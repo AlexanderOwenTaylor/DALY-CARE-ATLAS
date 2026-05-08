@@ -167,7 +167,7 @@ count_distinct_capped <- function(x, cap = 100000L) {
   length(unique(sample_x))
 }
 
-top_counts <- function(x, denom, top_n = 10L, cap = 200000L) {
+top_counts <- function(x, denom, top_n = 10L, cap = 200000L, min_count = 1L) {
   x <- as.character(x)
   x <- x[!(is.na(x) | trimws(x) == "")]
   if (!length(x)) {
@@ -175,6 +175,10 @@ top_counts <- function(x, denom, top_n = 10L, cap = 200000L) {
   }
   x <- head(x, cap)
   tab <- sort(table(x), decreasing = TRUE)
+  tab <- tab[as.integer(tab) >= min_count]
+  if (!length(tab)) {
+    return(empty_df(value = character(), n = integer(), pct = numeric()))
+  }
   tab <- head(tab, top_n)
   data.frame(
     value = truncate_value(names(tab)),

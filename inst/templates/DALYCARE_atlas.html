@@ -56,6 +56,48 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
     }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    label {
+      color: var(--muted);
+      font-size: 13px;
+      display: grid;
+      gap: 4px;
+    }
+    select {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      padding: 7px 9px;
+      min-width: 170px;
+    }
+    .panel-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .panel-nav button {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      padding: 7px 10px;
+    }
+    .panel-nav button:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
     .metric {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -104,6 +146,14 @@
       border: 1px solid var(--line);
       border-radius: 6px;
     }
+    .panel-block {
+      margin-top: 18px;
+    }
+    h3 {
+      font-size: 16px;
+      margin: 0 0 8px;
+      font-weight: 650;
+    }
   </style>
   <script src="DALYCARE_atlas_payload.js"></script>
 </head>
@@ -119,14 +169,32 @@
     </section>
     <section>
       <h2>Source Catalog</h2>
+      <div class="toolbar">
+        <label>Load status
+          <select id="source-filter">
+            <option value="">All sources</option>
+          </select>
+        </label>
+      </div>
       <div id="sources"></div>
     </section>
     <section>
       <h2>Checks</h2>
+      <div class="toolbar">
+        <label>Severity
+          <select id="check-filter">
+            <option value="">All checks</option>
+            <option value="error">Errors</option>
+            <option value="warning">Warnings</option>
+            <option value="ok">OK</option>
+          </select>
+        </label>
+      </div>
       <div id="checks"></div>
     </section>
     <section>
       <h2>Panels</h2>
+      <div id="panel-nav" class="panel-nav"></div>
       <div id="panels"></div>
     </section>
   </main>
@@ -148,6 +216,8 @@
       summary.appendChild(metric("Loaded", payload.loaded_source_count || 0));
       summary.appendChild(metric("Columns", payload.column_count || 0));
       summary.appendChild(metric("Checks", payload.check_count || 0));
+      summary.appendChild(metric("Warnings", payload.warning_count || 0));
+      summary.appendChild(metric("Errors", payload.error_count || 0));
 
       function renderTable(rows, maxRows) {
         if (!rows || !rows.length) {
@@ -181,16 +251,81 @@
         }[ch]));
       }
 
-      document.getElementById("sources").appendChild(renderTable(payload.sources || [], 200));
-      document.getElementById("checks").appendChild(renderTable(payload.checks || [], 200));
+      function renderInto(id, node) {
+        const target = document.getElementById(id);
+        target.innerHTML = "";
+        target.appendChild(node);
+      }
+
+      function uniqueValues(rows, key) {
+        return Array.from(new Set((rows || []).map(row => row[key]).filter(Boolean))).sort();
+      }
+
+      function fillSelect(select, values) {
+        values.forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          select.appendChild(option);
+        });
+      }
+
+      const sources = payload.sources || [];
+      const sourceFilter = document.getElementById("source-filter");
+      fillSelect(sourceFilter, uniqueValues(sources, "load_status"));
+      sourceFilter.addEventListener("change", () => {
+        const wanted = sourceFilter.value;
+        renderInto("sources", renderTable(wanted ? sources.filter(row => row.load_status === wanted) : sources, 200));
+      });
+      renderInto("sources", renderTable(sources, 200));
+
+      const severityRank = { error: 0, warning: 1, ok: 2 };
+      const checks = (payload.checks || []).slice().sort((a, b) => {
+        return (severityRank[a.severity] ?? 9) - (severityRank[b.severity] ?? 9);
+      });
+      const checkFilter = document.getElementById("check-filter");
+      checkFilter.addEventListener("change", () => {
+        const wanted = checkFilter.value;
+        renderInto("checks", renderTable(wanted ? checks.filter(row => row.severity === wanted) : checks, 200));
+      });
+      renderInto("checks", renderTable(checks, 200));
 
       const panels = document.getElementById("panels");
+      const panelNav = document.getElementById("panel-nav");
       const panelData = payload.panels || {};
+      const panelTitles = {
+        lab_npu_code_coverage: "Lab NPU Code Coverage",
+        diagnosis_icd_groups: "Diagnosis ICD Groups",
+        medication_atc_groups: "Medication ATC Groups",
+        damyda_feature_coverage: "DaMyDa Feature Coverage",
+        registry_clinical_summary: "Registry Clinical Summary",
+        damyda_clinical_profile: "DaMyDa Clinical Profile",
+        damyda_numeric_fields: "DaMyDa Numeric Fields",
+        lyfo_clinical_profile: "LYFO Clinical Profile",
+        cll_clinical_profile: "CLL Clinical Profile",
+        sp_operational_sources: "SP Operational Sources",
+        source_availability_drift: "Source Availability Drift"
+      };
+
+      function panelTitle(name) {
+        return panelTitles[name] || name.replace(/_/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
+      }
+
       Object.keys(panelData).forEach(name => {
+        const id = `panel-${name}`;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = panelTitle(name);
+        button.addEventListener("click", () => document.getElementById(id).scrollIntoView({ behavior: "smooth", block: "start" }));
+        panelNav.appendChild(button);
+        const block = document.createElement("div");
+        block.className = "panel-block";
+        block.id = id;
         const h = document.createElement("h3");
-        h.textContent = name.replace(/_/g, " ");
-        panels.appendChild(h);
-        panels.appendChild(renderTable(panelData[name], 100));
+        h.textContent = panelTitle(name);
+        block.appendChild(h);
+        block.appendChild(renderTable(panelData[name], 100));
+        panels.appendChild(block);
       });
       if (!Object.keys(panelData).length) {
         const empty = document.createElement("div");

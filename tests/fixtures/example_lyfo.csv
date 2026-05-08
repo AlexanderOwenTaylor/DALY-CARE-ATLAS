@@ -1,0 +1,5 @@
+patientid,diagnosis_date,Reg_Subtype,Reg_AnnArbor,Reg_IPI,Reg_BSymptomer,Reg_PS,Reg_Behandlet,Reg_Bulk
+10,2021-01-15,DLBCL,III,2,yes,1,yes,no
+11,2021-02-20,FL,II,1,no,0,yes,no
+12,2021-03-12,DLBCL,IV,3,yes,2,yes,yes
+13,2021-04-18,MCL,I,0,no,0,no,no

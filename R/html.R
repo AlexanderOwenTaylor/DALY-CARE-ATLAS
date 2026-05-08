@@ -19,7 +19,7 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
   list(html = html_path, payload = payload_path)
 }
 
-atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels) {
+atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels, run_summary = NULL) {
   list(
     run_id = run_id,
     generated_at = generated_at,
@@ -27,6 +27,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     loaded_source_count = sum(sources$load_status == "ok", na.rm = TRUE),
     column_count = nrow(columns),
     check_count = nrow(checks),
+    warning_count = sum(checks$severity == "warning", na.rm = TRUE),
+    error_count = sum(checks$severity == "error", na.rm = TRUE),
+    run_summary = public_rows(run_summary, max_rows = 100),
     sources = public_rows(sources, max_rows = 500),
     checks = public_rows(checks, max_rows = 500),
     panels = lapply(panels, public_rows, max_rows = 250)

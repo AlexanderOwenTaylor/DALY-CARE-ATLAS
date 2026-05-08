@@ -10,9 +10,12 @@ read_source_map <- function(source_map_path, project_root = ".") {
   source_map$priority <- suppressWarnings(as.integer(source_map$priority))
   source_map$profile_mode <- tolower(trimws(as.character(source_map$profile_mode)))
   source_map$profile_mode[source_map$profile_mode == "" | is.na(source_map$profile_mode)] <- "full"
+  warnings <- source_map_warnings(source_map, project_root = project_root)
+  source_map$profile_mode[!source_map$profile_mode %in% valid_profile_modes()] <- "full"
   source_map$priority[is.na(source_map$priority)] <- seq_len(nrow(source_map))[is.na(source_map$priority)]
   source_map <- source_map[order(source_map$priority, source_map$table_name), , drop = FALSE]
   rownames(source_map) <- NULL
+  attr(source_map, "warnings") <- warnings
   source_map
 }
 
@@ -36,3 +39,50 @@ validate_source_map <- function(source_map) {
   invisible(TRUE)
 }
 
+valid_profile_modes <- function() {
+  c("schema", "summary", "full")
+}
+
+source_map_warnings <- function(source_map, project_root = ".") {
+  rows <- list()
+  add_warning <- function(table_name, warning_id, message) {
+    rows[[length(rows) + 1L]] <<- data.frame(
+      table_name = table_name %||% "",
+      warning_id = warning_id,
+      message = message,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  duplicate_names <- unique(source_map$table_name[duplicated(source_map$table_name)])
+  for (table_name in duplicate_names) {
+    add_warning(table_name, "duplicate_table_name", paste("Source map contains duplicate table_name:", table_name))
+  }
+
+  bad_modes <- !source_map$profile_mode %in% valid_profile_modes()
+  if (any(bad_modes, na.rm = TRUE)) {
+    bad_values <- unique(source_map$profile_mode[bad_modes])
+    for (mode in bad_values) {
+      add_warning("", "unsupported_profile_mode", paste("Unsupported profile_mode will default to full:", mode))
+    }
+  }
+
+  file_rows <- which(source_map$source_type == "file")
+  for (i in file_rows) {
+    source <- source_map$source[[i]]
+    path <- if (file.exists(source)) source else file.path(project_root, source)
+    if (!file.exists(path)) {
+      add_warning(
+        source_map$table_name[[i]],
+        "missing_file_source",
+        paste("File-backed source does not exist yet:", source)
+      )
+    }
+  }
+
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) {
+    return(empty_df(table_name = character(), warning_id = character(), message = character()))
+  }
+  out
+}

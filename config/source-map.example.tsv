@@ -2,4 +2,5 @@ table_name	source_type	source	priority	profile_mode
 example_labs	file	tests/fixtures/example_labs.csv	1	full
 example_diagnoses	file	tests/fixtures/example_diagnoses.csv	2	full
 example_damyda	file	tests/fixtures/example_damyda.csv	3	full
-
+RKKP_LYFO	file	tests/fixtures/example_lyfo.csv	4	full
+RKKP_CLL	file	tests/fixtures/example_cll.csv	5	full

@@ -27,6 +27,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   generated_at <- atlas_timestamp()
   log_event("info", "", paste("Starting DALY-CARE atlas run", run_id))
   source_map <- read_source_map(source_map_path, project_root = project_root)
+  for (warning in validation_warnings(source_map, output_root = output_root, project_root = project_root)) {
+    log_event("warning", warning$table_name, warning$message)
+  }
 
   source_rows <- list()
   column_rows <- list()
@@ -37,6 +40,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     diagnosis_icd_groups = data.frame(stringsAsFactors = FALSE),
     medication_atc_groups = data.frame(stringsAsFactors = FALSE),
     damyda_feature_coverage = data.frame(stringsAsFactors = FALSE),
+    registry_clinical_summary = empty_registry_summary(),
+    damyda_clinical_profile = empty_registry_categorical(),
+    damyda_numeric_fields = empty_registry_numeric(),
+    lyfo_clinical_profile = empty_registry_categorical(),
+    cll_clinical_profile = empty_registry_categorical(),
     sp_operational_sources = data.frame(stringsAsFactors = FALSE),
     source_availability_drift = data.frame(stringsAsFactors = FALSE)
   )
@@ -91,13 +99,15 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$columns <- write_csv(columns, file.path(output_dir, "atlas_columns.csv"))
   output_paths$checks <- write_csv(checks, file.path(output_dir, "atlas_checks.csv"))
   output_paths$value_frequencies <- write_csv(frequencies, file.path(output_dir, "atlas_value_frequencies.csv"))
+  run_summary <- atlas_run_summary(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels)
+  output_paths$run_summary <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
 
   panel_paths <- list()
   for (panel_name in names(panels)) {
     panel_paths[[panel_name]] <- write_csv(panels[[panel_name]], file.path(panel_dir, paste0(panel_name, ".csv")))
   }
 
-  payload <- atlas_payload(run_id, generated_at, sources, columns, checks, panels)
+  payload <- atlas_payload(run_id, generated_at, sources, columns, checks, panels, run_summary = run_summary)
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
 
@@ -105,6 +115,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   manifest <- output_manifest(all_paths, run_dir = run_dir)
   manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
   log_event("info", "", "Output manifest written")
+  log_event("info", "", paste("Run summary:", run_summary_log_message(run_summary)))
   write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
 
   invisible(list(
@@ -114,6 +125,33 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     html = site_paths$html,
     payload = site_paths$payload
   ))
+}
+
+validation_warnings <- function(source_map, output_root, project_root = ".") {
+  rows <- list(attr(source_map, "warnings") %||% empty_df(table_name = character(), warning_id = character(), message = character()))
+  risky <- output_root_warnings(output_root, project_root = project_root)
+  if (nrow(risky)) rows[[length(rows) + 1L]] <- risky
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) {
+    return(list())
+  }
+  lapply(seq_len(nrow(out)), function(i) out[i, , drop = FALSE])
+}
+
+output_root_warnings <- function(output_root, project_root = ".") {
+  output_root <- normalize_slashes(normalizePath(output_root, winslash = "/", mustWork = FALSE))
+  project_root <- normalize_slashes(normalizePath(project_root, winslash = "/", mustWork = FALSE))
+  risky_roots <- normalize_slashes(file.path(project_root, c("R", "scripts", "tests", "config", "inst", "inst/legacy")))
+  risky <- identical(output_root, project_root) || any(startsWith(output_root, paste0(risky_roots, "/"))) || output_root %in% risky_roots
+  if (!isTRUE(risky)) {
+    return(empty_df(table_name = character(), warning_id = character(), message = character()))
+  }
+  data.frame(
+    table_name = "",
+    warning_id = "risky_output_root",
+    message = paste("Output root is inside a source-controlled project area:", output_root),
+    stringsAsFactors = FALSE
+  )
 }
 
 failed_source_row <- function(record, message) {
@@ -169,4 +207,35 @@ output_manifest <- function(paths, run_dir) {
     )
   })
   bind_rows_base(rows)
+}
+
+atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels) {
+  panel_rows <- sum(vapply(panels, nrow, integer(1)), na.rm = TRUE)
+  rows <- list(
+    data.frame(metric = "run_id", value = run_id, stringsAsFactors = FALSE),
+    data.frame(metric = "generated_at", value = generated_at, stringsAsFactors = FALSE),
+    data.frame(metric = "mapped_sources", value = as.character(nrow(source_map)), stringsAsFactors = FALSE),
+    data.frame(metric = "loaded_sources", value = as.character(sum(sources$load_status == "ok", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "failed_sources", value = as.character(sum(sources$load_status == "failed", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "columns_profiled", value = as.character(nrow(columns)), stringsAsFactors = FALSE),
+    data.frame(metric = "checks", value = as.character(nrow(checks)), stringsAsFactors = FALSE),
+    data.frame(metric = "warnings", value = as.character(sum(checks$severity == "warning", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "errors", value = as.character(sum(checks$severity == "error", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "value_frequency_rows", value = as.character(nrow(frequencies)), stringsAsFactors = FALSE),
+    data.frame(metric = "panel_rows", value = as.character(panel_rows), stringsAsFactors = FALSE),
+    data.frame(metric = "min_cell_count", value = as.character(atlas_min_cell_count()), stringsAsFactors = FALSE)
+  )
+  bind_rows_base(rows)
+}
+
+run_summary_log_message <- function(run_summary) {
+  values <- stats::setNames(run_summary$value, run_summary$metric)
+  paste(
+    "mapped_sources=", values[["mapped_sources"]] %||% "0",
+    ", loaded_sources=", values[["loaded_sources"]] %||% "0",
+    ", failed_sources=", values[["failed_sources"]] %||% "0",
+    ", checks=", values[["checks"]] %||% "0",
+    ", panel_rows=", values[["panel_rows"]] %||% "0",
+    sep = ""
+  )
 }
