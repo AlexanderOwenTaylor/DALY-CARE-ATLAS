@@ -107,9 +107,10 @@ Registry-focused runs can include these clinical panels:
 - `outputs/panels/cll_clinical_profile.csv`: aggregate CLL Binet, IGHV, FISH,
   cytogenetic, TP53, treatment, performance, ZAP70, CD38, and beta2m facets.
 
-The static atlas shows warnings and errors first, provides source/check filters,
-and adds navigation links for generated panels. The HTML remains data-light and
-loads its run payload from `site/DALYCARE_atlas_payload.js`.
+The static atlas is a tabbed, AOT-style review artifact with run-level metrics,
+domain cards, searchable source catalog, registry cards, QA triage, generated
+panel tables, and quick-start commands. The HTML remains data-light and loads
+its run payload from `site/DALYCARE_atlas_payload.js`.
 
 ## Legacy Provenance
 
