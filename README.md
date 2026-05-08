@@ -22,6 +22,21 @@ In DALY-CARE, set `DALYCARE_BOOTSTRAP_PATH` to a bootstrap script that defines
 Rscript scripts/run_atlas.R /path/to/project config/source-map.tsv atlas_runs report
 ```
 
+For real DALY-CARE runs, start from the package preset and bootstrap template:
+
+```sh
+export DALYCARE_PACKAGE_ROOT=/path/to/dalycare_package
+export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_bootstrap.R
+Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS
+Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare.tsv atlas_runs report
+```
+
+The preflight script checks the source map and bootstrap without loading live
+patient-level data. Set `DALYCARE_PREFLIGHT_ATTEMPT_LOAD=TRUE` only when you
+intentionally want to probe live DALY database access. Database credentials and
+access still depend on the upstream DALY-CARE package and the user's NGC
+`/ngc/people/<user>/db_access.R` setup.
+
 By default, public aggregate counts below 5 are suppressed in value-frequency
 and registry categorical outputs. Override this only for local fixture testing:
 
@@ -42,6 +57,17 @@ The source map is a TSV/CSV with these required columns:
 File-backed sources support `.csv`, `.tsv`, `.txt`, `.rds`, and `.rda/.RData`.
 Dataset-backed sources call DALY `load_dataset()` and support both return-value
 and side-effect loader contracts.
+
+`config/source-map.dalycare.tsv` is the curated DALY-CARE preset. It covers the
+canonical source universe from upstream `load_all_data()`: `patient`, RKKP
+registries (`RKKP_CLL`, `RKKP_LYFO`, `RKKP_DaMyDa`), SP operational tables,
+SDS/LPR/LPR3 tables, `t_dalycare_diagnoses`, and documented DALY diagnosis and
+survival views where available.
+
+Source maps may also include optional `domain`, `subdomain`, and `atlas_role`
+columns. The atlas preserves these in `atlas_sources.csv`, the resource catalog,
+and the static HTML payload so operators can filter and review sources by DALY
+area.
 
 `profile_mode` controls how much public aggregate evidence is written:
 

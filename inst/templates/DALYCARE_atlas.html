@@ -166,6 +166,7 @@
     <section>
       <h2>Run Summary</h2>
       <div id="summary" class="summary-grid"></div>
+      <div id="domain-summary" class="panel-block"></div>
     </section>
     <section>
       <h2>Source Catalog</h2>
@@ -173,6 +174,11 @@
         <label>Load status
           <select id="source-filter">
             <option value="">All sources</option>
+          </select>
+        </label>
+        <label>Domain
+          <select id="source-domain-filter">
+            <option value="">All domains</option>
           </select>
         </label>
       </div>
@@ -218,6 +224,14 @@
       summary.appendChild(metric("Checks", payload.check_count || 0));
       summary.appendChild(metric("Warnings", payload.warning_count || 0));
       summary.appendChild(metric("Errors", payload.error_count || 0));
+      const sourceDomains = payload.source_domains || [];
+      if (sourceDomains.length) {
+        const domainSummary = document.getElementById("domain-summary");
+        const h = document.createElement("h3");
+        h.textContent = "Source Domains";
+        domainSummary.appendChild(h);
+        domainSummary.appendChild(renderTable(sourceDomains, 100));
+      }
 
       function renderTable(rows, maxRows) {
         if (!rows || !rows.length) {
@@ -272,12 +286,20 @@
 
       const sources = payload.sources || [];
       const sourceFilter = document.getElementById("source-filter");
+      const sourceDomainFilter = document.getElementById("source-domain-filter");
       fillSelect(sourceFilter, uniqueValues(sources, "load_status"));
-      sourceFilter.addEventListener("change", () => {
+      fillSelect(sourceDomainFilter, uniqueValues(sources, "domain"));
+      function renderSources() {
         const wanted = sourceFilter.value;
-        renderInto("sources", renderTable(wanted ? sources.filter(row => row.load_status === wanted) : sources, 200));
-      });
-      renderInto("sources", renderTable(sources, 200));
+        const wantedDomain = sourceDomainFilter.value;
+        const filtered = sources.filter(row => {
+          return (!wanted || row.load_status === wanted) && (!wantedDomain || row.domain === wantedDomain);
+        });
+        renderInto("sources", renderTable(filtered, 200));
+      }
+      sourceFilter.addEventListener("change", renderSources);
+      sourceDomainFilter.addEventListener("change", renderSources);
+      renderSources();
 
       const severityRank = { error: 0, warning: 1, ok: 2 };
       const checks = (payload.checks || []).slice().sort((a, b) => {
@@ -306,9 +328,25 @@
         sp_operational_sources: "SP Operational Sources",
         source_availability_drift: "Source Availability Drift"
       };
+      const panelGroups = {
+        lab_npu_code_coverage: "Source Content",
+        diagnosis_icd_groups: "Source Content",
+        medication_atc_groups: "Source Content",
+        damyda_feature_coverage: "Clinical Registries",
+        registry_clinical_summary: "Clinical Registries",
+        damyda_clinical_profile: "Clinical Registries",
+        damyda_numeric_fields: "Clinical Registries",
+        lyfo_clinical_profile: "Clinical Registries",
+        cll_clinical_profile: "Clinical Registries",
+        sp_operational_sources: "SP Operations",
+        source_availability_drift: "Run QA"
+      };
 
       function panelTitle(name) {
         return panelTitles[name] || name.replace(/_/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
+      }
+      function panelGroup(name) {
+        return panelGroups[name] || "Atlas Panels";
       }
 
       Object.keys(panelData).forEach(name => {
@@ -324,6 +362,10 @@
         const h = document.createElement("h3");
         h.textContent = panelTitle(name);
         block.appendChild(h);
+        const group = document.createElement("p");
+        group.className = "subtitle";
+        group.textContent = panelGroup(name);
+        block.appendChild(group);
         block.appendChild(renderTable(panelData[name], 100));
         panels.appendChild(block);
       });

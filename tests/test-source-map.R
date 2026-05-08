@@ -34,3 +34,12 @@ expect_equal(warned$profile_mode[[1]], "full", "Unsupported profile_mode should 
 
 risky <- output_root_warnings(file.path(root, "inst", "legacy", "atlas_runs"), project_root = root)
 expect_true(any(risky$warning_id == "risky_output_root"), "Risky output locations should produce a validation warning.")
+
+metadata_map <- tempfile(fileext = ".tsv")
+writeLines(c(
+  "table_name\tsource_type\tsource\tpriority\tprofile_mode\tdomain\tsubdomain\tatlas_role",
+  "RKKP_CLL\tdataset\tRKKP_CLL\t1\tsummary\tRKKP\tCLL\tclinical_registry"
+), metadata_map)
+metadata_source_map <- read_source_map(metadata_map)
+expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(metadata_source_map)), "Optional DALY-CARE metadata columns should be preserved.")
+expect_equal(metadata_source_map$atlas_role[[1]], "clinical_registry", "Optional atlas_role metadata should survive normalization.")

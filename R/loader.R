@@ -49,26 +49,34 @@ load_dataset_source <- function(source_record, bootstrap_path = "") {
   }
 
   dataset_name <- source_record$source[[1]]
-  before <- ls(envir = .GlobalEnv, all.names = TRUE)
-  result <- get("load_dataset", envir = .GlobalEnv)(dataset_name)
-  on.exit(clean_loader_side_effects(before), add = TRUE)
+  before_global <- ls(envir = .GlobalEnv, all.names = TRUE)
+  call_env <- new.env(parent = .GlobalEnv)
+  call_env$load_dataset <- get("load_dataset", envir = .GlobalEnv)
+  call_env$dataset_name <- dataset_name
+  on.exit(clean_loader_side_effects(before_global), add = TRUE)
+  result <- evalq(load_dataset(dataset_name), envir = call_env)
 
   if (is.data.frame(result)) {
     return(result)
   }
 
+  created_global <- setdiff(ls(envir = .GlobalEnv, all.names = TRUE), before_global)
+  created_call <- setdiff(ls(envir = call_env, all.names = TRUE), c("load_dataset", "dataset_name"))
   candidates <- unique(c(
     dataset_name,
     make.names(dataset_name),
     source_record$table_name[[1]],
     make.names(source_record$table_name[[1]]),
-    setdiff(ls(envir = .GlobalEnv, all.names = TRUE), before)
+    created_call,
+    created_global
   ))
   candidates <- candidates[nzchar(candidates)]
-  for (nm in candidates) {
-    if (exists(nm, envir = .GlobalEnv, inherits = FALSE)) {
-      value <- get(nm, envir = .GlobalEnv, inherits = FALSE)
-      if (is.data.frame(value)) return(value)
+  for (env in list(call_env, .GlobalEnv)) {
+    for (nm in candidates) {
+      if (exists(nm, envir = env, inherits = FALSE)) {
+        value <- get(nm, envir = env, inherits = FALSE)
+        if (is.data.frame(value)) return(value)
+      }
     }
   }
   stop("DalyDataLoader dataset source did not produce a data frame: ", dataset_name, call. = FALSE)
@@ -85,4 +93,3 @@ clean_loader_side_effects <- function(before) {
   gc(verbose = FALSE)
   invisible(TRUE)
 }
-

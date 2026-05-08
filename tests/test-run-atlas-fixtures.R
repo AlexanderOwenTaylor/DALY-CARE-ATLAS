@@ -33,6 +33,7 @@ expect_file(result$payload)
 html <- paste(readLines(result$html, warn = FALSE), collapse = "\n")
 expect_true(grepl("DALYCARE_atlas_payload.js", html, fixed = TRUE), "HTML should reference external payload JS.")
 expect_true(grepl("source-filter", html, fixed = TRUE), "HTML should include source filtering controls.")
+expect_true(grepl("source-domain-filter", html, fixed = TRUE), "HTML should include domain filtering controls.")
 expect_true(grepl("check-filter", html, fixed = TRUE), "HTML should include check filtering controls.")
 expect_true(grepl("panel-nav", html, fixed = TRUE), "HTML should include panel navigation.")
 payload <- paste(readLines(result$payload, warn = FALSE), collapse = "\n")
@@ -40,6 +41,7 @@ expect_true(grepl("damyda_clinical_profile", payload, fixed = TRUE), "Payload sh
 expect_true(grepl("lyfo_clinical_profile", payload, fixed = TRUE), "Payload should include the LYFO clinical profile panel.")
 expect_true(grepl("cll_clinical_profile", payload, fixed = TRUE), "Payload should include the CLL clinical profile panel.")
 expect_true(grepl("run_summary", payload, fixed = TRUE), "Payload should include run summary rows.")
+expect_true(grepl("source_domains", payload, fixed = TRUE), "Payload should include source-domain summaries.")
 
 freq <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_value_frequencies.csv"), stringsAsFactors = FALSE)
 expect_false(any(freq$column_name == "patientid"), "Public value frequencies must not expose patient IDs.")
@@ -50,8 +52,12 @@ expect_true(all(c("registry_clinical_summary", "damyda_clinical_profile", "damyd
 expect_true(all(manifest$status == "ok"), "Manifest artifacts should exist.")
 
 sources <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_sources.csv"), stringsAsFactors = FALSE)
+expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(sources)), "Source metadata should be preserved in atlas_sources.csv.")
 expect_true(!any(sources$date_column_guess == "patientid"), "Patient identifiers should not be guessed as date columns.")
 expect_true("2021-01-01" %in% sources$min_date, "Date ranges should be emitted as ISO dates.")
+
+catalog <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_resource_catalog.csv"), stringsAsFactors = FALSE)
+expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(catalog)), "Source metadata should be preserved in the resource catalog.")
 
 damyda_clinical <- utils::read.csv(file.path(result$run_dir, "outputs", "panels", "damyda_clinical_profile.csv"), stringsAsFactors = FALSE)
 expect_true(any(damyda_clinical$facet == "stage"), "Run output should include DaMyDa stage summary.")

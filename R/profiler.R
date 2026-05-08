@@ -456,7 +456,7 @@ registry_numeric_spec <- function(field, candidates, unit = NA_character_) {
 panel_damyda_clinical_profile <- function(data, table_name, min_cell_count = atlas_min_cell_count()) {
   if (!identical(registry_name(table_name), "DaMyDa")) return(empty_registry_categorical())
   specs <- list(
-    registry_spec("stage", c("Reg_ISS_Stadie", "iss_stage", "ISS", "stage", "stadie"), 10L),
+    registry_spec("stage", c("Reg_ISS_Stadie", "Stadie", "iss_stage", "ISS", "stage", "stadie"), 10L),
     registry_spec("bone_disease", c("Reg_Knogleforandringer", "bone_disease", "knogle_present"), 5L),
     registry_spec("bone_disease_type", c("Reg_Knogleforandringer_type", "bone_type", "knogle_type"), 8L),
     registry_spec("amyloidosis", c("Reg_Amyloidose", "amyloidosis", "amyloidose"), 5L),
@@ -471,7 +471,7 @@ panel_damyda_clinical_profile <- function(data, table_name, min_cell_count = atl
     registry_spec("primary_complications", c("Reg_Komplikationer1", "primary_comp"), 10L),
     registry_spec("secondary_complications", c("Reg_Komplikationer2", "secondary_comp"), 12L),
     registry_spec("followup_complications", c("Reg_Komplikationer3", "followup_comp"), 12L),
-    registry_spec("cytogenetics_fish_done", c("Reg_FISH_Udfoert", "fish_done"), 5L),
+    registry_spec("cytogenetics_fish_done", c("Reg_FISH_Udfoert", "Cyto_FishUdfoert", "fish_done"), 5L),
     registry_spec("cytogenetics_iscn", c("Reg_ISCN_Resultat", "iscn"), 6L),
     registry_spec("cytogenetics_ploidy", c("Reg_Ploidi", "ploidy"), 6L),
     registry_spec("cytogenetics_abnormality", c("Reg_FISH_Abnormitet", "fish_abn", "fish_abnormality"), 14L),
@@ -480,7 +480,8 @@ panel_damyda_clinical_profile <- function(data, table_name, min_cell_count = atl
     registry_spec("imaging", c("Reg_Billeddiagnostik", "imaging"), 8L),
     registry_spec("prior_mgus", c("Reg_TidligereMGUS", "prior_mgus"), 4L),
     registry_spec("charlson", c("Reg_CharlsonGruppe", "Charlson", "CCI"), 7L),
-    registry_spec("region", c("Reg_Region", "region", "Region"), 8L)
+    registry_spec("region", c("Reg_Region", "region", "Region"), 8L),
+    registry_spec("organisation_shak", c("Reg_OrganisationKode_Shak", "organisation_shak", "shak"), 12L)
   )
   registry_categorical_panel(data, table_name, "DaMyDa", specs, min_cell_count = min_cell_count)
 }
@@ -488,20 +489,20 @@ panel_damyda_clinical_profile <- function(data, table_name, min_cell_count = atl
 panel_damyda_numeric_fields <- function(data, table_name) {
   if (!identical(registry_name(table_name), "DaMyDa")) return(empty_registry_numeric())
   specs <- list(
-    registry_numeric_spec("haemoglobin", c("Reg_Haemoglobin", "haemoglobin", "hemoglobin"), "mmol/L"),
-    registry_numeric_spec("creatinine", c("Reg_Creatinin_mikmoll", "Reg_Creatinin", "creatinine"), "umol/L"),
-    registry_numeric_spec("ldh", c("Reg_LDH", "ldh"), "U/L"),
+    registry_numeric_spec("haemoglobin", c("HB", "Reg_Haemoglobin", "haemoglobin", "hemoglobin"), "mmol/L"),
+    registry_numeric_spec("creatinine", c("CREA", "Reg_Creatinin_mikmoll", "Reg_Creatinin", "creatinine"), "umol/L"),
+    registry_numeric_spec("ldh", c("LDH", "Reg_LDH", "ldh"), "U/L"),
     registry_numeric_spec("crp", c("Reg_CReaktivtProtein_gl", "Reg_CRP", "crp"), "mg/L"),
     registry_numeric_spec("igg", c("Reg_IgG_gl", "igg"), "g/L"),
     registry_numeric_spec("iga", c("Reg_IgA_gl", "iga"), "g/L"),
     registry_numeric_spec("igm", c("Reg_IgM_gl", "igm"), "g/L"),
-    registry_numeric_spec("albumin", c("Reg_Albumin_gl", "albumin"), "g/L"),
-    registry_numeric_spec("m_component", c("Reg_PlasmaMKomponent", "m_component", "mkomponent"), "g/L"),
+    registry_numeric_spec("albumin", c("ALB", "Reg_Albumin_gl", "albumin"), "g/L"),
+    registry_numeric_spec("m_component", c("mspike_p_diagnosis", "Reg_PlasmaMKomponent", "m_component", "mkomponent"), "g/L"),
     registry_numeric_spec("ionized_calcium", c("Reg_CalciumIoniseret", "ionized_calcium", "calcium"), "mmol/L"),
-    registry_numeric_spec("free_kappa_chains", c("Reg_FrieKappaKaeder", "kappa"), "mg/L"),
-    registry_numeric_spec("free_lambda_chains", c("Reg_FrieLambdaKaeder", "lambda"), "mg/L"),
-    registry_numeric_spec("beta2_microglobulin", c("Reg_Beta2Microglobulin_gl", "beta2", "beta_2"), "mg/L"),
-    registry_numeric_spec("clonal_plasma_cells", c("Reg_ProcentKlonalePlasmaceller", "plasma_cells"), "%"),
+    registry_numeric_spec("free_kappa_chains", c("FLC_kappa", "Reg_FrieKappaKaeder", "kappa"), "mg/L"),
+    registry_numeric_spec("free_lambda_chains", c("FLC_lambda", "Reg_FrieLambdaKaeder", "lambda"), "mg/L"),
+    registry_numeric_spec("beta2_microglobulin", c("B2M", "Reg_Beta2Microglobulin_gl", "beta2", "beta_2"), "mg/L"),
+    registry_numeric_spec("clonal_plasma_cells", c("plasmacell_percentage_BM", "Reg_ProcentKlonalePlasmaceller", "plasma_cells"), "%"),
     registry_numeric_spec("albumin_corrected_calcium", c("Reg_CalciumAlbuminkorrigeret", "corrected_calcium"), "mmol/L")
   )
   registry_numeric_panel(data, table_name, "DaMyDa", specs)
@@ -511,12 +512,12 @@ panel_lyfo_clinical_profile <- function(data, table_name, min_cell_count = atlas
   if (!identical(registry_name(table_name), "LYFO")) return(empty_registry_categorical())
   specs <- list(
     registry_spec("subtype", c("Reg_Subtype", "subtype", "WHO", "lymfomtype"), 18L),
-    registry_spec("ann_arbor_stage", c("Reg_AnnArbor", "ann_arbor", "stage", "stadie"), 6L),
+    registry_spec("ann_arbor_stage", c("Reg_Stadium", "Reg_AnnArbor", "ann_arbor", "stage", "stadie"), 6L),
     registry_spec("ipi", c("Reg_IPI", "ipi", "aaipi"), 7L),
     registry_spec("b_symptoms", c("Reg_BSymptomer", "b_symptoms"), 4L),
-    registry_spec("performance_status", c("Reg_PS", "performance", "ecog"), 6L),
+    registry_spec("performance_status", c("Reg_PerformanceStatusWHO", "Reg_PS", "performance", "ecog"), 6L),
     registry_spec("treatment_flag", c("Reg_Behandlet", "treatment_flag", "treated"), 4L),
-    registry_spec("bulk_disease", c("Reg_Bulk", "bulk", "bulk_disease"), 4L)
+    registry_spec("bulk_disease", c("Reg_BulkSygdom", "Reg_Bulk", "bulk", "bulk_disease"), 4L)
   )
   registry_categorical_panel(data, table_name, "LYFO", specs, min_cell_count = min_cell_count)
 }
@@ -524,19 +525,19 @@ panel_lyfo_clinical_profile <- function(data, table_name, min_cell_count = atlas
 panel_cll_clinical_profile <- function(data, table_name, min_cell_count = atlas_min_cell_count()) {
   if (!identical(registry_name(table_name), "CLL")) return(empty_registry_categorical())
   specs <- list(
-    registry_spec("binet", c("Reg_Binet", "binet", "stage"), 4L),
-    registry_spec("ighv", c("Reg_IGHV", "ighv"), 5L),
+    registry_spec("binet", c("Reg_BinetStadium", "Reg_Binet", "binet", "stage"), 4L),
+    registry_spec("ighv", c("Reg_Umuteret", "Reg_IGHV", "ighv"), 5L),
     registry_spec("fish_overall", c("Reg_FISH", "fish"), 4L),
-    registry_spec("del13q", c("Reg_Del13q", "del13q"), 4L),
+    registry_spec("del13q", c("Reg_Del13q14", "Reg_Del13q", "del13q"), 4L),
     registry_spec("del11q", c("Reg_Del11q", "del11q"), 4L),
     registry_spec("del17p", c("Reg_Del17p", "del17p", "17p"), 4L),
-    registry_spec("trisomy12", c("Reg_Tri12", "trisomy12", "tri12"), 4L),
+    registry_spec("trisomy12", c("Reg_Trisomi12", "Reg_Tri12", "trisomy12", "tri12"), 4L),
     registry_spec("tp53", c("Reg_TP53", "tp53"), 4L),
     registry_spec("treatment_flag", c("Reg_Behandlet", "treatment_flag", "treated"), 4L),
-    registry_spec("performance_status", c("Reg_PS", "performance", "ecog"), 6L),
+    registry_spec("performance_status", c("Reg_Performancestatus", "Reg_PS", "performance", "ecog"), 6L),
     registry_spec("zap70", c("Reg_ZAP70", "zap70"), 4L),
-    registry_spec("cd38", c("Reg_CD38", "cd38"), 4L),
-    registry_spec("beta2m", c("Reg_Beta2M", "beta2m", "beta2"), 4L)
+    registry_spec("cd38", c("Reg_CD38Positiv", "Reg_CD38", "cd38"), 4L),
+    registry_spec("beta2m", c("Reg_Beta2Microglobulin", "Reg_Beta2M", "beta2m", "beta2"), 4L)
   )
   registry_categorical_panel(data, table_name, "CLL", specs, min_cell_count = min_cell_count)
 }

@@ -30,9 +30,29 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     warning_count = sum(checks$severity == "warning", na.rm = TRUE),
     error_count = sum(checks$severity == "error", na.rm = TRUE),
     run_summary = public_rows(run_summary, max_rows = 100),
+    source_domains = public_rows(source_domain_summary(sources), max_rows = 100),
     sources = public_rows(sources, max_rows = 500),
     checks = public_rows(checks, max_rows = 500),
     panels = lapply(panels, public_rows, max_rows = 250)
+  )
+}
+
+source_domain_summary <- function(sources) {
+  if (!nrow(sources) || !"domain" %in% names(sources)) {
+    return(empty_df(domain = character(), subdomain = character(), atlas_role = character(), load_status = character(), n_sources = integer()))
+  }
+  domain <- sources$domain %||% rep("", nrow(sources))
+  subdomain <- if ("subdomain" %in% names(sources)) sources$subdomain else rep("", nrow(sources))
+  atlas_role <- if ("atlas_role" %in% names(sources)) sources$atlas_role else rep("", nrow(sources))
+  aggregate(
+    list(n_sources = sources$table_name),
+    by = list(
+      domain = domain,
+      subdomain = subdomain,
+      atlas_role = atlas_role,
+      load_status = sources$load_status
+    ),
+    FUN = length
   )
 }
 

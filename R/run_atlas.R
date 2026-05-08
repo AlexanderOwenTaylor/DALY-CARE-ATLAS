@@ -77,6 +77,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
       next
     }
 
+    result$source <- append_source_metadata(result$source, record)
     source_rows[[length(source_rows) + 1L]] <- result$source
     column_rows[[length(column_rows) + 1L]] <- result$columns
     check_rows[[length(check_rows) + 1L]] <- result$checks
@@ -154,8 +155,27 @@ output_root_warnings <- function(output_root, project_root = ".") {
   )
 }
 
+source_record_metadata <- function(record) {
+  meta_names <- intersect(source_map_optional_metadata(), names(record))
+  if (!length(meta_names)) return(data.frame(stringsAsFactors = FALSE))
+  out <- as.data.frame(
+    stats::setNames(lapply(meta_names, function(nm) as.character(record[[nm]][[1]] %||% "")), meta_names),
+    stringsAsFactors = FALSE
+  )
+  out
+}
+
+append_source_metadata <- function(source_row, record) {
+  metadata <- source_record_metadata(record)
+  if (!ncol(metadata)) return(source_row)
+  for (nm in names(metadata)) {
+    source_row[[nm]] <- metadata[[nm]][[1]]
+  }
+  source_row
+}
+
 failed_source_row <- function(record, message) {
-  data.frame(
+  append_source_metadata(data.frame(
     table_name = record$table_name[[1]],
     source_type = record$source_type[[1]],
     source = record$source[[1]],
@@ -171,13 +191,17 @@ failed_source_row <- function(record, message) {
     profiled_at = atlas_timestamp(),
     message = message,
     stringsAsFactors = FALSE
-  )
+  ), record)
 }
 
 resource_catalog <- function(sources) {
   if (!nrow(sources)) return(sources)
   sources[, intersect(
-    c("table_name", "source_type", "source", "load_status", "n_rows", "n_cols", "min_date", "max_date", "id_column_guess", "date_column_guess"),
+    c(
+      "table_name", "source_type", "source", "domain", "subdomain", "atlas_role",
+      "load_status", "n_rows", "n_cols", "min_date", "max_date",
+      "id_column_guess", "date_column_guess"
+    ),
     names(sources)
   ), drop = FALSE]
 }

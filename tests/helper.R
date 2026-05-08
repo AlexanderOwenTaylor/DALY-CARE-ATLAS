@@ -2,6 +2,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
   files <- c(
     "R/utils.R",
     "R/source_map.R",
+    "R/dalycare_preflight.R",
     "R/loader.R",
     "R/profiler.R",
     "R/html.R",
@@ -33,4 +34,3 @@ expect_equal <- function(x, y, message = NULL) {
 expect_file <- function(path) {
   expect_true(file.exists(path), paste("Expected file to exist:", path))
 }
-

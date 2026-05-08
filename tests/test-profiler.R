@@ -56,6 +56,25 @@ expect_true(all(c("table_name", "registry", "field", "source_column", "unit", "n
 expect_true(any(numeric_panel$field == "albumin"), "DaMyDa numeric fields should include albumin when present.")
 expect_false(any(c("value", "examples", "distinct_sample") %in% names(numeric_panel)), "Numeric registry panel should not include raw values or examples.")
 
+dalycare_damyda <- data.frame(
+  patientid = c(1, 2, 3, 4),
+  Stadie = c("I", "II", "II", "III"),
+  Cyto_FishUdfoert = c("yes", "yes", "no", "yes"),
+  Reg_Diagnose_dt = c("2021-01-01", "2021-02-01", "2021-03-01", "2021-04-01"),
+  Reg_OrganisationKode_Shak = c("1500", "1500", "1300", "1300"),
+  HB = c(7.1, 6.8, 8.2, 7.7),
+  CREA = c(72, 85, 91, 110),
+  B2M = c(2.1, 3.4, 2.8, 5.2),
+  ALB = c(41, 38, 36, 32),
+  LDH = c(180, 210, 190, 260),
+  stringsAsFactors = FALSE
+)
+dalycare_damyda_profile <- profile_source(dalycare_damyda, "RKKP_DaMyDa", "file", "damyda.csv", min_cell_count = 1L)
+expect_true(any(dalycare_damyda_profile$panels$damyda_clinical_profile$source_column == "Stadie"), "DaMyDa aliases should match cleaner/raw Stadie.")
+expect_true(any(dalycare_damyda_profile$panels$damyda_clinical_profile$source_column == "Cyto_FishUdfoert"), "DaMyDa aliases should match cleaner/raw FISH status.")
+expect_true(any(dalycare_damyda_profile$panels$damyda_clinical_profile$source_column == "Reg_OrganisationKode_Shak"), "DaMyDa aliases should match organisation SHAK.")
+expect_true(all(c("HB", "CREA", "B2M", "ALB", "LDH") %in% dalycare_damyda_profile$panels$damyda_numeric_fields$source_column), "DaMyDa numeric aliases should match cleaner-style lab fields.")
+
 lyfo <- data.frame(
   patientid = c(1, 2, 3),
   Reg_Subtype = c("DLBCL", "FL", "DLBCL"),
@@ -68,6 +87,20 @@ lyfo_profile <- profile_source(lyfo, "RKKP_LYFO", "file", "lyfo.csv", min_cell_c
 expect_true(nrow(lyfo_profile$panels$lyfo_clinical_profile) > 0, "LYFO clinical profile should be generated.")
 expect_true(any(lyfo_profile$panels$lyfo_clinical_profile$facet == "subtype"), "LYFO profile should include subtype.")
 
+dalycare_lyfo <- data.frame(
+  patientid = c(1, 2, 3),
+  Reg_DiagnostiskBiopsi_dt = c("2020-01-01", "2020-02-01", "2020-03-01"),
+  Reg_Stadium = c("III", "II", "IV"),
+  Reg_PerformanceStatusWHO = c("0", "1", "2"),
+  Reg_BulkSygdom = c("no", "yes", "no"),
+  Reg_BSymptomer = c("yes", "no", "yes"),
+  stringsAsFactors = FALSE
+)
+dalycare_lyfo_profile <- profile_source(dalycare_lyfo, "RKKP_LYFO", "file", "lyfo.csv", min_cell_count = 1L)
+expect_true(any(dalycare_lyfo_profile$panels$lyfo_clinical_profile$source_column == "Reg_Stadium"), "LYFO aliases should match Reg_Stadium.")
+expect_true(any(dalycare_lyfo_profile$panels$lyfo_clinical_profile$source_column == "Reg_PerformanceStatusWHO"), "LYFO aliases should match Reg_PerformanceStatusWHO.")
+expect_true(any(dalycare_lyfo_profile$panels$lyfo_clinical_profile$source_column == "Reg_BulkSygdom"), "LYFO aliases should match Reg_BulkSygdom.")
+
 cll <- data.frame(
   patientid = c(1, 2, 3),
   Reg_Binet = c("A", "B", "C"),
@@ -79,6 +112,24 @@ cll <- data.frame(
 cll_profile <- profile_source(cll, "RKKP_CLL", "file", "cll.csv", min_cell_count = 1L)
 expect_true(nrow(cll_profile$panels$cll_clinical_profile) > 0, "CLL clinical profile should be generated.")
 expect_true(any(cll_profile$panels$cll_clinical_profile$facet == "tp53"), "CLL profile should include TP53.")
+
+dalycare_cll <- data.frame(
+  patientid = c(1, 2, 3, 4),
+  Reg_BinetStadium = c("A", "B", "B", "C"),
+  Reg_Umuteret = c("no", "yes", "yes", "no"),
+  Reg_Del13q14 = c("positive", "negative", "positive", "negative"),
+  Reg_Trisomi12 = c("negative", "positive", "negative", "negative"),
+  Reg_CD38Positiv = c("no", "yes", "no", "yes"),
+  Reg_Performancestatus = c("0", "1", "1", "2"),
+  stringsAsFactors = FALSE
+)
+dalycare_cll_profile <- profile_source(dalycare_cll, "RKKP_CLL", "file", "cll.csv", min_cell_count = 1L)
+expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_BinetStadium"), "CLL aliases should match Reg_BinetStadium.")
+expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_Umuteret"), "CLL aliases should match Reg_Umuteret.")
+expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_Del13q14"), "CLL aliases should match Reg_Del13q14.")
+expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_Trisomi12"), "CLL aliases should match Reg_Trisomi12.")
+expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_CD38Positiv"), "CLL aliases should match Reg_CD38Positiv.")
+expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_Performancestatus"), "CLL aliases should match Reg_Performancestatus.")
 
 sparse_lyfo <- profile_source(data.frame(patientid = 1:2, stringsAsFactors = FALSE), "RKKP_LYFO", "file", "lyfo.csv", min_cell_count = 1L)
 expect_equal(nrow(sparse_lyfo$panels$lyfo_clinical_profile), 0L, "Missing registry columns should produce an empty valid panel.")

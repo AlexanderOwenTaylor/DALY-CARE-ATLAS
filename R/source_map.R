@@ -9,6 +9,9 @@ read_source_map <- function(source_map_path, project_root = ".") {
   source_map$source <- trimws(as.character(source_map$source))
   source_map$priority <- suppressWarnings(as.integer(source_map$priority))
   source_map$profile_mode <- tolower(trimws(as.character(source_map$profile_mode)))
+  for (nm in intersect(source_map_optional_metadata(), names(source_map))) {
+    source_map[[nm]] <- trimws(as.character(source_map[[nm]]))
+  }
   source_map$profile_mode[source_map$profile_mode == "" | is.na(source_map$profile_mode)] <- "full"
   warnings <- source_map_warnings(source_map, project_root = project_root)
   source_map$profile_mode[!source_map$profile_mode %in% valid_profile_modes()] <- "full"
@@ -41,6 +44,10 @@ validate_source_map <- function(source_map) {
 
 valid_profile_modes <- function() {
   c("schema", "summary", "full")
+}
+
+source_map_optional_metadata <- function() {
+  c("domain", "subdomain", "atlas_role")
 }
 
 source_map_warnings <- function(source_map, project_root = ".") {
