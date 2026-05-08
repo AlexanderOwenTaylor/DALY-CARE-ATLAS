@@ -1,8 +1,6 @@
 # DALY-CARE-ATLAS
 
-`dalycareatlas` is a standalone, aggregate-only R package for resurrecting the
-useful DALY-CARE cartography machinery from the legacy WoMMen V06 work without
-making WoMMen WP1 depend on it.
+`dalycareatlas` is a standalone, aggregate-only R package for building DALY-CARE cartography machinery.
 
 The MVP profiles mapped DALY-CARE sources, writes machine-readable evidence
 tables, and renders a static HTML atlas from an external payload file. It does
