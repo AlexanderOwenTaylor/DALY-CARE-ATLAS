@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DALY-CARE Atlas</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2933;
+      --muted: #5b6773;
+      --line: #d8dee6;
+      --panel: #f7f9fb;
+      --accent: #1f6f8b;
+      --warn: #a15c00;
+      --bad: #a12828;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #fff;
+    }
+    header {
+      padding: 28px 36px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      font-weight: 650;
+      letter-spacing: 0;
+    }
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+    main {
+      padding: 24px 36px 42px;
+      display: grid;
+      gap: 26px;
+    }
+    section {
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+    }
+    h2 {
+      font-size: 20px;
+      margin: 0 0 12px;
+      font-weight: 650;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px 14px;
+    }
+    .metric b {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 3px;
+    }
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 9px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      color: #344150;
+      background: #f2f5f8;
+      font-weight: 650;
+      position: sticky;
+      top: 0;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .ok { color: var(--accent); font-weight: 650; }
+    .warning { color: var(--warn); font-weight: 650; }
+    .error { color: var(--bad); font-weight: 650; }
+    .empty {
+      color: var(--muted);
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+  </style>
+  <script src="DALYCARE_atlas_payload.js"></script>
+</head>
+<body>
+  <header>
+    <h1>DALY-CARE Atlas</h1>
+    <p class="subtitle" id="atlas-subtitle">Loading atlas payload...</p>
+  </header>
+  <main>
+    <section>
+      <h2>Run Summary</h2>
+      <div id="summary" class="summary-grid"></div>
+    </section>
+    <section>
+      <h2>Source Catalog</h2>
+      <div id="sources"></div>
+    </section>
+    <section>
+      <h2>Checks</h2>
+      <div id="checks"></div>
+    </section>
+    <section>
+      <h2>Panels</h2>
+      <div id="panels"></div>
+    </section>
+  </main>
+  <script>
+    (function () {
+      const payload = window.DALYCARE_ATLAS_PAYLOAD || {};
+      const subtitle = document.getElementById("atlas-subtitle");
+      subtitle.textContent = `Generated ${payload.generated_at || "unknown"} from ${payload.source_count || 0} mapped sources.`;
+
+      function metric(label, value) {
+        const div = document.createElement("div");
+        div.className = "metric";
+        div.innerHTML = `<b>${value}</b><span>${label}</span>`;
+        return div;
+      }
+
+      const summary = document.getElementById("summary");
+      summary.appendChild(metric("Sources", payload.source_count || 0));
+      summary.appendChild(metric("Loaded", payload.loaded_source_count || 0));
+      summary.appendChild(metric("Columns", payload.column_count || 0));
+      summary.appendChild(metric("Checks", payload.check_count || 0));
+
+      function renderTable(rows, maxRows) {
+        if (!rows || !rows.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "No rows available.";
+          return empty;
+        }
+        const cols = Object.keys(rows[0]);
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        thead.innerHTML = `<tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
+        table.appendChild(thead);
+        const tbody = document.createElement("tbody");
+        rows.slice(0, maxRows || 100).forEach(row => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = cols.map(c => `<td>${escapeHtml(row[c])}</td>`).join("");
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        const wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+        wrap.appendChild(table);
+        return wrap;
+      }
+
+      function escapeHtml(value) {
+        if (value === null || value === undefined) return "";
+        return String(value).replace(/[&<>"']/g, ch => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
+        }[ch]));
+      }
+
+      document.getElementById("sources").appendChild(renderTable(payload.sources || [], 200));
+      document.getElementById("checks").appendChild(renderTable(payload.checks || [], 200));
+
+      const panels = document.getElementById("panels");
+      const panelData = payload.panels || {};
+      Object.keys(panelData).forEach(name => {
+        const h = document.createElement("h3");
+        h.textContent = name.replace(/_/g, " ");
+        panels.appendChild(h);
+        panels.appendChild(renderTable(panelData[name], 100));
+      });
+      if (!Object.keys(panelData).length) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = "No panel outputs were generated.";
+        panels.appendChild(empty);
+      }
+    })();
+  </script>
+</body>
+</html>

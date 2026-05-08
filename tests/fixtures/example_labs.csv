@@ -1,0 +1,6 @@
+patientid,analysiscode,samplingdate,result_value,source
+1,NPU03230,2021-01-01,12.1,SDS_labka
+2,NPU03230,2021-01-02,15.3,SDS_labka
+3,NPU19675,2021-01-03,0.81,SP_AlleProvesvar
+4,NPU19675,2021-01-04,1.25,SP_AlleProvesvar
+

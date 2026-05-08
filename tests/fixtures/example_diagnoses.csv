@@ -1,0 +1,6 @@
+patientid,diagnosis_code,diagnosis_date,source
+1,DC900,2021-02-01,LPR
+2,DD472,2021-03-01,LPR
+3,DC901,2021-04-01,LPR
+4,DJ189,2021-05-01,LPR
+

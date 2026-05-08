@@ -1,0 +1,8 @@
+.Rhistory
+.RData
+.Rproj.user/
+atlas_runs/
+logs/
+*.log
+*.tmp
+
