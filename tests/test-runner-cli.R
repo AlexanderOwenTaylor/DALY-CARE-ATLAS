@@ -27,11 +27,27 @@ expect_true(any(grepl("<source_map_path>", help_text, fixed = TRUE)), "CLI help 
 
 no_arg_error <- tryCatch(
   {
-    cli_env$run_atlas_cli(character())
+    no_arg_text <- capture.output(cli_env$run_atlas_cli(character()))
     NA_character_
   },
   error = function(e) conditionMessage(e)
 )
-expect_true(grepl("Usage:", no_arg_error, fixed = TRUE), "CLI with no args should raise usage without quitting R.")
+expect_true(is.na(no_arg_error), "CLI with no args should print guidance without quitting R.")
+expect_true(any(grepl("No source map was provided", no_arg_text, fixed = TRUE)), "CLI with no args should explain the missing source map.")
+
+one_arg_call <- NULL
+cli_env$run_atlas_from_source <- function(project_root, source_map_path, output_root, mode) {
+  one_arg_call <<- list(
+    project_root = project_root,
+    source_map_path = source_map_path,
+    output_root = output_root,
+    mode = mode
+  )
+  invisible(list(run_dir = "not-run", html = "not-run"))
+}
+capture.output(cli_env$run_atlas_cli(c(root)))
+expect_equal(one_arg_call$source_map_path, "config/source-map.dalycare.tsv", "One-argument project-root mode should infer the default source map.")
+expect_equal(one_arg_call$output_root, "atlas_runs", "One-argument project-root mode should use the default output root.")
+expect_equal(one_arg_call$mode, "report", "One-argument project-root mode should use report mode.")
 
 restore_source_only()

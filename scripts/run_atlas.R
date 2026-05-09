@@ -2,10 +2,12 @@ usage <- paste(
   "Usage:",
   "  Rscript scripts/run_atlas.R <project_root> <source_map_path> [output_root] [mode]",
   "  Rscript scripts/run_atlas.R <source_map_path> [output_root] [mode]",
+  "  Rscript scripts/run_atlas.R <project_root>",
   "",
   "Examples:",
   "  Rscript scripts/run_atlas.R . config/source-map.example.tsv atlas_runs report",
   "  Rscript scripts/run_atlas.R config/source-map.dalycare.tsv atlas_runs report",
+  "  Rscript scripts/run_atlas.R .",
   sep = "\n"
 )
 
@@ -76,11 +78,24 @@ run_atlas_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
     return(invisible(NULL))
   }
 
-  if (length(args) == 0 || length(args) > 4) {
+  if (length(args) == 0) {
+    cat(usage, "\n")
+    cat("\nNo source map was provided. In R/RStudio, run:\n")
+    cat("  source(\"scripts/run_atlas.R\")\n")
+    cat("  result <- run_atlas_from_source(source_map_path = \"config/source-map.dalycare.tsv\")\n")
+    return(invisible(NULL))
+  }
+
+  if (length(args) > 4) {
     stop(usage, call. = FALSE)
   }
 
-  if (length(args) >= 2 && is_project_root_arg(args[[1]])) {
+  if (length(args) == 1 && is_project_root_arg(args[[1]])) {
+    project_root_arg <- args[[1]]
+    source_map_path <- default_source_map(project_root_arg)
+    output_root <- "atlas_runs"
+    mode <- "report"
+  } else if (length(args) >= 2 && is_project_root_arg(args[[1]])) {
     project_root_arg <- args[[1]]
     source_map_path <- args[[2]]
     output_root <- if (length(args) >= 3) args[[3]] else "atlas_runs"
