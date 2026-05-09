@@ -21,5 +21,5 @@ report <- check_dalycare_bootstrap(
 )
 write_dalycare_preflight_report(report)
 if (dalycare_preflight_has_errors(report)) {
-  quit(status = 1L, save = "no")
+  quit(status = 1L, save = "no", runLast = FALSE)
 }

@@ -1,5 +1,3 @@
-args <- commandArgs(trailingOnly = TRUE)
-
 usage <- paste(
   "Usage:",
   "  Rscript scripts/run_atlas.R <project_root> <source_map_path> [output_root] [mode]",
@@ -33,44 +31,51 @@ is_project_root_arg <- function(path) {
     file.exists(file.path(path, "scripts", "run_atlas.R"))
 }
 
-if (length(args) == 0 || any(args %in% c("-h", "--help"))) {
-  cat(usage, "\n")
-  quit(status = if (length(args) == 0) 1 else 0)
+run_atlas_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
+  if (any(args %in% c("-h", "--help"))) {
+    cat(usage, "\n")
+    return(invisible(NULL))
+  }
+
+  if (length(args) == 0 || length(args) > 4) {
+    stop(usage, call. = FALSE)
+  }
+
+  if (length(args) >= 2 && is_project_root_arg(args[[1]])) {
+    project_root_arg <- args[[1]]
+    source_map_path <- args[[2]]
+    output_root <- if (length(args) >= 3) args[[3]] else "atlas_runs"
+    mode <- if (length(args) >= 4) args[[4]] else "report"
+  } else {
+    project_root_arg <- find_project_root()
+    source_map_path <- args[[1]]
+    output_root <- if (length(args) >= 2) args[[2]] else "atlas_runs"
+    mode <- if (length(args) >= 3) args[[3]] else "report"
+  }
+
+  project_root <- normalizePath(project_root_arg, winslash = "/", mustWork = FALSE)
+  source(file.path(project_root, "R", "utils.R"))
+  source(file.path(project_root, "R", "source_map.R"))
+  source(file.path(project_root, "R", "loader.R"))
+  source(file.path(project_root, "R", "npu_dictionary.R"))
+  source(file.path(project_root, "R", "profiler.R"))
+  source(file.path(project_root, "R", "db_profile.R"))
+  source(file.path(project_root, "R", "html.R"))
+  source(file.path(project_root, "R", "run_atlas.R"))
+
+  result <- run_atlas(
+    project_root = project_root,
+    source_map_path = source_map_path,
+    output_root = output_root,
+    mode = mode
+  )
+
+  cat("DALY-CARE atlas run complete\n")
+  cat("Run directory:", result$run_dir, "\n")
+  cat("HTML:", result$html, "\n")
+  invisible(result)
 }
 
-if (length(args) > 4) {
-  stop(usage, call. = FALSE)
+if (!identical(Sys.getenv("DALYCARE_ATLAS_SOURCE_ONLY"), "TRUE")) {
+  invisible(run_atlas_cli())
 }
-
-if (length(args) >= 2 && is_project_root_arg(args[[1]])) {
-  project_root_arg <- args[[1]]
-  source_map_path <- args[[2]]
-  output_root <- if (length(args) >= 3) args[[3]] else "atlas_runs"
-  mode <- if (length(args) >= 4) args[[4]] else "report"
-} else {
-  project_root_arg <- find_project_root()
-  source_map_path <- args[[1]]
-  output_root <- if (length(args) >= 2) args[[2]] else "atlas_runs"
-  mode <- if (length(args) >= 3) args[[3]] else "report"
-}
-
-project_root <- normalizePath(project_root_arg, winslash = "/", mustWork = FALSE)
-source(file.path(project_root, "R", "utils.R"))
-source(file.path(project_root, "R", "source_map.R"))
-source(file.path(project_root, "R", "loader.R"))
-source(file.path(project_root, "R", "npu_dictionary.R"))
-source(file.path(project_root, "R", "profiler.R"))
-source(file.path(project_root, "R", "db_profile.R"))
-source(file.path(project_root, "R", "html.R"))
-source(file.path(project_root, "R", "run_atlas.R"))
-
-result <- run_atlas(
-  project_root = project_root,
-  source_map_path = source_map_path,
-  output_root = output_root,
-  mode = mode
-)
-
-cat("DALY-CARE atlas run complete\n")
-cat("Run directory:", result$run_dir, "\n")
-cat("HTML:", result$html, "\n")

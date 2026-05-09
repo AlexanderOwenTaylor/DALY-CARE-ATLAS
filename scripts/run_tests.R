@@ -24,8 +24,7 @@ if (length(failures)) {
   for (nm in names(failures)) {
     cat("-", nm, ":", failures[[nm]], "\n")
   }
-  quit(status = 1)
+  quit(status = 1, save = "no", runLast = FALSE)
 }
 
 cat("\nAll tests passed.\n")
-
