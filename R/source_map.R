@@ -47,7 +47,10 @@ valid_profile_modes <- function() {
 }
 
 source_map_optional_metadata <- function() {
-  c("domain", "subdomain", "atlas_role")
+  c(
+    "domain", "subdomain", "atlas_role",
+    "load_strategy", "db_name", "schema", "table", "chunk_size", "allow_full_load"
+  )
 }
 
 source_map_warnings <- function(source_map, project_root = ".") {

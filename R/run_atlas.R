@@ -1,5 +1,6 @@
 run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
-                      mode = "report", bootstrap_path = Sys.getenv("DALYCARE_BOOTSTRAP_PATH")) {
+                      mode = "report", bootstrap_path = Sys.getenv("DALYCARE_BOOTSTRAP_PATH"),
+                      db_adapter = NULL) {
   mode <- match.arg(mode, c("report", "strict"))
   project_root <- normalizePath(project_root, winslash = "/", mustWork = FALSE)
   source_map_path <- if (file.exists(source_map_path)) source_map_path else file.path(project_root, source_map_path)
@@ -30,6 +31,34 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   for (warning in validation_warnings(source_map, output_root = output_root, project_root = project_root)) {
     log_event("warning", warning$table_name, warning$message)
   }
+  if (is.null(db_adapter) && any(source_map$source_type == "dataset") && atlas_db_profile_enabled()) {
+    db_adapter <- dalycare_db_adapter(bootstrap_path = bootstrap_path)
+  }
+  source_resolution <- resolve_dalycare_sources(source_map, db_adapter = db_adapter)
+  memory_plan <- memory_plan_for_sources(source_map, source_resolution)
+  for (i in seq_len(nrow(source_resolution))) {
+    row <- source_resolution[i, , drop = FALSE]
+    if (row$resolution_status[[1]] %in% c("missing", "ambiguous", "db_unavailable")) {
+      log_event("warning", row$table_name[[1]], paste("DB source resolution:", row$message[[1]]))
+    }
+  }
+
+  memory_log_rows <- list()
+  log_memory <- function(plan_row) {
+    memory_log_rows[[length(memory_log_rows) + 1L]] <<- data.frame(
+      timestamp = atlas_timestamp(),
+      table_name = plan_row$table_name[[1]],
+      source_type = plan_row$source_type[[1]],
+      chosen_strategy = plan_row$chosen_strategy[[1]],
+      memory_status = plan_row$memory_status[[1]],
+      row_count = suppressWarnings(as.numeric(plan_row$row_count[[1]] %||% NA_real_)),
+      chunk_size = suppressWarnings(as.integer(plan_row$chunk_size[[1]] %||% NA_integer_)),
+      max_full_load_rows = suppressWarnings(as.integer(plan_row$max_full_load_rows[[1]] %||% NA_integer_)),
+      allow_full_load = as.logical(plan_row$allow_full_load[[1]] %||% FALSE),
+      message = plan_row$message[[1]],
+      stringsAsFactors = FALSE
+    )
+  }
 
   source_rows <- list()
   column_rows <- list()
@@ -50,23 +79,71 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     sp_operational_sources = data.frame(stringsAsFactors = FALSE),
     source_availability_drift = data.frame(stringsAsFactors = FALSE)
   )
+  stream_paths <- list(
+    sources = file.path(output_dir, "atlas_sources.csv"),
+    columns = file.path(output_dir, "atlas_columns.csv"),
+    column_profiles = file.path(output_dir, "atlas_column_profiles.csv"),
+    column_top_values = file.path(output_dir, "atlas_column_top_values.csv"),
+    checks = file.path(output_dir, "atlas_checks.csv"),
+    value_frequencies = file.path(output_dir, "atlas_value_frequencies.csv")
+  )
 
   for (i in seq_len(nrow(source_map))) {
     record <- source_map[i, , drop = FALSE]
     table_name <- record$table_name[[1]]
+    plan_row <- memory_plan[memory_plan$source_index == i, , drop = FALSE][1, , drop = FALSE]
+    resolution_row <- source_resolution[source_resolution$source_index == i, , drop = FALSE][1, , drop = FALSE]
+    log_memory(plan_row)
+    log_event("info", table_name, paste("Using load strategy:", plan_row$chosen_strategy[[1]]))
+    if (identical(plan_row$chosen_strategy[[1]], "skipped_risky_full_load")) {
+      message <- paste("Skipped source:", plan_row$message[[1]])
+      log_event("warning", table_name, message)
+      source_out <- append_runtime_source_context(
+        skipped_source_row(record, message),
+        plan_row,
+        resolution_row
+      )
+      check_out <- check_row(table_name, "source_skipped_risky_full_load", "warning", message)
+      append_csv_rows(source_out, stream_paths$sources)
+      append_csv_rows(check_out, stream_paths$checks)
+      next
+    }
     log_event("info", table_name, "Loading source")
     result <- tryCatch({
-      data <- load_source_data(record, project_root = project_root, bootstrap_path = bootstrap_path)
-      prof <- profile_source(
-        data = data,
-        table_name = table_name,
-        source_type = record$source_type[[1]],
-        source = record$source[[1]],
-        profile_mode = record$profile_mode[[1]]
-      )
-      rm(data)
-      gc(verbose = FALSE)
-      prof
+      if (plan_row$chosen_strategy[[1]] %in% c("db_aggregate", "db_chunked")) {
+        if (identical(plan_row$chosen_strategy[[1]], "db_chunked") && is.function(db_adapter$chunked_profile_table)) {
+          normalize_profile_result(db_adapter$chunked_profile_table(
+            db_name = resolution_row$db_name[[1]],
+            schema = resolution_row$schema[[1]],
+            table = resolution_row$table[[1]],
+            table_name = table_name,
+            source_type = "dataset",
+            source = record$source[[1]],
+            profile_mode = record$profile_mode[[1]],
+            chunk_size = plan_row$chunk_size[[1]],
+            min_cell_count = atlas_min_cell_count()
+          ))
+        } else {
+          profile_db_source(
+            source_record = record,
+            resolution_row = resolution_row,
+            db_adapter = db_adapter,
+            profile_mode = record$profile_mode[[1]]
+          )
+        }
+      } else {
+        data <- load_source_data(record, project_root = project_root, bootstrap_path = bootstrap_path)
+        prof <- profile_source(
+          data = data,
+          table_name = table_name,
+          source_type = record$source_type[[1]],
+          source = record$source[[1]],
+          profile_mode = record$profile_mode[[1]]
+        )
+        rm(data)
+        gc(verbose = FALSE)
+        prof
+      }
     }, error = function(e) {
       if (identical(mode, "strict")) stop(e)
       list(error = conditionMessage(e))
@@ -74,33 +151,42 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
 
     if (!is.null(result$error)) {
       log_event("error", table_name, result$error)
-      source_rows[[length(source_rows) + 1L]] <- failed_source_row(record, result$error)
-      check_rows[[length(check_rows) + 1L]] <- check_row(table_name, "source_load_failed", "error", result$error)
+      source_out <- append_runtime_source_context(
+        failed_source_row(record, result$error),
+        plan_row,
+        resolution_row
+      )
+      check_out <- check_row(table_name, "source_load_failed", "error", result$error)
+      append_csv_rows(source_out, stream_paths$sources)
+      append_csv_rows(check_out, stream_paths$checks)
       next
     }
 
     result$source <- append_source_metadata(result$source, record)
-    source_rows[[length(source_rows) + 1L]] <- result$source
-    column_rows[[length(column_rows) + 1L]] <- result$columns
-    column_profile_rows[[length(column_profile_rows) + 1L]] <- result$column_profiles
-    column_top_value_rows[[length(column_top_value_rows) + 1L]] <- result$column_top_values
-    check_rows[[length(check_rows) + 1L]] <- result$checks
-    frequency_rows[[length(frequency_rows) + 1L]] <- result$value_frequencies
+    result$source <- append_runtime_source_context(result$source, plan_row, resolution_row)
+    append_csv_rows(result$source, stream_paths$sources)
+    append_csv_rows(result$columns, stream_paths$columns)
+    append_csv_rows(result$column_profiles, stream_paths$column_profiles)
+    append_csv_rows(result$column_top_values, stream_paths$column_top_values)
+    append_csv_rows(result$checks, stream_paths$checks)
+    append_csv_rows(result$value_frequencies, stream_paths$value_frequencies)
     for (panel_name in names(result$panels)) {
       panels[[panel_name]] <- bind_rows_base(list(panels[[panel_name]], result$panels[[panel_name]]))
     }
     log_event("info", table_name, "Profiled source")
   }
 
-  sources <- bind_rows_base(source_rows)
-  columns <- bind_rows_base(column_rows)
-  column_profiles <- add_source_context_to_column_outputs(bind_rows_base(column_profile_rows), sources)
-  column_top_values <- add_source_context_to_column_outputs(bind_rows_base(column_top_value_rows), sources)
-  checks <- bind_rows_base(check_rows)
-  frequencies <- bind_rows_base(frequency_rows)
+  sources <- safe_read_output_csv(stream_paths$sources, bind_rows_base(source_rows))
+  columns <- safe_read_output_csv(stream_paths$columns, bind_rows_base(column_rows))
+  column_profiles <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_profiles, bind_rows_base(column_profile_rows)), sources)
+  column_top_values <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_top_values, bind_rows_base(column_top_value_rows)), sources)
+  checks <- safe_read_output_csv(stream_paths$checks, bind_rows_base(check_rows))
+  frequencies <- safe_read_output_csv(stream_paths$value_frequencies, bind_rows_base(frequency_rows))
   panels$source_availability_drift <- source_availability_panel(sources)
 
   output_paths <- list()
+  output_paths$source_resolution <- write_csv(source_resolution, file.path(output_dir, "atlas_source_resolution.csv"))
+  output_paths$memory_plan <- write_csv(memory_plan, file.path(output_dir, "atlas_memory_plan.csv"))
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
   output_paths$columns <- write_csv(columns, file.path(output_dir, "atlas_columns.csv"))
@@ -120,16 +206,28 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panel_paths[[panel_name]] <- write_csv(panels[[panel_name]], file.path(panel_dir, paste0(panel_name, ".csv")))
   }
 
+  payload_sources <- safe_read_output_csv(output_paths$sources, sources)
+  payload_columns <- safe_read_output_csv(output_paths$columns, columns)
+  payload_checks <- safe_read_output_csv(output_paths$checks, checks)
+  payload_column_profiles <- safe_read_output_csv(output_paths$column_profiles, column_profiles)
+  payload_column_top_values <- safe_read_output_csv(output_paths$column_top_values, column_top_values)
+  payload_run_summary <- safe_read_output_csv(output_paths$run_summary, run_summary)
+  payload_panels <- lapply(names(panels), function(panel_name) {
+    safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
+  })
+  names(payload_panels) <- names(panels)
+
   payload <- atlas_payload(
-    run_id, generated_at, sources, columns, checks, panels,
-    column_profiles = column_profiles,
-    column_top_values = column_top_values,
-    run_summary = run_summary
+    run_id, generated_at, payload_sources, payload_columns, payload_checks, payload_panels,
+    column_profiles = payload_column_profiles,
+    column_top_values = payload_column_top_values,
+    run_summary = payload_run_summary
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
 
-  all_paths <- c(output_paths, panel_paths, list(html = site_paths$html, payload = site_paths$payload))
+  memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
+  all_paths <- c(output_paths, panel_paths, list(html = site_paths$html, payload = site_paths$payload, memory_log = memory_log_path))
   manifest <- output_manifest(all_paths, run_dir = run_dir)
   manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
   log_event("info", "", "Output manifest written")
@@ -191,6 +289,16 @@ append_source_metadata <- function(source_row, record) {
   source_row
 }
 
+append_runtime_source_context <- function(source_row, plan_row, resolution_row) {
+  source_row$chosen_strategy <- plan_row$chosen_strategy[[1]] %||% ""
+  source_row$memory_status <- plan_row$memory_status[[1]] %||% ""
+  source_row$resolution_status <- resolution_row$resolution_status[[1]] %||% ""
+  source_row$db_name <- resolution_row$db_name[[1]] %||% ""
+  source_row$schema <- resolution_row$schema[[1]] %||% ""
+  source_row$table <- resolution_row$table[[1]] %||% ""
+  source_row
+}
+
 failed_source_row <- function(record, message) {
   append_source_metadata(data.frame(
     table_name = record$table_name[[1]],
@@ -211,12 +319,38 @@ failed_source_row <- function(record, message) {
   ), record)
 }
 
+skipped_source_row <- function(record, message) {
+  append_source_metadata(data.frame(
+    table_name = record$table_name[[1]],
+    source_type = record$source_type[[1]],
+    source = record$source[[1]],
+    profile_mode = record$profile_mode[[1]],
+    load_status = "skipped",
+    n_rows = NA_integer_,
+    n_cols = NA_integer_,
+    id_column_guess = NA_character_,
+    date_column_guess = NA_character_,
+    min_date = NA_character_,
+    max_date = NA_character_,
+    schema_signature = NA_character_,
+    profiled_at = atlas_timestamp(),
+    message = message,
+    stringsAsFactors = FALSE
+  ), record)
+}
+
+safe_read_output_csv <- function(path, fallback = data.frame(stringsAsFactors = FALSE)) {
+  if (!file.exists(path)) return(fallback)
+  tryCatch(read_delimited_file(path), error = function(e) fallback)
+}
+
 resource_catalog <- function(sources) {
   if (!nrow(sources)) return(sources)
   sources[, intersect(
     c(
       "table_name", "source_type", "source", "domain", "subdomain", "atlas_role",
-      "load_status", "n_rows", "n_cols", "min_date", "max_date",
+      "load_status", "chosen_strategy", "memory_status", "resolution_status",
+      "db_name", "schema", "table", "n_rows", "n_cols", "min_date", "max_date",
       "id_column_guess", "date_column_guess"
     ),
     names(sources)
@@ -273,6 +407,7 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
     data.frame(metric = "mapped_sources", value = as.character(nrow(source_map)), stringsAsFactors = FALSE),
     data.frame(metric = "loaded_sources", value = as.character(sum(sources$load_status == "ok", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "failed_sources", value = as.character(sum(sources$load_status == "failed", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "skipped_sources", value = as.character(sum(sources$load_status == "skipped", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "columns_profiled", value = as.character(nrow(columns)), stringsAsFactors = FALSE),
     data.frame(metric = "column_profile_rows", value = as.character(nrow(column_profiles)), stringsAsFactors = FALSE),
     data.frame(metric = "column_top_value_rows", value = as.character(nrow(column_top_values)), stringsAsFactors = FALSE),
@@ -281,6 +416,9 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
     data.frame(metric = "errors", value = as.character(sum(checks$severity == "error", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "value_frequency_rows", value = as.character(nrow(frequencies)), stringsAsFactors = FALSE),
     data.frame(metric = "panel_rows", value = as.character(panel_rows), stringsAsFactors = FALSE),
+    data.frame(metric = "db_aggregate_sources", value = as.character(sum(sources$chosen_strategy == "db_aggregate", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "dataset_full_load_fallback_sources", value = as.character(sum(sources$chosen_strategy == "dataset_full_load_fallback", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "skipped_risky_full_load_sources", value = as.character(sum(sources$chosen_strategy == "skipped_risky_full_load", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "min_cell_count", value = as.character(atlas_min_cell_count()), stringsAsFactors = FALSE)
   )
   bind_rows_base(rows)
@@ -292,6 +430,7 @@ run_summary_log_message <- function(run_summary) {
     "mapped_sources=", values[["mapped_sources"]] %||% "0",
     ", loaded_sources=", values[["loaded_sources"]] %||% "0",
     ", failed_sources=", values[["failed_sources"]] %||% "0",
+    ", skipped_sources=", values[["skipped_sources"]] %||% "0",
     ", checks=", values[["checks"]] %||% "0",
     ", panel_rows=", values[["panel_rows"]] %||% "0",
     sep = ""

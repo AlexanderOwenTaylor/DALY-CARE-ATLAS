@@ -12,6 +12,8 @@ result <- run_atlas(
 )
 
 expect_file(file.path(result$run_dir, "outputs", "atlas_resource_catalog.csv"))
+expect_file(file.path(result$run_dir, "outputs", "atlas_source_resolution.csv"))
+expect_file(file.path(result$run_dir, "outputs", "atlas_memory_plan.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_sources.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_columns.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_column_profiles.csv"))
@@ -29,6 +31,7 @@ expect_file(file.path(result$run_dir, "outputs", "panels", "lyfo_clinical_profil
 expect_file(file.path(result$run_dir, "outputs", "panels", "cll_clinical_profile.csv"))
 expect_file(file.path(result$run_dir, "outputs", "output_manifest.csv"))
 expect_file(file.path(result$run_dir, "logs", "atlas_execution_log.tsv"))
+expect_file(file.path(result$run_dir, "logs", "atlas_memory_log.tsv"))
 expect_file(result$html)
 expect_file(result$payload)
 
@@ -73,12 +76,13 @@ freq <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_value_freque
 expect_false(any(freq$column_name == "patientid"), "Public value frequencies must not expose patient IDs.")
 
 manifest <- utils::read.csv(file.path(result$run_dir, "outputs", "output_manifest.csv"), stringsAsFactors = FALSE)
-expect_true(all(c("resource_catalog", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "run_summary", "html", "payload") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
+expect_true(all(c("resource_catalog", "source_resolution", "memory_plan", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
 expect_true(all(c("registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list registry panel artifacts.")
 expect_true(all(manifest$status == "ok"), "Manifest artifacts should exist.")
 
 sources <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_sources.csv"), stringsAsFactors = FALSE)
 expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(sources)), "Source metadata should be preserved in atlas_sources.csv.")
+expect_true(all(c("chosen_strategy", "memory_status", "resolution_status") %in% names(sources)), "Source rows should record memory-safe profiling decisions.")
 expect_true(!any(sources$date_column_guess == "patientid"), "Patient identifiers should not be guessed as date columns.")
 expect_true("2021-01-01" %in% sources$min_date, "Date ranges should be emitted as ISO dates.")
 
@@ -103,8 +107,13 @@ expect_true(any(damyda_numeric$field == "albumin"), "Run output should include D
 expect_false(any(c("value", "examples", "distinct_sample") %in% names(damyda_numeric)), "Run output numeric registry panel should be aggregate-only.")
 
 run_summary <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_run_summary.csv"), stringsAsFactors = FALSE)
-expect_true(all(c("mapped_sources", "loaded_sources", "panel_rows", "min_cell_count") %in% run_summary$metric), "Run summary should include compact run metrics.")
+expect_true(all(c("mapped_sources", "loaded_sources", "skipped_sources", "panel_rows", "min_cell_count", "db_aggregate_sources", "dataset_full_load_fallback_sources") %in% run_summary$metric), "Run summary should include compact run and memory metrics.")
 expect_true("1" %in% run_summary$value[run_summary$metric == "min_cell_count"], "Run summary should record the active minimum cell count.")
 
 log_text <- paste(readLines(file.path(result$run_dir, "logs", "atlas_execution_log.tsv"), warn = FALSE), collapse = "\n")
 expect_true(grepl("Run summary:", log_text, fixed = TRUE), "Execution log should include a run summary line.")
+
+memory_plan <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_memory_plan.csv"), stringsAsFactors = FALSE)
+expect_true(all(memory_plan$chosen_strategy == "file_full_load"), "Fixture file sources should use the file full-load strategy.")
+memory_log <- utils::read.delim(file.path(result$run_dir, "logs", "atlas_memory_log.tsv"), stringsAsFactors = FALSE)
+expect_true(all(c("chosen_strategy", "memory_status", "max_full_load_rows") %in% names(memory_log)), "Memory log should record strategy and guardrail decisions.")

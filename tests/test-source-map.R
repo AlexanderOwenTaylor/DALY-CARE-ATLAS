@@ -37,9 +37,10 @@ expect_true(any(risky$warning_id == "risky_output_root"), "Risky output location
 
 metadata_map <- tempfile(fileext = ".tsv")
 writeLines(c(
-  "table_name\tsource_type\tsource\tpriority\tprofile_mode\tdomain\tsubdomain\tatlas_role",
-  "RKKP_CLL\tdataset\tRKKP_CLL\t1\tsummary\tRKKP\tCLL\tclinical_registry"
+  "table_name\tsource_type\tsource\tpriority\tprofile_mode\tdomain\tsubdomain\tatlas_role\tload_strategy\tdb_name\tschema\ttable\tchunk_size\tallow_full_load",
+  "RKKP_CLL\tdataset\tRKKP_CLL\t1\tsummary\tRKKP\tCLL\tclinical_registry\tdb_aggregate\tcore\tpublic\tRKKP_CLL\t25000\tFALSE"
 ), metadata_map)
 metadata_source_map <- read_source_map(metadata_map)
-expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(metadata_source_map)), "Optional DALY-CARE metadata columns should be preserved.")
+expect_true(all(c("domain", "subdomain", "atlas_role", "load_strategy", "db_name", "schema", "table", "chunk_size", "allow_full_load") %in% names(metadata_source_map)), "Optional DALY-CARE metadata and runtime columns should be preserved.")
 expect_equal(metadata_source_map$atlas_role[[1]], "clinical_registry", "Optional atlas_role metadata should survive normalization.")
+expect_equal(metadata_source_map$load_strategy[[1]], "db_aggregate", "Optional load_strategy should survive normalization.")

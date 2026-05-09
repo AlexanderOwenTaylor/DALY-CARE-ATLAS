@@ -8,6 +8,7 @@ source(file.path(project_root, "R", "utils.R"))
 source(file.path(project_root, "R", "source_map.R"))
 source(file.path(project_root, "R", "loader.R"))
 source(file.path(project_root, "R", "profiler.R"))
+source(file.path(project_root, "R", "db_profile.R"))
 source(file.path(project_root, "R", "html.R"))
 source(file.path(project_root, "R", "run_atlas.R"))
 
@@ -25,4 +26,3 @@ result <- run_atlas(
 cat("DALY-CARE atlas run complete\n")
 cat("Run directory:", result$run_dir, "\n")
 cat("HTML:", result$html, "\n")
-

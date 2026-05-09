@@ -57,6 +57,27 @@ write_csv <- function(x, path) {
   invisible(path)
 }
 
+append_csv_rows <- function(x, path) {
+  if (is.null(x) || !is.data.frame(x) || !nrow(x)) return(invisible(path))
+  dir_create(dirname(path))
+  if (!file.exists(path)) {
+    utils::write.csv(x, file = path, row.names = FALSE, na = "")
+  } else {
+    utils::write.table(
+      x,
+      file = path,
+      sep = ",",
+      row.names = FALSE,
+      col.names = FALSE,
+      append = TRUE,
+      quote = TRUE,
+      qmethod = "double",
+      na = ""
+    )
+  }
+  invisible(path)
+}
+
 write_tsv <- function(x, path) {
   dir_create(dirname(path))
   if (is.null(x)) x <- data.frame(stringsAsFactors = FALSE)

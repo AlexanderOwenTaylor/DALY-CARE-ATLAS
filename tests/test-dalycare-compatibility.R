@@ -4,7 +4,7 @@ source_test_runtime(root)
 
 dalycare_map_path <- file.path(root, "config", "source-map.dalycare.tsv")
 dalycare_map <- read_source_map(dalycare_map_path, project_root = root)
-expect_true(all(c("table_name", "source_type", "source", "priority", "profile_mode", "domain", "subdomain", "atlas_role") %in% names(dalycare_map)), "DALY-CARE preset should include required and metadata columns.")
+expect_true(all(c("table_name", "source_type", "source", "priority", "profile_mode", "domain", "subdomain", "atlas_role", "load_strategy", "db_name", "schema", "table", "chunk_size", "allow_full_load") %in% names(dalycare_map)), "DALY-CARE preset should include required, metadata, and memory-strategy columns.")
 expect_true(all(c(
   "patient", "RKKP_CLL", "RKKP_LYFO", "RKKP_DaMyDa",
   "SP_AdministreretMedicin", "SP_OrdineretMedicin", "SP_AlleProvesvar",

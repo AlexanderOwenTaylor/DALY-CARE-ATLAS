@@ -44,6 +44,17 @@ and registry categorical outputs. Override this only for local fixture testing:
 DALYCARE_MIN_CELL_COUNT=5 Rscript scripts/run_atlas.R /path/to/project config/source-map.tsv atlas_runs report
 ```
 
+For DALY database-backed sources, the runner now prefers DB-side aggregate
+profiling before it considers `load_dataset()`. These guardrails keep large
+tables off the R heap unless a source is explicitly permitted to use the legacy
+full-load path:
+
+```sh
+DALYCARE_ATLAS_DB_PROFILE=TRUE
+DALYCARE_ATLAS_CHUNK_SIZE=50000
+DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS=100000
+```
+
 ## Source Map
 
 The source map is a TSV/CSV with these required columns:
@@ -55,8 +66,9 @@ The source map is a TSV/CSV with these required columns:
 - `profile_mode`
 
 File-backed sources support `.csv`, `.tsv`, `.txt`, `.rds`, and `.rda/.RData`.
-Dataset-backed sources call DALY `load_dataset()` and support both return-value
-and side-effect loader contracts.
+Dataset-backed sources first try DB aggregate profiling. `load_dataset()` remains
+available for small fixtures and explicit fallback cases, including both
+return-value and side-effect loader contracts.
 
 `config/source-map.dalycare.tsv` is the curated DALY-CARE preset. It covers the
 canonical source universe from upstream `load_all_data()`: `patient`, RKKP
@@ -67,7 +79,10 @@ survival views where available.
 Source maps may also include optional `domain`, `subdomain`, and `atlas_role`
 columns. The atlas preserves these in `atlas_sources.csv`, the resource catalog,
 and the static HTML payload so operators can filter and review sources by DALY
-area.
+area. DALY DB runs may also include `load_strategy`, `db_name`, `schema`,
+`table`, `chunk_size`, and `allow_full_load`. By default `load_strategy = auto`
+means "use DB aggregates when the table resolves; otherwise skip risky full
+loads unless the table is small enough or `allow_full_load = TRUE`."
 
 `profile_mode` controls how much public aggregate evidence is written:
 
@@ -81,6 +96,8 @@ area.
 Each run writes `atlas_runs/<run_id>/` with:
 
 - `outputs/atlas_resource_catalog.csv`
+- `outputs/atlas_source_resolution.csv`
+- `outputs/atlas_memory_plan.csv`
 - `outputs/atlas_sources.csv`
 - `outputs/atlas_columns.csv`
 - `outputs/atlas_column_profiles.csv`
@@ -91,6 +108,7 @@ Each run writes `atlas_runs/<run_id>/` with:
 - `outputs/panels/*.csv`
 - `outputs/output_manifest.csv`
 - `logs/atlas_execution_log.tsv`
+- `logs/atlas_memory_log.tsv`
 - `site/DALYCARE_atlas.html`
 - `site/DALYCARE_atlas_payload.js`
 

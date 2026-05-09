@@ -159,7 +159,8 @@ catalog_rows <- function(sources) {
     return(empty_df(
       table_name = character(), domain = character(), subdomain = character(),
       atlas_role = character(), source_type = character(), source = character(),
-      profile_mode = character(), load_status = character(), n_rows = numeric(),
+      profile_mode = character(), load_status = character(), chosen_strategy = character(),
+      memory_status = character(), resolution_status = character(), n_rows = numeric(),
       n_cols = numeric(), date_range = character(), message = character()
     ))
   }
@@ -178,6 +179,9 @@ catalog_rows <- function(sources) {
     source = get_col("source"),
     profile_mode = get_col("profile_mode"),
     load_status = get_col("load_status"),
+    chosen_strategy = get_col("chosen_strategy"),
+    memory_status = get_col("memory_status"),
+    resolution_status = get_col("resolution_status"),
     n_rows = suppressWarnings(as.numeric(get_col("n_rows", NA))),
     n_cols = suppressWarnings(as.numeric(get_col("n_cols", NA))),
     date_range = date_range,
@@ -336,7 +340,8 @@ public_sources <- function(sources) {
   sources[, intersect(
     c(
       "table_name", "source_type", "source", "domain", "subdomain", "atlas_role",
-      "profile_mode", "load_status", "n_rows", "n_cols", "min_date", "max_date", "message"
+      "profile_mode", "load_status", "chosen_strategy", "memory_status",
+      "resolution_status", "n_rows", "n_cols", "min_date", "max_date", "message"
     ),
     names(sources)
   ), drop = FALSE]

@@ -1,49 +1,49 @@
-table_name	source_type	source	priority	profile_mode	domain	subdomain	atlas_role
-patient	dataset	patient	1	summary	Core	Patient	identity_backbone
-RKKP_CLL	dataset	RKKP_CLL	10	summary	RKKP	CLL	clinical_registry
-RKKP_LYFO	dataset	RKKP_LYFO	11	summary	RKKP	LYFO	clinical_registry
-RKKP_DaMyDa	dataset	RKKP_DaMyDa	12	summary	RKKP	DaMyDa	clinical_registry
-SP_AdministreretMedicin	dataset	SP_AdministreretMedicin	20	summary	SP	Medication	administered_medicine
-SP_OrdineretMedicin	dataset	SP_OrdineretMedicin	21	summary	SP	Medication	ordered_medicine
-SP_ADT_haendelser	dataset	SP_ADT_haendelser	22	summary	SP	ADT	encounter_events
-SP_AlleProvesvar	dataset	SP_AlleProvesvar	23	summary	SP	Laboratory	lab_results
-SP_Behandlingsniveau	dataset	SP_Behandlingsniveau	24	summary	SP	Treatment	treatment_level
-SP_BilleddiagnostiskeUndersøgelser_Del1	dataset	SP_BilleddiagnostiskeUndersøgelser_Del1	25	summary	SP	Imaging	imaging
-SP_BilleddiagnostiskeUndersøgelser_Del2	dataset	SP_BilleddiagnostiskeUndersøgelser_Del2	26	summary	SP	Imaging	imaging
-SP_Behandlingsplaner_Del1	dataset	SP_Behandlingsplaner_Del1	27	summary	SP	Treatment	treatment_plans
-SP_Bloddyrkning_Del1	dataset	SP_Bloddyrkning_Del1	28	summary	SP	Microbiology	blood_culture
-SP_Bloddyrkning_Del2	dataset	SP_Bloddyrkning_Del2	29	summary	SP	Microbiology	blood_culture
-SP_Bloddyrkning_Del3	dataset	SP_Bloddyrkning_Del3	30	summary	SP	Microbiology	blood_culture
-SP_Bloddyrkning_Del4	dataset	SP_Bloddyrkning_Del4	31	summary	SP	Microbiology	blood_culture
-SP_ITAOphold	dataset	SP_ITAOphold	32	summary	SP	ICU	icu_stays
-SP_Journalnotater_Del1	dataset	SP_Journalnotater_Del1	33	summary	SP	Notes	clinical_notes
-SP_SocialHX	dataset	SP_SocialHX	34	summary	SP	SocialHistory	social_history
-SP_VitaleVaerdier	dataset	SP_VitaleVaerdier	35	summary	SP	Vitals	vitals
-SDS_t_adm	dataset	SDS_t_adm	40	summary	SDS	LPR	admissions
-SDS_forloeb	dataset	SDS_forloeb	41	summary	SDS	LPR	care_pathways
-SDS_kontakter	dataset	SDS_kontakter	42	summary	SDS	LPR	contacts
-SDS_t_sksopr	dataset	SDS_t_sksopr	43	summary	SDS	LPR	procedures
-SDS_t_sksube	dataset	SDS_t_sksube	44	summary	SDS	LPR	sub_events
-SDS_t_diag	dataset	SDS_t_diag	45	summary	SDS	LPR	diagnoses
-SDS_t_udtilsgh	dataset	SDS_t_udtilsgh	46	summary	SDS	LPR	discharge_hospital
-SDS_procedurer_kirurgi	dataset	SDS_procedurer_kirurgi	47	summary	SDS	LPR3	surgical_procedures
-SDS_procedurer_andre	dataset	SDS_procedurer_andre	48	summary	SDS	LPR3	other_procedures
-SDS_diagnoser	dataset	SDS_diagnoser	49	summary	SDS	LPR3	diagnoses
-SDS_resultater	dataset	SDS_resultater	50	summary	SDS	LPR3	results
-SDS_koder	dataset	SDS_koder	51	summary	SDS	LPR3	codes
-SDS_organisationer	dataset	SDS_organisationer	52	summary	SDS	LPR3	organisations
-SDS_epikur	dataset	SDS_epikur	53	summary	SDS	ClinicalText	epikur
-SDS_indberetningmedpris	dataset	SDS_indberetningmedpris	54	summary	SDS	Medication	medicine_with_price
-SDS_pato	dataset	SDS_pato	55	summary	SDS	Pathology	pathology
-SDS_t_tumor	dataset	SDS_t_tumor	56	summary	SDS	Tumor	tumor
-SDS_lab_forsker	dataset	SDS_lab_forsker	57	summary	SDS	Laboratory	lab
-SDS_t_dodsaarsag_2	dataset	SDS_t_dodsaarsag_2	58	summary	SDS	Mortality	death_cause
-t_dalycare_diagnoses	dataset	t_dalycare_diagnoses	70	summary	DALY Views	Diagnosis	canonical_diagnosis_table
-view_diagnosses_all	dataset	view_diagnosses_all	71	schema	DALY Views	Diagnosis	documented_view
-view_diagnoses_all_hosp_region	dataset	view_diagnoses_all_hosp_region	72	schema	DALY Views	Diagnosis	documented_view
-view_dalycare_diagnoses	dataset	view_dalycare_diagnoses	73	schema	DALY Views	Diagnosis	documented_view
-view_date_death	dataset	view_date_death	74	schema	DALY Views	Survival	documented_view
-view_date_followup	dataset	view_date_followup	75	schema	DALY Views	Survival	documented_view
-view_true_date_death	dataset	view_true_date_death	76	schema	DALY Views	Survival	documented_view
-view_patient_table_os	dataset	view_patient_table_os	77	schema	DALY Views	Survival	documented_view
-view_create_patient_table	dataset	view_create_patient_table	78	schema	DALY Views	Survival	documented_view
+table_name	source_type	source	priority	profile_mode	domain	subdomain	atlas_role	load_strategy	db_name	schema	table	chunk_size	allow_full_load
+patient	dataset	patient	1	summary	Core	Patient	identity_backbone	auto					FALSE
+RKKP_CLL	dataset	RKKP_CLL	10	summary	RKKP	CLL	clinical_registry	auto					FALSE
+RKKP_LYFO	dataset	RKKP_LYFO	11	summary	RKKP	LYFO	clinical_registry	auto					FALSE
+RKKP_DaMyDa	dataset	RKKP_DaMyDa	12	summary	RKKP	DaMyDa	clinical_registry	auto					FALSE
+SP_AdministreretMedicin	dataset	SP_AdministreretMedicin	20	summary	SP	Medication	administered_medicine	auto					FALSE
+SP_OrdineretMedicin	dataset	SP_OrdineretMedicin	21	summary	SP	Medication	ordered_medicine	auto					FALSE
+SP_ADT_haendelser	dataset	SP_ADT_haendelser	22	summary	SP	ADT	encounter_events	auto					FALSE
+SP_AlleProvesvar	dataset	SP_AlleProvesvar	23	summary	SP	Laboratory	lab_results	auto					FALSE
+SP_Behandlingsniveau	dataset	SP_Behandlingsniveau	24	summary	SP	Treatment	treatment_level	auto					FALSE
+SP_BilleddiagnostiskeUndersøgelser_Del1	dataset	SP_BilleddiagnostiskeUndersøgelser_Del1	25	summary	SP	Imaging	imaging	auto					FALSE
+SP_BilleddiagnostiskeUndersøgelser_Del2	dataset	SP_BilleddiagnostiskeUndersøgelser_Del2	26	summary	SP	Imaging	imaging	auto					FALSE
+SP_Behandlingsplaner_Del1	dataset	SP_Behandlingsplaner_Del1	27	summary	SP	Treatment	treatment_plans	auto					FALSE
+SP_Bloddyrkning_Del1	dataset	SP_Bloddyrkning_Del1	28	summary	SP	Microbiology	blood_culture	auto					FALSE
+SP_Bloddyrkning_Del2	dataset	SP_Bloddyrkning_Del2	29	summary	SP	Microbiology	blood_culture	auto					FALSE
+SP_Bloddyrkning_Del3	dataset	SP_Bloddyrkning_Del3	30	summary	SP	Microbiology	blood_culture	auto					FALSE
+SP_Bloddyrkning_Del4	dataset	SP_Bloddyrkning_Del4	31	summary	SP	Microbiology	blood_culture	auto					FALSE
+SP_ITAOphold	dataset	SP_ITAOphold	32	summary	SP	ICU	icu_stays	auto					FALSE
+SP_Journalnotater_Del1	dataset	SP_Journalnotater_Del1	33	summary	SP	Notes	clinical_notes	auto					FALSE
+SP_SocialHX	dataset	SP_SocialHX	34	summary	SP	SocialHistory	social_history	auto					FALSE
+SP_VitaleVaerdier	dataset	SP_VitaleVaerdier	35	summary	SP	Vitals	vitals	auto					FALSE
+SDS_t_adm	dataset	SDS_t_adm	40	summary	SDS	LPR	admissions	auto					FALSE
+SDS_forloeb	dataset	SDS_forloeb	41	summary	SDS	LPR	care_pathways	auto					FALSE
+SDS_kontakter	dataset	SDS_kontakter	42	summary	SDS	LPR	contacts	auto					FALSE
+SDS_t_sksopr	dataset	SDS_t_sksopr	43	summary	SDS	LPR	procedures	auto					FALSE
+SDS_t_sksube	dataset	SDS_t_sksube	44	summary	SDS	LPR	sub_events	auto					FALSE
+SDS_t_diag	dataset	SDS_t_diag	45	summary	SDS	LPR	diagnoses	auto					FALSE
+SDS_t_udtilsgh	dataset	SDS_t_udtilsgh	46	summary	SDS	LPR	discharge_hospital	auto					FALSE
+SDS_procedurer_kirurgi	dataset	SDS_procedurer_kirurgi	47	summary	SDS	LPR3	surgical_procedures	auto					FALSE
+SDS_procedurer_andre	dataset	SDS_procedurer_andre	48	summary	SDS	LPR3	other_procedures	auto					FALSE
+SDS_diagnoser	dataset	SDS_diagnoser	49	summary	SDS	LPR3	diagnoses	auto					FALSE
+SDS_resultater	dataset	SDS_resultater	50	summary	SDS	LPR3	results	auto					FALSE
+SDS_koder	dataset	SDS_koder	51	summary	SDS	LPR3	codes	auto					FALSE
+SDS_organisationer	dataset	SDS_organisationer	52	summary	SDS	LPR3	organisations	auto					FALSE
+SDS_epikur	dataset	SDS_epikur	53	summary	SDS	ClinicalText	epikur	auto					FALSE
+SDS_indberetningmedpris	dataset	SDS_indberetningmedpris	54	summary	SDS	Medication	medicine_with_price	auto					FALSE
+SDS_pato	dataset	SDS_pato	55	summary	SDS	Pathology	pathology	auto					FALSE
+SDS_t_tumor	dataset	SDS_t_tumor	56	summary	SDS	Tumor	tumor	auto					FALSE
+SDS_lab_forsker	dataset	SDS_lab_forsker	57	summary	SDS	Laboratory	lab	auto					FALSE
+SDS_t_dodsaarsag_2	dataset	SDS_t_dodsaarsag_2	58	summary	SDS	Mortality	death_cause	auto					FALSE
+t_dalycare_diagnoses	dataset	t_dalycare_diagnoses	70	summary	DALY Views	Diagnosis	canonical_diagnosis_table	auto					FALSE
+view_diagnosses_all	dataset	view_diagnosses_all	71	schema	DALY Views	Diagnosis	documented_view	auto					FALSE
+view_diagnoses_all_hosp_region	dataset	view_diagnoses_all_hosp_region	72	schema	DALY Views	Diagnosis	documented_view	auto					FALSE
+view_dalycare_diagnoses	dataset	view_dalycare_diagnoses	73	schema	DALY Views	Diagnosis	documented_view	auto					FALSE
+view_date_death	dataset	view_date_death	74	schema	DALY Views	Survival	documented_view	auto					FALSE
+view_date_followup	dataset	view_date_followup	75	schema	DALY Views	Survival	documented_view	auto					FALSE
+view_true_date_death	dataset	view_true_date_death	76	schema	DALY Views	Survival	documented_view	auto					FALSE
+view_patient_table_os	dataset	view_patient_table_os	77	schema	DALY Views	Survival	documented_view	auto					FALSE
+view_create_patient_table	dataset	view_create_patient_table	78	schema	DALY Views	Survival	documented_view	auto					FALSE
