@@ -33,6 +33,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
 
   source_rows <- list()
   column_rows <- list()
+  column_profile_rows <- list()
+  column_top_value_rows <- list()
   check_rows <- list()
   frequency_rows <- list()
   panels <- list(
@@ -80,6 +82,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     result$source <- append_source_metadata(result$source, record)
     source_rows[[length(source_rows) + 1L]] <- result$source
     column_rows[[length(column_rows) + 1L]] <- result$columns
+    column_profile_rows[[length(column_profile_rows) + 1L]] <- result$column_profiles
+    column_top_value_rows[[length(column_top_value_rows) + 1L]] <- result$column_top_values
     check_rows[[length(check_rows) + 1L]] <- result$checks
     frequency_rows[[length(frequency_rows) + 1L]] <- result$value_frequencies
     for (panel_name in names(result$panels)) {
@@ -90,6 +94,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
 
   sources <- bind_rows_base(source_rows)
   columns <- bind_rows_base(column_rows)
+  column_profiles <- add_source_context_to_column_outputs(bind_rows_base(column_profile_rows), sources)
+  column_top_values <- add_source_context_to_column_outputs(bind_rows_base(column_top_value_rows), sources)
   checks <- bind_rows_base(check_rows)
   frequencies <- bind_rows_base(frequency_rows)
   panels$source_availability_drift <- source_availability_panel(sources)
@@ -98,9 +104,15 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
   output_paths$columns <- write_csv(columns, file.path(output_dir, "atlas_columns.csv"))
+  output_paths$column_profiles <- write_csv(column_profiles, file.path(output_dir, "atlas_column_profiles.csv"))
+  output_paths$column_top_values <- write_csv(column_top_values, file.path(output_dir, "atlas_column_top_values.csv"))
   output_paths$checks <- write_csv(checks, file.path(output_dir, "atlas_checks.csv"))
   output_paths$value_frequencies <- write_csv(frequencies, file.path(output_dir, "atlas_value_frequencies.csv"))
-  run_summary <- atlas_run_summary(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels)
+  run_summary <- atlas_run_summary(
+    run_id, generated_at, source_map, sources, columns, checks, frequencies, panels,
+    column_profiles = column_profiles,
+    column_top_values = column_top_values
+  )
   output_paths$run_summary <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
 
   panel_paths <- list()
@@ -108,7 +120,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panel_paths[[panel_name]] <- write_csv(panels[[panel_name]], file.path(panel_dir, paste0(panel_name, ".csv")))
   }
 
-  payload <- atlas_payload(run_id, generated_at, sources, columns, checks, panels, run_summary = run_summary)
+  payload <- atlas_payload(
+    run_id, generated_at, sources, columns, checks, panels,
+    column_profiles = column_profiles,
+    column_top_values = column_top_values,
+    run_summary = run_summary
+  )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
 
@@ -206,6 +223,18 @@ resource_catalog <- function(sources) {
   ), drop = FALSE]
 }
 
+add_source_context_to_column_outputs <- function(rows, sources) {
+  if (!nrow(rows) || !nrow(sources)) return(rows)
+  meta_names <- intersect(c("domain", "subdomain", "atlas_role"), names(sources))
+  if (!length(meta_names)) return(rows)
+  match_idx <- match(rows$table_name, sources$table_name)
+  for (nm in rev(meta_names)) {
+    rows[[nm]] <- ifelse(is.na(match_idx), NA_character_, as.character(sources[[nm]][match_idx]))
+    rows <- rows[c(nm, setdiff(names(rows), nm))]
+  }
+  rows
+}
+
 source_availability_panel <- function(sources) {
   if (!nrow(sources)) {
     return(empty_df(source_type = character(), load_status = character(), n_sources = integer()))
@@ -233,8 +262,11 @@ output_manifest <- function(paths, run_dir) {
   bind_rows_base(rows)
 }
 
-atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels) {
+atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels,
+                              column_profiles = NULL, column_top_values = NULL) {
   panel_rows <- sum(vapply(panels, nrow, integer(1)), na.rm = TRUE)
+  if (is.null(column_profiles)) column_profiles <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(column_top_values)) column_top_values <- data.frame(stringsAsFactors = FALSE)
   rows <- list(
     data.frame(metric = "run_id", value = run_id, stringsAsFactors = FALSE),
     data.frame(metric = "generated_at", value = generated_at, stringsAsFactors = FALSE),
@@ -242,6 +274,8 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
     data.frame(metric = "loaded_sources", value = as.character(sum(sources$load_status == "ok", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "failed_sources", value = as.character(sum(sources$load_status == "failed", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "columns_profiled", value = as.character(nrow(columns)), stringsAsFactors = FALSE),
+    data.frame(metric = "column_profile_rows", value = as.character(nrow(column_profiles)), stringsAsFactors = FALSE),
+    data.frame(metric = "column_top_value_rows", value = as.character(nrow(column_top_values)), stringsAsFactors = FALSE),
     data.frame(metric = "checks", value = as.character(nrow(checks)), stringsAsFactors = FALSE),
     data.frame(metric = "warnings", value = as.character(sum(checks$severity == "warning", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "errors", value = as.character(sum(checks$severity == "error", na.rm = TRUE)), stringsAsFactors = FALSE),

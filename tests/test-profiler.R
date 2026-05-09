@@ -16,6 +16,30 @@ expect_true("patientid" %in% profile$columns$column_name, "Column inventory shou
 expect_false(any(profile$value_frequencies$column_name == "patientid"), "Value frequencies must suppress patient identifiers.")
 expect_true(any(profile$checks$check_id == "sensitive_column_values_suppressed"), "Privacy suppression check should be emitted.")
 expect_true(nrow(profile$panels$lab_npu_code_coverage) > 0, "Lab code panel should be generated.")
+expect_true(all(names(df) %in% profile$column_profiles$column_name), "Every input column should have a safe aggregate column profile.")
+expect_equal(nrow(profile$column_profiles), ncol(df), "Column profile output should have one row per input column.")
+patient_profile <- profile$column_profiles[profile$column_profiles$column_name == "patientid", , drop = FALSE]
+expect_equal(patient_profile$profile_kind[[1]], "sensitive", "Patient identifiers should be marked sensitive in column profiles.")
+expect_true(is.na(patient_profile$min[[1]]) && is.na(patient_profile$max_date[[1]]), "Sensitive columns should not expose detailed stats.")
+expect_false(any(profile$column_top_values$column_name == "patientid"), "Sensitive columns should not emit top values.")
+expect_true(any(profile$column_top_values$column_name == "group"), "Eligible categorical columns should emit top values in full mode.")
+
+column_detail_df <- data.frame(
+  numeric_lab = c(1, 2, 3, 4, NA),
+  event_date = c("2020-01-01", "2020-01-03", "", "2020-02-01", "2020-02-04"),
+  category = c("A", "A", "B", "B", "rare"),
+  stringsAsFactors = FALSE
+)
+column_detail_profile <- profile_source(column_detail_df, "column_detail", "file", "detail.csv", min_cell_count = 2L)
+numeric_profile <- column_detail_profile$column_profiles[column_detail_profile$column_profiles$column_name == "numeric_lab", , drop = FALSE]
+date_profile <- column_detail_profile$column_profiles[column_detail_profile$column_profiles$column_name == "event_date", , drop = FALSE]
+category_top <- column_detail_profile$column_top_values[column_detail_profile$column_top_values$column_name == "category", , drop = FALSE]
+expect_equal(numeric_profile$profile_kind[[1]], "numeric", "Numeric-like columns should be profiled as numeric.")
+expect_equal(numeric_profile$median[[1]], 2.5, "Numeric column profiles should include aggregate numeric stats.")
+expect_equal(date_profile$profile_kind[[1]], "date", "Date-like columns should be profiled as dates.")
+expect_equal(date_profile$min_date[[1]], "2020-01-01", "Date column profiles should include minimum date.")
+expect_equal(date_profile$max_date[[1]], "2020-02-04", "Date column profiles should include maximum date.")
+expect_false(any(category_top$value == "rare"), "Column top values should obey minimum cell suppression.")
 
 damyda <- data.frame(
   patientid = c(1, 2),
@@ -138,6 +162,8 @@ expect_true(all(c("table_name", "registry", "facet", "source_column", "label", "
 schema_profile <- profile_source(registry_damyda, "RKKP_DaMyDa", "file", "damyda.csv", profile_mode = "schema", min_cell_count = 1L)
 expect_equal(nrow(schema_profile$value_frequencies), 0L, "Schema profile mode should not emit value frequencies.")
 expect_equal(length(schema_profile$panels), 0L, "Schema profile mode should not emit panels.")
+expect_equal(nrow(schema_profile$column_top_values), 0L, "Schema profile mode should not emit column top values.")
+expect_true(all(is.na(schema_profile$column_profiles$median)), "Schema profile mode should keep column profiles to metadata only.")
 
 summary_profile <- profile_source(registry_damyda, "RKKP_DaMyDa", "file", "damyda.csv", profile_mode = "summary", min_cell_count = 1L)
 expect_equal(nrow(summary_profile$value_frequencies), 0L, "Summary profile mode should not emit value frequencies.")
@@ -146,6 +172,7 @@ expect_false("damyda_clinical_profile" %in% names(summary_profile$panels), "Summ
 
 full_profile <- profile_source(registry_damyda, "RKKP_DaMyDa", "file", "damyda.csv", profile_mode = "full", min_cell_count = 1L)
 expect_true(nrow(full_profile$value_frequencies) > 0, "Full profile mode should emit eligible value frequencies.")
+expect_true(nrow(full_profile$column_top_values) > 0, "Full profile mode should emit eligible column top values.")
 expect_true("damyda_clinical_profile" %in% names(full_profile$panels), "Full profile mode should emit detailed registry panels.")
 
 privacy_df <- data.frame(

@@ -213,7 +213,7 @@
     }
     input[type="search"] { min-width: min(420px, 100%); }
     .catalog-list { display: grid; gap: 8px; }
-    .catalog-row {
+    .catalog-row, .column-row {
       display: grid;
       grid-template-columns: 150px 1fr 96px 86px 120px;
       gap: 10px;
@@ -224,7 +224,11 @@
       padding: 10px 12px;
       font-size: 13px;
     }
+    .column-row {
+      grid-template-columns: 160px 1fr 110px 120px 190px;
+    }
     .catalog-row strong { display: block; font-size: 14px; }
+    .column-row strong { display: block; font-size: 14px; }
     .mini { color: var(--muted); font-size: 12px; }
     .qa-list { display: grid; gap: 8px; }
     .qa-item {
@@ -335,7 +339,7 @@
     @media (max-width: 820px) {
       .hero { padding: 24px 18px 20px; }
       main { padding: 16px 14px 34px; }
-      .catalog-row { grid-template-columns: 1fr; }
+      .catalog-row, .column-row { grid-template-columns: 1fr; }
       .bar-row { grid-template-columns: 1fr; }
       .toolbar label, input[type="search"], select { width: 100%; }
     }
@@ -361,6 +365,7 @@
     <div class="nav-inner">
       <button class="tab-button active" data-tab="overview">Overview</button>
       <button class="tab-button" data-tab="catalog">Source Catalog</button>
+      <button class="tab-button" data-tab="columns">Column Explorer</button>
       <button class="tab-button" data-tab="registries">Registries</button>
       <button class="tab-button" data-tab="qa">Run QA</button>
       <button class="tab-button" data-tab="panels">Panels</button>
@@ -413,6 +418,38 @@
           </div>
           <div id="catalog-count" class="mini"></div>
           <div id="catalog-list" class="catalog-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-page" id="tab-columns">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Column Explorer</h2>
+          <p class="panel-sub">Safe aggregate coverage, numeric/date summaries, and suppressed top values for every profiled column.</p>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <label>Search
+              <input id="column-search" type="search" placeholder="Search table, column, domain, or kind">
+            </label>
+            <label>Dataset
+              <select id="column-dataset-filter"><option value="">All datasets</option></select>
+            </label>
+            <label>Domain
+              <select id="column-domain-filter"><option value="">All domains</option></select>
+            </label>
+            <label>Profile kind
+              <select id="column-kind-filter"><option value="">All kinds</option></select>
+            </label>
+          </div>
+          <div id="column-summary" class="grid" style="margin-bottom:14px"></div>
+          <div id="column-count" class="mini"></div>
+          <div id="column-list" class="catalog-list"></div>
+          <div style="height:14px"></div>
+          <h3>Top Values For Visible Columns</h3>
+          <p class="mini">Only eligible categorical columns are shown here. Sensitive, date-like, numeric, high-cardinality, and small-cell values are suppressed.</p>
+          <div id="column-top-values"></div>
         </div>
       </div>
     </section>
@@ -505,6 +542,9 @@ export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_
       const panels = payload.panels || {};
       const panelGroups = payload.panel_groups || [];
       const catalogRows = payload.catalog_rows || [];
+      const columnRows = payload.column_profile_rows || [];
+      const columnTopValues = payload.column_top_value_rows || [];
+      const columnSummary = payload.column_profile_summary || [];
       const qaItems = payload.qa_items || [];
       const registryCards = payload.registry_cards || {};
 
@@ -636,6 +676,62 @@ export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_
         document.getElementById(id).addEventListener("change", renderCatalog);
       });
       renderCatalog();
+
+      fillSelect("column-dataset-filter", uniqueValues(columnRows, "table_name"));
+      fillSelect("column-domain-filter", uniqueValues(columnRows, "domain"));
+      fillSelect("column-kind-filter", uniqueValues(columnRows, "profile_kind"));
+      setHtml("column-summary", (columnSummary || []).map(row => `
+        <article class="card">
+          <h3>${escapeHtml(row.domain || "Unassigned")}</h3>
+          <div class="kpi-row">
+            <div class="kpi"><b>${formatNumber(row.n_columns)}</b><span class="mini">${escapeHtml(row.profile_kind || "columns")}</span></div>
+          </div>
+        </article>
+      `).join("") || `<div class="empty">No column profile summary available.</div>`);
+
+      function columnStat(row) {
+        const kind = row.profile_kind || "";
+        if (kind === "numeric") {
+          return `median ${formatNumber(row.median)} (${formatNumber(row.p25)}-${formatNumber(row.p75)})`;
+        }
+        if (kind === "date") {
+          return `${escapeHtml(row.min_date || "")}${row.max_date ? " to " + escapeHtml(row.max_date) : ""}`;
+        }
+        if (kind === "sensitive") {
+          return "coverage only";
+        }
+        return `${formatNumber(row.n_distinct_capped)} distinct`;
+      }
+
+      function renderColumnExplorer() {
+        const q = document.getElementById("column-search").value.trim().toLowerCase();
+        const dataset = document.getElementById("column-dataset-filter").value;
+        const domain = document.getElementById("column-domain-filter").value;
+        const kind = document.getElementById("column-kind-filter").value;
+        const filtered = columnRows.filter(row => {
+          const hay = [row.table_name, row.column_name, row.domain, row.subdomain, row.profile_kind].join(" ").toLowerCase();
+          return (!q || hay.includes(q)) && (!dataset || row.table_name === dataset) && (!domain || row.domain === domain) && (!kind || row.profile_kind === kind);
+        });
+        document.getElementById("column-count").textContent = `${filtered.length} of ${columnRows.length} columns shown`;
+        setHtml("column-list", filtered.slice(0, 400).map(row => `
+          <article class="column-row">
+            <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.table_name || "")}</div></div>
+            <div><strong>${escapeHtml(row.column_name || "")}</strong><div class="mini">${escapeHtml(row.column_class || row.column_type || "")}</div></div>
+            <div><span class="badge">${escapeHtml(row.profile_kind || "unknown")}</span></div>
+            <div><strong>${formatNumber(row.pct_available)}%</strong><div class="mini">${formatNumber(row.n_available)} available</div></div>
+            <div>${columnStat(row)}<div class="mini">${formatNumber(row.n_missing)} missing</div></div>
+          </article>
+        `).join("") || `<div class="empty">No columns match the current filters.</div>`);
+
+        const keys = new Set(filtered.map(row => `${row.table_name}\u0001${row.column_name}`));
+        const visibleTopValues = columnTopValues.filter(row => keys.has(`${row.table_name}\u0001${row.column_name}`)).slice(0, 300);
+        setHtml("column-top-values", rowsForTable(visibleTopValues, 300));
+      }
+      ["column-search", "column-dataset-filter", "column-domain-filter", "column-kind-filter"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderColumnExplorer);
+        document.getElementById(id).addEventListener("change", renderColumnExplorer);
+      });
+      renderColumnExplorer();
 
       function bars(rows, valueKey, labelKey) {
         if (!rows || !rows.length) return `<div class="empty">No aggregate rows available.</div>`;

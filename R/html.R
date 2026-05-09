@@ -19,9 +19,15 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
   list(html = html_path, payload = payload_path)
 }
 
-atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels, run_summary = NULL) {
+atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels,
+                          column_profiles = NULL, column_top_values = NULL,
+                          run_summary = NULL) {
+  if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
+  if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
+  public_column_profiles <- public_column_profile_rows(column_profiles)
+  public_column_top_values <- sanitize_public_frame(column_top_values)
   list(
     run_id = run_id,
     generated_at = generated_at,
@@ -37,12 +43,51 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     qa_items = public_rows(qa_items(checks), max_rows = 500),
     registry_cards = registry_cards(panels),
     panel_groups = public_rows(panel_groups(panels), max_rows = 100),
+    column_profile_rows = public_rows(public_column_profiles, max_rows = 3000),
+    column_top_value_rows = public_rows(public_column_top_values, max_rows = 3000),
+    column_profile_summary = public_rows(column_profile_summary(column_profiles), max_rows = 200),
     run_summary = public_rows(run_summary, max_rows = 100),
     source_domains = public_rows(source_domain_summary(sources), max_rows = 100),
     sources = public_rows(public_sources(sources), max_rows = 500),
     checks = public_rows(public_checks, max_rows = 500),
     panels = lapply(public_panels, public_rows, max_rows = 250)
   )
+}
+
+basic_column_profiles <- function(columns) {
+  if (!is.data.frame(columns) || !nrow(columns)) return(empty_column_profiles())
+  get_col <- function(name, default) {
+    if (name %in% names(columns)) columns[[name]] else rep(default, nrow(columns))
+  }
+  is_sensitive <- as.logical(get_col("is_sensitive", FALSE))
+  is_date_like <- as.logical(get_col("is_date_like", FALSE))
+  is_numeric_like <- as.logical(get_col("is_numeric_like", FALSE))
+  out <- data.frame(
+    table_name = get_col("table_name", ""),
+    column_name = get_col("column_name", ""),
+    column_type = get_col("column_type", ""),
+    column_class = get_col("column_class", ""),
+    profile_kind = ifelse(is_sensitive, "sensitive", ifelse(is_date_like, "date", ifelse(is_numeric_like, "numeric", "categorical"))),
+    n_rows = NA_integer_,
+    n_available = NA_integer_,
+    pct_available = NA_real_,
+    n_missing = get_col("n_missing", NA_integer_),
+    pct_missing = get_col("pct_missing", NA_real_),
+    n_distinct_capped = get_col("n_distinct_capped", NA_integer_),
+    is_sensitive = is_sensitive,
+    is_date_like = is_date_like,
+    is_numeric_like = is_numeric_like,
+    min = NA_real_,
+    mean = NA_real_,
+    median = NA_real_,
+    p25 = NA_real_,
+    p75 = NA_real_,
+    max = NA_real_,
+    min_date = NA_character_,
+    max_date = NA_character_,
+    stringsAsFactors = FALSE
+  )
+  out
 }
 
 hero_metrics <- function(sources, columns, checks, run_summary = NULL) {
@@ -259,6 +304,31 @@ panel_group <- function(name) {
     source_availability_drift = "Run QA"
   )
   named_value(groups, name, "Atlas Panels")
+}
+
+public_column_profile_rows <- function(column_profiles) {
+  if (!is.data.frame(column_profiles) || !nrow(column_profiles)) return(empty_column_profiles())
+  out <- sanitize_public_frame(column_profiles)
+  if ("is_sensitive" %in% names(out) && "column_name" %in% names(out)) {
+    sensitive <- as.logical(out$is_sensitive)
+    sensitive[is.na(sensitive)] <- FALSE
+    out$column_name[sensitive] <- "[sensitive]"
+  }
+  out
+}
+
+column_profile_summary <- function(column_profiles) {
+  if (!is.data.frame(column_profiles) || !nrow(column_profiles)) {
+    return(empty_df(domain = character(), profile_kind = character(), n_columns = integer()))
+  }
+  domain <- if ("domain" %in% names(column_profiles)) column_profiles$domain else rep("Unassigned", nrow(column_profiles))
+  domain[is.na(domain) | domain == ""] <- "Unassigned"
+  profile_kind <- if ("profile_kind" %in% names(column_profiles)) column_profiles$profile_kind else rep("unknown", nrow(column_profiles))
+  aggregate(
+    list(n_columns = column_profiles$table_name),
+    by = list(domain = domain, profile_kind = profile_kind),
+    FUN = length
+  )
 }
 
 public_sources <- function(sources) {

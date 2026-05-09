@@ -83,6 +83,8 @@ Each run writes `atlas_runs/<run_id>/` with:
 - `outputs/atlas_resource_catalog.csv`
 - `outputs/atlas_sources.csv`
 - `outputs/atlas_columns.csv`
+- `outputs/atlas_column_profiles.csv`
+- `outputs/atlas_column_top_values.csv`
 - `outputs/atlas_checks.csv`
 - `outputs/atlas_value_frequencies.csv`
 - `outputs/atlas_run_summary.csv`
@@ -108,9 +110,16 @@ Registry-focused runs can include these clinical panels:
   cytogenetic, TP53, treatment, performance, ZAP70, CD38, and beta2m facets.
 
 The static atlas is a tabbed, AOT-style review artifact with run-level metrics,
-domain cards, searchable source catalog, registry cards, QA triage, generated
-panel tables, and quick-start commands. The HTML remains data-light and loads
-its run payload from `site/DALYCARE_atlas_payload.js`.
+domain cards, searchable source catalog, a safe per-column explorer, registry
+cards, QA triage, generated panel tables, and quick-start commands. The HTML
+remains data-light and loads its run payload from
+`site/DALYCARE_atlas_payload.js`.
+
+`atlas_column_profiles.csv` contains one aggregate row per profiled column:
+coverage, missingness, distinct count, sensitivity/date/numeric flags, and safe
+numeric or date summaries where applicable. `atlas_column_top_values.csv`
+contains top categorical values only for eligible non-sensitive columns after
+minimum-cell suppression.
 
 ## Legacy Provenance
 

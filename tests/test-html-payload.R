@@ -75,12 +75,55 @@ run_summary <- data.frame(
   value = c("2", "2", "5"),
   stringsAsFactors = FALSE
 )
+column_profiles <- data.frame(
+  domain = c("SP", "SP"),
+  table_name = c("example_labs", "example_labs"),
+  column_name = c("patientid", "group"),
+  column_type = c("character", "character"),
+  column_class = c("character", "character"),
+  profile_kind = c("sensitive", "categorical"),
+  n_rows = c(10, 10),
+  n_available = c(10, 9),
+  pct_available = c(100, 90),
+  n_missing = c(0, 1),
+  pct_missing = c(0, 10),
+  n_distinct_capped = c(10, 2),
+  is_sensitive = c(TRUE, FALSE),
+  is_date_like = c(FALSE, FALSE),
+  is_numeric_like = c(FALSE, FALSE),
+  min = c(NA, NA),
+  mean = c(NA, NA),
+  median = c(NA, NA),
+  p25 = c(NA, NA),
+  p75 = c(NA, NA),
+  max = c(NA, NA),
+  min_date = c(NA, NA),
+  max_date = c(NA, NA),
+  stringsAsFactors = FALSE
+)
+column_top_values <- data.frame(
+  domain = "SP",
+  table_name = "example_labs",
+  column_name = "group",
+  value = "A",
+  n = 6,
+  pct_rows = 60,
+  stringsAsFactors = FALSE
+)
 
-payload <- atlas_payload("test-run", "2026-05-09T00:00:00+0200", sources, columns, checks, panels, run_summary = run_summary)
-expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "registry_cards", "panel_groups") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
+payload <- atlas_payload(
+  "test-run", "2026-05-09T00:00:00+0200", sources, columns, checks, panels,
+  column_profiles = column_profiles,
+  column_top_values = column_top_values,
+  run_summary = run_summary
+)
+expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
 expect_true(length(payload$domain_cards) == 2L, "Domain cards should be derived from source domains.")
 expect_true(length(payload$catalog_rows) == 2L, "Catalog rows should be derived from source rows.")
+expect_true(length(payload$column_profile_rows) == 2L, "Column profile rows should be included in the public payload.")
+expect_true(length(payload$column_top_value_rows) == 1L, "Column top value rows should be included in the public payload.")
+expect_true(length(payload$column_profile_summary) > 0, "Column profile summaries should be included in the public payload.")
 expect_true(length(payload$registry_cards) == 1L, "Registry cards should be generated when registry panels exist.")
 expect_true("DaMyDa" %in% names(payload$registry_cards), "Registry cards should be keyed by registry name.")
 expect_true(any(vapply(payload$panel_groups, function(row) identical(row$panel_name, "damyda_clinical_profile"), logical(1))), "Panel groups should include generated panel metadata.")
@@ -91,6 +134,8 @@ view_json <- atlas_to_json(list(
   catalog_rows = payload$catalog_rows,
   qa_items = payload$qa_items,
   registry_cards = payload$registry_cards,
-  panel_groups = payload$panel_groups
+  panel_groups = payload$panel_groups,
+  column_profile_rows = payload$column_profile_rows,
+  column_top_value_rows = payload$column_top_value_rows
 ))
 expect_false(grepl("patientid", view_json, ignore.case = TRUE), "View-model payload sections should not expose id-like field names.")

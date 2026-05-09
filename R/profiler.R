@@ -31,11 +31,17 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
   )
 
   columns <- profile_columns(data, table_name)
+  column_profiles <- profile_column_profiles(data, table_name, profile_mode = profile_mode)
   checks <- profile_checks(data, table_name)
   frequencies <- if (identical(profile_mode, "full")) {
     profile_value_frequencies(data, table_name, top_n = top_n, min_cell_count = min_cell_count)
   } else {
     empty_value_frequencies()
+  }
+  column_top_values <- if (identical(profile_mode, "full")) {
+    profile_column_top_values(data, table_name, top_n = top_n, min_cell_count = min_cell_count)
+  } else {
+    empty_column_top_values()
   }
   panels <- profile_panels(
     data = data,
@@ -47,6 +53,8 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
   list(
     source = source_row,
     columns = columns,
+    column_profiles = column_profiles,
+    column_top_values = column_top_values,
     checks = checks,
     value_frequencies = frequencies,
     panels = panels
@@ -95,6 +103,8 @@ profile_columns <- function(data, table_name) {
   rows <- lapply(names(data), function(nm) {
     x <- data[[nm]]
     missing <- is.na(x) | trimws(as.character(x)) == ""
+    is_sensitive <- safe_sensitive_column(nm, x)
+    is_numeric_like <- is_numeric_like_vector(x)
     data.frame(
       table_name = table_name,
       column_name = nm,
@@ -103,13 +113,102 @@ profile_columns <- function(data, table_name) {
       n_missing = sum(missing),
       pct_missing = safe_pct(sum(missing), length(x)),
       n_distinct_capped = count_distinct_capped(x),
-      is_sensitive = is_sensitive_column(nm),
+      is_sensitive = is_sensitive,
       is_date_like = is_date_like_column(nm, x),
-      is_numeric_like = is.numeric(x) || mean(!is.na(suppressWarnings(as.numeric(as.character(x))))) >= 0.8,
+      is_numeric_like = is_numeric_like,
       stringsAsFactors = FALSE
     )
   })
   bind_rows_base(rows)
+}
+
+empty_column_profiles <- function() {
+  empty_df(
+    table_name = character(), column_name = character(), column_type = character(),
+    column_class = character(), profile_kind = character(), n_rows = integer(),
+    n_available = integer(), pct_available = numeric(), n_missing = integer(),
+    pct_missing = numeric(), n_distinct_capped = integer(), is_sensitive = logical(),
+    is_date_like = logical(), is_numeric_like = logical(), min = numeric(),
+    mean = numeric(), median = numeric(), p25 = numeric(), p75 = numeric(),
+    max = numeric(), min_date = character(), max_date = character()
+  )
+}
+
+profile_column_profiles <- function(data, table_name, profile_mode = "full") {
+  if (!ncol(data)) return(empty_column_profiles())
+  profile_mode <- normalize_profile_mode(profile_mode)
+  rows <- lapply(names(data), function(nm) {
+    x <- data[[nm]]
+    missing <- is.na(x) | trimws(as.character(x)) == ""
+    n_available <- sum(!missing)
+    is_sensitive <- safe_sensitive_column(nm, x)
+    is_date_like <- is_date_like_column(nm, x)
+    is_numeric_like <- is_numeric_like_vector(x)
+    profile_kind <- if (is_sensitive) {
+      "sensitive"
+    } else if (is_date_like) {
+      "date"
+    } else if (is_numeric_like) {
+      "numeric"
+    } else {
+      "categorical"
+    }
+    numeric_stats <- column_numeric_stats(x, enabled = !is_sensitive && is_numeric_like && !identical(profile_mode, "schema"))
+    date_stats <- column_date_stats(x, enabled = !is_sensitive && is_date_like && !identical(profile_mode, "schema"))
+    data.frame(
+      table_name = table_name,
+      column_name = nm,
+      column_type = typeof(x),
+      column_class = class_scalar(x),
+      profile_kind = profile_kind,
+      n_rows = length(x),
+      n_available = n_available,
+      pct_available = safe_pct(n_available, length(x)),
+      n_missing = sum(missing),
+      pct_missing = safe_pct(sum(missing), length(x)),
+      n_distinct_capped = count_distinct_capped(x),
+      is_sensitive = is_sensitive,
+      is_date_like = is_date_like,
+      is_numeric_like = is_numeric_like,
+      min = numeric_stats$min,
+      mean = numeric_stats$mean,
+      median = numeric_stats$median,
+      p25 = numeric_stats$p25,
+      p75 = numeric_stats$p75,
+      max = numeric_stats$max,
+      min_date = as.character(date_stats$min_date),
+      max_date = as.character(date_stats$max_date),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) return(empty_column_profiles())
+  out
+}
+
+column_numeric_stats <- function(x, enabled = TRUE) {
+  empty <- list(min = NA_real_, mean = NA_real_, median = NA_real_, p25 = NA_real_, p75 = NA_real_, max = NA_real_)
+  if (!isTRUE(enabled)) return(empty)
+  values <- suppressWarnings(as.numeric(as.character(x)))
+  values <- values[!is.na(values)]
+  if (!length(values)) return(empty)
+  list(
+    min = min(values),
+    mean = mean(values),
+    median = stats::median(values),
+    p25 = as.numeric(stats::quantile(values, 0.25, na.rm = TRUE, names = FALSE)),
+    p75 = as.numeric(stats::quantile(values, 0.75, na.rm = TRUE, names = FALSE)),
+    max = max(values)
+  )
+}
+
+column_date_stats <- function(x, enabled = TRUE) {
+  empty <- list(min_date = NA_character_, max_date = NA_character_)
+  if (!isTRUE(enabled)) return(empty)
+  values <- safe_as_date(x)
+  values <- values[!is.na(values)]
+  if (!length(values)) return(empty)
+  list(min_date = as.character(min(values)), max_date = as.character(max(values)))
 }
 
 profile_checks <- function(data, table_name) {
@@ -155,26 +254,66 @@ empty_value_frequencies <- function() {
   empty_df(table_name = character(), column_name = character(), value = character(), n = integer(), pct = numeric())
 }
 
+empty_column_top_values <- function() {
+  empty_df(table_name = character(), column_name = character(), value = character(), n = integer(), pct_rows = numeric())
+}
+
 profile_value_frequencies <- function(data, table_name, top_n = 10L, min_cell_count = atlas_min_cell_count()) {
+  top_values <- profile_column_top_values(data, table_name, top_n = top_n, min_cell_count = min_cell_count)
+  if (!nrow(top_values)) return(empty_value_frequencies())
+  data.frame(
+    table_name = top_values$table_name,
+    column_name = top_values$column_name,
+    value = top_values$value,
+    n = top_values$n,
+    pct = top_values$pct_rows,
+    stringsAsFactors = FALSE
+  )
+}
+
+profile_column_top_values <- function(data, table_name, top_n = 10L, min_cell_count = atlas_min_cell_count()) {
   if (!nrow(data) || !ncol(data)) {
-    return(empty_value_frequencies())
+    return(empty_column_top_values())
   }
   min_cell_count <- normalize_min_cell_count(min_cell_count)
   eligible <- names(data)[vapply(names(data), function(nm) {
     x <- data[[nm]]
-    !is_sensitive_column(nm) &&
+    !safe_sensitive_column(nm, x) &&
       !is_date_like_column(nm, x) &&
-      !is.numeric(x) &&
+      !is_numeric_like_vector(x) &&
       count_distinct_capped(x, cap = 5000L) <= 100L
   }, logical(1))]
   rows <- lapply(eligible, function(nm) {
     out <- top_counts(data[[nm]], denom = nrow(data), top_n = top_n, min_count = min_cell_count)
     if (!nrow(out)) return(out)
-    cbind(table_name = table_name, column_name = nm, out, stringsAsFactors = FALSE)
+    data.frame(
+      table_name = table_name,
+      column_name = nm,
+      value = out$value,
+      n = out$n,
+      pct_rows = out$pct,
+      stringsAsFactors = FALSE
+    )
   })
   out <- bind_rows_base(rows)
-  if (!nrow(out)) return(empty_value_frequencies())
+  if (!nrow(out)) return(empty_column_top_values())
   out
+}
+
+safe_sensitive_column <- function(name, x) {
+  is_sensitive_column(name) || column_looks_cpr_like(x)
+}
+
+column_looks_cpr_like <- function(x) {
+  sample_x <- head(x[!(is.na(x) | trimws(as.character(x)) == "")], 1000)
+  length(sample_x) > 0 && mean(looks_cpr_like(sample_x)) > 0.8
+}
+
+is_numeric_like_vector <- function(x) {
+  if (is.numeric(x)) return(TRUE)
+  nonmissing <- !(is.na(x) | trimws(as.character(x)) == "")
+  if (!any(nonmissing)) return(FALSE)
+  mean(!is.na(suppressWarnings(as.numeric(as.character(x[nonmissing]))))) >= 0.8
 }
 
 profile_panels <- function(data, table_name, profile_mode = "full", min_cell_count = atlas_min_cell_count()) {
