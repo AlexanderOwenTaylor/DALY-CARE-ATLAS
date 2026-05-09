@@ -31,6 +31,45 @@ is_project_root_arg <- function(path) {
     file.exists(file.path(path, "scripts", "run_atlas.R"))
 }
 
+default_source_map <- function(project_root = find_project_root()) {
+  dalycare_map <- file.path(project_root, "config", "source-map.dalycare.tsv")
+  if (file.exists(dalycare_map)) {
+    return("config/source-map.dalycare.tsv")
+  }
+  "config/source-map.example.tsv"
+}
+
+load_atlas_runtime <- function(project_root = find_project_root()) {
+  project_root <- normalizePath(project_root, winslash = "/", mustWork = FALSE)
+  source(file.path(project_root, "R", "utils.R"))
+  source(file.path(project_root, "R", "source_map.R"))
+  source(file.path(project_root, "R", "loader.R"))
+  source(file.path(project_root, "R", "npu_dictionary.R"))
+  source(file.path(project_root, "R", "profiler.R"))
+  source(file.path(project_root, "R", "db_profile.R"))
+  source(file.path(project_root, "R", "html.R"))
+  source(file.path(project_root, "R", "run_atlas.R"))
+  invisible(project_root)
+}
+
+run_atlas_from_source <- function(project_root = find_project_root(),
+                                  source_map_path = default_source_map(project_root),
+                                  output_root = "atlas_runs",
+                                  mode = "report") {
+  project_root <- load_atlas_runtime(project_root)
+  result <- run_atlas(
+    project_root = project_root,
+    source_map_path = source_map_path,
+    output_root = output_root,
+    mode = mode
+  )
+
+  cat("DALY-CARE atlas run complete\n")
+  cat("Run directory:", result$run_dir, "\n")
+  cat("HTML:", result$html, "\n")
+  invisible(result)
+}
+
 run_atlas_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
   if (any(args %in% c("-h", "--help"))) {
     cat(usage, "\n")
@@ -53,29 +92,27 @@ run_atlas_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
     mode <- if (length(args) >= 3) args[[3]] else "report"
   }
 
-  project_root <- normalizePath(project_root_arg, winslash = "/", mustWork = FALSE)
-  source(file.path(project_root, "R", "utils.R"))
-  source(file.path(project_root, "R", "source_map.R"))
-  source(file.path(project_root, "R", "loader.R"))
-  source(file.path(project_root, "R", "npu_dictionary.R"))
-  source(file.path(project_root, "R", "profiler.R"))
-  source(file.path(project_root, "R", "db_profile.R"))
-  source(file.path(project_root, "R", "html.R"))
-  source(file.path(project_root, "R", "run_atlas.R"))
-
-  result <- run_atlas(
-    project_root = project_root,
+  run_atlas_from_source(
+    project_root = project_root_arg,
     source_map_path = source_map_path,
     output_root = output_root,
     mode = mode
   )
-
-  cat("DALY-CARE atlas run complete\n")
-  cat("Run directory:", result$run_dir, "\n")
-  cat("HTML:", result$html, "\n")
-  invisible(result)
 }
 
-if (!identical(Sys.getenv("DALYCARE_ATLAS_SOURCE_ONLY"), "TRUE")) {
+run_atlas_source_message <- function() {
+  cat("DALY-CARE atlas runner loaded.\n")
+  cat("Run from this R session with:\n")
+  cat("  result <- run_atlas_from_source(source_map_path = \"config/source-map.dalycare.tsv\")\n")
+  cat("Or from a terminal with:\n")
+  cat("  Rscript scripts/run_atlas.R config/source-map.dalycare.tsv atlas_runs report\n")
+  invisible(NULL)
+}
+
+if (identical(Sys.getenv("DALYCARE_ATLAS_SOURCE_ONLY"), "TRUE")) {
+  invisible(NULL)
+} else if (interactive()) {
+  run_atlas_source_message()
+} else {
   invisible(run_atlas_cli())
 }

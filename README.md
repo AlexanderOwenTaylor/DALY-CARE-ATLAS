@@ -15,6 +15,18 @@ Rscript scripts/run_tests.R
 Rscript scripts/run_atlas.R . config/source-map.example.tsv atlas_runs report
 ```
 
+From an interactive R session or RStudio, source the runner first, then call the
+source-friendly helper:
+
+```r
+source("scripts/run_atlas.R")
+result <- run_atlas_from_source(
+  source_map_path = "config/source-map.example.tsv",
+  output_root = "atlas_runs",
+  mode = "report"
+)
+```
+
 In DALY-CARE, set `DALYCARE_BOOTSTRAP_PATH` to a bootstrap script that defines
 `load_dataset()`, then run:
 

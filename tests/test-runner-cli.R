@@ -13,6 +13,13 @@ restore_source_only <- function() {
 
 cli_env <- new.env(parent = globalenv())
 sys.source(file.path(root, "scripts", "run_atlas.R"), envir = cli_env)
+expect_true(exists("run_atlas_from_source", envir = cli_env), "Sourcing the runner should define the source-friendly helper.")
+expect_true(exists("load_atlas_runtime", envir = cli_env), "Sourcing the runner should define the runtime loader.")
+
+source_message <- capture.output(cli_env$run_atlas_source_message())
+expect_true(any(grepl("runner loaded", source_message, fixed = TRUE)), "Source message should confirm the runner loaded.")
+expect_true(any(grepl("run_atlas_from_source", source_message, fixed = TRUE)), "Source message should show the R-session command.")
+expect_equal(cli_env$default_source_map(root), "config/source-map.dalycare.tsv", "Default source map should prefer the DALY-CARE preset.")
 
 help_text <- capture.output(cli_env$run_atlas_cli(c("--help")))
 expect_true(any(grepl("Usage:", help_text, fixed = TRUE)), "CLI help should print usage.")
