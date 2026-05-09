@@ -56,8 +56,9 @@ load_dataset_source <- function(source_record, bootstrap_path = "") {
   on.exit(clean_loader_side_effects(before_global), add = TRUE)
   result <- evalq(load_dataset(dataset_name), envir = call_env)
 
-  if (is.data.frame(result)) {
-    return(result)
+  extracted <- extract_loader_data_frame(result, dataset_name = dataset_name)
+  if (!is.null(extracted)) {
+    return(extracted)
   }
 
   created_global <- setdiff(ls(envir = .GlobalEnv, all.names = TRUE), before_global)
@@ -75,11 +76,60 @@ load_dataset_source <- function(source_record, bootstrap_path = "") {
     for (nm in candidates) {
       if (exists(nm, envir = env, inherits = FALSE)) {
         value <- get(nm, envir = env, inherits = FALSE)
-        if (is.data.frame(value)) return(value)
+        extracted <- extract_loader_data_frame(value, dataset_name = dataset_name)
+        if (!is.null(extracted)) return(extracted)
       }
     }
   }
   stop("DalyDataLoader dataset source did not produce a data frame: ", dataset_name, call. = FALSE)
+}
+
+extract_loader_data_frame <- function(value, dataset_name = "", depth = 0L) {
+  if (is.data.frame(value)) return(value)
+  if (depth > 4L) return(NULL)
+  preferred <- unique(c(
+    dataset_name,
+    make.names(dataset_name),
+    paste0(dataset_name, "_subset"),
+    paste0(make.names(dataset_name), "_subset"),
+    "data", "result", "value", "dataset", "x"
+  ))
+  preferred <- preferred[nzchar(preferred)]
+
+  if (is.environment(value)) {
+    env_names <- ls(envir = value, all.names = TRUE)
+    for (nm in unique(c(preferred, env_names))) {
+      if (exists(nm, envir = value, inherits = FALSE)) {
+        out <- extract_loader_data_frame(get(nm, envir = value, inherits = FALSE), dataset_name, depth + 1L)
+        if (!is.null(out)) return(out)
+      }
+    }
+    return(NULL)
+  }
+
+  if (is.list(value)) {
+    for (nm in unique(c(preferred, names(value)))) {
+      if (nzchar(nm) && nm %in% names(value)) {
+        item <- value[[nm]]
+      } else {
+        next
+      }
+      out <- extract_loader_data_frame(item, dataset_name, depth + 1L)
+      if (!is.null(out)) return(out)
+    }
+    for (j in seq_along(value)) {
+      out <- extract_loader_data_frame(value[[j]], dataset_name, depth + 1L)
+      if (!is.null(out)) return(out)
+    }
+    if (length(value) && all(vapply(value, function(x) is.atomic(x) || is.factor(x) || inherits(x, "Date"), logical(1)))) {
+      lengths <- vapply(value, length, integer(1))
+      if (length(unique(lengths)) == 1L && lengths[[1]] > 0L) {
+        out <- tryCatch(as.data.frame(value, stringsAsFactors = FALSE), error = function(e) NULL)
+        if (is.data.frame(out)) return(out)
+      }
+    }
+  }
+  NULL
 }
 
 clean_loader_side_effects <- function(before) {

@@ -19,6 +19,8 @@ writeLines(c(
   "load_dataset <- function(name) {",
   "  if (identical(name, 'returned_dataset')) return(data.frame(x = 1:2))",
   "  if (identical(name, 'side_effect_dataset')) { assign('side_effect_dataset', data.frame(y = 1:4), envir = .GlobalEnv); return(invisible(NULL)) }",
+  "  if (identical(name, 'list_wrapped_dataset')) return(list(data = data.frame(q = 1:6)))",
+  "  if (identical(name, 'env_wrapped_dataset')) { e <- new.env(parent = emptyenv()); e$data <- data.frame(r = 1:7); return(e) }",
   "  stop('unknown dataset')",
   "}"
 ), bootstrap)
@@ -31,6 +33,14 @@ side_effect_record <- data.frame(table_name = "side_effect", source_type = "data
 side_effect <- load_source_data(side_effect_record, bootstrap_path = bootstrap)
 expect_equal(nrow(side_effect), 4L, "Side-effect dataset loader should work.")
 expect_false(exists("side_effect_dataset", envir = .GlobalEnv, inherits = FALSE), "Side-effect dataset object should be cleaned from global env.")
+
+list_record <- data.frame(table_name = "list_wrapped", source_type = "dataset", source = "list_wrapped_dataset", priority = 1L, profile_mode = "full")
+list_loaded <- load_source_data(list_record, bootstrap_path = bootstrap)
+expect_equal(nrow(list_loaded), 6L, "List-wrapped DALY loader outputs should be unwrapped.")
+
+env_record <- data.frame(table_name = "env_wrapped", source_type = "dataset", source = "env_wrapped_dataset", priority = 1L, profile_mode = "full")
+env_loaded <- load_source_data(env_record, bootstrap_path = bootstrap)
+expect_equal(nrow(env_loaded), 7L, "Environment-wrapped DALY loader outputs should be unwrapped.")
 
 if (exists("load_dataset", envir = .GlobalEnv, inherits = FALSE)) {
   rm(load_dataset, envir = .GlobalEnv)

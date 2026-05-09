@@ -524,18 +524,27 @@
         <div class="panel-body">
           <div class="grid">
             <div class="card">
-              <h3>1. Configure DALY-CARE package access</h3>
-              <pre class="code-block"><code>export DALYCARE_PACKAGE_ROOT=/path/to/dalycare_package
-export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_bootstrap.R</code></pre>
-              <p class="mini">Live database credentials remain controlled by the user's NGC db_access.R setup.</p>
+              <h3>1. Confirm production access</h3>
+              <pre class="code-block"><code># Standard loader is auto-detected when present:
+# /ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R
+# Credentials stay in /ngc/people/&lt;user&gt;/db_access.R</code></pre>
+              <p class="mini">Set DALYCARE_BOOTSTRAP_PATH only when using a non-standard loader.</p>
             </div>
             <div class="card">
               <h3>2. Preflight without live data</h3>
               <pre class="code-block"><code>Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS</code></pre>
-              <p class="mini">This validates the bootstrap and source map without emitting patient-level data.</p>
+              <p class="mini">This validates bootstrap, db_access.R, DB catalog resolution, and the source map without emitting patient-level rows.</p>
             </div>
             <div class="card">
-              <h3>3. Run the atlas</h3>
+              <h3>3. Run from RStudio Console</h3>
+              <pre class="code-block"><code>source("scripts/run_atlas.R")
+result &lt;- run_atlas_from_source(
+  source_map_path = "config/source-map.dalycare.tsv"
+)</code></pre>
+              <p class="mini">Runs refuse misleading empty live atlases unless DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN=TRUE is set for a dry run.</p>
+            </div>
+            <div class="card">
+              <h3>4. Run from a terminal</h3>
               <pre class="code-block"><code>Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare.tsv atlas_runs report</code></pre>
               <p class="mini">Outputs are CSV evidence files plus this HTML viewer and its external JS payload.</p>
             </div>

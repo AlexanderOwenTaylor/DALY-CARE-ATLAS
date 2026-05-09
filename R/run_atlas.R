@@ -1,8 +1,10 @@
 run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
-                      mode = "report", bootstrap_path = Sys.getenv("DALYCARE_BOOTSTRAP_PATH"),
+                      mode = "report",
+                      bootstrap_path = dalycare_resolve_bootstrap_path(Sys.getenv("DALYCARE_BOOTSTRAP_PATH", unset = "")),
                       db_adapter = NULL) {
   mode <- match.arg(mode, c("report", "strict"))
   project_root <- normalizePath(project_root, winslash = "/", mustWork = FALSE)
+  bootstrap_path <- dalycare_resolve_bootstrap_path(bootstrap_path)
   source_map_path <- if (file.exists(source_map_path)) source_map_path else file.path(project_root, source_map_path)
   output_root <- if (grepl("^[A-Za-z]:|^/", output_root)) output_root else file.path(project_root, output_root)
 
@@ -38,6 +40,18 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   }
   source_resolution <- resolve_dalycare_sources(source_map, db_adapter = db_adapter)
   memory_plan <- memory_plan_for_sources(source_map, source_resolution)
+  access_report <- dalycare_access_report(
+    project_root = project_root,
+    source_map = source_map,
+    bootstrap_path = bootstrap_path,
+    db_adapter = db_adapter,
+    source_resolution = source_resolution
+  )
+  for (i in seq_len(nrow(access_report))) {
+    if (access_report$status[[i]] %in% c("warning", "error")) {
+      log_event(access_report$status[[i]], access_report$table_name[[i]], paste(access_report$check_id[[i]], access_report$message[[i]]))
+    }
+  }
   for (i in seq_len(nrow(source_resolution))) {
     row <- source_resolution[i, , drop = FALSE]
     if (row$resolution_status[[1]] %in% c("missing", "ambiguous", "db_unavailable")) {
@@ -189,11 +203,20 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   column_profiles <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_profiles, bind_rows_base(column_profile_rows)), sources)
   column_top_values <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_top_values, bind_rows_base(column_top_value_rows)), sources)
   checks <- safe_read_output_csv(stream_paths$checks, bind_rows_base(check_rows))
+  access_checks <- access_report_checks(access_report)
+  if (nrow(access_checks)) checks <- bind_rows_base(list(checks, access_checks))
   frequencies <- safe_read_output_csv(stream_paths$value_frequencies, bind_rows_base(frequency_rows))
   panels$source_availability_drift <- source_availability_panel(sources)
+  empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
+  if (isTRUE(empty_live_refused)) {
+    message <- empty_live_run_message(source_map, source_resolution)
+    checks <- bind_rows_base(list(checks, check_row("", "empty_live_run_refused", "error", message)))
+    log_event("error", "", message)
+  }
 
   output_paths <- list()
   output_paths$source_resolution <- write_csv(source_resolution, file.path(output_dir, "atlas_source_resolution.csv"))
+  output_paths$dalycare_access <- write_csv(access_report, file.path(output_dir, "atlas_dalycare_access.csv"))
   output_paths$memory_plan <- write_csv(memory_plan, file.path(output_dir, "atlas_memory_plan.csv"))
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
@@ -212,6 +235,16 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   panel_paths <- list()
   for (panel_name in names(panels)) {
     panel_paths[[panel_name]] <- write_csv(panels[[panel_name]], file.path(panel_dir, paste0(panel_name, ".csv")))
+  }
+
+  if (isTRUE(empty_live_refused)) {
+    memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
+    all_paths <- c(output_paths, panel_paths, list(memory_log = memory_log_path))
+    manifest <- output_manifest(all_paths, run_dir = run_dir)
+    manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
+    log_event("info", "", "Diagnostic manifest written")
+    write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
+    stop(empty_live_run_message(source_map, source_resolution), "\nDiagnostics written to: ", run_dir, call. = FALSE)
   }
 
   payload_sources <- safe_read_output_csv(output_paths$sources, sources)
@@ -249,6 +282,58 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     html = site_paths$html,
     payload = site_paths$payload
   ))
+}
+
+atlas_allow_empty_live_run <- function() {
+  normalize_atlas_logical(Sys.getenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN", unset = "FALSE"), default = FALSE)
+}
+
+should_refuse_empty_live_run <- function(source_map, sources) {
+  if (atlas_allow_empty_live_run()) return(FALSE)
+  if (!is.data.frame(source_map) || !"source_type" %in% names(source_map)) return(FALSE)
+  has_dataset <- any(tolower(source_map$source_type) == "dataset", na.rm = TRUE)
+  if (!isTRUE(has_dataset)) return(FALSE)
+  loaded <- 0L
+  if (is.data.frame(sources) && all(c("load_status", "source_type") %in% names(sources))) {
+    loaded <- sum(tolower(sources$source_type) == "dataset" & sources$load_status == "ok", na.rm = TRUE)
+  } else if (is.data.frame(sources) && "load_status" %in% names(sources)) {
+    loaded <- sum(sources$load_status == "ok", na.rm = TRUE)
+  }
+  loaded == 0L
+}
+
+empty_live_run_message <- function(source_map, source_resolution = NULL) {
+  n_dataset <- if (is.data.frame(source_map) && "source_type" %in% names(source_map)) {
+    sum(tolower(source_map$source_type) == "dataset", na.rm = TRUE)
+  } else {
+    0L
+  }
+  resolution_summary <- ""
+  if (is.data.frame(source_resolution) && nrow(source_resolution) && "resolution_status" %in% names(source_resolution)) {
+    counts <- table(source_resolution$resolution_status, useNA = "no")
+    resolution_summary <- paste(paste(names(counts), as.integer(counts), sep = "="), collapse = ", ")
+  }
+  paste(
+    "Refusing to write a misleading live DALY atlas: the source map contains",
+    n_dataset,
+    "dataset-backed DALY source(s), but zero sources were profiled.",
+    "Check outputs/atlas_dalycare_access.csv and outputs/atlas_source_resolution.csv.",
+    if (nzchar(resolution_summary)) paste("Resolution summary:", resolution_summary) else "",
+    "Set DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN=TRUE only for fixture/skeleton dry-runs."
+  )
+}
+
+access_report_checks <- function(access_report) {
+  if (!is.data.frame(access_report) || !nrow(access_report)) return(empty_df(table_name = character(), check_id = character(), severity = character(), message = character()))
+  status <- access_report$status %||% rep("", nrow(access_report))
+  severity <- ifelse(status %in% c("error", "warning"), status, "info")
+  data.frame(
+    table_name = access_report$table_name %||% rep("", nrow(access_report)),
+    check_id = paste0("dalycare_access_", access_report$check_id %||% seq_len(nrow(access_report))),
+    severity = severity,
+    message = paste(access_report$message %||% "", access_report$detail %||% ""),
+    stringsAsFactors = FALSE
+  )
 }
 
 validation_warnings <- function(source_map, output_root, project_root = ".") {

@@ -3,6 +3,8 @@ dalycare_canonical_sources <- function() {
     "patient",
     "RKKP_CLL", "RKKP_LYFO", "RKKP_DaMyDa",
     "SP_AdministreretMedicin", "SP_ADT_haendelser", "SP_AlleProvesvar",
+    "SP_BilleddiagnostikeUndersoegelser_Del1",
+    "SP_BilleddiagnostikeUndersoegelser_Del2",
     "SP_Behandlingsniveau", "SP_BilleddiagnostiskeUndersøgelser_Del1",
     "SP_BilleddiagnostiskeUndersøgelser_Del2", "SP_Behandlingsplaner_Del1",
     "SP_Bloddyrkning_Del1", "SP_Bloddyrkning_Del2", "SP_Bloddyrkning_Del3",
@@ -27,6 +29,12 @@ dalycare_default_source_map_path <- function(project_root = ".") {
 }
 
 dalycare_default_bootstrap_path <- function(project_root = ".") {
+  standard <- if (exists("dalycare_standard_bootstrap_path", mode = "function")) {
+    dalycare_standard_bootstrap_path()
+  } else {
+    "/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R"
+  }
+  if (file.exists(standard)) return(standard)
   file.path(project_root, "inst", "templates", "dalycare_bootstrap.R")
 }
 
@@ -145,6 +153,38 @@ check_dalycare_bootstrap <- function(project_root = ".",
   }
 
   out <- bind_rows_base(rows)
+  if (exists("dalycare_access_report", mode = "function")) {
+    db_adapter <- if (exists("dalycare_db_adapter", mode = "function")) {
+      tryCatch(dalycare_db_adapter(bootstrap_path = bootstrap_path), error = function(e) NULL)
+    } else {
+      NULL
+    }
+    source_resolution <- if (!is.null(source_map) && exists("resolve_dalycare_sources", mode = "function")) {
+      tryCatch(resolve_dalycare_sources(source_map, db_adapter = db_adapter), error = function(e) NULL)
+    } else {
+      NULL
+    }
+    access_rows <- tryCatch(
+      dalycare_access_report(
+        project_root = project_root,
+        source_map = source_map,
+        bootstrap_path = bootstrap_path,
+        db_adapter = db_adapter,
+        source_resolution = source_resolution
+      ),
+      error = function(e) data.frame(
+        status = "error",
+        check_id = "dalycare_access_report_failed",
+        table_name = "",
+        db_name = "",
+        schema = "",
+        message = conditionMessage(e),
+        detail = "",
+        stringsAsFactors = FALSE
+      )
+    )
+    out <- bind_rows_base(list(out, access_rows))
+  }
   if (!nrow(out)) {
     return(empty_df(status = character(), check_id = character(), table_name = character(), message = character(), detail = character()))
   }

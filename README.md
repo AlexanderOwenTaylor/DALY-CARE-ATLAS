@@ -25,27 +25,31 @@ result <- run_atlas_from_source(
 )
 ```
 
-In DALY-CARE, set `DALYCARE_BOOTSTRAP_PATH` to a bootstrap script that defines
-`load_dataset()`, then run:
+In DALY-CARE production, the atlas now auto-detects the standard loader at
+`/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R` when it exists. You
+only need `DALYCARE_BOOTSTRAP_PATH` when using a non-standard loader.
 
-```sh
-Rscript scripts/run_atlas.R /path/to/project config/source-map.tsv atlas_runs report
+From RStudio Console:
+
+```r
+source("scripts/run_atlas.R")
+result <- run_atlas_from_source(source_map_path = "config/source-map.dalycare.tsv")
 ```
 
-For real DALY-CARE runs, start from the package preset and bootstrap template:
+From a terminal:
 
 ```sh
-export DALYCARE_PACKAGE_ROOT=/path/to/dalycare_package
-export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_bootstrap.R
 Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS
 Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare.tsv atlas_runs report
 ```
 
-The preflight script checks the source map and bootstrap without loading live
-patient-level data. Set `DALYCARE_PREFLIGHT_ATTEMPT_LOAD=TRUE` only when you
-intentionally want to probe live DALY database access. Database credentials and
-access still depend on the upstream DALY-CARE package and the user's NGC
-`/ngc/people/<user>/db_access.R` setup.
+The preflight script checks the source map, bootstrap, NGC `db_access.R`, DB
+connection availability, and DB catalog resolution without loading patient-level
+rows. Database credentials remain controlled by
+`/ngc/people/<user>/db_access.R`; the atlas reports symbol presence/classes only
+and never writes credential values. If a DALY source map resolves zero live
+sources, the run now stops before writing the HTML artifact unless
+`DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN=TRUE` is set for a deliberate dry run.
 
 By default, public aggregate counts below 5 are suppressed in value-frequency
 and registry categorical outputs. Override this only for local fixture testing:
@@ -107,6 +111,7 @@ Each run writes `atlas_runs/<run_id>/` with:
 
 - `outputs/atlas_resource_catalog.csv`
 - `outputs/atlas_source_resolution.csv`
+- `outputs/atlas_dalycare_access.csv`
 - `outputs/atlas_memory_plan.csv`
 - `outputs/atlas_sources.csv`
 - `outputs/atlas_columns.csv`

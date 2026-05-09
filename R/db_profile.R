@@ -10,6 +10,41 @@ atlas_max_full_load_rows <- function() {
   normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS", unset = "100000"), default = 100000L)
 }
 
+dalycare_standard_bootstrap_path <- function() {
+  "/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R"
+}
+
+dalycare_resolve_bootstrap_path <- function(bootstrap_path = "") {
+  explicit <- trimws(as.character(bootstrap_path[[1]] %||% ""))
+  if (nzchar(explicit)) return(explicit)
+  env_path <- trimws(Sys.getenv("DALYCARE_BOOTSTRAP_PATH", unset = ""))
+  if (nzchar(env_path)) return(env_path)
+  standard <- dalycare_standard_bootstrap_path()
+  if (file.exists(standard)) return(standard)
+  ""
+}
+
+dalycare_default_db_access_path <- function(user = Sys.info()[["user"]] %||% Sys.getenv("USER", unset = "")) {
+  override <- Sys.getenv("DALYCARE_DB_ACCESS_PATH", unset = "")
+  if (nzchar(override)) return(override)
+  if (!nzchar(user %||% "")) return("")
+  file.path("/ngc/people", user, "db_access.R")
+}
+
+dalycare_db_host <- function() {
+  Sys.getenv("DALYCARE_ATLAS_DB_HOST", unset = "kb-dalyca-01.hpc.cld")
+}
+
+dalycare_db_port <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_DB_PORT", unset = "5432"), default = 5432L)
+}
+
+dalycare_db_names <- function() {
+  raw <- Sys.getenv("DALYCARE_ATLAS_DB_NAMES", unset = "core,import,dalycare")
+  dbs <- trimws(strsplit(raw, ",", fixed = TRUE)[[1]])
+  dbs[nzchar(dbs)]
+}
+
 normalize_atlas_logical <- function(x, default = FALSE) {
   x <- tolower(trimws(as.character(x[[1]] %||% "")))
   if (x %in% c("true", "t", "yes", "y", "1")) return(TRUE)
@@ -76,6 +111,7 @@ atlas_known_daly_db_schemas <- function() {
 }
 
 dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
+  bootstrap_path <- dalycare_resolve_bootstrap_path(bootstrap_path)
   if (nzchar(bootstrap_path %||% "") && file.exists(bootstrap_path)) {
     tryCatch(source(bootstrap_path, local = env), error = function(e) invisible(NULL))
   }
@@ -88,6 +124,12 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
   if (!is.null(env_conn)) {
     connections[[connection_db_name(env_conn, "env_postgres")]] <- env_conn
   }
+  ngc_connections <- postgres_connections_from_ngc_db_access()
+  for (nm in names(ngc_connections)) {
+    if (!nm %in% names(connections)) {
+      connections[[nm]] <- ngc_connections[[nm]]
+    }
+  }
   if (!length(connections)) {
     return(NULL)
   }
@@ -95,6 +137,10 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
   list(
     adapter_name = "DBI",
     connections = connections,
+    access = dalycare_db_access_metadata(
+      bootstrap_path = bootstrap_path,
+      connection_names = names(connections)
+    ),
     list_tables = function() dbi_list_tables(connections),
     table_schema = function(db_name, schema, table) dbi_table_schema(connections, db_name, schema, table),
     table_row_count = function(db_name, schema, table) dbi_table_row_count(connections, db_name, schema, table),
@@ -117,6 +163,201 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
       )
     }
   )
+}
+
+dalycare_db_access_metadata <- function(bootstrap_path = dalycare_resolve_bootstrap_path(),
+                                        db_access_path = dalycare_default_db_access_path(),
+                                        connection_names = character()) {
+  access <- read_dalycare_db_access(db_access_path)
+  data.frame(
+    bootstrap_path = bootstrap_path %||% "",
+    bootstrap_exists = file.exists(bootstrap_path %||% ""),
+    db_access_path = db_access_path %||% "",
+    db_access_exists = isTRUE(access$exists),
+    db_access_error = access$error %||% "",
+    db_access_pw_present = isTRUE(access$password_present),
+    db_access_symbols = paste(access$symbols$symbol_name, collapse = ","),
+    db_connection_names = paste(connection_names, collapse = ","),
+    stringsAsFactors = FALSE
+  )
+}
+
+dalycare_access_report <- function(project_root = ".",
+                                   source_map = NULL,
+                                   bootstrap_path = "",
+                                   db_adapter = NULL,
+                                   source_resolution = NULL) {
+  rows <- list()
+  add <- function(status, check_id, message, table_name = "", db_name = "", schema = "", detail = "") {
+    rows[[length(rows) + 1L]] <<- data.frame(
+      status = status,
+      check_id = check_id,
+      table_name = table_name %||% "",
+      db_name = db_name %||% "",
+      schema = schema %||% "",
+      message = message %||% "",
+      detail = detail %||% "",
+      stringsAsFactors = FALSE
+    )
+  }
+
+  bootstrap_path <- dalycare_resolve_bootstrap_path(bootstrap_path)
+  if (nzchar(bootstrap_path)) {
+    if (file.exists(bootstrap_path)) {
+      add("ok", "bootstrap_path_available", paste("Bootstrap path exists:", bootstrap_path))
+      probe_env <- new.env(parent = .GlobalEnv)
+      before_global <- ls(envir = .GlobalEnv, all.names = TRUE)
+      sourced <- tryCatch(source(bootstrap_path, local = probe_env), error = function(e) e)
+      global_loader_available <- exists("load_dataset", mode = "function", envir = .GlobalEnv, inherits = FALSE)
+      created_global <- setdiff(ls(envir = .GlobalEnv, all.names = TRUE), before_global)
+      if (length(created_global)) {
+        rm(list = created_global, envir = .GlobalEnv)
+      }
+      if (inherits(sourced, "error")) {
+        add("error", "bootstrap_source_failed", conditionMessage(sourced), detail = bootstrap_path)
+      } else if (exists("load_dataset", mode = "function", envir = probe_env, inherits = FALSE) ||
+                 isTRUE(global_loader_available)) {
+        add("ok", "load_dataset_available", "Bootstrap defined load_dataset().")
+      } else {
+        add("warning", "load_dataset_missing", "Bootstrap sourced, but load_dataset() was not found.")
+      }
+    } else {
+      add("warning", "bootstrap_path_missing", paste("Bootstrap path not found:", bootstrap_path))
+    }
+  } else {
+    add("warning", "bootstrap_path_unset", "No bootstrap path was provided and the standard production path was not found.")
+  }
+
+  db_access_path <- dalycare_default_db_access_path()
+  access <- read_dalycare_db_access(db_access_path)
+  if (!nzchar(db_access_path)) {
+    add("warning", "db_access_path_unset", "Could not determine the NGC db_access.R path.")
+  } else if (!isTRUE(access$exists)) {
+    add("warning", "db_access_missing", paste("DB credential file not found:", db_access_path))
+  } else if (nzchar(access$error %||% "")) {
+    add("warning", "db_access_source_failed", access$error, detail = db_access_path)
+  } else {
+    pw_detail <- paste0("pw_present=", isTRUE(access$password_present), "; symbols=", paste(access$symbols$symbol_name, collapse = ","))
+    add(if (isTRUE(access$password_present)) "ok" else "warning", "db_access_read", "DB credential file was sourced in a private environment.", detail = pw_detail)
+  }
+
+  add(if (requireNamespace("DBI", quietly = TRUE)) "ok" else "warning", "dbi_package_available", "DBI package availability checked.")
+  add(if (requireNamespace("RPostgres", quietly = TRUE)) "ok" else "warning", "rpostgres_package_available", "RPostgres package availability checked.")
+
+  if (is.null(db_adapter)) {
+    add("warning", "db_adapter_unavailable", "No DB adapter was available; DALY source catalog could not be queried.")
+  } else {
+    conn_names <- names(db_adapter$connections %||% list())
+    add("ok", "db_adapter_available", paste("DB adapter available with", length(conn_names), "connection(s)."), detail = paste(conn_names, collapse = ","))
+    tables <- adapter_list_tables(db_adapter)
+    if (!nrow(tables)) {
+      add("warning", "db_catalog_empty", "DB adapter returned no tables or views in the DALY atlas schema universe.")
+    } else {
+      by_schema <- aggregate(table ~ db_name + schema, data = tables, FUN = length)
+      names(by_schema)[names(by_schema) == "table"] <- "n_tables"
+      for (i in seq_len(nrow(by_schema))) {
+        add(
+          "ok",
+          "db_catalog_schema_count",
+          paste("Catalog tables/views:", by_schema$n_tables[[i]]),
+          db_name = by_schema$db_name[[i]],
+          schema = by_schema$schema[[i]]
+        )
+      }
+    }
+  }
+
+  if (!is.null(source_resolution) && is.data.frame(source_resolution) && nrow(source_resolution)) {
+    status_counts <- aggregate(source_index ~ resolution_status, data = source_resolution, FUN = length)
+    for (i in seq_len(nrow(status_counts))) {
+      add(
+        if (status_counts$resolution_status[[i]] %in% c("missing", "ambiguous", "db_unavailable")) "warning" else "ok",
+        paste0("source_resolution_", status_counts$resolution_status[[i]]),
+        paste("Mapped sources:", status_counts$source_index[[i]])
+      )
+    }
+  } else if (!is.null(source_map) && is.data.frame(source_map) && any(source_map$source_type == "dataset")) {
+    add("warning", "source_resolution_missing", "Source map has dataset rows, but no source-resolution report was available.")
+  }
+
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) {
+    return(empty_df(status = character(), check_id = character(), table_name = character(), db_name = character(), schema = character(), message = character(), detail = character()))
+  }
+  out
+}
+
+read_dalycare_db_access <- function(db_access_path = dalycare_default_db_access_path(),
+                                    user = Sys.info()[["user"]] %||% Sys.getenv("USER", unset = "")) {
+  empty <- function(error = "") {
+    list(
+      path = db_access_path %||% "",
+      exists = file.exists(db_access_path %||% ""),
+      error = error,
+      user = user %||% "",
+      password = NULL,
+      password_present = FALSE,
+      symbols = empty_df(symbol_name = character(), object_class = character(), object_type = character(), object_length = integer())
+    )
+  }
+  if (!nzchar(db_access_path %||% "") || !file.exists(db_access_path)) {
+    return(empty())
+  }
+  access_env <- new.env(parent = .GlobalEnv)
+  sourced <- tryCatch(source(db_access_path, local = access_env), error = function(e) e)
+  if (inherits(sourced, "error")) {
+    return(empty(conditionMessage(sourced)))
+  }
+  names <- ls(envir = access_env, all.names = TRUE)
+  symbols <- lapply(names, function(nm) {
+    value <- tryCatch(get(nm, envir = access_env, inherits = FALSE), error = function(e) NULL)
+    data.frame(
+      symbol_name = nm,
+      object_class = paste(class(value), collapse = "/"),
+      object_type = typeof(value),
+      object_length = length(value),
+      stringsAsFactors = FALSE
+    )
+  })
+  pw <- if (exists("pw", envir = access_env, inherits = FALSE)) {
+    tryCatch(get("pw", envir = access_env, inherits = FALSE), error = function(e) NULL)
+  } else {
+    NULL
+  }
+  list(
+    path = db_access_path,
+    exists = TRUE,
+    error = "",
+    user = user %||% "",
+    password = if (is.null(pw)) NULL else as.character(pw[[1]]),
+    password_present = !is.null(pw) && nzchar(as.character(pw[[1]] %||% "")),
+    symbols = bind_rows_base(symbols)
+  )
+}
+
+postgres_connections_from_ngc_db_access <- function(db_access = read_dalycare_db_access(),
+                                                    db_names = dalycare_db_names()) {
+  if (!requireNamespace("RPostgres", quietly = TRUE) || !requireNamespace("DBI", quietly = TRUE)) {
+    return(list())
+  }
+  if (!isTRUE(db_access$password_present)) return(list())
+  user <- Sys.getenv("DALYCARE_ATLAS_DB_USER", unset = db_access$user %||% "")
+  if (!nzchar(user)) return(list())
+  connections <- list()
+  for (db_name in db_names) {
+    args <- list(
+      drv = RPostgres::Postgres(),
+      dbname = db_name,
+      host = dalycare_db_host(),
+      port = dalycare_db_port(),
+      user = user,
+      password = db_access$password,
+      options = "-c default_transaction_read_only=on"
+    )
+    conn <- tryCatch(do.call(DBI::dbConnect, args), error = function(e) NULL)
+    if (!is.null(conn)) connections[[connection_db_name(conn, db_name)]] <- conn
+  }
+  connections
 }
 
 find_dbi_connections <- function(env = .GlobalEnv) {
@@ -242,16 +483,8 @@ match_table_location <- function(record, tables) {
   requested_db <- source_record_value(record, "db_name")
   requested_schema <- source_record_value(record, "schema")
   requested_table <- source_record_value(record, "table")
-  candidates <- if (nzchar(requested_table)) {
-    requested_table
-  } else {
-    unique(c(
-      source_record_value(record, "source"),
-      source_record_value(record, "table_name"),
-      make.names(source_record_value(record, "source")),
-      make.names(source_record_value(record, "table_name"))
-    ))
-  }
+  candidates <- dalycare_table_candidates(record)
+  if (nzchar(requested_table)) candidates <- unique(c(requested_table, candidates))
   candidates <- candidates[nzchar(candidates)]
   table_key <- normalized_table_key(tables$table)
   candidate_keys <- normalized_table_key(candidates)
@@ -266,8 +499,88 @@ match_table_location <- function(record, tables) {
   tables[ix, , drop = FALSE]
 }
 
+dalycare_table_candidates <- function(record) {
+  base <- unique(c(
+    source_record_value(record, "table"),
+    source_record_value(record, "source"),
+    source_record_value(record, "table_name"),
+    make.names(source_record_value(record, "source")),
+    make.names(source_record_value(record, "table_name"))
+  ))
+  base <- base[nzchar(base)]
+  aliases <- dalycare_table_aliases()
+  out <- base
+  base_keys <- normalized_table_key(base)
+  for (family in aliases) {
+    family_keys <- normalized_table_key(family)
+    if (any(base_keys %in% family_keys)) out <- unique(c(out, family))
+  }
+  out[nzchar(out)]
+}
+
+dalycare_table_aliases <- function() {
+  list(
+    c("patient", "patients", "patient_table", "view_create_patient_table"),
+    c("RKKP_CLL", "rkkp_cll", "clean_RKKP_CLL"),
+    c("RKKP_LYFO", "rkkp_lyfo", "clean_RKKP_LYFO"),
+    c("RKKP_DaMyDa", "RKKP_DAMYDA", "rkkp_damyda", "clean_RKKP_DAMYDA"),
+    c("SP_AdministreretMedicin", "SP_Administreret_Medicin", "AdministreretMedicin"),
+    c("SP_OrdineretMedicin", "SP_Ordineret_Medicin", "OrdineretMedicin"),
+    c("SP_ADT_haendelser", "SP_ADT_Haendelser", "SP_ADT_Haendelser", "ADT_Haendelser"),
+    c("SP_AlleProvesvar", "SP_AlleProevesvar", "AlleProvesvar", "AlleProevesvar"),
+    c("SP_Behandlingsniveau", "Behandlingsniveau"),
+    c("SP_BilleddiagnostikeUndersoegelser_Del1", "SP_BilleddiagnostiskeUndersoegelser_Del1", "SP_BilleddiagnostiskeUndersøgelser_Del1", "SP_BilleddiagnostiskeUndersÃ¸gelser_Del1", "BilleddiagnostikeUndersoegelser_Del1"),
+    c("SP_BilleddiagnostikeUndersoegelser_Del2", "SP_BilleddiagnostiskeUndersoegelser_Del2", "SP_BilleddiagnostiskeUndersøgelser_Del2", "SP_BilleddiagnostiskeUndersÃ¸gelser_Del2", "BilleddiagnostikeUndersoegelser_Del2"),
+    c("SP_Behandlingsplaner_Del1", "SP_Behandlingsplaner_del1", "Behandlingsplaner_Del1"),
+    c("SP_Behandlingsplaner_Del2", "SP_Behandlingsplaner_del2", "Behandlingsplaner_Del2"),
+    c("SP_Bloddyrkning_Del1", "SP_Bloddyrkning_del1", "Bloddyrkning_Del1"),
+    c("SP_Bloddyrkning_Del2", "SP_Bloddyrkning_del2", "Bloddyrkning_Del2"),
+    c("SP_Bloddyrkning_Del3", "SP_Bloddyrkning_del3", "Bloddyrkning_Del3"),
+    c("SP_Bloddyrkning_Del4", "SP_Bloddyrkning_del4", "Bloddyrkning_Del4"),
+    c("SP_ITAOphold", "ITA_Ophold", "ITAOphold"),
+    c("SP_Journalnotater_Del1", "SP_Journalnotater_del1", "Journalnotater_Del1"),
+    c("SP_Journalnotater_Del2", "SP_Journalnotater_del2", "Journalnotater_Del2"),
+    c("SP_SocialHX", "SocialHX", "social_history"),
+    c("SP_VitaleVaerdier", "SP_VitaleVærdier", "SP_VitaleVÃ¦rdier", "VitaleVaerdier"),
+    c("SDS_lab_forsker", "SDS_laboratorieproevesvar", "SDS_laboratorieprøvesvar"),
+    c("SDS_lab_labidcodes", "SDS_dimlaboratoriekoder", "labidcodes"),
+    c("SDS_t_dodsaarsag_2", "SDS_t_doedsaarsag", "SDS_doedsaarsag_3", "SDS_dodsaarsag"),
+    c("SDS_t_tumor", "SDS_tumor_aarlig", "SDS_tumor"),
+    c("SDS_procedurer_kirurgi", "SDS_procedure_kirurgi", "procedurer_kirurgi"),
+    c("SDS_procedurer_andre", "SDS_procedure_andre", "procedurer_andre"),
+    c("SDS_t_adm", "SDS_admissioner", "admissioner"),
+    c("SDS_forloeb", "SDS_forløb", "forloeb"),
+    c("SDS_kontakter", "kontakter"),
+    c("SDS_t_sksopr", "SDS_sksopr"),
+    c("SDS_t_sksube", "SDS_sksube"),
+    c("SDS_t_diag", "SDS_diag"),
+    c("SDS_t_udtilsgh", "SDS_udtilsgh"),
+    c("SDS_diagnoser", "diagnoser"),
+    c("SDS_resultater", "resultater"),
+    c("SDS_koder", "koder"),
+    c("SDS_organisationer", "organisationer"),
+    c("SDS_epikur", "epikur"),
+    c("SDS_indberetningmedpris", "indberetningmedpris"),
+    c("SDS_pato", "pato"),
+    c("t_dalycare_diagnoses", "dalycare_diagnoses"),
+    c("view_diagnosses_all", "view_diagnoses_all", "diagnoses_all", "diagnosses_all"),
+    c("view_diagnoses_all_hosp_region", "diagnoses_all_hosp_region"),
+    c("view_date_death", "date_death"),
+    c("view_date_followup", "date_followup"),
+    c("view_true_date_death", "true_date_death"),
+    c("view_dalycare_diagnoses", "dalycare_diagnoses_view"),
+    c("view_patient_table_os", "patient_table_os")
+  )
+}
+
 normalized_table_key <- function(x) {
-  gsub("[^a-z0-9]", "", tolower(as.character(x)))
+  x <- as.character(x)
+  x <- gsub("Ã¸|ø|Ø", "oe", x)
+  x <- gsub("Ã¦|æ|Æ", "ae", x)
+  x <- gsub("Ã¥|å|Å", "aa", x)
+  folded <- suppressWarnings(iconv(x, from = "", to = "ASCII//TRANSLIT", sub = ""))
+  folded[is.na(folded)] <- x[is.na(folded)]
+  gsub("[^a-z0-9]", "", tolower(folded))
 }
 
 adapter_table_row_count <- function(db_adapter, db_name, schema, table) {
@@ -420,12 +733,16 @@ normalize_profile_result <- function(out) {
 }
 
 dbi_list_tables <- function(connections) {
+  known <- atlas_known_daly_db_schemas()
   rows <- lapply(names(connections), function(db_name) {
     conn <- connections[[db_name]]
+    schemas <- unique(known$schema[known$db_name == db_name])
+    if (!length(schemas)) schemas <- unique(known$schema)
+    schema_sql <- paste(as.character(DBI::dbQuoteString(conn, schemas)), collapse = ", ")
     sql <- paste(
       "select current_database() as db_name, table_schema as schema, table_name as table",
       "from information_schema.tables",
-      "where table_schema not in ('pg_catalog', 'information_schema')",
+      "where table_schema in (", schema_sql, ")",
       "and table_type in ('BASE TABLE', 'VIEW')"
     )
     out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) empty_source_resolution_tables())

@@ -4,9 +4,13 @@ source_test_runtime(root)
 
 old_db_profile <- Sys.getenv("DALYCARE_ATLAS_DB_PROFILE", unset = NA)
 old_max_full_load <- Sys.getenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS", unset = NA)
+old_allow_empty <- Sys.getenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN", unset = NA)
+old_db_access <- Sys.getenv("DALYCARE_DB_ACCESS_PATH", unset = NA)
 on.exit({
   if (is.na(old_db_profile)) Sys.unsetenv("DALYCARE_ATLAS_DB_PROFILE") else Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = old_db_profile)
   if (is.na(old_max_full_load)) Sys.unsetenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS") else Sys.setenv(DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS = old_max_full_load)
+  if (is.na(old_allow_empty)) Sys.unsetenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN") else Sys.setenv(DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN = old_allow_empty)
+  if (is.na(old_db_access)) Sys.unsetenv("DALYCARE_DB_ACCESS_PATH") else Sys.setenv(DALYCARE_DB_ACCESS_PATH = old_db_access)
   if (exists("load_dataset", envir = .GlobalEnv, inherits = FALSE)) rm(load_dataset, envir = .GlobalEnv)
 }, add = TRUE)
 Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = "TRUE", DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS = "3")
@@ -67,6 +71,32 @@ expect_true(any(resolution$table_name == "RKKP_DaMyDa" & resolution$resolution_s
 expect_true(any(resolution$table_name == "RKKP_CLL" & resolution$resolution_status == "ambiguous"), "Resolver should flag ambiguous DB table matches.")
 expect_true(any(resolution$table_name == "NOPE" & resolution$resolution_status == "missing"), "Resolver should flag missing DB table matches.")
 
+alias_map <- data.frame(
+  table_name = c("SP_BilleddiagnostikeUndersoegelser_Del1", "view_diagnoses_all"),
+  source_type = "dataset",
+  source = c("SP_BilleddiagnostikeUndersoegelser_Del1", "view_diagnoses_all"),
+  priority = 1:2,
+  profile_mode = "schema",
+  stringsAsFactors = FALSE
+)
+alias_tables <- data.frame(
+  db_name = c("import", "dalycare"),
+  schema = c("public", "views"),
+  table = c("SP_BilleddiagnostiskeUndersøgelser_Del1", "view_diagnosses_all"),
+  stringsAsFactors = FALSE
+)
+alias_resolution <- resolve_dalycare_sources(alias_map, db_adapter = list(list_tables = function() alias_tables, table_row_count = function(...) 1L))
+expect_true(all(alias_resolution$resolution_status == "resolved"), "Resolver should match ASCII-folded and known spelling aliases.")
+
+fake_db_access <- tempfile(fileext = ".R")
+writeLines(c("pw <- 'not-secret-in-report'", "ignored <- 123"), fake_db_access)
+Sys.setenv(DALYCARE_DB_ACCESS_PATH = fake_db_access)
+access <- read_dalycare_db_access()
+expect_true(access$password_present, "DB access reader should detect a pw symbol.")
+report <- dalycare_access_report(source_map = alias_map, db_adapter = list(list_tables = function() alias_tables, table_row_count = function(...) 1L), source_resolution = alias_resolution)
+report_text <- paste(capture.output(print(report)), collapse = "\n")
+expect_false(grepl("not-secret-in-report", report_text, fixed = TRUE), "DB access diagnostics must not expose credential values.")
+
 plan <- memory_plan_for_sources(source_map, resolution)
 expect_true(any(plan$table_name == "RKKP_DaMyDa" & plan$chosen_strategy == "db_aggregate"), "Resolved DALY sources should prefer DB aggregate profiling.")
 expect_true(any(plan$table_name == "RKKP_CLL" & plan$chosen_strategy == "skipped_risky_full_load"), "Ambiguous large DALY sources should not fall back to load_dataset() by default.")
@@ -88,13 +118,26 @@ expect_true(any(db_profile$panels$lab_npu_code_coverage$lab_code == "NPU04998"),
 expect_true(any(db_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "DB aggregate profile should produce dictionary-aware NPU vector usage.")
 expect_true(any(db_profile$panels$npu_lab_unmatched_codes$npu_code == "NPU99999"), "DB aggregate profile should produce suppressed-safe unmatched NPU summaries.")
 
-Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = "FALSE")
 skip_map <- tempfile(fileext = ".tsv")
 writeLines(c(
   "table_name\tsource_type\tsource\tpriority\tprofile_mode",
   "large_dataset\tdataset\tlarge_dataset\t1\tfull"
 ), skip_map)
 assign("load_dataset", function(dataset = NULL) stop("load_dataset should not be called for skipped risky full loads"), envir = .GlobalEnv)
+Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = "FALSE")
+Sys.unsetenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN")
+fail_root <- tempfile("atlas_empty_fail_")
+empty_error <- tryCatch(
+  run_atlas(project_root = root, source_map_path = skip_map, output_root = fail_root, mode = "report"),
+  error = function(e) conditionMessage(e)
+)
+expect_true(grepl("Refusing to write a misleading live DALY atlas", empty_error, fixed = TRUE), "Dataset-backed DALY maps with zero profiled sources should fail loudly by default.")
+failed_dirs <- list.dirs(fail_root, recursive = FALSE, full.names = TRUE)
+expect_true(length(failed_dirs) == 1L, "Failed empty live runs should still leave one diagnostic run directory.")
+expect_file(file.path(failed_dirs[[1]], "outputs", "atlas_dalycare_access.csv"))
+expect_file(file.path(failed_dirs[[1]], "outputs", "output_manifest.csv"))
+
+Sys.setenv(DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN = "TRUE")
 skip_result <- run_atlas(project_root = root, source_map_path = skip_map, output_root = tempfile("atlas_skip_"), mode = "report")
 skip_sources <- utils::read.csv(file.path(skip_result$run_dir, "outputs", "atlas_sources.csv"), stringsAsFactors = FALSE)
 expect_true(identical(skip_sources$load_status[[1]], "skipped"), "Risky unresolved dataset sources should be skipped before load_dataset() is called.")

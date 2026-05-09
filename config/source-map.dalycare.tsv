@@ -8,8 +8,8 @@ SP_OrdineretMedicin	dataset	SP_OrdineretMedicin	21	summary	SP	Medication	ordered
 SP_ADT_haendelser	dataset	SP_ADT_haendelser	22	summary	SP	ADT	encounter_events	auto					FALSE
 SP_AlleProvesvar	dataset	SP_AlleProvesvar	23	summary	SP	Laboratory	lab_results	auto					FALSE
 SP_Behandlingsniveau	dataset	SP_Behandlingsniveau	24	summary	SP	Treatment	treatment_level	auto					FALSE
-SP_BilleddiagnostiskeUndersøgelser_Del1	dataset	SP_BilleddiagnostiskeUndersøgelser_Del1	25	summary	SP	Imaging	imaging	auto					FALSE
-SP_BilleddiagnostiskeUndersøgelser_Del2	dataset	SP_BilleddiagnostiskeUndersøgelser_Del2	26	summary	SP	Imaging	imaging	auto					FALSE
+SP_BilleddiagnostikeUndersoegelser_Del1	dataset	SP_BilleddiagnostikeUndersoegelser_Del1	25	summary	SP	Imaging	imaging	auto					FALSE
+SP_BilleddiagnostikeUndersoegelser_Del2	dataset	SP_BilleddiagnostikeUndersoegelser_Del2	26	summary	SP	Imaging	imaging	auto					FALSE
 SP_Behandlingsplaner_Del1	dataset	SP_Behandlingsplaner_Del1	27	summary	SP	Treatment	treatment_plans	auto					FALSE
 SP_Bloddyrkning_Del1	dataset	SP_Bloddyrkning_Del1	28	summary	SP	Microbiology	blood_culture	auto					FALSE
 SP_Bloddyrkning_Del2	dataset	SP_Bloddyrkning_Del2	29	summary	SP	Microbiology	blood_culture	auto					FALSE

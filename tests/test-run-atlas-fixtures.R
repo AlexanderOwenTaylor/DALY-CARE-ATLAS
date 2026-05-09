@@ -13,6 +13,7 @@ result <- run_atlas(
 
 expect_file(file.path(result$run_dir, "outputs", "atlas_resource_catalog.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_source_resolution.csv"))
+expect_file(file.path(result$run_dir, "outputs", "atlas_dalycare_access.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_memory_plan.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_sources.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_columns.csv"))
@@ -81,7 +82,7 @@ freq <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_value_freque
 expect_false(any(freq$column_name == "patientid"), "Public value frequencies must not expose patient IDs.")
 
 manifest <- utils::read.csv(file.path(result$run_dir, "outputs", "output_manifest.csv"), stringsAsFactors = FALSE)
-expect_true(all(c("resource_catalog", "source_resolution", "memory_plan", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
+expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "memory_plan", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU and registry panel artifacts.")
 expect_true(all(manifest$status == "ok"), "Manifest artifacts should exist.")
 
