@@ -7,69 +7,283 @@
   <style>
     :root {
       color-scheme: light;
-      --ink: #1f2933;
-      --muted: #5b6773;
-      --line: #d8dee6;
-      --panel: #f7f9fb;
-      --accent: #1f6f8b;
-      --warn: #a15c00;
-      --bad: #a12828;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface-2: #eef3f5;
+      --ink: #18212a;
+      --muted: #5c6975;
+      --line: #d8e0e6;
+      --green: #145c47;
+      --green-soft: #e4f2ed;
+      --blue: #1f638d;
+      --blue-soft: #e4eff6;
+      --amber: #9a6500;
+      --amber-soft: #fff1d6;
+      --red: #a12828;
+      --red-soft: #f8e4e4;
+      --shadow: 0 8px 24px rgba(20, 36, 50, .08);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--ink);
-      background: #fff;
+      background: var(--bg);
+      line-height: 1.45;
     }
-    header {
-      padding: 28px 36px 18px;
-      border-bottom: 1px solid var(--line);
+    button, input, select { font: inherit; }
+    code, pre { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+    .hero {
+      background: var(--green);
+      color: #fff;
+      padding: 30px 28px 24px;
+      border-bottom: 4px solid #0f4637;
+    }
+    .hero-inner, .nav-inner, main { max-width: 1440px; margin: 0 auto; }
+    .kicker {
+      margin: 0 0 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      opacity: .78;
     }
     h1 {
-      margin: 0 0 8px;
-      font-size: 30px;
-      font-weight: 650;
+      margin: 0;
+      font-size: clamp(32px, 4vw, 52px);
+      line-height: 1.02;
+      font-weight: 720;
       letter-spacing: 0;
     }
-    .subtitle {
-      margin: 0;
-      color: var(--muted);
+    .hero-copy {
+      margin: 10px 0 0;
+      max-width: 980px;
+      color: rgba(255,255,255,.88);
       font-size: 15px;
     }
-    main {
-      padding: 24px 36px 42px;
+    .hero-meta {
+      margin-top: 12px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: rgba(255,255,255,.82);
+      font-size: 12px;
+    }
+    .hero-metrics {
+      margin-top: 20px;
       display: grid;
-      gap: 26px;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
     }
-    section {
-      border-top: 1px solid var(--line);
-      padding-top: 18px;
+    .metric-card {
+      border: 1px solid rgba(255,255,255,.22);
+      background: rgba(255,255,255,.08);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 82px;
     }
-    h2 {
-      font-size: 20px;
-      margin: 0 0 12px;
-      font-weight: 650;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 12px;
-    }
-    .metric {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 12px 14px;
-    }
-    .metric b {
+    .metric-value {
       display: block;
       font-size: 24px;
-      margin-bottom: 3px;
+      font-weight: 780;
+      line-height: 1.1;
     }
-    .metric span {
+    .metric-label {
+      display: block;
+      margin-top: 5px;
+      color: rgba(255,255,255,.78);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .metric-card.warn { background: rgba(255, 230, 181, .18); }
+    .metric-card.bad { background: rgba(255, 207, 207, .18); }
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--surface);
+      border-bottom: 1px solid var(--line);
+      box-shadow: 0 1px 8px rgba(20, 36, 50, .06);
+    }
+    .nav-inner {
+      display: flex;
+      gap: 0;
+      overflow-x: auto;
+      padding: 0 20px;
+    }
+    .tab-button {
+      border: 0;
+      border-bottom: 3px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 14px 16px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .tab-button:hover { color: var(--ink); }
+    .tab-button.active {
+      color: var(--green);
+      border-bottom-color: var(--green);
+    }
+    main {
+      padding: 22px 24px 44px;
+    }
+    .tab-page { display: none; }
+    .tab-page.active {
+      display: grid;
+      gap: 16px;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .panel-head {
+      padding: 18px 20px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-title {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 720;
+      letter-spacing: 0;
+    }
+    .panel-sub {
+      margin: 5px 0 0;
       color: var(--muted);
       font-size: 13px;
+      max-width: 980px;
+    }
+    .panel-body { padding: 16px 20px 20px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+    }
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+    .muted { color: var(--muted); }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--surface-2);
+      color: var(--muted);
+    }
+    .badge.ok { background: var(--green-soft); color: var(--green); }
+    .badge.warning { background: var(--amber-soft); color: var(--amber); }
+    .badge.error, .badge.failed { background: var(--red-soft); color: var(--red); }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .toolbar label {
+      display: grid;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+    input[type="search"], select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      min-width: 180px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    input[type="search"] { min-width: min(420px, 100%); }
+    .catalog-list { display: grid; gap: 8px; }
+    .catalog-row, .column-row {
+      display: grid;
+      grid-template-columns: 150px 1fr 96px 86px 120px;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+    .column-row {
+      grid-template-columns: 160px 1fr 110px 120px 190px;
+    }
+    .catalog-row strong { display: block; font-size: 14px; }
+    .column-row strong { display: block; font-size: 14px; }
+    .mini { color: var(--muted); font-size: 12px; }
+    .qa-list { display: grid; gap: 8px; }
+    .qa-item {
+      border: 1px solid var(--line);
+      border-left-width: 4px;
+      border-radius: 8px;
+      background: #fff;
+      padding: 11px 12px;
+    }
+    .qa-item.error { border-left-color: var(--red); }
+    .qa-item.warning { border-left-color: var(--amber); }
+    .qa-item.ok { border-left-color: var(--green); }
+    .registry-card {
+      display: grid;
+      gap: 14px;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+    .kpi {
+      background: var(--surface-2);
+      border-radius: 8px;
+      padding: 10px;
+    }
+    .kpi b {
+      display: block;
+      font-size: 20px;
+    }
+    .bar-list { display: grid; gap: 7px; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 210px) 1fr 70px;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+    .track {
+      height: 9px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    .fill {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 999px;
+      min-width: 2px;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
     }
     table {
       width: 100%;
@@ -77,127 +291,539 @@
       font-size: 13px;
     }
     th, td {
-      border-bottom: 1px solid var(--line);
       padding: 8px 9px;
+      border-bottom: 1px solid var(--line);
       text-align: left;
       vertical-align: top;
     }
     th {
+      background: var(--surface-2);
       color: #344150;
-      background: #f2f5f8;
-      font-weight: 650;
+      font-weight: 720;
       position: sticky;
       top: 0;
     }
-    .table-wrap {
-      overflow-x: auto;
-      border: 1px solid var(--line);
-      border-radius: 6px;
+    .panel-nav {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
     }
-    .ok { color: var(--accent); font-weight: 650; }
-    .warning { color: var(--warn); font-weight: 650; }
-    .error { color: var(--bad); font-weight: 650; }
-    .empty {
-      color: var(--muted);
-      padding: 12px;
-      background: var(--panel);
+    .panel-nav button {
       border: 1px solid var(--line);
-      border-radius: 6px;
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      padding: 7px 10px;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .panel-nav button:hover { border-color: var(--blue); color: var(--blue); }
+    .code-block {
+      background: #15222c;
+      color: #eef7f6;
+      border-radius: 8px;
+      padding: 12px;
+      overflow-x: auto;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      color: var(--muted);
+      background: var(--surface-2);
+    }
+    @media (max-width: 820px) {
+      .hero { padding: 24px 18px 20px; }
+      main { padding: 16px 14px 34px; }
+      .catalog-row, .column-row { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 1fr; }
+      .toolbar label, input[type="search"], select { width: 100%; }
     }
   </style>
   <script src="DALYCARE_atlas_payload.js"></script>
 </head>
 <body>
-  <header>
-    <h1>DALY-CARE Atlas</h1>
-    <p class="subtitle" id="atlas-subtitle">Loading atlas payload...</p>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="kicker">DALY-CARE Data Resource</p>
+      <h1>DALY-CARE Atlas</h1>
+      <p class="hero-copy" id="hero-copy">Loading run payload...</p>
+      <div class="hero-meta">
+        <span id="run-id">Run pending</span>
+        <span id="generated-at">Generated pending</span>
+        <span id="qa-badge" class="badge">QA pending</span>
+      </div>
+      <div id="hero-metrics" class="hero-metrics"></div>
+    </div>
   </header>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <button class="tab-button active" data-tab="overview">Overview</button>
+      <button class="tab-button" data-tab="catalog">Source Catalog</button>
+      <button class="tab-button" data-tab="columns">Column Explorer</button>
+      <button class="tab-button" data-tab="registries">Registries</button>
+      <button class="tab-button" data-tab="qa">Run QA</button>
+      <button class="tab-button" data-tab="panels">Panels</button>
+      <button class="tab-button" data-tab="quickstart">Quick Start</button>
+    </div>
+  </nav>
+
   <main>
-    <section>
-      <h2>Run Summary</h2>
-      <div id="summary" class="summary-grid"></div>
+    <section class="tab-page active" id="tab-overview">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Run Overview</h2>
+          <p class="panel-sub">Aggregate coverage, source domains, and the first QA signals from this atlas run.</p>
+        </div>
+        <div class="panel-body">
+          <div id="domain-cards" class="grid"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Warnings And Errors First</h2>
+          <p class="panel-sub">The atlas surfaces issues before routine checks so operators can triage quickly.</p>
+        </div>
+        <div class="panel-body">
+          <div id="qa-preview" class="qa-list"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Consensus NPU Dictionary</h2>
+          <p class="panel-sub">Reference dictionary coverage and observed lab usage by consensus vector, generated from aggregate panels only.</p>
+        </div>
+        <div class="panel-body">
+          <div id="npu-cards" class="grid"></div>
+        </div>
+      </div>
     </section>
-    <section>
-      <h2>Source Catalog</h2>
-      <div id="sources"></div>
+
+    <section class="tab-page" id="tab-catalog">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Resource Catalog</h2>
+          <p class="panel-sub">Search and filter mapped sources by DALY domain, load status, and atlas role.</p>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <label>Search
+              <input id="catalog-search" type="search" placeholder="Search source, domain, role, or message">
+            </label>
+            <label>Domain
+              <select id="catalog-domain-filter"><option value="">All domains</option></select>
+            </label>
+            <label>Status
+              <select id="catalog-status-filter"><option value="">All statuses</option></select>
+            </label>
+            <label>Role
+              <select id="catalog-role-filter"><option value="">All roles</option></select>
+            </label>
+          </div>
+          <div id="catalog-count" class="mini"></div>
+          <div id="catalog-list" class="catalog-list"></div>
+        </div>
+      </div>
     </section>
-    <section>
-      <h2>Checks</h2>
-      <div id="checks"></div>
+
+    <section class="tab-page" id="tab-columns">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Column Explorer</h2>
+          <p class="panel-sub">Safe aggregate coverage, numeric/date summaries, and suppressed top values for every profiled column.</p>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <label>Search
+              <input id="column-search" type="search" placeholder="Search table, column, domain, or kind">
+            </label>
+            <label>Dataset
+              <select id="column-dataset-filter"><option value="">All datasets</option></select>
+            </label>
+            <label>Domain
+              <select id="column-domain-filter"><option value="">All domains</option></select>
+            </label>
+            <label>Profile kind
+              <select id="column-kind-filter"><option value="">All kinds</option></select>
+            </label>
+          </div>
+          <div id="column-summary" class="grid" style="margin-bottom:14px"></div>
+          <div id="column-count" class="mini"></div>
+          <div id="column-list" class="catalog-list"></div>
+          <div style="height:14px"></div>
+          <h3>Top Values For Visible Columns</h3>
+          <p class="mini">Only eligible categorical columns are shown here. Sensitive, date-like, numeric, high-cardinality, and small-cell values are suppressed.</p>
+          <div id="column-top-values"></div>
+        </div>
+      </div>
     </section>
-    <section>
-      <h2>Panels</h2>
-      <div id="panels"></div>
+
+    <section class="tab-page" id="tab-registries">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Disease Registries</h2>
+          <p class="panel-sub">Generated from aggregate registry panels for DaMyDa, LYFO, and CLL when available.</p>
+        </div>
+        <div class="panel-body">
+          <div id="registry-cards" class="grid"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-page" id="tab-qa">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Run QA</h2>
+          <p class="panel-sub">Errors and warnings are sorted before routine privacy and profiling checks.</p>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <label>Severity
+              <select id="qa-severity-filter">
+                <option value="">All severities</option>
+                <option value="error">Errors</option>
+                <option value="warning">Warnings</option>
+                <option value="ok">OK</option>
+              </select>
+            </label>
+          </div>
+          <div id="qa-list" class="qa-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-page" id="tab-panels">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Aggregate Panels</h2>
+          <p class="panel-sub">Every table here corresponds to a generated CSV panel in the run output bundle.</p>
+        </div>
+        <div class="panel-body">
+          <div class="toolbar">
+            <label>Panel group
+              <select id="panel-group-filter"><option value="">All groups</option></select>
+            </label>
+          </div>
+          <div id="panel-nav" class="panel-nav"></div>
+          <div id="panel-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-page" id="tab-quickstart">
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Quick Start</h2>
+          <p class="panel-sub">Run the DALY-CARE-aware atlas with the package bootstrap and curated source map.</p>
+        </div>
+        <div class="panel-body">
+          <div class="grid">
+            <div class="card">
+              <h3>1. Configure DALY-CARE package access</h3>
+              <pre class="code-block"><code>export DALYCARE_PACKAGE_ROOT=/path/to/dalycare_package
+export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_bootstrap.R</code></pre>
+              <p class="mini">Live database credentials remain controlled by the user's NGC db_access.R setup.</p>
+            </div>
+            <div class="card">
+              <h3>2. Preflight without live data</h3>
+              <pre class="code-block"><code>Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS</code></pre>
+              <p class="mini">This validates the bootstrap and source map without emitting patient-level data.</p>
+            </div>
+            <div class="card">
+              <h3>3. Run the atlas</h3>
+              <pre class="code-block"><code>Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare.tsv atlas_runs report</code></pre>
+              <p class="mini">Outputs are CSV evidence files plus this HTML viewer and its external JS payload.</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
+
   <script>
     (function () {
       const payload = window.DALYCARE_ATLAS_PAYLOAD || {};
-      const subtitle = document.getElementById("atlas-subtitle");
-      subtitle.textContent = `Generated ${payload.generated_at || "unknown"} from ${payload.source_count || 0} mapped sources.`;
+      const panels = payload.panels || {};
+      const panelGroups = payload.panel_groups || [];
+      const catalogRows = payload.catalog_rows || [];
+      const columnRows = payload.column_profile_rows || [];
+      const columnTopValues = payload.column_top_value_rows || [];
+      const columnSummary = payload.column_profile_summary || [];
+      const qaItems = payload.qa_items || [];
+      const npuCards = payload.npu_cards || {};
+      const registryCards = payload.registry_cards || {};
 
-      function metric(label, value) {
-        const div = document.createElement("div");
-        div.className = "metric";
-        div.innerHTML = `<b>${value}</b><span>${label}</span>`;
-        return div;
-      }
-
-      const summary = document.getElementById("summary");
-      summary.appendChild(metric("Sources", payload.source_count || 0));
-      summary.appendChild(metric("Loaded", payload.loaded_source_count || 0));
-      summary.appendChild(metric("Columns", payload.column_count || 0));
-      summary.appendChild(metric("Checks", payload.check_count || 0));
-
-      function renderTable(rows, maxRows) {
-        if (!rows || !rows.length) {
-          const empty = document.createElement("div");
-          empty.className = "empty";
-          empty.textContent = "No rows available.";
-          return empty;
-        }
-        const cols = Object.keys(rows[0]);
-        const table = document.createElement("table");
-        const thead = document.createElement("thead");
-        thead.innerHTML = `<tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr>`;
-        table.appendChild(thead);
-        const tbody = document.createElement("tbody");
-        rows.slice(0, maxRows || 100).forEach(row => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = cols.map(c => `<td>${escapeHtml(row[c])}</td>`).join("");
-          tbody.appendChild(tr);
-        });
-        table.appendChild(tbody);
-        const wrap = document.createElement("div");
-        wrap.className = "table-wrap";
-        wrap.appendChild(table);
-        return wrap;
-      }
-
-      function escapeHtml(value) {
+      function text(value) {
         if (value === null || value === undefined) return "";
-        return String(value).replace(/[&<>"']/g, ch => ({
+        return String(value);
+      }
+      function escapeHtml(value) {
+        return text(value).replace(/[&<>"']/g, ch => ({
           "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#039;"
         }[ch]));
       }
-
-      document.getElementById("sources").appendChild(renderTable(payload.sources || [], 200));
-      document.getElementById("checks").appendChild(renderTable(payload.checks || [], 200));
-
-      const panels = document.getElementById("panels");
-      const panelData = payload.panels || {};
-      Object.keys(panelData).forEach(name => {
-        const h = document.createElement("h3");
-        h.textContent = name.replace(/_/g, " ");
-        panels.appendChild(h);
-        panels.appendChild(renderTable(panelData[name], 100));
-      });
-      if (!Object.keys(panelData).length) {
-        const empty = document.createElement("div");
-        empty.className = "empty";
-        empty.textContent = "No panel outputs were generated.";
-        panels.appendChild(empty);
+      function numberValue(value) {
+        const n = Number(String(value || "").replace(/,/g, ""));
+        return Number.isFinite(n) ? n : 0;
       }
+      function formatNumber(value) {
+        const n = numberValue(value);
+        if (!n && String(value || "") !== "0") return escapeHtml(value);
+        return n.toLocaleString();
+      }
+      function metric(id) {
+        return (payload.hero_metrics || []).find(row => row.metric === id) || {};
+      }
+      function rowsForTable(rows, maxRows) {
+        if (!rows || !rows.length) return `<div class="empty">No rows available.</div>`;
+        const shown = rows.slice(0, maxRows || 100);
+        const cols = Object.keys(shown[0] || {});
+        return `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${shown.map(row => `<tr>${cols.map(c => `<td>${escapeHtml(row[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+      }
+      function uniqueValues(rows, key) {
+        return Array.from(new Set((rows || []).map(row => row[key]).filter(Boolean))).sort();
+      }
+      function fillSelect(id, values) {
+        const el = document.getElementById(id);
+        values.forEach(value => {
+          const option = document.createElement("option");
+          option.value = value;
+          option.textContent = value;
+          el.appendChild(option);
+        });
+      }
+      function setHtml(id, html) {
+        document.getElementById(id).innerHTML = html;
+      }
+      function severityBadge(severity) {
+        const s = text(severity || "ok").toLowerCase();
+        return `<span class="badge ${escapeHtml(s)}">${escapeHtml(s.toUpperCase())}</span>`;
+      }
+
+      document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
+      document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
+      document.getElementById("generated-at").textContent = `Generated ${payload.generated_at || "unknown"}`;
+      const errors = numberValue(metric("errors").value);
+      const warnings = numberValue(metric("warnings").value);
+      const qaBadge = document.getElementById("qa-badge");
+      qaBadge.className = `badge ${errors ? "error" : warnings ? "warning" : "ok"}`;
+      qaBadge.textContent = errors ? `${errors} errors` : warnings ? `${warnings} warnings` : "QA clear";
+      setHtml("hero-metrics", (payload.hero_metrics || []).map(row => `
+        <div class="metric-card ${escapeHtml(row.tone || "neutral")}">
+          <span class="metric-value">${formatNumber(row.value)}</span>
+          <span class="metric-label">${escapeHtml(row.label)}</span>
+        </div>
+      `).join(""));
+
+      document.querySelectorAll(".tab-button").forEach(button => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".tab-button").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll(".tab-page").forEach(p => p.classList.remove("active"));
+          button.classList.add("active");
+          document.getElementById(`tab-${button.dataset.tab}`).classList.add("active");
+        });
+      });
+
+      setHtml("domain-cards", (payload.domain_cards || []).map(card => `
+        <article class="card">
+          <h3>${escapeHtml(card.domain || "Unassigned")}</h3>
+          <div class="kpi-row">
+            <div class="kpi"><b>${formatNumber(card.loaded_sources)}</b><span class="mini">loaded</span></div>
+            <div class="kpi"><b>${formatNumber(card.n_sources)}</b><span class="mini">mapped</span></div>
+            <div class="kpi"><b>${formatNumber(card.n_rows)}</b><span class="mini">rows</span></div>
+          </div>
+          <p class="mini">${escapeHtml(card.subdomains || "No subdomains recorded")}</p>
+          <p class="mini">${escapeHtml(card.atlas_roles || "No atlas roles recorded")}</p>
+        </article>
+      `).join("") || `<div class="empty">No source domains were available.</div>`);
+
+      function renderQa(targetId, items, limit) {
+        const rows = limit ? items.slice(0, limit) : items;
+        setHtml(targetId, rows.map(item => `
+          <article class="qa-item ${escapeHtml(item.severity || "")}">
+            <div>${severityBadge(item.severity)} <strong>${escapeHtml(item.check_id || "check")}</strong> <span class="mini">${escapeHtml(item.table_name || "")}</span></div>
+            <div class="mini">${escapeHtml(item.message || "")}</div>
+          </article>
+        `).join("") || `<div class="empty">No QA rows available.</div>`);
+      }
+      renderQa("qa-preview", qaItems, 8);
+      renderQa("qa-list", qaItems);
+      document.getElementById("qa-severity-filter").addEventListener("change", event => {
+        const wanted = event.target.value;
+        renderQa("qa-list", wanted ? qaItems.filter(item => item.severity === wanted) : qaItems);
+      });
+
+      function renderNpuCards() {
+        const summary = npuCards.summary || [];
+        const vectors = npuCards.top_vectors || [];
+        const observed = npuCards.observed_vectors || [];
+        const unmatched = npuCards.unmatched_codes || [];
+        const summaryKpis = summary.map(row => `
+          <div class="kpi"><b>${formatNumber(row.value)}</b><span class="mini">${escapeHtml(row.label || row.metric)}</span></div>
+        `).join("");
+        setHtml("npu-cards", `
+          <article class="card">
+            <h3>Dictionary Coverage</h3>
+            <div class="kpi-row">${summaryKpis || `<div class="empty">No dictionary summary available.</div>`}</div>
+          </article>
+          <article class="card">
+            <h3>Largest Consensus Vectors</h3>
+            ${bars(vectors.map(row => Object.assign({}, row, { display_label: row.consensus_vector })), "n_dictionary_codes", "display_label")}
+          </article>
+          <article class="card">
+            <h3>Observed Lab Usage</h3>
+            ${observed.length ? bars(observed.map(row => Object.assign({}, row, { display_label: row.consensus_vector })), "n_observed", "display_label") : `<div class="empty">No observed dictionary-matched NPU usage in this run.</div>`}
+          </article>
+          <article class="card">
+            <h3>Unmatched Observed Codes</h3>
+            ${unmatched.length ? rowsForTable(unmatched, 15) : `<div class="empty">No suppressed-safe unmatched NPU codes were observed.</div>`}
+          </article>
+        `);
+      }
+
+      fillSelect("catalog-domain-filter", uniqueValues(catalogRows, "domain"));
+      fillSelect("catalog-status-filter", uniqueValues(catalogRows, "load_status"));
+      fillSelect("catalog-role-filter", uniqueValues(catalogRows, "atlas_role"));
+      function renderCatalog() {
+        const q = document.getElementById("catalog-search").value.trim().toLowerCase();
+        const domain = document.getElementById("catalog-domain-filter").value;
+        const status = document.getElementById("catalog-status-filter").value;
+        const role = document.getElementById("catalog-role-filter").value;
+        const filtered = catalogRows.filter(row => {
+          const hay = [row.table_name, row.source, row.domain, row.subdomain, row.atlas_role, row.message].join(" ").toLowerCase();
+          return (!q || hay.includes(q)) && (!domain || row.domain === domain) && (!status || row.load_status === status) && (!role || row.atlas_role === role);
+        });
+        document.getElementById("catalog-count").textContent = `${filtered.length} of ${catalogRows.length} sources shown`;
+        setHtml("catalog-list", filtered.map(row => `
+          <article class="catalog-row">
+            <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.subdomain || "")}</div></div>
+            <div><strong>${escapeHtml(row.table_name)}</strong><div class="mini">${escapeHtml(row.source_type)} - ${escapeHtml(row.source)}</div></div>
+            <div>${severityBadge(row.load_status === "failed" ? "error" : "ok")}</div>
+            <div><strong>${formatNumber(row.n_rows)}</strong><div class="mini">rows</div></div>
+            <div><strong>${formatNumber(row.n_cols)}</strong><div class="mini">${escapeHtml(row.date_range || "no date range")}</div></div>
+          </article>
+        `).join("") || `<div class="empty">No sources match the current filters.</div>`);
+      }
+      ["catalog-search", "catalog-domain-filter", "catalog-status-filter", "catalog-role-filter"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderCatalog);
+        document.getElementById(id).addEventListener("change", renderCatalog);
+      });
+      renderCatalog();
+
+      fillSelect("column-dataset-filter", uniqueValues(columnRows, "table_name"));
+      fillSelect("column-domain-filter", uniqueValues(columnRows, "domain"));
+      fillSelect("column-kind-filter", uniqueValues(columnRows, "profile_kind"));
+      setHtml("column-summary", (columnSummary || []).map(row => `
+        <article class="card">
+          <h3>${escapeHtml(row.domain || "Unassigned")}</h3>
+          <div class="kpi-row">
+            <div class="kpi"><b>${formatNumber(row.n_columns)}</b><span class="mini">${escapeHtml(row.profile_kind || "columns")}</span></div>
+          </div>
+        </article>
+      `).join("") || `<div class="empty">No column profile summary available.</div>`);
+
+      function columnStat(row) {
+        const kind = row.profile_kind || "";
+        if (kind === "numeric") {
+          return `median ${formatNumber(row.median)} (${formatNumber(row.p25)}-${formatNumber(row.p75)})`;
+        }
+        if (kind === "date") {
+          return `${escapeHtml(row.min_date || "")}${row.max_date ? " to " + escapeHtml(row.max_date) : ""}`;
+        }
+        if (kind === "sensitive") {
+          return "coverage only";
+        }
+        return `${formatNumber(row.n_distinct_capped)} distinct`;
+      }
+
+      function renderColumnExplorer() {
+        const q = document.getElementById("column-search").value.trim().toLowerCase();
+        const dataset = document.getElementById("column-dataset-filter").value;
+        const domain = document.getElementById("column-domain-filter").value;
+        const kind = document.getElementById("column-kind-filter").value;
+        const filtered = columnRows.filter(row => {
+          const hay = [row.table_name, row.column_name, row.domain, row.subdomain, row.profile_kind].join(" ").toLowerCase();
+          return (!q || hay.includes(q)) && (!dataset || row.table_name === dataset) && (!domain || row.domain === domain) && (!kind || row.profile_kind === kind);
+        });
+        document.getElementById("column-count").textContent = `${filtered.length} of ${columnRows.length} columns shown`;
+        setHtml("column-list", filtered.slice(0, 400).map(row => `
+          <article class="column-row">
+            <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.table_name || "")}</div></div>
+            <div><strong>${escapeHtml(row.column_name || "")}</strong><div class="mini">${escapeHtml(row.column_class || row.column_type || "")}</div></div>
+            <div><span class="badge">${escapeHtml(row.profile_kind || "unknown")}</span></div>
+            <div><strong>${formatNumber(row.pct_available)}%</strong><div class="mini">${formatNumber(row.n_available)} available</div></div>
+            <div>${columnStat(row)}<div class="mini">${formatNumber(row.n_missing)} missing</div></div>
+          </article>
+        `).join("") || `<div class="empty">No columns match the current filters.</div>`);
+
+        const keys = new Set(filtered.map(row => `${row.table_name}\u0001${row.column_name}`));
+        const visibleTopValues = columnTopValues.filter(row => keys.has(`${row.table_name}\u0001${row.column_name}`)).slice(0, 300);
+        setHtml("column-top-values", rowsForTable(visibleTopValues, 300));
+      }
+      ["column-search", "column-dataset-filter", "column-domain-filter", "column-kind-filter"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderColumnExplorer);
+        document.getElementById(id).addEventListener("change", renderColumnExplorer);
+      });
+      renderColumnExplorer();
+
+      function bars(rows, valueKey, labelKey) {
+        if (!rows || !rows.length) return `<div class="empty">No aggregate rows available.</div>`;
+        const max = Math.max(...rows.map(row => numberValue(row[valueKey])), 1);
+        return `<div class="bar-list">${rows.map(row => {
+          const n = numberValue(row[valueKey]);
+          const width = Math.max(2, n / max * 100);
+          return `<div class="bar-row"><div title="${escapeHtml(row[labelKey])}">${escapeHtml(row[labelKey])}</div><div class="track"><div class="fill" style="width:${width}%"></div></div><div>${formatNumber(n)}</div></div>`;
+        }).join("")}</div>`;
+      }
+      renderNpuCards();
+      setHtml("registry-cards", Object.keys(registryCards).map(name => {
+        const card = registryCards[name];
+        const facets = card.facets || [];
+        const numeric = card.numeric_fields || [];
+        return `<article class="card registry-card">
+          <div>
+            <h3>${escapeHtml(card.registry || name)}</h3>
+            <p class="mini">${escapeHtml(card.table_name || "")} ${card.date_range ? "- " + escapeHtml(card.date_range) : ""}</p>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi"><b>${formatNumber(card.n_patients)}</b><span class="mini">patients</span></div>
+            <div class="kpi"><b>${formatNumber(card.n_rows)}</b><span class="mini">rows</span></div>
+            <div class="kpi"><b>${formatNumber(card.n_cols)}</b><span class="mini">columns</span></div>
+          </div>
+          <div>
+            <strong>Top categorical facets</strong>
+            ${bars(facets.slice(0, 10).map(row => Object.assign({}, row, { display_label: `${row.facet}: ${row.label}` })), "n", "display_label")}
+          </div>
+          <div>
+            <strong>Numeric availability</strong>
+            ${numeric.length ? rowsForTable(numeric, 12) : `<div class="empty">No numeric registry panel for this registry.</div>`}
+          </div>
+        </article>`;
+      }).join("") || `<div class="empty">No registry cards were generated for this run.</div>`);
+
+      fillSelect("panel-group-filter", uniqueValues(panelGroups, "group"));
+      function renderPanels() {
+        const wanted = document.getElementById("panel-group-filter").value;
+        const groups = wanted ? panelGroups.filter(row => row.group === wanted) : panelGroups;
+        setHtml("panel-nav", groups.map(row => `<button type="button" data-target="panel-${escapeHtml(row.panel_name)}">${escapeHtml(row.title)} (${formatNumber(row.n_rows)})</button>`).join(""));
+        setHtml("panel-list", groups.map(row => `
+          <section class="card" id="panel-${escapeHtml(row.panel_name)}" style="margin-bottom:12px">
+            <h3>${escapeHtml(row.title)}</h3>
+            <p class="mini">${escapeHtml(row.group)} - ${escapeHtml(row.panel_name)}.csv</p>
+            ${rowsForTable(panels[row.panel_name] || [], 100)}
+          </section>
+        `).join("") || `<div class="empty">No panels match the current filter.</div>`);
+        document.querySelectorAll("#panel-nav button").forEach(button => {
+          button.addEventListener("click", () => document.getElementById(button.dataset.target).scrollIntoView({ behavior: "smooth", block: "start" }));
+        });
+      }
+      document.getElementById("panel-group-filter").addEventListener("change", renderPanels);
+      renderPanels();
     })();
   </script>
 </body>

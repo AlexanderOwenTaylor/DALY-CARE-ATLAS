@@ -1,0 +1,5 @@
+patientid,diagnosis_date,Reg_Binet,Reg_IGHV,Reg_FISH,Reg_Del13q,Reg_Del11q,Reg_Del17p,Reg_Tri12,Reg_TP53,Reg_Behandlet,Reg_PS,Reg_ZAP70,Reg_CD38,Reg_Beta2M
+20,2021-01-11,A,mutated,done,positive,negative,negative,negative,wildtype,no,0,negative,negative,2.4
+21,2021-02-09,B,unmutated,done,negative,positive,negative,positive,mutated,yes,1,positive,positive,4.1
+22,2021-03-07,C,unmutated,done,negative,negative,positive,negative,mutated,yes,2,positive,negative,5.5
+23,2021-04-02,A,mutated,not done,,,,,wildtype,no,0,negative,negative,2.1

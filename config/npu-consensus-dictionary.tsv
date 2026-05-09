@@ -1,0 +1,156 @@
+Code	Consensus vector	System	Status (LabTerm)	Clinical role	Used in V08 classification	Vector consensus basis	Resolution note
+NPU01446	CALCIUM_IONISED_CODES	P	Active	Ionised (free) plasma calcium	npu__2_.csv	WoMMen final only	
+NPU04144	CALCIUM_IONISED_CODES	P		Ionised (free) plasma calcium	npu__2_.csv	WoMMen final only	
+NPU01443	CALCIUM_TOTAL_CODES	P	Active	Total plasma calcium	npu__2_.csv	WoMMen final only; present in V7 keep list	
+NPU04169	CALCIUM_TOTAL_CODES	P		Total plasma calcium	npu__2_.csv	WoMMen final only	
+NPU17123	CALCIUM_TOTAL_CODES	P		Total plasma calcium	npu__2_.csv	WoMMen final only	
+NPU04998	CREATININE_CODES	P	Active	Plasma creatinine for eGFR context	V7 confirmed	WoMMen final only; present in V7 keep list	
+NPU18016	CREATININE_CODES	P	Active	Plasma creatinine for eGFR context	V7 confirmed	WoMMen final only; present in V7 keep list	
+DNK35302	EGFR_CODES	Kidn.		eGFR (CKD-EPI) — SP-code, not NPU	V7 confirmed	WoMMen final only; present in V7 keep list	
+NPU19608	FLC_RATIO_CODES	P	Active	Plasma κ/λ FLC ratio	V7 confirmed	WoMMen canonical over AOT alias; present in V7 keep list	Canonical vector kept as FLC_RATIO_CODES from WoMMen final; AOT used FLC_RATIO.
+NPU28596	FLC_RATIO_CODES	P	Active	Plasma κ/λ FLC ratio	V7 confirmed	WoMMen canonical over AOT alias; present in V7 keep list	Canonical vector kept as FLC_RATIO_CODES from WoMMen final; AOT used FLC_RATIO.
+NPU26735	FLC_RATIO_U_CODES	U	Active	Urine κ/λ FLC ratio	V7 confirmed — URINE	WoMMen canonical over AOT alias; differs from V7 intended	Canonical vector kept as FLC_RATIO_U_CODES from WoMMen final; AOT used FLC_RATIO. V7 intended/review label was FLC_RATIO_CODES.
+NPU19606	FREELITE_KAPPA_CODES	P		Plasma polyclonal κ FLC	v6 Ark1	WoMMen canonical over AOT alias	Canonical vector kept as FREELITE_KAPPA_CODES from WoMMen final; AOT used FLC_KAPPA.
+NPU26733	FREELITE_KAPPA_U_CODES	U	Active	Urine polyclonal κ FLC	V7 confirmed — URINE not plasma	WoMMen canonical over AOT alias; differs from V7 intended	Canonical vector kept as FREELITE_KAPPA_U_CODES from WoMMen final; AOT used FLC_KAPPA. V7 intended/review label was FREELITE_KAPPA_CODES.
+NPU19607	FREELITE_LAMBDA_CODES	P		Plasma polyclonal λ FLC	v6 Ark1	WoMMen canonical over AOT alias	Canonical vector kept as FREELITE_LAMBDA_CODES from WoMMen final; AOT used FLC_LAMBDA.
+NPU26734	FREELITE_LAMBDA_U_CODES	U	Active	Urine polyclonal λ FLC	V7 confirmed — URINE not plasma	WoMMen canonical over AOT alias; differs from V7 intended	Canonical vector kept as FREELITE_LAMBDA_U_CODES from WoMMen final; AOT used FLC_LAMBDA. V7 intended/review label was FREELITE_LAMBDA_CODES.
+NPU02476	IGA_TOTAL_CODES	P	Active	Polyclonal total IGA (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02478	IGA_TOTAL_CODES	P		Polyclonal total IGA (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19795	IGA_TOTAL_CODES	P		Polyclonal total IGA (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19796	IGA_TOTAL_CODES	P		Polyclonal total IGA (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU28159	IGA_TOTAL_CODES	P		Polyclonal total IGA (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02479	IGD_TOTAL_CODES	P		Polyclonal total IGD (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU14663	IGD_TOTAL_CODES	P		Polyclonal total IGD (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU21709	IGD_TOTAL_CODES	P		Polyclonal total IGD (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU24562	IGD_TOTAL_CODES	P		Polyclonal total IGD (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU29219	IGD_TOTAL_CODES	P		Polyclonal total IGD (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02482	IGE_TOTAL_CODES	P		Polyclonal total IGE (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU18868	IGE_TOTAL_CODES	P		Polyclonal total IGE (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU29221	IGE_TOTAL_CODES	P		Polyclonal total IGE (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU56406	IGE_TOTAL_CODES	P		Polyclonal total IGE (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU57454	IGE_TOTAL_CODES	P		Polyclonal total IGE (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02481	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02486	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU10500	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU10501	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU10502	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU10503	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU10608	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19806	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19814	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19817	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19818	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19819	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19820	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU29680	IGG_TOTAL_CODES	P		Polyclonal total IGG (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02488	IGM_TOTAL_CODES	P		Polyclonal total IGM (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU19825	IGM_TOTAL_CODES	P		Polyclonal total IGM (plasma) — all unit/standard variants	npu__1_.csv	WoMMen final only	
+NPU02593	LEUKOCYTE_CODES	B	Active	Blood leukocyte count	V7 clarified	WoMMen final only; differs from V7 intended	Canonical vector kept as LEUKOCYTE_CODES. V7 intended/review label was CREATININE_CODES.
+NPU01351	MSPIKE_BJP	U	Active	Bence Jones protein (urine)	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU09106	MSPIKE_BJP	U	Active	Bence Jones protein (urine)	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU59230	MSPIKE_FREE_HEAVY	P	Active	Monoclonal free heavy chains α/μ/γ	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU59231	MSPIKE_FREE_HEAVY	P	Active	Monoclonal free heavy chains α/μ/γ	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU59232	MSPIKE_FREE_HEAVY	P	Active	Monoclonal free heavy chains α/μ/γ	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU19846	MSPIKE_GROUP	P		Plasma M-component group list	v6 Ark1	WoMMen + AOT agreement	
+NPU14523	MSPIKE_IFX_P	P	Active	Plasma IFE	V7 reassign (user: is M-protein regardless)	WoMMen canonical over AOT alias; differs from V7 intended	Canonical vector kept as MSPIKE_IFX_P from WoMMen final; AOT used MSPIKE_NEUROPATHY. V7 intended/review label was MSPIKE_NEUROPATHY.
+NPU28875	MSPIKE_IFX_P	P		Plasma IFE	v6 Ark1	WoMMen + AOT agreement	
+NPU28906	MSPIKE_IFX_U	U	Active	Urine IFE	v6 Ark1	WoMMen + AOT agreement	
+NPU19791	MSPIKE_IGA	P		Plasma IgA monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU19793	MSPIKE_IGA	P		Plasma IgA monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28634	MSPIKE_IGA	P		Plasma IgA monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28635	MSPIKE_IGA	P		Plasma IgA monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28923	MSPIKE_IGA	P		Plasma IgA monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU19798	MSPIKE_IGD	P	Active	Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU19800	MSPIKE_IGD	P	Active	Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU28636	MSPIKE_IGD	P		Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU28637	MSPIKE_IGD	P		Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU28924	MSPIKE_IGD	P		Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU59181	MSPIKE_IGD	P	Active	Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU59182	MSPIKE_IGD	P	Active	Plasma IgD monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU28642	MSPIKE_IGE	P		Plasma IgE monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU28643	MSPIKE_IGE	P		Plasma IgE monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU28927	MSPIKE_IGE	P		Plasma IgE monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU59183	MSPIKE_IGE	P	Active	Plasma IgE monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU59184	MSPIKE_IGE	P	Active	Plasma IgE monoclonal	V7 confirmed	WoMMen + AOT agreement	
+NPU19807	MSPIKE_IGG	P		Plasma IgG monoclonal (κ/λ typed or total)	v6 Ark1	WoMMen + AOT agreement	
+NPU19809	MSPIKE_IGG	P		Plasma IgG monoclonal (κ/λ typed or total)	v6 Ark1	WoMMen + AOT agreement	
+NPU28638	MSPIKE_IGG	P		Plasma IgG monoclonal (κ/λ typed or total)	v6 Ark1	WoMMen + AOT agreement	
+NPU28639	MSPIKE_IGG	P		Plasma IgG monoclonal (κ/λ typed or total)	v6 Ark1	WoMMen + AOT agreement	
+NPU28925	MSPIKE_IGG	P		Plasma IgG monoclonal (κ/λ typed or total)	v6 Ark1	WoMMen + AOT agreement	
+NPU19821	MSPIKE_IGM	P		Plasma IgM monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU19823	MSPIKE_IGM	P		Plasma IgM monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28640	MSPIKE_IGM	P		Plasma IgM monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28641	MSPIKE_IGM	P		Plasma IgM monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28926	MSPIKE_IGM	P		Plasma IgM monoclonal	v6 Ark1	WoMMen + AOT agreement	
+NPU28644	MSPIKE_LC	P		Plasma monoclonal free LC (LC-only M-spike)	v6 Ark1	WoMMen + AOT agreement	
+NPU28645	MSPIKE_LC	P		Plasma monoclonal free LC (LC-only M-spike)	v6 Ark1	WoMMen + AOT agreement	
+NPU02644	MSPIKE_SCREEN	P	Active	Plasma M-component screen	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU08642	MSPIKE_SCREEN	P	Active	Plasma M-component screen	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU17675	MSPIKE_SCREEN	P		Plasma M-component screen	v6 Ark1	WoMMen + AOT agreement	
+NPU19844	MSPIKE_SCREEN	P	Active	Plasma M-component screen	v6 Ark1	WoMMen + AOT agreement	
+NPU02642	MSPIKE_TYPE_LABEL	P	Active	Plasma type label	v6 Ark1	WoMMen + AOT agreement	
+NPU28855	MSPIKE_URINE_24H_IGA_TYPED	Pt(U)		24h urine IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGA_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGA.
+NPU28856	MSPIKE_URINE_24H_IGA_TYPED	Pt(U)		24h urine IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGA_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGA.
+NPU29118	MSPIKE_URINE_24H_IGA_TYPED	Pt(U)		24h urine IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28857	MSPIKE_URINE_24H_IGD_TYPED	Pt(U)		24h urine IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGD_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGD.
+NPU28858	MSPIKE_URINE_24H_IGD_TYPED	Pt(U)		24h urine IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGD_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGD.
+NPU29120	MSPIKE_URINE_24H_IGD_TYPED	Pt(U)		24h urine IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28859	MSPIKE_URINE_24H_IGE_TYPED	Pt(U)		24h urine IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGE_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGE.
+NPU28860	MSPIKE_URINE_24H_IGE_TYPED	Pt(U)		24h urine IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGE_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGE.
+NPU29121	MSPIKE_URINE_24H_IGE_TYPED	Pt(U)		24h urine IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28861	MSPIKE_URINE_24H_IGG_TYPED	Pt(U)		24h urine IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGG_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGG.
+NPU28862	MSPIKE_URINE_24H_IGG_TYPED	Pt(U)		24h urine IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGG_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGG.
+NPU29122	MSPIKE_URINE_24H_IGG_TYPED	Pt(U)		24h urine IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28863	MSPIKE_URINE_24H_IGM_TYPED	Pt(U)		24h urine IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGM_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGM.
+NPU28864	MSPIKE_URINE_24H_IGM_TYPED	Pt(U)		24h urine IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen canonical over AOT alias	Canonical vector kept as MSPIKE_URINE_24H_IGM_TYPED from WoMMen final; AOT used MSPIKE_URINE_24H_IGM.
+NPU29123	MSPIKE_URINE_24H_IGM_TYPED	Pt(U)		24h urine IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28865	MSPIKE_URINE_24H_LC	Pt(U)		24h urine monoclonal free LC	V7 confirmed	WoMMen + AOT agreement	
+NPU28866	MSPIKE_URINE_24H_LC	Pt(U)		24h urine monoclonal free LC	V7 confirmed	WoMMen + AOT agreement	
+NPU28952	MSPIKE_URINE_24H_LC	Pt(U)	Active	24h urine monoclonal free LC	V7 confirmed	WoMMen + AOT agreement	
+NPU28953	MSPIKE_URINE_24H_LC	Pt(U)	Active	24h urine monoclonal free LC	V7 confirmed	WoMMen + AOT agreement	
+NPU19848	MSPIKE_URINE_24H_SCREEN	Pt(U)		24h urine screen/rate	v6 Ark1	WoMMen + AOT agreement	
+NPU29119	MSPIKE_URINE_24H_SCREEN	Pt(U)		24h urine group list	npu.csv	WoMMen final only	
+NPU19847	MSPIKE_URINE_GROUP	U		Urine group list	v6 Ark1	WoMMen + AOT agreement	
+NPU28843	MSPIKE_URINE_IGA_TYPED	U		Urine spot IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU28844	MSPIKE_URINE_IGA_TYPED	U		Urine spot IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29124	MSPIKE_URINE_IGA_TYPED	U		Urine spot IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU29297	MSPIKE_URINE_IGA_TYPED	U		Urine spot IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29298	MSPIKE_URINE_IGA_TYPED	U		Urine spot IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29299	MSPIKE_URINE_IGA_TYPED	U		Urine spot IGA monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28845	MSPIKE_URINE_IGD_TYPED	U		Urine spot IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU28846	MSPIKE_URINE_IGD_TYPED	U		Urine spot IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29125	MSPIKE_URINE_IGD_TYPED	U		Urine spot IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU29300	MSPIKE_URINE_IGD_TYPED	U		Urine spot IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29301	MSPIKE_URINE_IGD_TYPED	U		Urine spot IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29302	MSPIKE_URINE_IGD_TYPED	U		Urine spot IGD monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28847	MSPIKE_URINE_IGE_TYPED	U		Urine spot IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU28848	MSPIKE_URINE_IGE_TYPED	U		Urine spot IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29126	MSPIKE_URINE_IGE_TYPED	U		Urine spot IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU29303	MSPIKE_URINE_IGE_TYPED	U		Urine spot IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29304	MSPIKE_URINE_IGE_TYPED	U		Urine spot IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29305	MSPIKE_URINE_IGE_TYPED	U		Urine spot IGE monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28849	MSPIKE_URINE_IGG_TYPED	U		Urine spot IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU28850	MSPIKE_URINE_IGG_TYPED	U		Urine spot IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29127	MSPIKE_URINE_IGG_TYPED	U		Urine spot IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU29306	MSPIKE_URINE_IGG_TYPED	U		Urine spot IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29307	MSPIKE_URINE_IGG_TYPED	U		Urine spot IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29308	MSPIKE_URINE_IGG_TYPED	U		Urine spot IGG monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28851	MSPIKE_URINE_IGM_TYPED	U		Urine spot IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU28852	MSPIKE_URINE_IGM_TYPED	U		Urine spot IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29128	MSPIKE_URINE_IGM_TYPED	U		Urine spot IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU29309	MSPIKE_URINE_IGM_TYPED	U		Urine spot IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29310	MSPIKE_URINE_IGM_TYPED	U		Urine spot IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen + AOT agreement	
+NPU29311	MSPIKE_URINE_IGM_TYPED	U		Urine spot IGM monoclonal (κ/λ typed or total)	npu.csv	WoMMen final only	
+NPU28853	MSPIKE_URINE_LC	U		Urine spot monoclonal free LC	v6 Ark1	WoMMen + AOT agreement	
+NPU28854	MSPIKE_URINE_LC	U		Urine spot monoclonal free LC	v6 Ark1	WoMMen + AOT agreement	
+NPU29236	MSPIKE_URINE_LC	U		Urine spot monoclonal free LC	v6 Ark1	WoMMen + AOT agreement	
+NPU29237	MSPIKE_URINE_LC	U		Urine spot monoclonal free LC	v6 Ark1	WoMMen + AOT agreement	
+NPU02645	MSPIKE_URINE_SCREEN	U	Active	Urine M-component screen	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU08643	MSPIKE_URINE_SCREEN	U	Active	Urine M-component screen	V7 confirmed	WoMMen + AOT agreement; present in V7 keep list	
+NPU17676	MSPIKE_URINE_SCREEN	U		Urine M-component screen	v6 Ark1	WoMMen + AOT agreement	
+NPU19845	MSPIKE_URINE_SCREEN	U		Urine M-component screen	v6 Ark1	WoMMen + AOT agreement	
+NPU19849	MSPIKE_URINE_SCREEN	U		Urine M-component screen	v6 Ark1	WoMMen + AOT agreement	
+NPU57552	MSPIKE_URINE_SCREEN	U	Active	Urine M-component screen	v6 Ark1	WoMMen + AOT agreement	
+NPU02643	MSPIKE_URINE_TYPE_LABEL	U	Active	Urine type label	v6 Ark1	WoMMen + AOT agreement	
+NPU19822		U				WoMMen final only	
+NPU19824		U				WoMMen final only	

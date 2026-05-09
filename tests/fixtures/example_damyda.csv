@@ -1,6 +1,5 @@
-patientid,diagnosis_date,region,iss_stage,bone_disease,treatment_required,albumin
-1,2021-02-01,Capital,1,no,yes,41
-2,2021-03-01,Zealand,2,yes,yes,38
-3,2021-04-01,Central,,no,no,
-4,2021-05-01,South,3,yes,yes,32
-
+patientid,diagnosis_date,region,iss_stage,bone_disease,treatment_required,primary_response,Reg_FISH_Udfoert,Reg_MKomponentType,albumin,Reg_Creatinin,Reg_LDH,Reg_ProcentKlonalePlasmaceller
+1,2021-02-01,Capital,1,no,yes,VGPR,yes,IgG kappa,41,72,180,12
+2,2021-03-01,Zealand,2,yes,yes,PR,yes,IgA lambda,38,85,220,18
+3,2021-04-01,Central,,no,no,,no,,,"",,
+4,2021-05-01,South,3,yes,yes,CR,yes,light chain,32,110,260,35
