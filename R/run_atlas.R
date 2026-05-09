@@ -115,6 +115,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     resolution_row <- source_resolution[source_resolution$source_index == i, , drop = FALSE][1, , drop = FALSE]
     log_memory(plan_row)
     log_event("info", table_name, paste("Using load strategy:", plan_row$chosen_strategy[[1]]))
+    cat(sprintf(
+      "[%d/%d] %s: %s (%s)\n",
+      i, nrow(source_map), table_name,
+      plan_row$chosen_strategy[[1]],
+      plan_row$resolution_status[[1]]
+    ))
+    flush.console()
     if (identical(plan_row$chosen_strategy[[1]], "skipped_risky_full_load")) {
       message <- paste("Skipped source:", plan_row$message[[1]])
       log_event("warning", table_name, message)
@@ -196,6 +203,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
       panels[[panel_name]] <- bind_rows_base(list(panels[[panel_name]], result$panels[[panel_name]]))
     }
     log_event("info", table_name, "Profiled source")
+    cat(sprintf("      done: %s rows, %s columns\n", result$source$n_rows[[1]], result$source$n_cols[[1]]))
+    flush.console()
   }
 
   sources <- safe_read_output_csv(stream_paths$sources, bind_rows_base(source_rows))

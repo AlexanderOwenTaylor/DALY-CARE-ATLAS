@@ -10,6 +10,10 @@ atlas_max_full_load_rows <- function() {
   normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS", unset = "100000"), default = 100000L)
 }
 
+atlas_max_text_distinct_rows <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS", unset = "1000000"), default = 1000000L)
+}
+
 dalycare_standard_bootstrap_path <- function() {
   "/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R"
 }
@@ -878,7 +882,8 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
   column_type <- as.character(info$data_type[[1]] %||% "")
   column_class <- as.character(info$udt_name[[1]] %||% column_type)
   qcol <- DBI::dbQuoteIdentifier(conn, column_name)
-  counts <- dbi_column_counts(conn, table_ref, qcol)
+  skip_distinct <- dbi_skip_distinct_count(column_type, column_class, row_count)
+  counts <- dbi_column_counts(conn, table_ref, qcol, include_distinct = !skip_distinct)
   is_sensitive <- is_sensitive_column(column_name)
   is_date_like <- sql_type_is_date(column_type, column_class) && !is_sensitive
   is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive
@@ -922,11 +927,27 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
   )
 }
 
-dbi_column_counts <- function(conn, table_ref, qcol) {
+dbi_skip_distinct_count <- function(column_type, column_class, row_count) {
+  if (is.na(row_count)) return(FALSE)
+  is_text <- sql_type_is_text(column_type, column_class)
+  isTRUE(is_text) && suppressWarnings(as.numeric(row_count)) > atlas_max_text_distinct_rows()
+}
+
+sql_type_is_text <- function(column_type, column_class) {
+  values <- tolower(c(column_type %||% "", column_class %||% ""))
+  any(values %in% c("text", "varchar", "bpchar", "char", "character varying", "character"))
+}
+
+dbi_column_counts <- function(conn, table_ref, qcol, include_distinct = TRUE) {
+  distinct_sql <- if (isTRUE(include_distinct)) {
+    paste0("count(distinct ", qcol, ")")
+  } else {
+    "cast(null as double precision)"
+  }
   sql <- paste0(
     "select ",
     "sum(case when ", qcol, " is null or btrim(", qcol, "::text) = '' then 1 else 0 end) as n_missing, ",
-    "count(distinct ", qcol, ") as n_distinct ",
+    distinct_sql, " as n_distinct ",
     "from ", table_ref
   )
   tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) data.frame(n_missing = NA_real_, n_distinct = NA_real_))
