@@ -1,3 +1,19 @@
+atlas_runner_script_path <- local({
+  frames <- sys.frames()
+  for (i in rev(seq_along(frames))) {
+    if (exists("ofile", envir = frames[[i]], inherits = FALSE)) {
+      return(normalizePath(get("ofile", envir = frames[[i]]), winslash = "/", mustWork = FALSE))
+    }
+  }
+
+  file_arg <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+  if (length(file_arg)) {
+    return(normalizePath(sub("^--file=", "", file_arg[[1]]), winslash = "/", mustWork = FALSE))
+  }
+
+  NA_character_
+})
+
 usage <- paste(
   "Usage:",
   "  Rscript scripts/run_atlas.R <project_root> <source_map_path> [output_root] [mode]",
@@ -11,7 +27,10 @@ usage <- paste(
   sep = "\n"
 )
 
-find_project_root <- function(start = getwd()) {
+find_project_root <- function(start = NULL) {
+  if (is.null(start)) {
+    start <- if (!is.na(atlas_runner_script_path)) dirname(dirname(atlas_runner_script_path)) else getwd()
+  }
   current <- normalizePath(start, winslash = "/", mustWork = FALSE)
   repeat {
     if (

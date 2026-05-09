@@ -15,6 +15,7 @@ cli_env <- new.env(parent = globalenv())
 sys.source(file.path(root, "scripts", "run_atlas.R"), envir = cli_env)
 expect_true(exists("run_atlas_from_source", envir = cli_env), "Sourcing the runner should define the source-friendly helper.")
 expect_true(exists("load_atlas_runtime", envir = cli_env), "Sourcing the runner should define the runtime loader.")
+expect_equal(cli_env$find_project_root(), root, "Sourced runner should infer the project root from its own script path.")
 
 source_message <- capture.output(cli_env$run_atlas_source_message())
 expect_true(any(grepl("runner loaded", source_message, fixed = TRUE)), "Source message should confirm the runner loaded.")
