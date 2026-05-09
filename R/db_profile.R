@@ -100,7 +100,8 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
     table_row_count = function(db_name, schema, table) dbi_table_row_count(connections, db_name, schema, table),
     profile_table = function(db_name, schema, table, table_name, source_type, source,
                              profile_mode = "full", top_n = 10L,
-                             min_cell_count = atlas_min_cell_count()) {
+                             min_cell_count = atlas_min_cell_count(),
+                             npu_dictionary = NULL) {
       dbi_profile_table(
         connections = connections,
         db_name = db_name,
@@ -111,7 +112,8 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
         source = source,
         profile_mode = profile_mode,
         top_n = top_n,
-        min_cell_count = min_cell_count
+        min_cell_count = min_cell_count,
+        npu_dictionary = npu_dictionary
       )
     }
   )
@@ -376,7 +378,8 @@ memory_plan_for_source <- function(record, source_index, resolution) {
 }
 
 profile_db_source <- function(source_record, resolution_row, db_adapter, profile_mode = NULL,
-                              top_n = 10L, min_cell_count = atlas_min_cell_count()) {
+                              top_n = 10L, min_cell_count = atlas_min_cell_count(),
+                              npu_dictionary = NULL) {
   if (is.null(db_adapter)) {
     stop("DB aggregate profiling requested but no DB adapter was available.", call. = FALSE)
   }
@@ -384,7 +387,7 @@ profile_db_source <- function(source_record, resolution_row, db_adapter, profile
     stop("DB adapter does not provide profile_table().", call. = FALSE)
   }
   profile_mode <- normalize_profile_mode(profile_mode %||% source_record_value(source_record, "profile_mode", "full"))
-  out <- db_adapter$profile_table(
+  args <- list(
     db_name = resolution_row$db_name[[1]],
     schema = resolution_row$schema[[1]],
     table = resolution_row$table[[1]],
@@ -395,6 +398,11 @@ profile_db_source <- function(source_record, resolution_row, db_adapter, profile
     top_n = top_n,
     min_cell_count = min_cell_count
   )
+  formals_names <- names(formals(db_adapter$profile_table))
+  if ("npu_dictionary" %in% formals_names || "..." %in% formals_names) {
+    args$npu_dictionary <- npu_dictionary
+  }
+  out <- do.call(db_adapter$profile_table, args)
   normalize_profile_result(out)
 }
 
@@ -459,7 +467,8 @@ dbi_table_row_count <- function(connections, db_name, schema, table) {
 
 dbi_profile_table <- function(connections, db_name, schema, table, table_name, source_type, source,
                               profile_mode = "full", top_n = 10L,
-                              min_cell_count = atlas_min_cell_count()) {
+                              min_cell_count = atlas_min_cell_count(),
+                              npu_dictionary = NULL) {
   conn <- dbi_connection_for(connections, db_name)
   profile_mode <- normalize_profile_mode(profile_mode)
   schema_info <- dbi_table_schema(connections, db_name, schema, table)
@@ -515,7 +524,18 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
     profiled_at = atlas_timestamp(),
     stringsAsFactors = FALSE
   )
-  panels <- dbi_panels_from_profiles(column_profiles, source_row)
+  panels <- if (identical(profile_mode, "schema")) {
+    list()
+  } else {
+    dbi_panels_from_profiles(
+      column_profiles = column_profiles,
+      source_row = source_row,
+      conn = conn,
+      table_ref = table_ref,
+      npu_dictionary = npu_dictionary,
+      min_cell_count = min_cell_count
+    )
+  }
   list(
     source = source_row,
     columns = columns,
@@ -731,18 +751,79 @@ dbi_checks_from_columns <- function(table_name, column_names) {
   )
 }
 
-dbi_panels_from_profiles <- function(column_profiles, source_row) {
-  registry <- registry_name(source_row$table_name[[1]])
-  if (is.na(registry)) return(list())
-  summary <- data.frame(
-    table_name = source_row$table_name[[1]],
-    registry = registry,
-    n_rows = source_row$n_rows[[1]],
-    n_cols = source_row$n_cols[[1]],
-    n_patients = NA_integer_,
-    min_date = source_row$min_date[[1]],
-    max_date = source_row$max_date[[1]],
+dbi_npu_code_counts <- function(conn, table_ref, column_name, table_name, row_count,
+                                min_cell_count = atlas_min_cell_count()) {
+  if (is.na(column_name) || !nzchar(column_name)) {
+    return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
+  }
+  qcol <- DBI::dbQuoteIdentifier(conn, column_name)
+  sql <- paste0(
+    "select npu_code, count(*) as n_observed from (",
+    "select upper(regexp_replace((regexp_match(upper(", qcol, "::text), 'NPU[[:space:]_-]*[0-9]+'))[1], '[^A-Z0-9]', '', 'g')) as npu_code ",
+    "from ", table_ref, " where ", qcol, " is not null and ", qcol, "::text ~* 'NPU[[:space:]_-]*[0-9]+'",
+    ") x where npu_code is not null group by npu_code having count(*) >= ",
+    as.integer(normalize_min_cell_count(min_cell_count)),
+    " order by n_observed desc, npu_code"
+  )
+  out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) empty_df(npu_code = character(), n_observed = integer()))
+  if (!nrow(out)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
+  data.frame(
+    npu_code = as.character(out$npu_code),
+    n_observed = suppressWarnings(as.integer(out$n_observed)),
+    pct_rows = vapply(suppressWarnings(as.integer(out$n_observed)), safe_pct, numeric(1), denom = row_count),
     stringsAsFactors = FALSE
   )
-  list(registry_clinical_summary = summary)
+}
+
+dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, table_ref = NULL,
+                                     npu_dictionary = NULL,
+                                     min_cell_count = atlas_min_cell_count()) {
+  panels <- list()
+  registry <- registry_name(source_row$table_name[[1]])
+  if (!is.na(registry)) {
+    panels$registry_clinical_summary <- data.frame(
+      table_name = source_row$table_name[[1]],
+      registry = registry,
+      n_rows = source_row$n_rows[[1]],
+      n_cols = source_row$n_cols[[1]],
+      n_patients = NA_integer_,
+      min_date = source_row$min_date[[1]],
+      max_date = source_row$max_date[[1]],
+      stringsAsFactors = FALSE
+    )
+  }
+  if (!is.null(conn) && !is.null(table_ref) && !is.null(npu_dictionary) && nrow(npu_dictionary)) {
+    code_column <- npu_code_column_from_names(column_profiles$column_name)
+    counts <- dbi_npu_code_counts(
+      conn = conn,
+      table_ref = table_ref,
+      column_name = code_column,
+      table_name = source_row$table_name[[1]],
+      row_count = source_row$n_rows[[1]],
+      min_cell_count = 1L
+    )
+    panels$lab_npu_code_coverage <- npu_lab_code_coverage_from_counts(
+      counts = counts,
+      table_name = source_row$table_name[[1]],
+      code_column = code_column,
+      min_cell_count = min_cell_count
+    )
+    panels$npu_lab_usage_by_vector <- npu_lab_usage_from_counts(
+      counts = counts,
+      table_name = source_row$table_name[[1]],
+      code_column = code_column,
+      denom = source_row$n_rows[[1]],
+      dictionary = npu_dictionary,
+      min_cell_count = min_cell_count
+    )
+    panels$npu_lab_unmatched_codes <- npu_lab_unmatched_from_counts(
+      counts = counts,
+      table_name = source_row$table_name[[1]],
+      code_column = code_column,
+      denom = source_row$n_rows[[1]],
+      dictionary = npu_dictionary,
+      min_cell_count = min_cell_count
+    )
+  }
+  panels
 }

@@ -1,6 +1,7 @@
 profile_source <- function(data, table_name, source_type = NA_character_, source = NA_character_,
                            profile_mode = "full", top_n = 10L,
-                           min_cell_count = atlas_min_cell_count()) {
+                           min_cell_count = atlas_min_cell_count(),
+                           npu_dictionary = NULL) {
   if (!is.data.frame(data)) {
     stop("profile_source() requires a data frame.", call. = FALSE)
   }
@@ -47,7 +48,8 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
     data = data,
     table_name = table_name,
     profile_mode = profile_mode,
-    min_cell_count = min_cell_count
+    min_cell_count = min_cell_count,
+    npu_dictionary = npu_dictionary
   )
 
   list(
@@ -316,14 +318,17 @@ is_numeric_like_vector <- function(x) {
   mean(!is.na(suppressWarnings(as.numeric(as.character(x[nonmissing]))))) >= 0.8
 }
 
-profile_panels <- function(data, table_name, profile_mode = "full", min_cell_count = atlas_min_cell_count()) {
+profile_panels <- function(data, table_name, profile_mode = "full", min_cell_count = atlas_min_cell_count(),
+                           npu_dictionary = NULL) {
   profile_mode <- normalize_profile_mode(profile_mode)
   if (identical(profile_mode, "schema")) {
     return(list())
   }
   min_cell_count <- normalize_min_cell_count(min_cell_count)
   summary_panels <- list(
-    lab_npu_code_coverage = panel_lab_codes(data, table_name),
+    lab_npu_code_coverage = panel_lab_codes(data, table_name, min_cell_count = min_cell_count),
+    npu_lab_usage_by_vector = panel_npu_lab_usage_by_vector(data, table_name, npu_dictionary, min_cell_count = min_cell_count),
+    npu_lab_unmatched_codes = panel_npu_lab_unmatched_codes(data, table_name, npu_dictionary, min_cell_count = min_cell_count),
     diagnosis_icd_groups = panel_diagnosis_groups(data, table_name),
     medication_atc_groups = panel_atc_groups(data, table_name),
     damyda_feature_coverage = panel_damyda_features(data, table_name),
@@ -349,21 +354,13 @@ first_matching_column <- function(data, patterns) {
   hits[1] %||% NA_character_
 }
 
-panel_lab_codes <- function(data, table_name) {
-  code_col <- first_matching_column(data, c("npu", "analysis.*code", "analyse.*kode", "^code$", "lab.*code"))
+panel_lab_codes <- function(data, table_name, min_cell_count = atlas_min_cell_count()) {
+  code_col <- npu_code_column(data)
   if (is.na(code_col)) {
     return(empty_df(table_name = character(), code_column = character(), lab_code = character(), n = integer(), pct_rows = numeric()))
   }
-  counts <- top_counts(data[[code_col]], denom = nrow(data), top_n = 100L)
-  if (!nrow(counts)) return(counts)
-  data.frame(
-    table_name = table_name,
-    code_column = code_col,
-    lab_code = counts$value,
-    n = counts$n,
-    pct_rows = counts$pct,
-    stringsAsFactors = FALSE
-  )
+  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = min_cell_count)
+  npu_lab_code_coverage_from_counts(counts, table_name = table_name, code_column = code_col, min_cell_count = min_cell_count)
 }
 
 panel_diagnosis_groups <- function(data, table_name) {

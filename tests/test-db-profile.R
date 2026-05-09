@@ -15,9 +15,11 @@ fake_damyda <- data.frame(
   patientid = c("0101011234", "0202022345", "0303033456", "0404044567", "0505055678", "0606066789"),
   Reg_Diagnose_dt = as.Date("2020-01-01") + 0:5,
   Stadie = c("I", "I", "II", "II", "II", "III"),
+  analysiscode = c("NPU04998", "NPU04998", "NPU01443", "NPU99999", "NPU99999", "not-a-code"),
   ALB = c(34, 35, 36, 38, 39, 40),
   stringsAsFactors = FALSE
 )
+npu_dictionary <- load_npu_consensus_dictionary(project_root = root)
 fake_adapter <- list(
   list_tables = function() {
     data.frame(
@@ -33,7 +35,8 @@ fake_adapter <- list(
     500000L
   },
   profile_table = function(db_name, schema, table, table_name, source_type, source,
-                           profile_mode = "full", top_n = 10L, min_cell_count = atlas_min_cell_count()) {
+                           profile_mode = "full", top_n = 10L, min_cell_count = atlas_min_cell_count(),
+                           npu_dictionary = NULL) {
     if (!identical(table, "RKKP_DaMyDa")) stop("unexpected fake table")
     profile_source(
       fake_damyda,
@@ -42,7 +45,8 @@ fake_adapter <- list(
       source = source,
       profile_mode = profile_mode,
       top_n = top_n,
-      min_cell_count = min_cell_count
+      min_cell_count = min_cell_count,
+      npu_dictionary = npu_dictionary
     )
   }
 )
@@ -73,12 +77,16 @@ db_profile <- profile_db_source(
   resolution_row = resolution[resolution$table_name == "RKKP_DaMyDa", , drop = FALSE],
   db_adapter = fake_adapter,
   profile_mode = "full",
-  min_cell_count = 2L
+  min_cell_count = 2L,
+  npu_dictionary = npu_dictionary
 )
 expect_equal(nrow(db_profile$column_profiles), ncol(fake_damyda), "DB aggregate profile should emit one column profile per source column.")
 expect_true(any(db_profile$column_profiles$column_name == "ALB" & db_profile$column_profiles$profile_kind == "numeric"), "DB aggregate profile should preserve numeric aggregate summaries.")
 expect_false(any(db_profile$column_top_values$column_name == "patientid"), "DB aggregate top values must not expose patient identifiers.")
 expect_true(any(db_profile$column_top_values$column_name == "Stadie" & db_profile$column_top_values$n >= 2), "DB aggregate top values should obey minimum-cell suppression.")
+expect_true(any(db_profile$panels$lab_npu_code_coverage$lab_code == "NPU04998"), "DB aggregate profile should produce NPU code coverage without full-table loading.")
+expect_true(any(db_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "DB aggregate profile should produce dictionary-aware NPU vector usage.")
+expect_true(any(db_profile$panels$npu_lab_unmatched_codes$npu_code == "NPU99999"), "DB aggregate profile should produce suppressed-safe unmatched NPU summaries.")
 
 Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = "FALSE")
 skip_map <- tempfile(fileext = ".tsv")

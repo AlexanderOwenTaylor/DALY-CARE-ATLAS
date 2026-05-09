@@ -41,6 +41,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     domain_cards = public_rows(domain_cards(sources), max_rows = 100),
     catalog_rows = public_rows(catalog_rows(sources), max_rows = 1000),
     qa_items = public_rows(qa_items(checks), max_rows = 500),
+    npu_cards = npu_cards(panels),
     registry_cards = registry_cards(panels),
     panel_groups = public_rows(panel_groups(panels), max_rows = 100),
     column_profile_rows = public_rows(public_column_profiles, max_rows = 3000),
@@ -224,6 +225,26 @@ registry_cards <- function(panels) {
   cards
 }
 
+npu_cards <- function(panels) {
+  summary <- panels$npu_dictionary_summary %||% empty_npu_dictionary_summary()
+  vectors <- panels$npu_dictionary_vectors %||% empty_npu_dictionary_vectors()
+  usage <- panels$npu_lab_usage_by_vector %||% empty_npu_lab_usage_by_vector()
+  unmatched <- panels$npu_lab_unmatched_codes %||% empty_npu_lab_unmatched_codes()
+  if (!is.data.frame(summary)) summary <- empty_npu_dictionary_summary()
+  if (!is.data.frame(vectors)) vectors <- empty_npu_dictionary_vectors()
+  if (!is.data.frame(usage)) usage <- empty_npu_lab_usage_by_vector()
+  if (!is.data.frame(unmatched)) unmatched <- empty_npu_lab_unmatched_codes()
+  vectors <- vectors[order(-suppressWarnings(as.numeric(vectors$n_dictionary_codes)), vectors$consensus_vector), , drop = FALSE]
+  usage <- usage[order(-suppressWarnings(as.numeric(usage$n_observed)), usage$consensus_vector), , drop = FALSE]
+  unmatched <- unmatched[order(-suppressWarnings(as.numeric(unmatched$n_observed)), unmatched$npu_code), , drop = FALSE]
+  list(
+    summary = public_rows(summary, max_rows = 20),
+    top_vectors = public_rows(head(vectors, 15L), max_rows = 15),
+    observed_vectors = public_rows(head(usage, 15L), max_rows = 15),
+    unmatched_codes = public_rows(head(unmatched, 15L), max_rows = 15)
+  )
+}
+
 registry_panel_for <- function(panels, registry) {
   panel_name <- switch(
     registry,
@@ -279,6 +300,10 @@ panel_groups <- function(panels) {
 panel_title <- function(name) {
   titles <- c(
     lab_npu_code_coverage = "Lab NPU Code Coverage",
+    npu_dictionary_summary = "NPU Dictionary Summary",
+    npu_dictionary_vectors = "NPU Dictionary Vectors",
+    npu_lab_usage_by_vector = "NPU Lab Usage By Vector",
+    npu_lab_unmatched_codes = "NPU Lab Unmatched Codes",
     diagnosis_icd_groups = "Diagnosis ICD Groups",
     medication_atc_groups = "Medication ATC Groups",
     damyda_feature_coverage = "DaMyDa Feature Coverage",
@@ -296,6 +321,10 @@ panel_title <- function(name) {
 panel_group <- function(name) {
   groups <- c(
     lab_npu_code_coverage = "Source Content",
+    npu_dictionary_summary = "Source Content",
+    npu_dictionary_vectors = "Source Content",
+    npu_lab_usage_by_vector = "Source Content",
+    npu_lab_unmatched_codes = "Source Content",
     diagnosis_icd_groups = "Source Content",
     medication_atc_groups = "Source Content",
     damyda_feature_coverage = "Clinical Registries",

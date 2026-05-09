@@ -393,6 +393,15 @@
           <div id="qa-preview" class="qa-list"></div>
         </div>
       </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">Consensus NPU Dictionary</h2>
+          <p class="panel-sub">Reference dictionary coverage and observed lab usage by consensus vector, generated from aggregate panels only.</p>
+        </div>
+        <div class="panel-body">
+          <div id="npu-cards" class="grid"></div>
+        </div>
+      </div>
     </section>
 
     <section class="tab-page" id="tab-catalog">
@@ -546,6 +555,7 @@ export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_
       const columnTopValues = payload.column_top_value_rows || [];
       const columnSummary = payload.column_profile_summary || [];
       const qaItems = payload.qa_items || [];
+      const npuCards = payload.npu_cards || {};
       const registryCards = payload.registry_cards || {};
 
       function text(value) {
@@ -648,6 +658,34 @@ export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_
         renderQa("qa-list", wanted ? qaItems.filter(item => item.severity === wanted) : qaItems);
       });
 
+      function renderNpuCards() {
+        const summary = npuCards.summary || [];
+        const vectors = npuCards.top_vectors || [];
+        const observed = npuCards.observed_vectors || [];
+        const unmatched = npuCards.unmatched_codes || [];
+        const summaryKpis = summary.map(row => `
+          <div class="kpi"><b>${formatNumber(row.value)}</b><span class="mini">${escapeHtml(row.label || row.metric)}</span></div>
+        `).join("");
+        setHtml("npu-cards", `
+          <article class="card">
+            <h3>Dictionary Coverage</h3>
+            <div class="kpi-row">${summaryKpis || `<div class="empty">No dictionary summary available.</div>`}</div>
+          </article>
+          <article class="card">
+            <h3>Largest Consensus Vectors</h3>
+            ${bars(vectors.map(row => Object.assign({}, row, { display_label: row.consensus_vector })), "n_dictionary_codes", "display_label")}
+          </article>
+          <article class="card">
+            <h3>Observed Lab Usage</h3>
+            ${observed.length ? bars(observed.map(row => Object.assign({}, row, { display_label: row.consensus_vector })), "n_observed", "display_label") : `<div class="empty">No observed dictionary-matched NPU usage in this run.</div>`}
+          </article>
+          <article class="card">
+            <h3>Unmatched Observed Codes</h3>
+            ${unmatched.length ? rowsForTable(unmatched, 15) : `<div class="empty">No suppressed-safe unmatched NPU codes were observed.</div>`}
+          </article>
+        `);
+      }
+
       fillSelect("catalog-domain-filter", uniqueValues(catalogRows, "domain"));
       fillSelect("catalog-status-filter", uniqueValues(catalogRows, "load_status"));
       fillSelect("catalog-role-filter", uniqueValues(catalogRows, "atlas_role"));
@@ -742,6 +780,7 @@ export DALYCARE_BOOTSTRAP_PATH=/path/to/DALY-CARE-ATLAS/inst/templates/dalycare_
           return `<div class="bar-row"><div title="${escapeHtml(row[labelKey])}">${escapeHtml(row[labelKey])}</div><div class="track"><div class="fill" style="width:${width}%"></div></div><div>${formatNumber(n)}</div></div>`;
         }).join("")}</div>`;
       }
+      renderNpuCards();
       setHtml("registry-cards", Object.keys(registryCards).map(name => {
         const card = registryCards[name];
         const facets = card.facets || [];

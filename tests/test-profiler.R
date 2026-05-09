@@ -24,6 +24,22 @@ expect_true(is.na(patient_profile$min[[1]]) && is.na(patient_profile$max_date[[1
 expect_false(any(profile$column_top_values$column_name == "patientid"), "Sensitive columns should not emit top values.")
 expect_true(any(profile$column_top_values$column_name == "group"), "Eligible categorical columns should emit top values in full mode.")
 
+npu_dictionary <- load_npu_consensus_dictionary(project_root = root)
+npu_profile <- profile_source(
+  data.frame(
+    analysiscode = c("NPU04998", "NPU04998", "NPU01443", "NPU99999", "not-a-code"),
+    stringsAsFactors = FALSE
+  ),
+  "labs_npu",
+  "file",
+  "labs.csv",
+  min_cell_count = 2L,
+  npu_dictionary = npu_dictionary
+)
+expect_true(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "Profiler should join observed NPUs to consensus vectors.")
+expect_false(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CALCIUM_TOTAL_CODES"), "NPU vector usage should obey minimum-cell suppression.")
+expect_equal(nrow(npu_profile$panels$npu_lab_unmatched_codes), 0L, "Unmatched NPU codes below the minimum cell count should be suppressed.")
+
 column_detail_df <- data.frame(
   numeric_lab = c(1, 2, 3, 4, NA),
   event_date = c("2020-01-01", "2020-01-03", "", "2020-02-01", "2020-02-04"),

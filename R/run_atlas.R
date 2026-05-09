@@ -28,6 +28,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   generated_at <- atlas_timestamp()
   log_event("info", "", paste("Starting DALY-CARE atlas run", run_id))
   source_map <- read_source_map(source_map_path, project_root = project_root)
+  npu_dictionary <- load_npu_consensus_dictionary(project_root = project_root)
+  log_event("info", "", paste("Loaded NPU consensus dictionary with", nrow(npu_dictionary), "codes"))
   for (warning in validation_warnings(source_map, output_root = output_root, project_root = project_root)) {
     log_event("warning", warning$table_name, warning$message)
   }
@@ -68,6 +70,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   frequency_rows <- list()
   panels <- list(
     lab_npu_code_coverage = data.frame(stringsAsFactors = FALSE),
+    npu_dictionary_summary = panel_npu_dictionary_summary(npu_dictionary),
+    npu_dictionary_vectors = panel_npu_dictionary_vectors(npu_dictionary),
+    npu_lab_usage_by_vector = empty_npu_lab_usage_by_vector(),
+    npu_lab_unmatched_codes = empty_npu_lab_unmatched_codes(),
     diagnosis_icd_groups = data.frame(stringsAsFactors = FALSE),
     medication_atc_groups = data.frame(stringsAsFactors = FALSE),
     damyda_feature_coverage = data.frame(stringsAsFactors = FALSE),
@@ -128,7 +134,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
             source_record = record,
             resolution_row = resolution_row,
             db_adapter = db_adapter,
-            profile_mode = record$profile_mode[[1]]
+            profile_mode = record$profile_mode[[1]],
+            npu_dictionary = npu_dictionary
           )
         }
       } else {
@@ -138,7 +145,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
           table_name = table_name,
           source_type = record$source_type[[1]],
           source = record$source[[1]],
-          profile_mode = record$profile_mode[[1]]
+          profile_mode = record$profile_mode[[1]],
+          npu_dictionary = npu_dictionary
         )
         rm(data)
         gc(verbose = FALSE)

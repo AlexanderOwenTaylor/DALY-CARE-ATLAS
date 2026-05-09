@@ -139,6 +139,19 @@ numeric or date summaries where applicable. `atlas_column_top_values.csv`
 contains top categorical values only for eligible non-sensitive columns after
 minimum-cell suppression.
 
+The atlas also ships a reference NPU consensus dictionary in
+`config/npu-consensus-dictionary.tsv`, generated from the unified consensus
+workbook. Lab sources with NPU-like code columns are joined to this dictionary
+in aggregate-only panels:
+
+- `outputs/panels/npu_dictionary_summary.csv`
+- `outputs/panels/npu_dictionary_vectors.csv`
+- `outputs/panels/npu_lab_usage_by_vector.csv`
+- `outputs/panels/npu_lab_unmatched_codes.csv`
+
+Observed NPU counts are normalized to uppercase `NPU[0-9]+` codes and remain
+subject to `DALYCARE_MIN_CELL_COUNT` suppression.
+
 ## Legacy Provenance
 
 Legacy WoMMen V06 cartography files are preserved under
