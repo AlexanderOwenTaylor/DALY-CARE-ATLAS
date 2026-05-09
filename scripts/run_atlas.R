@@ -66,6 +66,7 @@ load_atlas_runtime <- function(project_root = find_project_root()) {
   source(file.path(project_root, "R", "source_map.R"))
   source(file.path(project_root, "R", "loader.R"))
   source(file.path(project_root, "R", "npu_dictionary.R"))
+  source(file.path(project_root, "R", "code_panels.R"))
   source(file.path(project_root, "R", "profiler.R"))
   source(file.path(project_root, "R", "db_profile.R"))
   source(file.path(project_root, "R", "html.R"))

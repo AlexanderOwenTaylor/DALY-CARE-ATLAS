@@ -61,6 +61,79 @@ panels <- list(
     stringsAsFactors = FALSE
   ),
   npu_lab_unmatched_codes = empty_npu_lab_unmatched_codes(),
+  npu_detective_code_inventory = data.frame(
+    table_name = "example_labs",
+    code_column = "analysiscode",
+    npu_code = "NPU04998",
+    dictionary_match = TRUE,
+    consensus_vector = "CREATININE_CODES",
+    clinical_role = "Plasma creatinine",
+    system = "P",
+    status_labterm = "Active",
+    surface = "renal_creatinine",
+    candidate_label = "Creatinine and renal function",
+    n_observed = 6,
+    pct_rows = 60,
+    stringsAsFactors = FALSE
+  ),
+  npu_detective_candidates = empty_npu_detective_candidates(),
+  npu_detective_source_year = data.frame(
+    table_name = "example_labs",
+    code_column = "analysiscode",
+    year_column = "samplingdate",
+    year = 2021,
+    npu_code = "NPU04998",
+    consensus_vector = "CREATININE_CODES",
+    surface = "renal_creatinine",
+    n_observed = 6,
+    pct_rows = 60,
+    stringsAsFactors = FALSE
+  ),
+  isotype_code_usage = data.frame(
+    table_name = "example_labs",
+    code_column = "analysiscode",
+    npu_code = "NPU28638",
+    consensus_vector = "MSPIKE_IGG",
+    isotype_family = "IgG",
+    specimen_class = "plasma",
+    bucket = "heavy_chain",
+    n_observed = 3,
+    pct_rows = 30,
+    stringsAsFactors = FALSE
+  ),
+  isotype_bucket_summary = data.frame(
+    table_name = "example_labs",
+    bucket = "heavy_chain",
+    isotype_family = "IgG",
+    specimen_class = "plasma",
+    n_rows = 3,
+    pct_rows = 30,
+    n_patients = NA_integer_,
+    stringsAsFactors = FALSE
+  ),
+  mm_treatment_code_counts = data.frame(
+    table_name = "example_treatments",
+    code_column = "procedurekode",
+    code_system = "SKS",
+    family = "mm_procedure",
+    match_type = "exact",
+    code = "BWHA154",
+    label = "Myeloma procedure BWHA154",
+    n_rows = 2,
+    pct_rows = 20,
+    n_patients = NA_integer_,
+    stringsAsFactors = FALSE
+  ),
+  mm_treatment_source_summary = data.frame(
+    table_name = "example_treatments",
+    n_rows_scanned = 10,
+    matched_rows = 2,
+    pct_rows_matched = 20,
+    matched_patients = NA_integer_,
+    min_date = "2021-06-01",
+    max_date = "2021-06-02",
+    stringsAsFactors = FALSE
+  ),
   registry_clinical_summary = data.frame(
     table_name = "RKKP_DaMyDa",
     registry = "DaMyDa",
@@ -146,7 +219,7 @@ payload <- atlas_payload(
   column_top_values = column_top_values,
   run_summary = run_summary
 )
-expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "npu_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
+expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
 expect_true(length(payload$domain_cards) == 2L, "Domain cards should be derived from source domains.")
 expect_true(length(payload$catalog_rows) == 2L, "Catalog rows should be derived from source rows.")
@@ -156,6 +229,9 @@ expect_true(length(payload$column_profile_summary) > 0, "Column profile summarie
 expect_true(length(payload$npu_cards$summary) > 0, "NPU cards should include dictionary summary rows.")
 expect_true(length(payload$npu_cards$top_vectors) > 0, "NPU cards should include vector summaries.")
 expect_true(length(payload$npu_cards$observed_vectors) > 0, "NPU cards should include observed lab usage.")
+expect_true(length(payload$detective_cards$observed_codes) > 0, "NPU detective cards should include observed code inventory.")
+expect_true(length(payload$isotype_cards$code_usage) > 0, "Isotype cards should include observed code usage.")
+expect_true(length(payload$treatment_cards$code_families) > 0, "Treatment cards should include MM treatment code counts.")
 expect_true(length(payload$registry_cards) == 1L, "Registry cards should be generated when registry panels exist.")
 expect_true("DaMyDa" %in% names(payload$registry_cards), "Registry cards should be keyed by registry name.")
 expect_true(any(vapply(payload$panel_groups, function(row) identical(row$panel_name, "damyda_clinical_profile"), logical(1))), "Panel groups should include generated panel metadata.")
@@ -166,6 +242,9 @@ view_json <- atlas_to_json(list(
   catalog_rows = payload$catalog_rows,
   qa_items = payload$qa_items,
   npu_cards = payload$npu_cards,
+  detective_cards = payload$detective_cards,
+  isotype_cards = payload$isotype_cards,
+  treatment_cards = payload$treatment_cards,
   registry_cards = payload$registry_cards,
   panel_groups = payload$panel_groups,
   column_profile_rows = payload$column_profile_rows,

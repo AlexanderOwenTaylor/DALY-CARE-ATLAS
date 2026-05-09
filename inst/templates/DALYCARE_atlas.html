@@ -402,6 +402,19 @@
           <div id="npu-cards" class="grid"></div>
         </div>
       </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2 class="panel-title">NPU Detective, Isotype, And Treatment Codes</h2>
+          <p class="panel-sub">Aggregate-only code inventory, isotype family usage, and MM treatment-code evidence from protected panel outputs.</p>
+        </div>
+        <div class="panel-body">
+          <div id="detective-cards" class="grid"></div>
+          <div style="height:14px"></div>
+          <div id="isotype-cards" class="grid"></div>
+          <div style="height:14px"></div>
+          <div id="treatment-cards" class="grid"></div>
+        </div>
+      </div>
     </section>
 
     <section class="tab-page" id="tab-catalog">
@@ -565,6 +578,9 @@ result &lt;- run_atlas_from_source(
       const columnSummary = payload.column_profile_summary || [];
       const qaItems = payload.qa_items || [];
       const npuCards = payload.npu_cards || {};
+      const detectiveCards = payload.detective_cards || {};
+      const isotypeCards = payload.isotype_cards || {};
+      const treatmentCards = payload.treatment_cards || {};
       const registryCards = payload.registry_cards || {};
 
       function text(value) {
@@ -695,6 +711,45 @@ result &lt;- run_atlas_from_source(
         `);
       }
 
+      function renderCodeDiscoveryCards() {
+        const detectiveObserved = detectiveCards.observed_codes || [];
+        const detectiveCandidates = detectiveCards.candidate_codes || [];
+        const isotypeBuckets = isotypeCards.bucket_summary || [];
+        const isotypeUsage = isotypeCards.code_usage || [];
+        const treatmentCounts = treatmentCards.code_families || [];
+        const treatmentSources = treatmentCards.source_summary || [];
+        setHtml("detective-cards", `
+          <article class="card">
+            <h3>NPU Detective Inventory</h3>
+            ${detectiveObserved.length ? bars(detectiveObserved.map(row => Object.assign({}, row, { display_label: row.surface || row.consensus_vector || row.npu_code })), "n_observed", "display_label") : `<div class="empty">No detective inventory rows available.</div>`}
+          </article>
+          <article class="card">
+            <h3>Candidate NPU Codes</h3>
+            ${detectiveCandidates.length ? rowsForTable(detectiveCandidates, 12) : `<div class="empty">No unmatched or weakly classified NPU candidates met the cell threshold.</div>`}
+          </article>
+        `);
+        setHtml("isotype-cards", `
+          <article class="card">
+            <h3>Isotype Buckets</h3>
+            ${isotypeBuckets.length ? bars(isotypeBuckets.map(row => Object.assign({}, row, { display_label: `${row.specimen_class}: ${row.isotype_family}` })), "n_rows", "display_label") : `<div class="empty">No isotype bucket rows available.</div>`}
+          </article>
+          <article class="card">
+            <h3>Isotype Code Usage</h3>
+            ${isotypeUsage.length ? rowsForTable(isotypeUsage, 12) : `<div class="empty">No observed isotype codes met the cell threshold.</div>`}
+          </article>
+        `);
+        setHtml("treatment-cards", `
+          <article class="card">
+            <h3>MM Treatment Code Families</h3>
+            ${treatmentCounts.length ? bars(treatmentCounts.map(row => Object.assign({}, row, { display_label: `${row.family}: ${row.code}` })), "n_rows", "display_label") : `<div class="empty">No MM treatment code family rows available.</div>`}
+          </article>
+          <article class="card">
+            <h3>Treatment Evidence Sources</h3>
+            ${treatmentSources.length ? rowsForTable(treatmentSources, 12) : `<div class="empty">No treatment source summaries met the cell threshold.</div>`}
+          </article>
+        `);
+      }
+
       fillSelect("catalog-domain-filter", uniqueValues(catalogRows, "domain"));
       fillSelect("catalog-status-filter", uniqueValues(catalogRows, "load_status"));
       fillSelect("catalog-role-filter", uniqueValues(catalogRows, "atlas_role"));
@@ -790,6 +845,7 @@ result &lt;- run_atlas_from_source(
         }).join("")}</div>`;
       }
       renderNpuCards();
+      renderCodeDiscoveryCards();
       setHtml("registry-cards", Object.keys(registryCards).map(name => {
         const card = registryCards[name];
         const facets = card.facets || [];

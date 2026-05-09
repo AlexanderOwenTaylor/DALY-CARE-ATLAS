@@ -1,0 +1,10 @@
+surface	candidate_label	consensus_vectors	system_include	system_exclude	clinical_role_pattern
+renal_creatinine	Creatinine and renal function	CREATININE_CODES	P,U		creatinine|renal|egfr
+calcium_total	Total calcium	CALCIUM_TOTAL_CODES	P		calcium
+calcium_ionised	Ionised calcium	CALCIUM_IONISED_CODES	P		ionised|free calcium
+flc_ratio	Free light-chain ratio	FLC_RATIO_CODES,FLC_RATIO_U_CODES	P,U		free light|flc|ratio
+freelite_kappa	Free kappa light chain	FREELITE_KAPPA_CODES,FREELITE_KAPPA_U_CODES	P,U		kappa
+freelite_lambda	Free lambda light chain	FREELITE_LAMBDA_CODES,FREELITE_LAMBDA_U_CODES	P,U		lambda
+immunoglobulin_total	Total immunoglobulins	IGA_TOTAL_CODES,IGG_TOTAL_CODES,IGM_TOTAL_CODES,IGD_TOTAL_CODES,IGE_TOTAL_CODES	P		immunoglobulin|total ig
+mspike_plasma	Plasma M-spike and isotype	MSPIKE_IGG,MSPIKE_IGA,MSPIKE_IGM,MSPIKE_IGD,MSPIKE_IGE,MSPIKE_LC,MSPIKE_SCREEN,MSPIKE_IFX_P,MSPIKE_TYPE_LABEL,MSPIKE_GROUP,MSPIKE_FREE_HEAVY	P		m-component|m spike|monoclonal|ife
+mspike_urine	Urine M-spike and Bence Jones	MSPIKE_IFX_U,MSPIKE_BJP,MSPIKE_URINE_SCREEN,MSPIKE_URINE_TYPE_LABEL,MSPIKE_URINE_GROUP,MSPIKE_URINE_LC,MSPIKE_URINE_IGA_TYPED,MSPIKE_URINE_IGG_TYPED,MSPIKE_URINE_IGM_TYPED,MSPIKE_URINE_IGD_TYPED,MSPIKE_URINE_IGE_TYPED,MSPIKE_URINE_24H_SCREEN,MSPIKE_URINE_24H_LC,MSPIKE_URINE_24H_IGA_TYPED,MSPIKE_URINE_24H_IGG_TYPED,MSPIKE_URINE_24H_IGM_TYPED,MSPIKE_URINE_24H_IGD_TYPED,MSPIKE_URINE_24H_IGE_TYPED	U,Pt(U)		urine|bence|monoclonal

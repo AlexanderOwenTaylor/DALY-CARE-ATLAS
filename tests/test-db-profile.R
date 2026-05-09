@@ -26,6 +26,9 @@ fake_damyda <- data.frame(
   stringsAsFactors = FALSE
 )
 npu_dictionary <- load_npu_consensus_dictionary(project_root = root)
+npu_surfaces <- load_npu_detective_surfaces(project_root = root)
+isotype_vectors <- load_isotype_vectors(project_root = root, dictionary = npu_dictionary)
+treatment_families <- load_mm_treatment_code_families(project_root = root)
 fake_adapter <- list(
   list_tables = function() {
     data.frame(
@@ -42,7 +45,10 @@ fake_adapter <- list(
   },
   profile_table = function(db_name, schema, table, table_name, source_type, source,
                            profile_mode = "full", top_n = 10L, min_cell_count = atlas_min_cell_count(),
-                           npu_dictionary = NULL) {
+                           npu_dictionary = NULL,
+                           npu_surfaces = NULL,
+                           isotype_vectors = NULL,
+                           treatment_families = NULL) {
     if (!identical(table, "RKKP_DaMyDa")) stop("unexpected fake table")
     profile_source(
       fake_damyda,
@@ -52,7 +58,10 @@ fake_adapter <- list(
       profile_mode = profile_mode,
       top_n = top_n,
       min_cell_count = min_cell_count,
-      npu_dictionary = npu_dictionary
+      npu_dictionary = npu_dictionary,
+      npu_surfaces = npu_surfaces,
+      isotype_vectors = isotype_vectors,
+      treatment_families = treatment_families
     )
   }
 )
@@ -110,7 +119,10 @@ db_profile <- profile_db_source(
   db_adapter = fake_adapter,
   profile_mode = "full",
   min_cell_count = 2L,
-  npu_dictionary = npu_dictionary
+  npu_dictionary = npu_dictionary,
+  npu_surfaces = npu_surfaces,
+  isotype_vectors = isotype_vectors,
+  treatment_families = treatment_families
 )
 expect_equal(nrow(db_profile$column_profiles), ncol(fake_damyda), "DB aggregate profile should emit one column profile per source column.")
 expect_true(any(db_profile$column_profiles$column_name == "ALB" & db_profile$column_profiles$profile_kind == "numeric"), "DB aggregate profile should preserve numeric aggregate summaries.")
@@ -119,6 +131,8 @@ expect_true(any(db_profile$column_top_values$column_name == "Stadie" & db_profil
 expect_true(any(db_profile$panels$lab_npu_code_coverage$lab_code == "NPU04998"), "DB aggregate profile should produce NPU code coverage without full-table loading.")
 expect_true(any(db_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "DB aggregate profile should produce dictionary-aware NPU vector usage.")
 expect_true(any(db_profile$panels$npu_lab_unmatched_codes$npu_code == "NPU99999"), "DB aggregate profile should produce suppressed-safe unmatched NPU summaries.")
+expect_true(any(db_profile$panels$npu_detective_code_inventory$surface == "renal_creatinine"), "DB aggregate profile should produce NPU detective inventory from aggregate counts.")
+expect_true(any(db_profile$panels$npu_detective_candidates$npu_code == "NPU99999"), "DB aggregate profile should produce NPU detective candidates from aggregate counts.")
 Sys.setenv(DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS = "100")
 expect_true(dbi_skip_distinct_count("text", "text", 101), "DB profiling should skip expensive distinct counts for huge text columns.")
 expect_false(dbi_skip_distinct_count("text", "text", 100), "DB profiling should keep distinct counts for small text columns.")

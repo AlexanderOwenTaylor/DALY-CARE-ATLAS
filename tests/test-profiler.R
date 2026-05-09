@@ -25,6 +25,9 @@ expect_false(any(profile$column_top_values$column_name == "patientid"), "Sensiti
 expect_true(any(profile$column_top_values$column_name == "group"), "Eligible categorical columns should emit top values in full mode.")
 
 npu_dictionary <- load_npu_consensus_dictionary(project_root = root)
+npu_surfaces <- load_npu_detective_surfaces(project_root = root)
+isotype_vectors <- load_isotype_vectors(project_root = root, dictionary = npu_dictionary)
+treatment_families <- load_mm_treatment_code_families(project_root = root)
 npu_profile <- profile_source(
   data.frame(
     analysiscode = c("NPU04998", "NPU04998", "NPU01443", "NPU99999", "not-a-code"),
@@ -39,6 +42,48 @@ npu_profile <- profile_source(
 expect_true(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "Profiler should join observed NPUs to consensus vectors.")
 expect_false(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CALCIUM_TOTAL_CODES"), "NPU vector usage should obey minimum-cell suppression.")
 expect_equal(nrow(npu_profile$panels$npu_lab_unmatched_codes), 0L, "Unmatched NPU codes below the minimum cell count should be suppressed.")
+
+code_discovery_profile <- profile_source(
+  data.frame(
+    patientid = 1:8,
+    analysiscode = c("NPU04998", "NPU04998", "NPU28638", "NPU28638", "NPU99999", "NPU99999", "NPU01443", "not-a-code"),
+    samplingdate = c("2021-01-01", "2021-01-02", "2021-02-01", "2021-02-02", "2022-01-01", "2022-01-02", "2022-03-01", "2022-04-01"),
+    stringsAsFactors = FALSE
+  ),
+  "SP_AlleProvesvar",
+  "file",
+  "labs.csv",
+  min_cell_count = 2L,
+  npu_dictionary = npu_dictionary,
+  npu_surfaces = npu_surfaces,
+  isotype_vectors = isotype_vectors
+)
+expect_true(any(code_discovery_profile$panels$npu_detective_code_inventory$npu_code == "NPU04998"), "NPU detective inventory should include observed NPU-like codes.")
+expect_true(any(code_discovery_profile$panels$npu_detective_code_inventory$surface == "renal_creatinine"), "NPU detective inventory should classify dictionary codes against detective surfaces.")
+expect_true(any(code_discovery_profile$panels$npu_detective_candidates$npu_code == "NPU99999"), "NPU detective candidates should include unmatched NPU-like codes above the threshold.")
+expect_false(any(code_discovery_profile$panels$npu_detective_code_inventory$npu_code == "NPU01443"), "NPU detective inventory should suppress small cells.")
+expect_true(any(code_discovery_profile$panels$npu_detective_source_year$year == 2021), "NPU detective should emit source-year aggregates when a date column exists.")
+expect_true(any(code_discovery_profile$panels$isotype_code_usage$isotype_family == "IgG"), "Isotype finder should classify M-spike IgG vectors.")
+expect_true(any(code_discovery_profile$panels$isotype_bucket_summary$bucket == "heavy_chain"), "Isotype finder should emit aggregate bucket summaries.")
+
+treatment_profile <- profile_source(
+  data.frame(
+    patientid = 1:7,
+    procedurekode = c("BWHA154", "BWHA154", "BWG123", "BWG124", "MH02AB02", "ZZZ999", ""),
+    procedure_date = c("2021-06-01", "2021-06-02", "2021-06-03", "2021-06-04", "2021-06-05", "2021-06-06", "2021-06-07"),
+    stringsAsFactors = FALSE
+  ),
+  "SDS_procedurer_andre",
+  "file",
+  "procedures.csv",
+  min_cell_count = 2L,
+  treatment_families = treatment_families
+)
+expect_true(any(treatment_profile$panels$mm_treatment_code_counts$code == "BWHA154"), "Treatment-code panel should count exact MM procedure codes.")
+expect_true(any(treatment_profile$panels$mm_treatment_code_counts$code == "BWG"), "Treatment-code panel should count prefix MM procedure families.")
+expect_false(any(treatment_profile$panels$mm_treatment_code_counts$code == "MH02AB02"), "Treatment-code panel should suppress small exact-code cells.")
+expect_true(nrow(treatment_profile$panels$mm_treatment_source_summary) == 1L, "Treatment source summary should be emitted when matched rows clear the threshold.")
+expect_false(any(grepl("patientid", names(treatment_profile$panels$mm_treatment_code_counts), ignore.case = TRUE)), "Treatment panels must not expose patient identifier column names.")
 
 column_detail_df <- data.frame(
   numeric_lab = c(1, 2, 3, 4, NA),

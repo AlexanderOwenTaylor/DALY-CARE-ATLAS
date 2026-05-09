@@ -32,6 +32,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   source_map <- read_source_map(source_map_path, project_root = project_root)
   npu_dictionary <- load_npu_consensus_dictionary(project_root = project_root)
   log_event("info", "", paste("Loaded NPU consensus dictionary with", nrow(npu_dictionary), "codes"))
+  npu_surfaces <- load_npu_detective_surfaces(project_root = project_root)
+  isotype_vectors <- load_isotype_vectors(project_root = project_root, dictionary = npu_dictionary)
+  treatment_families <- load_mm_treatment_code_families(project_root = project_root)
+  log_event("info", "", paste("Loaded NPU detective surfaces:", nrow(npu_surfaces)))
+  log_event("info", "", paste("Loaded isotype NPU mappings:", nrow(isotype_vectors)))
+  log_event("info", "", paste("Loaded MM treatment code rules:", nrow(treatment_families)))
   for (warning in validation_warnings(source_map, output_root = output_root, project_root = project_root)) {
     log_event("warning", warning$table_name, warning$message)
   }
@@ -88,6 +94,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     npu_dictionary_vectors = panel_npu_dictionary_vectors(npu_dictionary),
     npu_lab_usage_by_vector = empty_npu_lab_usage_by_vector(),
     npu_lab_unmatched_codes = empty_npu_lab_unmatched_codes(),
+    npu_detective_code_inventory = empty_npu_detective_code_inventory(),
+    npu_detective_candidates = empty_npu_detective_candidates(),
+    npu_detective_source_year = empty_npu_detective_source_year(),
+    isotype_code_usage = empty_isotype_code_usage(),
+    isotype_bucket_summary = empty_isotype_bucket_summary(),
+    mm_treatment_code_counts = empty_mm_treatment_code_counts(),
+    mm_treatment_source_summary = empty_mm_treatment_source_summary(),
     diagnosis_icd_groups = data.frame(stringsAsFactors = FALSE),
     medication_atc_groups = data.frame(stringsAsFactors = FALSE),
     damyda_feature_coverage = data.frame(stringsAsFactors = FALSE),
@@ -156,7 +169,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
             resolution_row = resolution_row,
             db_adapter = db_adapter,
             profile_mode = record$profile_mode[[1]],
-            npu_dictionary = npu_dictionary
+            npu_dictionary = npu_dictionary,
+            npu_surfaces = npu_surfaces,
+            isotype_vectors = isotype_vectors,
+            treatment_families = treatment_families
           )
         }
       } else {
@@ -167,7 +183,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
           source_type = record$source_type[[1]],
           source = record$source[[1]],
           profile_mode = record$profile_mode[[1]],
-          npu_dictionary = npu_dictionary
+          npu_dictionary = npu_dictionary,
+          npu_surfaces = npu_surfaces,
+          isotype_vectors = isotype_vectors,
+          treatment_families = treatment_families
         )
         rm(data)
         gc(verbose = FALSE)

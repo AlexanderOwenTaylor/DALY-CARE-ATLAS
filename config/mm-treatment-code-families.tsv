@@ -1,0 +1,18 @@
+family	code_system	match_type	code	label	source_hint
+mm_procedure	SKS	exact	BWHA154	Myeloma procedure BWHA154	procedure
+mm_procedure	SKS	exact	BWHA105	Myeloma procedure BWHA105	procedure
+mm_procedure	SKS	exact	BWHA102	Myeloma procedure BWHA102	procedure
+mm_procedure	SKS	exact	BWHB81	Myeloma procedure BWHB81	procedure
+mm_procedure	SKS	exact	BWHB82	Myeloma procedure BWHB82	procedure
+mm_procedure	SKS	exact	BWHB86	Myeloma procedure BWHB86	procedure
+mm_procedure	SKS	exact	BWHA402	Myeloma procedure BWHA402	procedure
+mm_procedure	SKS	exact	BWHA432	Myeloma procedure BWHA432	procedure
+mm_procedure	SKS	exact	BWHA439	Myeloma procedure BWHA439	procedure
+mm_procedure	SKS	exact	BOHJ19H8	Myeloma procedure BOHJ19H8	procedure
+mm_procedure	SKS	exact	BOHJ19H9	Myeloma procedure BOHJ19H9	procedure
+mm_procedure	SKS	exact	BWHA445	Myeloma procedure BWHA445	procedure
+mm_procedure_family	SKS	prefix	BWHA	Myeloma BWHA procedure family	procedure
+mm_procedure_family	SKS	prefix	BWG	Myeloma BWG procedure family	procedure
+dexa	SKS	exact	MH02AB02	DEXA scan	procedure
+antineoplastic_atc	ATC	prefix	L01	Antineoplastic medicines	medication
+immunomodulating_atc	ATC	prefix	L04	Immunomodulating medicines	medication

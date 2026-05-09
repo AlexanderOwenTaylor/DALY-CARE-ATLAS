@@ -1,7 +1,10 @@
 profile_source <- function(data, table_name, source_type = NA_character_, source = NA_character_,
                            profile_mode = "full", top_n = 10L,
                            min_cell_count = atlas_min_cell_count(),
-                           npu_dictionary = NULL) {
+                           npu_dictionary = NULL,
+                           npu_surfaces = NULL,
+                           isotype_vectors = NULL,
+                           treatment_families = NULL) {
   if (!is.data.frame(data)) {
     stop("profile_source() requires a data frame.", call. = FALSE)
   }
@@ -49,7 +52,10 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
     table_name = table_name,
     profile_mode = profile_mode,
     min_cell_count = min_cell_count,
-    npu_dictionary = npu_dictionary
+    npu_dictionary = npu_dictionary,
+    npu_surfaces = npu_surfaces,
+    isotype_vectors = isotype_vectors,
+    treatment_families = treatment_families
   )
 
   list(
@@ -319,7 +325,10 @@ is_numeric_like_vector <- function(x) {
 }
 
 profile_panels <- function(data, table_name, profile_mode = "full", min_cell_count = atlas_min_cell_count(),
-                           npu_dictionary = NULL) {
+                           npu_dictionary = NULL,
+                           npu_surfaces = NULL,
+                           isotype_vectors = NULL,
+                           treatment_families = NULL) {
   profile_mode <- normalize_profile_mode(profile_mode)
   if (identical(profile_mode, "schema")) {
     return(list())
@@ -329,6 +338,13 @@ profile_panels <- function(data, table_name, profile_mode = "full", min_cell_cou
     lab_npu_code_coverage = panel_lab_codes(data, table_name, min_cell_count = min_cell_count),
     npu_lab_usage_by_vector = panel_npu_lab_usage_by_vector(data, table_name, npu_dictionary, min_cell_count = min_cell_count),
     npu_lab_unmatched_codes = panel_npu_lab_unmatched_codes(data, table_name, npu_dictionary, min_cell_count = min_cell_count),
+    npu_detective_code_inventory = panel_npu_detective_code_inventory(data, table_name, npu_dictionary, npu_surfaces, min_cell_count = min_cell_count),
+    npu_detective_candidates = panel_npu_detective_candidates(data, table_name, npu_dictionary, npu_surfaces, min_cell_count = min_cell_count),
+    npu_detective_source_year = panel_npu_detective_source_year(data, table_name, npu_dictionary, npu_surfaces, min_cell_count = min_cell_count),
+    isotype_code_usage = panel_isotype_code_usage(data, table_name, isotype_vectors, min_cell_count = min_cell_count),
+    isotype_bucket_summary = panel_isotype_bucket_summary(data, table_name, isotype_vectors, min_cell_count = min_cell_count),
+    mm_treatment_code_counts = panel_mm_treatment_code_counts(data, table_name, treatment_families, min_cell_count = min_cell_count),
+    mm_treatment_source_summary = panel_mm_treatment_source_summary(data, table_name, treatment_families, min_cell_count = min_cell_count),
     diagnosis_icd_groups = panel_diagnosis_groups(data, table_name),
     medication_atc_groups = panel_atc_groups(data, table_name),
     damyda_feature_coverage = panel_damyda_features(data, table_name),

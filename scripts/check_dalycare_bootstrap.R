@@ -10,6 +10,8 @@ bootstrap_path <- if (length(args) >= 3L) {
 
 source(file.path(project_root, "R", "utils.R"))
 source(file.path(project_root, "R", "source_map.R"))
+source(file.path(project_root, "R", "npu_dictionary.R"))
+source(file.path(project_root, "R", "code_panels.R"))
 source(file.path(project_root, "R", "profiler.R"))
 source(file.path(project_root, "R", "db_profile.R"))
 source(file.path(project_root, "R", "dalycare_preflight.R"))

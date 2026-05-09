@@ -42,6 +42,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     catalog_rows = public_rows(catalog_rows(sources), max_rows = 1000),
     qa_items = public_rows(qa_items(checks), max_rows = 500),
     npu_cards = npu_cards(panels),
+    detective_cards = detective_cards(panels),
+    isotype_cards = isotype_cards(panels),
+    treatment_cards = treatment_cards(panels),
     registry_cards = registry_cards(panels),
     panel_groups = public_rows(panel_groups(panels), max_rows = 100),
     column_profile_rows = public_rows(public_column_profiles, max_rows = 3000),
@@ -245,6 +248,48 @@ npu_cards <- function(panels) {
   )
 }
 
+detective_cards <- function(panels) {
+  inventory <- panels$npu_detective_code_inventory %||% empty_npu_detective_code_inventory()
+  candidates <- panels$npu_detective_candidates %||% empty_npu_detective_candidates()
+  source_year <- panels$npu_detective_source_year %||% empty_npu_detective_source_year()
+  if (!is.data.frame(inventory)) inventory <- empty_npu_detective_code_inventory()
+  if (!is.data.frame(candidates)) candidates <- empty_npu_detective_candidates()
+  if (!is.data.frame(source_year)) source_year <- empty_npu_detective_source_year()
+  inventory <- inventory[order(-suppressWarnings(as.numeric(inventory$n_observed)), inventory$npu_code), , drop = FALSE]
+  candidates <- candidates[order(-suppressWarnings(as.numeric(candidates$n_observed)), candidates$npu_code), , drop = FALSE]
+  list(
+    observed_codes = public_rows(head(inventory, 15L), max_rows = 15),
+    candidate_codes = public_rows(head(candidates, 15L), max_rows = 15),
+    source_year = public_rows(head(source_year[order(source_year$year, -suppressWarnings(as.numeric(source_year$n_observed))), , drop = FALSE], 20L), max_rows = 20)
+  )
+}
+
+isotype_cards <- function(panels) {
+  usage <- panels$isotype_code_usage %||% empty_isotype_code_usage()
+  buckets <- panels$isotype_bucket_summary %||% empty_isotype_bucket_summary()
+  if (!is.data.frame(usage)) usage <- empty_isotype_code_usage()
+  if (!is.data.frame(buckets)) buckets <- empty_isotype_bucket_summary()
+  usage <- usage[order(-suppressWarnings(as.numeric(usage$n_observed)), usage$isotype_family), , drop = FALSE]
+  buckets <- buckets[order(-suppressWarnings(as.numeric(buckets$n_rows)), buckets$bucket, buckets$isotype_family), , drop = FALSE]
+  list(
+    code_usage = public_rows(head(usage, 15L), max_rows = 15),
+    bucket_summary = public_rows(head(buckets, 15L), max_rows = 15)
+  )
+}
+
+treatment_cards <- function(panels) {
+  counts <- panels$mm_treatment_code_counts %||% empty_mm_treatment_code_counts()
+  summary <- panels$mm_treatment_source_summary %||% empty_mm_treatment_source_summary()
+  if (!is.data.frame(counts)) counts <- empty_mm_treatment_code_counts()
+  if (!is.data.frame(summary)) summary <- empty_mm_treatment_source_summary()
+  counts <- counts[order(-suppressWarnings(as.numeric(counts$n_rows)), counts$family, counts$code), , drop = FALSE]
+  summary <- summary[order(-suppressWarnings(as.numeric(summary$matched_rows)), summary$table_name), , drop = FALSE]
+  list(
+    code_families = public_rows(head(counts, 15L), max_rows = 15),
+    source_summary = public_rows(head(summary, 15L), max_rows = 15)
+  )
+}
+
 registry_panel_for <- function(panels, registry) {
   panel_name <- switch(
     registry,
@@ -304,6 +349,13 @@ panel_title <- function(name) {
     npu_dictionary_vectors = "NPU Dictionary Vectors",
     npu_lab_usage_by_vector = "NPU Lab Usage By Vector",
     npu_lab_unmatched_codes = "NPU Lab Unmatched Codes",
+    npu_detective_code_inventory = "NPU Detective Code Inventory",
+    npu_detective_candidates = "NPU Detective Candidates",
+    npu_detective_source_year = "NPU Detective Source-Year Usage",
+    isotype_code_usage = "Isotype Code Usage",
+    isotype_bucket_summary = "Isotype Bucket Summary",
+    mm_treatment_code_counts = "MM Treatment Code Counts",
+    mm_treatment_source_summary = "MM Treatment Source Summary",
     diagnosis_icd_groups = "Diagnosis ICD Groups",
     medication_atc_groups = "Medication ATC Groups",
     damyda_feature_coverage = "DaMyDa Feature Coverage",
@@ -325,6 +377,13 @@ panel_group <- function(name) {
     npu_dictionary_vectors = "Source Content",
     npu_lab_usage_by_vector = "Source Content",
     npu_lab_unmatched_codes = "Source Content",
+    npu_detective_code_inventory = "NPU Detective",
+    npu_detective_candidates = "NPU Detective",
+    npu_detective_source_year = "NPU Detective",
+    isotype_code_usage = "Isotype Finder",
+    isotype_bucket_summary = "Isotype Finder",
+    mm_treatment_code_counts = "MM Treatment Codes",
+    mm_treatment_source_summary = "MM Treatment Codes",
     diagnosis_icd_groups = "Source Content",
     medication_atc_groups = "Source Content",
     damyda_feature_coverage = "Clinical Registries",

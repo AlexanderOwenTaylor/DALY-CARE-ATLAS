@@ -151,7 +151,10 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
     profile_table = function(db_name, schema, table, table_name, source_type, source,
                              profile_mode = "full", top_n = 10L,
                              min_cell_count = atlas_min_cell_count(),
-                             npu_dictionary = NULL) {
+                             npu_dictionary = NULL,
+                             npu_surfaces = NULL,
+                             isotype_vectors = NULL,
+                             treatment_families = NULL) {
       dbi_profile_table(
         connections = connections,
         db_name = db_name,
@@ -163,7 +166,10 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
         profile_mode = profile_mode,
         top_n = top_n,
         min_cell_count = min_cell_count,
-        npu_dictionary = npu_dictionary
+        npu_dictionary = npu_dictionary,
+        npu_surfaces = npu_surfaces,
+        isotype_vectors = isotype_vectors,
+        treatment_families = treatment_families
       )
     }
   )
@@ -696,7 +702,10 @@ memory_plan_for_source <- function(record, source_index, resolution) {
 
 profile_db_source <- function(source_record, resolution_row, db_adapter, profile_mode = NULL,
                               top_n = 10L, min_cell_count = atlas_min_cell_count(),
-                              npu_dictionary = NULL) {
+                              npu_dictionary = NULL,
+                              npu_surfaces = NULL,
+                              isotype_vectors = NULL,
+                              treatment_families = NULL) {
   if (is.null(db_adapter)) {
     stop("DB aggregate profiling requested but no DB adapter was available.", call. = FALSE)
   }
@@ -718,6 +727,15 @@ profile_db_source <- function(source_record, resolution_row, db_adapter, profile
   formals_names <- names(formals(db_adapter$profile_table))
   if ("npu_dictionary" %in% formals_names || "..." %in% formals_names) {
     args$npu_dictionary <- npu_dictionary
+  }
+  if ("npu_surfaces" %in% formals_names || "..." %in% formals_names) {
+    args$npu_surfaces <- npu_surfaces
+  }
+  if ("isotype_vectors" %in% formals_names || "..." %in% formals_names) {
+    args$isotype_vectors <- isotype_vectors
+  }
+  if ("treatment_families" %in% formals_names || "..." %in% formals_names) {
+    args$treatment_families <- treatment_families
   }
   out <- do.call(db_adapter$profile_table, args)
   normalize_profile_result(out)
@@ -789,7 +807,10 @@ dbi_table_row_count <- function(connections, db_name, schema, table) {
 dbi_profile_table <- function(connections, db_name, schema, table, table_name, source_type, source,
                               profile_mode = "full", top_n = 10L,
                               min_cell_count = atlas_min_cell_count(),
-                              npu_dictionary = NULL) {
+                              npu_dictionary = NULL,
+                              npu_surfaces = NULL,
+                              isotype_vectors = NULL,
+                              treatment_families = NULL) {
   conn <- dbi_connection_for(connections, db_name)
   profile_mode <- normalize_profile_mode(profile_mode)
   schema_info <- dbi_table_schema(connections, db_name, schema, table)
@@ -854,6 +875,9 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
       conn = conn,
       table_ref = table_ref,
       npu_dictionary = npu_dictionary,
+      npu_surfaces = npu_surfaces,
+      isotype_vectors = isotype_vectors,
+      treatment_families = treatment_families,
       min_cell_count = min_cell_count
     )
   }
@@ -1113,8 +1137,181 @@ dbi_npu_code_counts <- function(conn, table_ref, column_name, table_name, row_co
   )
 }
 
+dbi_npu_source_year_counts <- function(conn, table_ref, code_column, year_column, row_count,
+                                       min_cell_count = atlas_min_cell_count()) {
+  if (is.na(code_column) || !nzchar(code_column) || is.na(year_column) || !nzchar(year_column)) {
+    return(empty_npu_detective_source_year())
+  }
+  qcode <- DBI::dbQuoteIdentifier(conn, code_column)
+  qyear <- DBI::dbQuoteIdentifier(conn, year_column)
+  sql <- paste0(
+    "select year, npu_code, count(*) as n_observed from (",
+    "select extract(year from ", qyear, "::date)::integer as year, ",
+    "upper(regexp_replace((regexp_match(upper(", qcode, "::text), 'NPU[[:space:]_-]*[0-9]+'))[1], '[^A-Z0-9]', '', 'g')) as npu_code ",
+    "from ", table_ref,
+    " where ", qcode, " is not null and ", qyear, " is not null and ", qcode, "::text ~* 'NPU[[:space:]_-]*[0-9]+'",
+    ") x where year is not null and npu_code is not null ",
+    "group by year, npu_code having count(*) >= ", as.integer(normalize_min_cell_count(min_cell_count)),
+    " order by year, n_observed desc, npu_code"
+  )
+  out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) empty_df(year = integer(), npu_code = character(), n_observed = integer()))
+  if (!nrow(out)) return(empty_df(year = integer(), npu_code = character(), n_observed = integer(), pct_rows = numeric()))
+  data.frame(
+    year = suppressWarnings(as.integer(out$year)),
+    npu_code = as.character(out$npu_code),
+    n_observed = suppressWarnings(as.integer(out$n_observed)),
+    pct_rows = vapply(suppressWarnings(as.integer(out$n_observed)), safe_pct, numeric(1), denom = row_count),
+    stringsAsFactors = FALSE
+  )
+}
+
+dbi_npu_source_year_panel <- function(conn, table_ref, code_column, year_column, table_name, row_count,
+                                      dictionary, surfaces, min_cell_count = atlas_min_cell_count()) {
+  counts <- dbi_npu_source_year_counts(conn, table_ref, code_column, year_column, row_count, min_cell_count = min_cell_count)
+  if (!nrow(counts)) return(empty_npu_detective_source_year())
+  inventory <- npu_detective_inventory_from_counts(
+    counts = data.frame(npu_code = counts$npu_code, n_observed = counts$n_observed, stringsAsFactors = FALSE),
+    table_name = table_name,
+    code_column = code_column,
+    denom = row_count,
+    dictionary = dictionary,
+    surfaces = surfaces,
+    min_cell_count = min_cell_count
+  )
+  if (!nrow(inventory)) return(empty_npu_detective_source_year())
+  data.frame(
+    table_name = table_name,
+    code_column = code_column,
+    year_column = year_column,
+    year = counts$year,
+    npu_code = counts$npu_code,
+    consensus_vector = inventory$consensus_vector[match(counts$npu_code, inventory$npu_code)],
+    surface = inventory$surface[match(counts$npu_code, inventory$npu_code)],
+    n_observed = counts$n_observed,
+    pct_rows = counts$pct_rows,
+    stringsAsFactors = FALSE
+  )
+}
+
+dbi_treatment_code_columns <- function(column_profiles, table_name) {
+  if (is.null(column_profiles) || !nrow(column_profiles) || !likely_treatment_source(table_name)) return(character())
+  column_names <- as.character(column_profiles$column_name)
+  fake <- as.data.frame(stats::setNames(rep(list(character()), length(column_names)), column_names), stringsAsFactors = FALSE)
+  treatment_code_column_candidates(fake)
+}
+
+dbi_rule_condition <- function(conn, column_name, rule) {
+  qcol <- DBI::dbQuoteIdentifier(conn, column_name)
+  normalized <- paste0("upper(regexp_replace(coalesce(", qcol, "::text, ''), '[^A-Za-z0-9]', '', 'g'))")
+  code <- DBI::dbQuoteString(conn, normalize_generic_code(rule$code[[1]]))
+  if (identical(rule$match_type[[1]], "prefix")) {
+    paste0(normalized, " like ", DBI::dbQuoteString(conn, paste0(normalize_generic_code(rule$code[[1]]), "%")))
+  } else {
+    paste0(normalized, " = ", code)
+  }
+}
+
+dbi_mm_treatment_code_counts <- function(conn, table_ref, column_profiles, source_row, treatment_families,
+                                         min_cell_count = atlas_min_cell_count()) {
+  if (is.null(treatment_families) || !nrow(treatment_families)) return(empty_mm_treatment_code_counts())
+  table_name <- source_row$table_name[[1]]
+  code_cols <- dbi_treatment_code_columns(column_profiles, table_name)
+  if (!length(code_cols)) return(empty_mm_treatment_code_counts())
+  id_col <- guess_id_column_from_names(column_profiles$column_name)
+  has_id <- !is.na(id_col) && nzchar(id_col)
+  min_cell_count <- normalize_min_cell_count(min_cell_count)
+  rows <- list()
+  cat(sprintf("      panel query: MM treatment codes for %s\n", table_name))
+  flush.console()
+  for (code_col in code_cols) {
+    for (i in seq_len(nrow(treatment_families))) {
+      rule <- treatment_families[i, , drop = FALSE]
+      condition <- dbi_rule_condition(conn, code_col, rule)
+      select_patients <- if (has_id) {
+        paste0(", count(distinct ", DBI::dbQuoteIdentifier(conn, id_col), ") as n_patients")
+      } else {
+        ", cast(null as integer) as n_patients"
+      }
+      sql <- paste0("select count(*) as n_rows", select_patients, " from ", table_ref, " where ", condition)
+      out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) data.frame(n_rows = 0L, n_patients = NA_integer_))
+      n_rows <- suppressWarnings(as.integer(out$n_rows[[1]] %||% 0L))
+      if (is.na(n_rows) || n_rows < min_cell_count) next
+      n_patients <- suppressWarnings(as.integer(out$n_patients[[1]] %||% NA_integer_))
+      if (!is.na(n_patients) && n_patients < min_cell_count) n_patients <- NA_integer_
+      rows[[length(rows) + 1L]] <- data.frame(
+        table_name = table_name,
+        code_column = code_col,
+        code_system = rule$code_system[[1]],
+        family = rule$family[[1]],
+        match_type = rule$match_type[[1]],
+        code = rule$code[[1]],
+        label = rule$label[[1]],
+        n_rows = n_rows,
+        pct_rows = safe_pct(n_rows, source_row$n_rows[[1]]),
+        n_patients = n_patients,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) return(empty_mm_treatment_code_counts())
+  out[order(-out$n_rows, out$table_name, out$family, out$code), , drop = FALSE]
+}
+
+dbi_mm_treatment_source_summary <- function(conn, table_ref, column_profiles, source_row, treatment_families,
+                                            min_cell_count = atlas_min_cell_count()) {
+  if (is.null(treatment_families) || !nrow(treatment_families)) return(empty_mm_treatment_source_summary())
+  table_name <- source_row$table_name[[1]]
+  code_cols <- dbi_treatment_code_columns(column_profiles, table_name)
+  if (!length(code_cols)) return(empty_mm_treatment_source_summary())
+  conditions <- unlist(lapply(code_cols, function(code_col) {
+    vapply(seq_len(nrow(treatment_families)), function(i) {
+      dbi_rule_condition(conn, code_col, treatment_families[i, , drop = FALSE])
+    }, character(1))
+  }), use.names = FALSE)
+  conditions <- unique(conditions[nzchar(conditions)])
+  if (!length(conditions)) return(empty_mm_treatment_source_summary())
+  where <- paste0("(", paste(conditions, collapse = ") or ("), ")")
+  id_col <- guess_id_column_from_names(column_profiles$column_name)
+  has_id <- !is.na(id_col) && nzchar(id_col)
+  date_col <- guess_date_column_from_profiles(column_profiles)
+  has_date <- !is.na(date_col) && nzchar(date_col)
+  patient_sql <- if (has_id) {
+    paste0(", count(distinct ", DBI::dbQuoteIdentifier(conn, id_col), ") as matched_patients")
+  } else {
+    ", cast(null as integer) as matched_patients"
+  }
+  date_sql <- if (has_date) {
+    paste0(
+      ", min(", DBI::dbQuoteIdentifier(conn, date_col), "::date) as min_date",
+      ", max(", DBI::dbQuoteIdentifier(conn, date_col), "::date) as max_date"
+    )
+  } else {
+    ", cast(null as date) as min_date, cast(null as date) as max_date"
+  }
+  sql <- paste0("select count(*) as matched_rows", patient_sql, date_sql, " from ", table_ref, " where ", where)
+  out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) data.frame(matched_rows = 0L, matched_patients = NA_integer_, min_date = NA_character_, max_date = NA_character_))
+  matched_rows <- suppressWarnings(as.integer(out$matched_rows[[1]] %||% 0L))
+  if (is.na(matched_rows) || matched_rows < normalize_min_cell_count(min_cell_count)) return(empty_mm_treatment_source_summary())
+  matched_patients <- suppressWarnings(as.integer(out$matched_patients[[1]] %||% NA_integer_))
+  if (!is.na(matched_patients) && matched_patients < normalize_min_cell_count(min_cell_count)) matched_patients <- NA_integer_
+  data.frame(
+    table_name = table_name,
+    n_rows_scanned = source_row$n_rows[[1]],
+    matched_rows = matched_rows,
+    pct_rows_matched = safe_pct(matched_rows, source_row$n_rows[[1]]),
+    matched_patients = matched_patients,
+    min_date = as.character(out$min_date[[1]] %||% NA_character_),
+    max_date = as.character(out$max_date[[1]] %||% NA_character_),
+    stringsAsFactors = FALSE
+  )
+}
+
 dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, table_ref = NULL,
                                      npu_dictionary = NULL,
+                                     npu_surfaces = NULL,
+                                     isotype_vectors = NULL,
+                                     treatment_families = NULL,
                                      min_cell_count = atlas_min_cell_count()) {
   panels <- list()
   registry <- registry_name(source_row$table_name[[1]])
@@ -1160,6 +1357,67 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
       code_column = code_column,
       denom = source_row$n_rows[[1]],
       dictionary = npu_dictionary,
+      min_cell_count = min_cell_count
+    )
+    panels$npu_detective_code_inventory <- npu_detective_inventory_from_counts(
+      counts = counts,
+      table_name = source_row$table_name[[1]],
+      code_column = code_column,
+      denom = source_row$n_rows[[1]],
+      dictionary = npu_dictionary,
+      surfaces = npu_surfaces,
+      min_cell_count = min_cell_count
+    )
+    panels$npu_detective_candidates <- npu_detective_candidates_from_counts(
+      counts = counts,
+      table_name = source_row$table_name[[1]],
+      code_column = code_column,
+      denom = source_row$n_rows[[1]],
+      dictionary = npu_dictionary,
+      surfaces = npu_surfaces,
+      min_cell_count = min_cell_count
+    )
+    panels$npu_detective_source_year <- dbi_npu_source_year_panel(
+      conn = conn,
+      table_ref = table_ref,
+      code_column = code_column,
+      year_column = source_row$date_column_guess[[1]],
+      table_name = source_row$table_name[[1]],
+      row_count = source_row$n_rows[[1]],
+      dictionary = npu_dictionary,
+      surfaces = npu_surfaces,
+      min_cell_count = min_cell_count
+    )
+    panels$isotype_code_usage <- isotype_code_usage_from_counts(
+      counts = counts,
+      table_name = source_row$table_name[[1]],
+      code_column = code_column,
+      denom = source_row$n_rows[[1]],
+      isotype_vectors = isotype_vectors,
+      min_cell_count = min_cell_count
+    )
+    panels$isotype_bucket_summary <- isotype_bucket_summary_from_usage(
+      usage = panels$isotype_code_usage,
+      table_name = source_row$table_name[[1]],
+      denom = source_row$n_rows[[1]],
+      min_cell_count = min_cell_count
+    )
+  }
+  if (!is.null(conn) && !is.null(table_ref) && !is.null(treatment_families) && nrow(treatment_families)) {
+    panels$mm_treatment_code_counts <- dbi_mm_treatment_code_counts(
+      conn = conn,
+      table_ref = table_ref,
+      column_profiles = column_profiles,
+      source_row = source_row,
+      treatment_families = treatment_families,
+      min_cell_count = min_cell_count
+    )
+    panels$mm_treatment_source_summary <- dbi_mm_treatment_source_summary(
+      conn = conn,
+      table_ref = table_ref,
+      column_profiles = column_profiles,
+      source_row = source_row,
+      treatment_families = treatment_families,
       min_cell_count = min_cell_count
     )
   }

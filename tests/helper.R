@@ -5,6 +5,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/dalycare_preflight.R",
     "R/loader.R",
     "R/npu_dictionary.R",
+    "R/code_panels.R",
     "R/profiler.R",
     "R/db_profile.R",
     "R/html.R",
