@@ -43,6 +43,16 @@ expect_true(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "
 expect_false(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CALCIUM_TOTAL_CODES"), "NPU vector usage should obey minimum-cell suppression.")
 expect_equal(nrow(npu_profile$panels$npu_lab_unmatched_codes), 0L, "Unmatched NPU codes below the minimum cell count should be suppressed.")
 
+component_npu_profile <- profile_source(
+  data.frame(component = c("NPU04998", "NPU04998", "not-a-code"), stringsAsFactors = FALSE),
+  "SP_AlleProvesvar",
+  "file",
+  "labs.csv",
+  min_cell_count = 2L,
+  npu_dictionary = npu_dictionary
+)
+expect_true(any(component_npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "Profiler should treat SP component as a likely NPU code column.")
+
 code_discovery_profile <- profile_source(
   data.frame(
     patientid = 1:8,

@@ -63,6 +63,12 @@ append_csv_rows <- function(x, path) {
   if (!file.exists(path)) {
     utils::write.csv(x, file = path, row.names = FALSE, na = "")
   } else {
+    header <- names(utils::read.csv(path, nrows = 0, stringsAsFactors = FALSE, check.names = FALSE))
+    if (length(header)) {
+      missing <- setdiff(header, names(x))
+      for (nm in missing) x[[nm]] <- NA
+      x <- x[header]
+    }
     utils::write.table(
       x,
       file = path,

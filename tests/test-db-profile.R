@@ -140,8 +140,9 @@ expect_false(dbi_skip_distinct_count("integer", "int4", 1000000), "DB profiling 
 
 skip_map <- tempfile(fileext = ".tsv")
 writeLines(c(
-  "table_name\tsource_type\tsource\tpriority\tprofile_mode",
-  "large_dataset\tdataset\tlarge_dataset\t1\tfull"
+  "table_name\tsource_type\tsource\tpriority\tprofile_mode\tdomain\tsubdomain\tatlas_role",
+  "example_labs\tfile\ttests/fixtures/example_labs.csv\t1\tfull\tSP\tLaboratory\tfixture",
+  "large_dataset\tdataset\tlarge_dataset\t2\tfull\tDALY\tLarge\tguardrail"
 ), skip_map)
 assign("load_dataset", function(dataset = NULL) stop("load_dataset should not be called for skipped risky full loads"), envir = .GlobalEnv)
 Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = "FALSE")
@@ -160,8 +161,11 @@ expect_file(file.path(failed_dirs[[1]], "outputs", "output_manifest.csv"))
 Sys.setenv(DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN = "TRUE")
 skip_result <- run_atlas(project_root = root, source_map_path = skip_map, output_root = tempfile("atlas_skip_"), mode = "report")
 skip_sources <- utils::read.csv(file.path(skip_result$run_dir, "outputs", "atlas_sources.csv"), stringsAsFactors = FALSE)
-expect_true(identical(skip_sources$load_status[[1]], "skipped"), "Risky unresolved dataset sources should be skipped before load_dataset() is called.")
-expect_true(identical(skip_sources$chosen_strategy[[1]], "skipped_risky_full_load"), "Skipped source rows should record the memory guardrail strategy.")
+skipped_source <- skip_sources[skip_sources$table_name == "large_dataset", , drop = FALSE]
+expect_true(identical(skipped_source$load_status[[1]], "skipped"), "Risky unresolved dataset sources should be skipped before load_dataset() is called.")
+expect_true(identical(skipped_source$chosen_strategy[[1]], "skipped_risky_full_load"), "Skipped source rows should record the memory guardrail strategy.")
+expect_true(identical(skipped_source$domain[[1]], "DALY"), "Skipped source rows should keep source-map metadata aligned in atlas_sources.csv.")
+expect_true(grepl("Skipped source:", skipped_source$message[[1]], fixed = TRUE), "Skipped source diagnostics should stay in the message column.")
 if (exists("load_dataset", envir = .GlobalEnv, inherits = FALSE)) rm(load_dataset, envir = .GlobalEnv)
 if (is.na(old_db_profile)) Sys.unsetenv("DALYCARE_ATLAS_DB_PROFILE") else Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = old_db_profile)
 if (is.na(old_max_full_load)) Sys.unsetenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS") else Sys.setenv(DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS = old_max_full_load)

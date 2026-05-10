@@ -31,6 +31,7 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
     max_date = as.character(date_range$max_date),
     schema_signature = schema_signature(data),
     profiled_at = atlas_timestamp(),
+    message = "",
     stringsAsFactors = FALSE
   )
 

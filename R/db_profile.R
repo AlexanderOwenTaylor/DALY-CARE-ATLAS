@@ -864,6 +864,7 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
     max_date = date_range$max_date,
     schema_signature = dbi_schema_signature(schema_info),
     profiled_at = atlas_timestamp(),
+    message = "",
     stringsAsFactors = FALSE
   )
   panels <- if (identical(profile_mode, "schema")) {
@@ -1307,6 +1308,186 @@ dbi_mm_treatment_source_summary <- function(conn, table_ref, column_profiles, so
   )
 }
 
+dbi_registry_column <- function(column_profiles, candidates) {
+  columns <- as.character(column_profiles$column_name %||% character())
+  if (!length(columns)) return(NA_character_)
+  columns_lc <- tolower(columns)
+  for (candidate in candidates) {
+    exact <- which(columns_lc == tolower(candidate))
+    exact <- exact[!vapply(columns[exact], is_sensitive_column, logical(1))]
+    if (length(exact)) return(columns[[exact[[1]]]])
+  }
+  for (candidate in candidates) {
+    partial <- which(grepl(tolower(candidate), columns_lc, fixed = TRUE))
+    partial <- partial[!vapply(columns[partial], is_sensitive_column, logical(1))]
+    if (length(partial)) return(columns[[partial[[1]]]])
+  }
+  NA_character_
+}
+
+dbi_registry_categorical_specs <- function(registry) {
+  switch(
+    registry,
+    "DaMyDa" = list(
+      registry_spec("stage", c("Reg_ISS_Stadie", "Stadie", "iss_stage", "ISS", "stage", "stadie"), 10L),
+      registry_spec("bone_disease", c("Reg_Knogleforandringer", "bone_disease", "knogle_present"), 5L),
+      registry_spec("amyloidosis", c("Reg_Amyloidose", "amyloidosis", "amyloidose"), 5L),
+      registry_spec("treatment_flag", c("Reg_Behandlet", "treatment_required", "treated", "behandlet"), 5L),
+      registry_spec("relapse_flag", c("Reg_Relaps", "relapse", "relaps"), 5L),
+      registry_spec("primary_response", c("Reg_Respons1", "primary_response"), 12L),
+      registry_spec("primary_treatment", c("Reg_PrimaerBehandling", "primary_tx", "primary_treatment", "regime"), 14L),
+      registry_spec("cytogenetics_fish_done", c("Reg_FISH_Udfoert", "Cyto_FishUdfoert", "fish_done"), 5L),
+      registry_spec("performance_status", c("Reg_PerformanceStatus", "performance_status", "ecog"), 6L),
+      registry_spec("m_component_type", c("Reg_MKomponentType", "Reg_Mkomponent", "mcomp_type", "let_kaede"), 12L),
+      registry_spec("imaging", c("Reg_Billeddiagnostik", "imaging"), 8L),
+      registry_spec("prior_mgus", c("Reg_TidligereMGUS", "prior_mgus"), 4L),
+      registry_spec("charlson", c("Reg_CharlsonGruppe", "Charlson", "CCI"), 7L),
+      registry_spec("region", c("Reg_Region", "region", "Region"), 8L),
+      registry_spec("organisation_shak", c("Reg_OrganisationKode_Shak", "organisation_shak", "shak"), 12L)
+    ),
+    "LYFO" = list(
+      registry_spec("subtype", c("Reg_Subtype", "subtype", "WHO", "lymfomtype"), 18L),
+      registry_spec("ann_arbor_stage", c("Reg_Stadium", "Reg_AnnArbor", "ann_arbor", "stage", "stadie"), 6L),
+      registry_spec("ipi", c("Reg_IPI", "ipi", "aaipi"), 7L),
+      registry_spec("b_symptoms", c("Reg_BSymptomer", "b_symptoms"), 4L),
+      registry_spec("performance_status", c("Reg_PerformanceStatusWHO", "Reg_PS", "performance", "ecog"), 6L),
+      registry_spec("treatment_flag", c("Reg_Behandlet", "treatment_flag", "treated"), 4L),
+      registry_spec("bulk_disease", c("Reg_BulkSygdom", "Reg_Bulk", "bulk", "bulk_disease"), 4L)
+    ),
+    "CLL" = list(
+      registry_spec("binet", c("Reg_BinetStadium", "Reg_Binet", "binet", "stage"), 4L),
+      registry_spec("ighv", c("Reg_Umuteret", "Reg_IGHV", "ighv"), 5L),
+      registry_spec("fish_overall", c("Reg_FISH", "fish"), 4L),
+      registry_spec("del13q", c("Reg_Del13q14", "Reg_Del13q", "del13q"), 4L),
+      registry_spec("del11q", c("Reg_Del11q", "del11q"), 4L),
+      registry_spec("del17p", c("Reg_Del17p", "del17p", "17p"), 4L),
+      registry_spec("trisomy12", c("Reg_Trisomi12", "Reg_Tri12", "trisomy12", "tri12"), 4L),
+      registry_spec("tp53", c("Reg_TP53", "tp53"), 4L),
+      registry_spec("treatment_flag", c("Reg_Behandlet", "treatment_flag", "treated"), 4L),
+      registry_spec("performance_status", c("Reg_Performancestatus", "Reg_PS", "performance", "ecog"), 6L),
+      registry_spec("zap70", c("Reg_ZAP70", "zap70"), 4L),
+      registry_spec("cd38", c("Reg_CD38Positiv", "Reg_CD38", "cd38"), 4L),
+      registry_spec("beta2m", c("Reg_Beta2Microglobulin", "Reg_Beta2M", "beta2m", "beta2"), 4L)
+    ),
+    list()
+  )
+}
+
+dbi_damyda_numeric_specs <- function() {
+  list(
+    registry_numeric_spec("haemoglobin", c("HB", "Reg_Haemoglobin", "haemoglobin", "hemoglobin"), "mmol/L"),
+    registry_numeric_spec("creatinine", c("CREA", "Reg_Creatinin_mikmoll", "Reg_Creatinin", "creatinine"), "umol/L"),
+    registry_numeric_spec("ldh", c("LDH", "Reg_LDH", "ldh"), "U/L"),
+    registry_numeric_spec("crp", c("Reg_CReaktivtProtein_gl", "Reg_CRP", "crp"), "mg/L"),
+    registry_numeric_spec("igg", c("Reg_IgG_gl", "igg"), "g/L"),
+    registry_numeric_spec("iga", c("Reg_IgA_gl", "iga"), "g/L"),
+    registry_numeric_spec("igm", c("Reg_IgM_gl", "igm"), "g/L"),
+    registry_numeric_spec("albumin", c("ALB", "Reg_Albumin_gl", "albumin"), "g/L"),
+    registry_numeric_spec("m_component", c("mspike_p_diagnosis", "Reg_PlasmaMKomponent", "m_component", "mkomponent"), "g/L"),
+    registry_numeric_spec("ionized_calcium", c("Reg_CalciumIoniseret", "ionized_calcium", "calcium"), "mmol/L"),
+    registry_numeric_spec("free_kappa_chains", c("FLC_kappa", "Reg_FrieKappaKaeder", "kappa"), "mg/L"),
+    registry_numeric_spec("free_lambda_chains", c("FLC_lambda", "Reg_FrieLambdaKaeder", "lambda"), "mg/L"),
+    registry_numeric_spec("beta2_microglobulin", c("B2M", "Reg_Beta2Microglobulin_gl", "beta2", "beta_2"), "mg/L"),
+    registry_numeric_spec("clonal_plasma_cells", c("plasmacell_percentage_BM", "Reg_ProcentKlonalePlasmaceller", "plasma_cells"), "%"),
+    registry_numeric_spec("albumin_corrected_calcium", c("Reg_CalciumAlbuminkorrigeret", "corrected_calcium"), "mmol/L")
+  )
+}
+
+dbi_registry_top_labels <- function(conn, table_ref, column_name, table_name, registry, facet, row_count,
+                                    top_n = 12L, min_cell_count = atlas_min_cell_count()) {
+  if (is.na(column_name) || !nzchar(column_name)) return(empty_registry_categorical())
+  qcol <- DBI::dbQuoteIdentifier(conn, column_name)
+  sql <- paste0(
+    "select left(", qcol, "::text, 120) as label, count(*) as n ",
+    "from ", table_ref,
+    " where ", qcol, " is not null and btrim(", qcol, "::text) <> '' ",
+    "group by left(", qcol, "::text, 120) ",
+    "having count(*) >= ", as.integer(normalize_min_cell_count(min_cell_count)),
+    " order by n desc, label limit ", as.integer(top_n)
+  )
+  out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) empty_df(label = character(), n = integer()))
+  if (!nrow(out)) return(empty_registry_categorical())
+  labels <- truncate_value(as.character(out$label))
+  keep <- !looks_cpr_like(labels)
+  out <- out[keep, , drop = FALSE]
+  labels <- labels[keep]
+  if (!nrow(out)) return(empty_registry_categorical())
+  data.frame(
+    table_name = table_name,
+    registry = registry,
+    facet = facet,
+    source_column = column_name,
+    label = labels,
+    n = suppressWarnings(as.integer(out$n)),
+    pct_rows = vapply(suppressWarnings(as.integer(out$n)), safe_pct, numeric(1), denom = row_count),
+    stringsAsFactors = FALSE
+  )
+}
+
+dbi_registry_categorical_panel <- function(conn, table_ref, column_profiles, source_row, registry,
+                                           min_cell_count = atlas_min_cell_count()) {
+  specs <- dbi_registry_categorical_specs(registry)
+  if (!length(specs)) return(empty_registry_categorical())
+  rows <- lapply(specs, function(spec) {
+    column_name <- dbi_registry_column(column_profiles, spec$candidates)
+    dbi_registry_top_labels(
+      conn = conn,
+      table_ref = table_ref,
+      column_name = column_name,
+      table_name = source_row$table_name[[1]],
+      registry = registry,
+      facet = spec$facet,
+      row_count = source_row$n_rows[[1]],
+      top_n = spec$top_n %||% 12L,
+      min_cell_count = min_cell_count
+    )
+  })
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) return(empty_registry_categorical())
+  out
+}
+
+dbi_registry_numeric_field <- function(conn, table_ref, column_profiles, source_row, registry, spec) {
+  column_name <- dbi_registry_column(column_profiles, spec$candidates)
+  if (is.na(column_name) || !nzchar(column_name)) return(empty_registry_numeric())
+  profile <- column_profiles[column_profiles$column_name == column_name, , drop = FALSE]
+  if (!nrow(profile) || !isTRUE(as.logical(profile$is_numeric_like[[1]]))) return(empty_registry_numeric())
+  qcol <- DBI::dbQuoteIdentifier(conn, column_name)
+  sql <- paste0(
+    "select count(", qcol, ") as n_available, avg(", qcol, "::double precision) as mean, ",
+    "percentile_cont(0.5) within group (order by ", qcol, "::double precision) as median, ",
+    "percentile_cont(0.25) within group (order by ", qcol, "::double precision) as p25, ",
+    "percentile_cont(0.75) within group (order by ", qcol, "::double precision) as p75 ",
+    "from ", table_ref, " where ", qcol, " is not null"
+  )
+  out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) data.frame(n_available = 0L))
+  n_available <- suppressWarnings(as.integer(out$n_available[[1]] %||% 0L))
+  if (is.na(n_available) || n_available <= 0L) return(empty_registry_numeric())
+  data.frame(
+    table_name = source_row$table_name[[1]],
+    registry = registry,
+    field = spec$field,
+    source_column = column_name,
+    unit = spec$unit %||% NA_character_,
+    n_available = n_available,
+    pct_available = safe_pct(n_available, source_row$n_rows[[1]]),
+    mean = suppressWarnings(as.numeric(out$mean[[1]] %||% NA_real_)),
+    median = suppressWarnings(as.numeric(out$median[[1]] %||% NA_real_)),
+    p25 = suppressWarnings(as.numeric(out$p25[[1]] %||% NA_real_)),
+    p75 = suppressWarnings(as.numeric(out$p75[[1]] %||% NA_real_)),
+    stringsAsFactors = FALSE
+  )
+}
+
+dbi_damyda_numeric_panel <- function(conn, table_ref, column_profiles, source_row) {
+  rows <- lapply(dbi_damyda_numeric_specs(), function(spec) {
+    dbi_registry_numeric_field(conn, table_ref, column_profiles, source_row, "DaMyDa", spec)
+  })
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) return(empty_registry_numeric())
+  out
+}
+
 dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, table_ref = NULL,
                                      npu_dictionary = NULL,
                                      npu_surfaces = NULL,
@@ -1326,6 +1507,22 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
       max_date = source_row$max_date[[1]],
       stringsAsFactors = FALSE
     )
+    if (!is.null(conn) && !is.null(table_ref)) {
+      if (identical(registry, "DaMyDa")) {
+        panels$damyda_clinical_profile <- dbi_registry_categorical_panel(
+          conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count
+        )
+        panels$damyda_numeric_fields <- dbi_damyda_numeric_panel(conn, table_ref, column_profiles, source_row)
+      } else if (identical(registry, "LYFO")) {
+        panels$lyfo_clinical_profile <- dbi_registry_categorical_panel(
+          conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count
+        )
+      } else if (identical(registry, "CLL")) {
+        panels$cll_clinical_profile <- dbi_registry_categorical_panel(
+          conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count
+        )
+      }
+    }
   }
   if (!is.null(conn) && !is.null(table_ref) && !is.null(npu_dictionary) && nrow(npu_dictionary)) {
     code_column <- npu_code_column_from_names(column_profiles$column_name)

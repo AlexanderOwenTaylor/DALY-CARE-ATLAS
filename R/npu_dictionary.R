@@ -79,8 +79,9 @@ npu_code_column <- function(data) {
   if (!ncol(data)) return(NA_character_)
   patterns <- c(
     "^npu$", "npu.*code", "npu.*kode", "analysis.*code", "analyse.*kode",
-    "analysekode", "analysiscode", "component.*code", "komponent.*kode",
-    "komponentkode", "^code$", "^kode$", "lab.*code", "lab.*kode", "svar.*kode"
+    "analysekode", "analysiscode", "^component$", "component.*code",
+    "^komponent$", "komponent.*kode", "komponentkode", "^code$", "^kode$",
+    "lab.*code", "lab.*kode", "svar.*kode"
   )
   hits <- names(data)[Reduce(`|`, lapply(patterns, function(p) grepl(p, names(data), ignore.case = TRUE)))]
   if (!length(hits)) return(NA_character_)
