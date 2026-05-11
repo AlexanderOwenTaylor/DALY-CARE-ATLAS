@@ -21,7 +21,8 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
 
 atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels,
                           column_profiles = NULL, column_top_values = NULL,
-                          run_summary = NULL) {
+                          run_summary = NULL, source_resolution = NULL,
+                          memory_plan = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   public_checks <- sanitize_public_frame(checks)
@@ -45,6 +46,28 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     detective_cards = detective_cards(panels),
     isotype_cards = isotype_cards(panels),
     treatment_cards = treatment_cards(panels),
+    aot_nav = aot_nav(),
+    aot_overview = aot_overview(
+      sources = sources,
+      columns = columns,
+      checks = checks,
+      panels = panels,
+      run_summary = run_summary
+    ),
+    aot_registry_sections = aot_registry_sections(panels),
+    aot_clinical_sections = aot_clinical_sections(sources),
+    aot_treatment_sections = aot_treatment_sections(sources, panels),
+    aot_laboratory_sections = aot_laboratory_sections(sources, panels),
+    aot_ehr_sections = aot_ehr_sections(sources),
+    aot_infrastructure_sections = aot_infrastructure_sections(
+      sources = sources,
+      checks = checks,
+      panels = panels,
+      column_profiles = column_profiles,
+      run_summary = run_summary,
+      source_resolution = source_resolution,
+      memory_plan = memory_plan
+    ),
     registry_cards = registry_cards(panels),
     panel_groups = public_rows(panel_groups(panels), max_rows = 100),
     column_profile_rows = public_rows(public_column_profiles, max_rows = 3000),
@@ -56,6 +79,240 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     checks = public_rows(public_checks, max_rows = 500),
     panels = lapply(public_panels, public_rows, max_rows = 250)
   )
+}
+
+aot_nav <- function() {
+  list(
+    list(
+      id = "overview",
+      label = "Overview",
+      sub_tabs = c("Run metrics", "Coverage", "Priority QA")
+    ),
+    list(
+      id = "quickstart",
+      label = "Quick Start",
+      sub_tabs = c("RStudio", "Terminal", "Preflight")
+    ),
+    list(
+      id = "registries",
+      label = "Disease Registries",
+      sub_tabs = c("DaMyDa", "LYFO", "CLL", "Registry inventory")
+    ),
+    list(
+      id = "clinical",
+      label = "Clinical Data",
+      sub_tabs = c("Diagnoses", "Admissions", "Imaging", "Vitals", "Notes", "Social history")
+    ),
+    list(
+      id = "treatment",
+      label = "Treatment",
+      sub_tabs = c("Code families", "Source summary", "Medicine", "Procedures")
+    ),
+    list(
+      id = "laboratory",
+      label = "Laboratory",
+      sub_tabs = c("NPU vectors", "NPU detective", "Isotypes", "Lab sources")
+    ),
+    list(
+      id = "ehr",
+      label = "EHR Modules",
+      sub_tabs = c("SP", "SDS/LPR", "DALY views")
+    ),
+    list(
+      id = "infrastructure",
+      label = "Infrastructure",
+      sub_tabs = c("Catalog", "Columns", "Resolution", "Memory plan", "Panels", "QA")
+    )
+  )
+}
+
+aot_overview <- function(sources, columns, checks, panels, run_summary = NULL) {
+  safe_sources <- public_sources(sources)
+  list(
+    metrics = public_rows(hero_metrics(sources, columns, checks, run_summary), max_rows = 20),
+    source_availability = public_rows(aot_source_availability(safe_sources), max_rows = 100),
+    largest_sources = public_rows(aot_largest_sources(safe_sources), max_rows = 20),
+    priority_qa = public_rows(qa_items(checks), max_rows = 20),
+    panel_groups = public_rows(panel_groups(panels), max_rows = 100),
+    run_summary = public_rows(run_summary, max_rows = 100)
+  )
+}
+
+aot_registry_sections <- function(panels) {
+  cards <- registry_cards(panels)
+  list(
+    overview = cards,
+    damyda = aot_registry_panel_bundle(panels, "damyda"),
+    lyfo = aot_registry_panel_bundle(panels, "lyfo"),
+    cll = aot_registry_panel_bundle(panels, "cll"),
+    summary = public_rows(panel_or_empty(panels, "registry_clinical_summary"), max_rows = 100)
+  )
+}
+
+aot_clinical_sections <- function(sources) {
+  safe_sources <- public_sources(sources)
+  list(
+    diagnoses = public_rows(aot_sources_like(safe_sources, c("diagnos", "diagnos", "diag", "cancer", "tumor")), max_rows = 100),
+    admissions = public_rows(aot_sources_like(safe_sources, c("adt", "adm", "kontakt", "contact", "skadestue", "icu")), max_rows = 100),
+    imaging = public_rows(aot_sources_like(safe_sources, c("billed", "imaging", "image", "radiolog", "scan", "ct", "mr")), max_rows = 100),
+    vitals = public_rows(aot_sources_like(safe_sources, c("vital", "vaegt", "weight", "height", "bloodpressure")), max_rows = 100),
+    notes = public_rows(aot_sources_like(safe_sources, c("note", "journal", "epikur", "text")), max_rows = 100),
+    social_history = public_rows(aot_sources_like(safe_sources, c("social", "smoking", "alcohol")), max_rows = 100)
+  )
+}
+
+aot_treatment_sections <- function(sources, panels) {
+  cards <- treatment_cards(panels)
+  safe_sources <- public_sources(sources)
+  list(
+    code_families = cards$code_families,
+    source_summary = cards$source_summary,
+    treatment_sources = public_rows(aot_sources_like(
+      safe_sources,
+      c("behandling", "treatment", "medicin", "medicine", "atc", "procedure", "sks", "plan", "ordered", "administered")
+    ), max_rows = 150),
+    panels = public_rows(aot_panel_index(panels, c("mm_treatment", "treatment")), max_rows = 50)
+  )
+}
+
+aot_laboratory_sections <- function(sources, panels) {
+  safe_sources <- public_sources(sources)
+  list(
+    npu = npu_cards(panels),
+    detective = detective_cards(panels),
+    isotype = isotype_cards(panels),
+    lab_sources = public_rows(aot_sources_like(
+      safe_sources,
+      c("lab", "laborator", "npu", "prove", "prøve", "analysis", "result", "biochemistry")
+    ), max_rows = 150),
+    panels = public_rows(aot_panel_index(panels, c("npu", "isotype", "lab")), max_rows = 80)
+  )
+}
+
+aot_ehr_sections <- function(sources) {
+  safe_sources <- public_sources(sources)
+  list(
+    sp = public_rows(aot_sources_like(safe_sources, c("^sp_", "sp ")), max_rows = 150),
+    sds_lpr = public_rows(aot_sources_like(safe_sources, c("^sds", "^lpr", "lpr3", "sksube", "procedure")), max_rows = 150),
+    daly_views = public_rows(aot_sources_like(safe_sources, c("dalycare", "view_", "views", "survival")), max_rows = 150)
+  )
+}
+
+aot_infrastructure_sections <- function(sources, checks, panels, column_profiles, run_summary = NULL,
+                                        source_resolution = NULL, memory_plan = NULL) {
+  safe_sources <- public_sources(sources)
+  list(
+    catalog = public_rows(catalog_rows(sources), max_rows = 1000),
+    columns = public_rows(public_column_profile_rows(column_profiles), max_rows = 3000),
+    column_summary = public_rows(column_profile_summary(column_profiles), max_rows = 200),
+    resolution = public_rows(sanitize_public_frame(source_resolution), max_rows = 500),
+    memory_plan = public_rows(sanitize_public_frame(memory_plan), max_rows = 500),
+    skipped_sources = public_rows(aot_sources_by_status(safe_sources, c("skipped", "missing", "failed", "error", "unresolved")), max_rows = 500),
+    panels = public_rows(panel_groups(panels), max_rows = 100),
+    qa = public_rows(qa_items(checks), max_rows = 500),
+    run_summary = public_rows(run_summary, max_rows = 100)
+  )
+}
+
+aot_registry_panel_bundle <- function(panels, registry) {
+  registry <- tolower(registry)
+  matched <- panels[grepl(registry, tolower(names(panels)), fixed = TRUE)]
+  if (!length(matched)) return(list())
+  out <- lapply(matched, function(panel) public_rows(panel, max_rows = 100))
+  names(out) <- names(matched)
+  out
+}
+
+aot_panel_index <- function(panels, patterns) {
+  if (!length(panels)) return(data.frame())
+  panel_names <- names(panels)
+  matched <- Reduce(`|`, lapply(patterns, function(pattern) {
+    grepl(pattern, panel_names, ignore.case = TRUE)
+  }))
+  if (!any(matched)) return(data.frame())
+  data.frame(
+    panel = panel_names[matched],
+    title = vapply(panel_names[matched], panel_title, character(1), USE.NAMES = FALSE),
+    rows = vapply(panels[matched], nrow, integer(1)),
+    group = vapply(panel_names[matched], panel_group, character(1), USE.NAMES = FALSE),
+    stringsAsFactors = FALSE
+  )
+}
+
+aot_source_availability <- function(sources) {
+  if (!is.data.frame(sources) || !nrow(sources)) return(data.frame())
+  domain <- if ("domain" %in% names(sources)) sources$domain else rep("", nrow(sources))
+  subdomain <- if ("subdomain" %in% names(sources)) sources$subdomain else rep("", nrow(sources))
+  status <- if ("status" %in% names(sources)) sources$status else if ("load_status" %in% names(sources)) sources$load_status else rep("", nrow(sources))
+  key <- data.frame(
+    domain = replace_empty(domain, "Unassigned"),
+    subdomain = replace_empty(subdomain, "Unassigned"),
+    status = replace_empty(status, "unknown"),
+    stringsAsFactors = FALSE
+  )
+  out <- aggregate(rep(1L, nrow(key)), key, sum)
+  names(out) <- c("domain", "subdomain", "status", "n_sources")
+  out
+}
+
+aot_largest_sources <- function(sources) {
+  if (!is.data.frame(sources) || !nrow(sources)) return(data.frame())
+  rows <- numeric_or_zero(if ("n_rows" %in% names(sources)) sources$n_rows else rep(NA, nrow(sources)))
+  out <- sources
+  out$n_rows_sort <- rows
+  out <- out[order(out$n_rows_sort, decreasing = TRUE, na.last = TRUE), , drop = FALSE]
+  keep <- intersect(c("table_name", "status", "load_status", "domain", "subdomain", "atlas_role", "n_rows", "n_cols", "min_date", "max_date"), names(out))
+  out <- out[seq_len(min(20, nrow(out))), keep, drop = FALSE]
+  out
+}
+
+aot_sources_like <- function(sources, patterns) {
+  if (!is.data.frame(sources) || !nrow(sources)) return(data.frame())
+  search_cols <- intersect(c("table_name", "domain", "subdomain", "atlas_role"), names(sources))
+  haystack <- if (length(search_cols)) {
+    apply(sources[, search_cols, drop = FALSE], 1, paste, collapse = " ")
+  } else {
+    rep("", nrow(sources))
+  }
+  matched <- Reduce(`|`, lapply(patterns, function(pattern) {
+    grepl(pattern, haystack, ignore.case = TRUE, perl = TRUE)
+  }))
+  out <- sources[matched, , drop = FALSE]
+  if (!nrow(out)) return(data.frame())
+  keep <- intersect(c("table_name", "status", "load_status", "domain", "subdomain", "atlas_role", "n_rows", "n_cols", "min_date", "max_date"), names(out))
+  out[, keep, drop = FALSE]
+}
+
+aot_sources_by_status <- function(sources, patterns) {
+  if (!is.data.frame(sources) || !nrow(sources)) return(data.frame())
+  status <- paste(
+    if ("status" %in% names(sources)) sources$status else "",
+    if ("load_status" %in% names(sources)) sources$load_status else ""
+  )
+  matched <- Reduce(`|`, lapply(patterns, function(pattern) {
+    grepl(pattern, status, ignore.case = TRUE)
+  }))
+  out <- sources[matched, , drop = FALSE]
+  if (!nrow(out)) return(data.frame())
+  keep <- intersect(c("table_name", "status", "load_status", "domain", "subdomain", "atlas_role", "n_rows", "n_cols"), names(out))
+  out[, keep, drop = FALSE]
+}
+
+panel_or_empty <- function(panels, name) {
+  if (is.list(panels) && name %in% names(panels)) return(sanitize_public_frame(panels[[name]]))
+  data.frame()
+}
+
+replace_empty <- function(x, replacement) {
+  x <- as.character(x)
+  x[is.na(x) | !nzchar(x)] <- replacement
+  x
+}
+
+numeric_or_zero <- function(x) {
+  out <- suppressWarnings(as.numeric(x))
+  out[is.na(out)] <- 0
+  out
 }
 
 basic_column_profiles <- function(columns) {

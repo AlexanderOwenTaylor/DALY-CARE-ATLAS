@@ -220,7 +220,15 @@ payload <- atlas_payload(
   run_summary = run_summary
 )
 expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
+expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
+expect_true(length(payload$aot_nav) == 8L, "AOT navigation should expose the V33-style top-level domains.")
+expect_true(any(vapply(payload$aot_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "AOT navigation should include Disease Registries.")
+expect_true(length(payload$aot_overview$source_availability) > 0, "AOT overview should derive source availability summaries from source rows.")
+expect_true(length(payload$aot_registry_sections$damyda) > 0, "AOT registry sections should include DaMyDa panels when available.")
+expect_true(length(payload$aot_laboratory_sections$npu$summary) > 0, "AOT laboratory sections should include NPU dictionary summaries.")
+expect_true(length(payload$aot_treatment_sections$code_families) > 0, "AOT treatment sections should include treatment-code family summaries.")
+expect_true(length(payload$aot_infrastructure_sections$catalog) > 0, "AOT infrastructure sections should include catalog rows.")
 expect_true(length(payload$domain_cards) == 2L, "Domain cards should be derived from source domains.")
 expect_true(length(payload$catalog_rows) == 2L, "Catalog rows should be derived from source rows.")
 expect_true(length(payload$column_profile_rows) == 2L, "Column profile rows should be included in the public payload.")
@@ -245,6 +253,14 @@ view_json <- atlas_to_json(list(
   detective_cards = payload$detective_cards,
   isotype_cards = payload$isotype_cards,
   treatment_cards = payload$treatment_cards,
+  aot_nav = payload$aot_nav,
+  aot_overview = payload$aot_overview,
+  aot_registry_sections = payload$aot_registry_sections,
+  aot_clinical_sections = payload$aot_clinical_sections,
+  aot_treatment_sections = payload$aot_treatment_sections,
+  aot_laboratory_sections = payload$aot_laboratory_sections,
+  aot_ehr_sections = payload$aot_ehr_sections,
+  aot_infrastructure_sections = payload$aot_infrastructure_sections,
   registry_cards = payload$registry_cards,
   panel_groups = payload$panel_groups,
   column_profile_rows = payload$column_profile_rows,

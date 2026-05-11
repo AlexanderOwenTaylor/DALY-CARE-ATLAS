@@ -290,7 +290,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     run_id, generated_at, payload_sources, payload_columns, payload_checks, payload_panels,
     column_profiles = payload_column_profiles,
     column_top_values = payload_column_top_values,
-    run_summary = payload_run_summary
+    run_summary = payload_run_summary,
+    source_resolution = source_resolution,
+    memory_plan = memory_plan
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
