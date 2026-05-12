@@ -247,6 +247,20 @@ run_summary <- data.frame(
   value = c("2", "2", "5"),
   stringsAsFactors = FALSE
 )
+action_items <- data.frame(
+  severity = "warning",
+  category = "Source resolution",
+  action_id = "missing_source",
+  table_name = "view_date_death",
+  domain = "DALY views",
+  subdomain = "Survival",
+  atlas_role = "infrastructure",
+  reason = "No matching table or view was found in the DB catalog.",
+  current_behavior = "The source was not profiled because it was absent from the live DB catalog.",
+  recommended_action = "Confirm that this DALY view exists in the live database.",
+  evidence = "nearest=view_true_date_death",
+  stringsAsFactors = FALSE
+)
 column_profiles <- data.frame(
   domain = c("SP", "SP"),
   table_name = c("example_labs", "example_labs"),
@@ -287,9 +301,10 @@ payload <- atlas_payload(
   "test-run", "2026-05-09T00:00:00+0200", sources, columns, checks, panels,
   column_profiles = column_profiles,
   column_top_values = column_top_values,
-  run_summary = run_summary
+  run_summary = run_summary,
+  action_items = action_items
 )
-expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
+expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
 expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
 expect_true(all(c("aot_temporal_coverage", "aot_spatial_coverage", "aot_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
@@ -300,6 +315,8 @@ expect_true(length(payload$aot_registry_sections$damyda) > 0, "AOT registry sect
 expect_true(length(payload$aot_laboratory_sections$npu$summary) > 0, "AOT laboratory sections should include NPU dictionary summaries.")
 expect_true(length(payload$aot_treatment_sections$code_families) > 0, "AOT treatment sections should include treatment-code family summaries.")
 expect_true(length(payload$aot_infrastructure_sections$catalog) > 0, "AOT infrastructure sections should include catalog rows.")
+expect_true(length(payload$aot_infrastructure_sections$action_items) > 0, "AOT infrastructure sections should include action item rows.")
+expect_true(length(payload$aot_infrastructure_sections$action_summary) > 0, "AOT infrastructure sections should include action item summaries.")
 expect_true(length(payload$aot_temporal_coverage$sources) > 0, "AOT temporal coverage should include source coverage rows.")
 expect_true(length(payload$aot_temporal_coverage$years) > 0, "AOT temporal coverage should include year rows.")
 expect_true(length(payload$aot_spatial_coverage$region_coverage) > 0, "AOT spatial coverage should include region coverage rows.")
@@ -324,6 +341,8 @@ view_json <- atlas_to_json(list(
   domain_cards = payload$domain_cards,
   catalog_rows = payload$catalog_rows,
   qa_items = payload$qa_items,
+  action_items = payload$action_items,
+  action_summary = payload$action_summary,
   npu_cards = payload$npu_cards,
   detective_cards = payload$detective_cards,
   isotype_cards = payload$isotype_cards,

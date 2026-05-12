@@ -447,7 +447,10 @@ resolve_dalycare_sources <- function(source_map, db_adapter = NULL) {
 }
 
 resolve_dalycare_source <- function(record, source_index, db_adapter = NULL, tables = empty_source_resolution_tables()) {
-  base <- function(status, n_matches = 0L, message = "", match = NULL, row_count = NA_real_) {
+  base <- function(status, n_matches = 0L, message = "", match = NULL, row_count = NA_real_,
+                   candidate_locations = "", candidate_row_counts = "",
+                   suggested_db_name = "", suggested_schema = "", suggested_table = "",
+                   suggestion = "") {
     data.frame(
       source_index = source_index,
       table_name = source_record_value(record, "table_name"),
@@ -461,6 +464,12 @@ resolve_dalycare_source <- function(record, source_index, db_adapter = NULL, tab
       n_matches = as.integer(n_matches),
       row_count = suppressWarnings(as.numeric(row_count)),
       message = message,
+      candidate_locations = candidate_locations %||% "",
+      candidate_row_counts = candidate_row_counts %||% "",
+      suggested_db_name = suggested_db_name %||% "",
+      suggested_schema = suggested_schema %||% "",
+      suggested_table = suggested_table %||% "",
+      suggestion = suggestion %||% "",
       stringsAsFactors = FALSE
     )
   }
@@ -478,14 +487,97 @@ resolve_dalycare_source <- function(record, source_index, db_adapter = NULL, tab
 
   matches <- match_table_location(record, tables)
   if (!nrow(matches)) {
-    return(base("missing", message = "No matching table or view was found in the DB catalog."))
+    suggestions <- nearest_table_suggestions(record, tables)
+    candidate_locations <- format_table_locations(suggestions)
+    missing_message <- if (grepl("^view_", source_record_value(record, "table_name"), ignore.case = TRUE) ||
+      grepl("^view_", source_record_value(record, "source"), ignore.case = TRUE)) {
+      "Requested DALY view was absent from the live DB catalog."
+    } else {
+      "No matching table or view was found in the DB catalog."
+    }
+    suggestion <- if (nrow(suggestions)) {
+      paste("No exact alias matched; nearest live catalog matches:", candidate_locations)
+    } else {
+      "No exact alias matched and no near catalog matches were found; source appears absent from the live catalog."
+    }
+    return(base(
+      "missing",
+      message = missing_message,
+      candidate_locations = candidate_locations,
+      suggested_db_name = if (nrow(suggestions)) suggestions$db_name[[1]] else "",
+      suggested_schema = if (nrow(suggestions)) suggestions$schema[[1]] else "",
+      suggested_table = if (nrow(suggestions)) suggestions$table[[1]] else "",
+      suggestion = suggestion
+    ))
   }
   if (nrow(matches) > 1L) {
-    return(base("ambiguous", n_matches = nrow(matches), message = "Multiple DB tables matched this source."))
+    return(base(
+      "ambiguous",
+      n_matches = nrow(matches),
+      message = "Multiple DB tables matched this source.",
+      candidate_locations = format_table_locations(matches),
+      candidate_row_counts = format_table_row_counts(db_adapter, matches),
+      suggestion = "Set db_name, schema, and table explicitly in the source map to choose one candidate."
+    ))
   }
   row_count <- adapter_table_row_count(db_adapter, matches$db_name[[1]], matches$schema[[1]], matches$table[[1]])
   message <- if (is.na(row_count)) "Resolved DB table; row count unavailable." else "Resolved DB table."
-  base("resolved", n_matches = 1L, message = message, match = matches, row_count = row_count)
+  base(
+    "resolved",
+    n_matches = 1L,
+    message = message,
+    match = matches,
+    row_count = row_count,
+    candidate_locations = format_table_locations(matches),
+    candidate_row_counts = format_table_row_counts(db_adapter, matches),
+    suggested_db_name = matches$db_name[[1]],
+    suggested_schema = matches$schema[[1]],
+    suggested_table = matches$table[[1]]
+  )
+}
+
+format_table_locations <- function(locations, limit = 10L) {
+  if (!is.data.frame(locations) || nrow(locations) == 0) return("")
+  keep <- seq_len(min(nrow(locations), limit))
+  out <- paste(locations$db_name[keep], locations$schema[keep], locations$table[keep], sep = ".")
+  if (nrow(locations) > limit) out <- c(out, paste0("+", nrow(locations) - limit, " more"))
+  paste(out, collapse = "; ")
+}
+
+format_table_row_counts <- function(db_adapter, locations, limit = 10L) {
+  if (!is.data.frame(locations) || nrow(locations) == 0) return("")
+  keep <- seq_len(min(nrow(locations), limit))
+  out <- vapply(keep, function(i) {
+    n <- adapter_table_row_count(db_adapter, locations$db_name[[i]], locations$schema[[i]], locations$table[[i]])
+    count <- if (is.na(n)) "unavailable" else as.character(format(n, scientific = FALSE, trim = TRUE))
+    paste0(locations$db_name[[i]], ".", locations$schema[[i]], ".", locations$table[[i]], "=", count)
+  }, character(1))
+  if (nrow(locations) > limit) out <- c(out, paste0("+", nrow(locations) - limit, " more"))
+  paste(out, collapse = "; ")
+}
+
+nearest_table_suggestions <- function(record, tables, limit = 5L) {
+  if (!is.data.frame(tables) || nrow(tables) == 0) return(empty_source_resolution_tables())
+  candidates <- dalycare_table_candidates(record)
+  candidate_keys <- normalized_table_key(candidates)
+  candidate_keys <- candidate_keys[nzchar(candidate_keys)]
+  if (!length(candidate_keys)) return(tables[0, , drop = FALSE])
+  table_keys <- normalized_table_key(tables$table)
+  scores <- vapply(seq_along(table_keys), function(i) {
+    key <- table_keys[[i]]
+    if (!nzchar(key)) return(Inf)
+    overlaps <- vapply(candidate_keys, function(candidate_key) {
+      grepl(key, candidate_key, fixed = TRUE) || grepl(candidate_key, key, fixed = TRUE)
+    }, logical(1))
+    if (any(overlaps)) {
+      return(0)
+    }
+    min(as.numeric(adist(key, candidate_keys, partial = TRUE)))
+  }, numeric(1))
+  order_ix <- order(scores, tables$db_name, tables$schema, tables$table)
+  order_ix <- order_ix[is.finite(scores[order_ix])]
+  if (!length(order_ix)) return(tables[0, , drop = FALSE])
+  tables[head(order_ix, limit), , drop = FALSE]
 }
 
 match_table_location <- function(record, tables) {
@@ -623,6 +715,12 @@ empty_source_resolution_row <- function(record, source_index) {
     n_matches = 0L,
     row_count = NA_real_,
     message = "No resolution row was available.",
+    candidate_locations = "",
+    candidate_row_counts = "",
+    suggested_db_name = "",
+    suggested_schema = "",
+    suggested_table = "",
+    suggestion = "",
     stringsAsFactors = FALSE
   )
 }
@@ -910,8 +1008,10 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
   skip_distinct <- dbi_skip_distinct_count(column_type, column_class, row_count)
   counts <- dbi_column_counts(conn, table_ref, qcol, include_distinct = !skip_distinct)
   is_sensitive <- is_sensitive_column(column_name)
-  is_date_like <- sql_type_is_date(column_type, column_class) && !is_sensitive
-  is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive
+  is_sql_date <- sql_type_is_date(column_type, column_class)
+  is_text_date <- likely_text_date_column(column_name, column_type, column_class)
+  is_date_like <- (is_sql_date || is_text_date) && !is_sensitive
+  is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive && !is_date_like
   profile_kind <- if (is_sensitive) {
     "sensitive"
   } else if (is_date_like) {
@@ -922,7 +1022,11 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
     "categorical"
   }
   numeric_stats <- dbi_numeric_stats(conn, table_ref, qcol, enabled = is_numeric_like && !identical(profile_mode, "schema"))
-  date_stats <- dbi_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"))
+  date_stats <- if (is_text_date && !is_sensitive) {
+    dbi_text_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"))
+  } else {
+    dbi_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"))
+  }
   n_missing <- suppressWarnings(as.numeric(counts$n_missing[[1]] %||% NA_real_))
   n_available <- if (is.na(n_missing) || is.na(row_count)) NA_real_ else row_count - n_missing
   data.frame(
@@ -1014,6 +1118,20 @@ dbi_date_stats <- function(conn, table_ref, qcol, enabled = TRUE) {
   list(min_date = as.character(out$min_date[[1]] %||% NA_character_), max_date = as.character(out$max_date[[1]] %||% NA_character_))
 }
 
+dbi_text_date_stats <- function(conn, table_ref, qcol, enabled = TRUE) {
+  empty <- list(min_date = NA_character_, max_date = NA_character_)
+  if (!isTRUE(enabled)) return(empty)
+  expr <- dbi_text_date_string_expression(qcol)
+  sql <- paste0(
+    "select min(date_value) as min_date, max(date_value) as max_date ",
+    "from (select ", expr, " as date_value from ", table_ref, ") atlas_text_dates ",
+    "where date_value is not null"
+  )
+  out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) NULL)
+  if (is.null(out) || !nrow(out)) return(empty)
+  list(min_date = as.character(out$min_date[[1]] %||% NA_character_), max_date = as.character(out$max_date[[1]] %||% NA_character_))
+}
+
 dbi_column_top_values <- function(conn, table_ref, column_profiles, row_count, top_n = 10L,
                                   min_cell_count = atlas_min_cell_count()) {
   if (!nrow(column_profiles)) return(empty_column_top_values())
@@ -1059,6 +1177,53 @@ sql_type_is_numeric <- function(column_type, column_class = "") {
 
 sql_type_is_date <- function(column_type, column_class = "") {
   grepl("date|timestamp|time without time zone|time with time zone", paste(column_type, column_class), ignore.case = TRUE)
+}
+
+likely_text_date_column <- function(column_name, column_type, column_class = "") {
+  if (!sql_type_is_text(column_type, column_class)) return(FALSE)
+  name <- tolower(as.character(column_name %||% ""))
+  grepl(
+    paste(
+      c(
+        "(^|_)dt$",
+        "_dt$",
+        "(^|_)dato$",
+        "date$",
+        "diagnose",
+        "diagnosedato",
+        "kontakt.*dato",
+        "behandling.*dato",
+        "treatment.*date",
+        "response.*date",
+        "startdato",
+        "slutdato"
+      ),
+      collapse = "|"
+    ),
+    name
+  )
+}
+
+dbi_text_date_string_expression <- function(qcol) {
+  value <- paste0("btrim(", qcol, "::text)")
+  digits <- paste0("regexp_replace(", value, ", '[^0-9]', '', 'g')")
+  paste0(
+    "case when ", value, " ~ '^[0-9]{4}[-/]?[0-9]{2}[-/]?[0-9]{2}' ",
+    "then substring(", digits, " from 1 for 4) || '-' || substring(", digits, " from 5 for 2) || '-' || substring(", digits, " from 7 for 2) ",
+    "else null end"
+  )
+}
+
+dbi_date_year_expression <- function(qcol, column_type = "", column_class = "") {
+  if (sql_type_is_text(column_type, column_class)) {
+    date_value <- dbi_text_date_string_expression(qcol)
+    date_value <- paste0("(", date_value, ")")
+    return(paste0(
+      "case when ", date_value, " is not null ",
+      "then substring(", date_value, " from 1 for 4)::integer else null end"
+    ))
+  }
+  paste0("extract(year from ", qcol, "::date)::integer")
 }
 
 dbi_columns_from_profiles <- function(column_profiles) {

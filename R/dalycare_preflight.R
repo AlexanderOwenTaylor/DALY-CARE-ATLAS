@@ -153,6 +153,7 @@ check_dalycare_bootstrap <- function(project_root = ".",
   }
 
   out <- bind_rows_base(rows)
+  db_adapter <- NULL
   if (exists("dalycare_access_report", mode = "function")) {
     db_adapter <- if (exists("dalycare_db_adapter", mode = "function")) {
       tryCatch(dalycare_db_adapter(bootstrap_path = bootstrap_path), error = function(e) NULL)
@@ -184,6 +185,9 @@ check_dalycare_bootstrap <- function(project_root = ".",
       )
     )
     out <- bind_rows_base(list(out, access_rows))
+  }
+  if (exists("adjust_access_report_for_actual_impact", mode = "function")) {
+    out <- adjust_access_report_for_actual_impact(out, db_adapter = db_adapter %||% NULL)
   }
   if (!nrow(out)) {
     return(empty_df(status = character(), check_id = character(), table_name = character(), message = character(), detail = character()))

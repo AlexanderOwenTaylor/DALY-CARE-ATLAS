@@ -81,6 +81,11 @@ resolution <- resolve_dalycare_sources(source_map, db_adapter = fake_adapter)
 expect_true(any(resolution$table_name == "RKKP_DaMyDa" & resolution$resolution_status == "resolved"), "Resolver should find an unambiguous DALY table.")
 expect_true(any(resolution$table_name == "RKKP_CLL" & resolution$resolution_status == "ambiguous"), "Resolver should flag ambiguous DB table matches.")
 expect_true(any(resolution$table_name == "NOPE" & resolution$resolution_status == "missing"), "Resolver should flag missing DB table matches.")
+ambiguous <- resolution[resolution$table_name == "RKKP_CLL", , drop = FALSE]
+expect_true(grepl("core.public.RKKP_CLL", ambiguous$candidate_locations[[1]], fixed = TRUE), "Ambiguous resolver rows should list candidate DB locations.")
+expect_true(grepl("unavailable|500000", ambiguous$candidate_row_counts[[1]]), "Ambiguous resolver rows should list row-count availability.")
+missing <- resolution[resolution$table_name == "NOPE", , drop = FALSE]
+expect_true("suggestion" %in% names(missing), "Missing resolver rows should include a suggestion field.")
 
 alias_map <- data.frame(
   table_name = c("SP_BilleddiagnostikeUndersoegelser_Del1", "view_diagnoses_all"),
@@ -107,6 +112,24 @@ expect_true(access$password_present, "DB access reader should detect a pw symbol
 report <- dalycare_access_report(source_map = alias_map, db_adapter = list(list_tables = function() alias_tables, table_row_count = function(...) 1L), source_resolution = alias_resolution)
 report_text <- paste(capture.output(print(report)), collapse = "\n")
 expect_false(grepl("not-secret-in-report", report_text, fixed = TRUE), "DB access diagnostics must not expose credential values.")
+
+impact_report <- data.frame(
+  status = c("error", "ok"),
+  check_id = c("bootstrap_source_failed", "db_adapter_available"),
+  table_name = "",
+  db_name = "",
+  schema = "",
+  message = c("object 'un' not found", "DB adapter available"),
+  detail = "",
+  stringsAsFactors = FALSE
+)
+impact_plan <- data.frame(chosen_strategy = "db_aggregate", stringsAsFactors = FALSE)
+adjusted <- adjust_access_report_for_actual_impact(impact_report, db_adapter = fake_adapter, memory_plan = impact_plan)
+expect_true(adjusted$status[adjusted$check_id == "bootstrap_source_failed"] == "warning", "Bootstrap source failure should be a warning when DB aggregate profiling is available.")
+expect_true(grepl("DB aggregate profiling succeeded", adjusted$message[adjusted$check_id == "bootstrap_source_failed"], fixed = TRUE), "Adjusted bootstrap diagnostics should explain the fallback impact.")
+blocking_plan <- data.frame(chosen_strategy = "dataset_full_load_fallback", stringsAsFactors = FALSE)
+blocking <- adjust_access_report_for_actual_impact(impact_report, db_adapter = NULL, memory_plan = blocking_plan)
+expect_true(blocking$status[blocking$check_id == "bootstrap_source_failed"] == "error", "Bootstrap source failure should remain an error when DB aggregate profiling is unavailable.")
 
 plan <- memory_plan_for_sources(source_map, resolution)
 expect_true(any(plan$table_name == "RKKP_DaMyDa" & plan$chosen_strategy == "db_aggregate"), "Resolved DALY sources should prefer DB aggregate profiling.")
@@ -137,6 +160,8 @@ Sys.setenv(DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS = "100")
 expect_true(dbi_skip_distinct_count("text", "text", 101), "DB profiling should skip expensive distinct counts for huge text columns.")
 expect_false(dbi_skip_distinct_count("text", "text", 100), "DB profiling should keep distinct counts for small text columns.")
 expect_false(dbi_skip_distinct_count("integer", "int4", 1000000), "DB profiling should keep distinct counts for non-text columns.")
+expect_true(likely_text_date_column("Reg_Diagnose_dt", "text", "text"), "DB profiling should treat DALY text _dt aliases as date-like.")
+expect_true(grepl("regexp_replace", dbi_date_year_expression("\"Reg_Diagnose_dt\"", "text", "text"), fixed = TRUE), "Text-date year extraction should be SQL-side and aggregate-safe.")
 
 skip_map <- tempfile(fileext = ".tsv")
 writeLines(c(
@@ -156,6 +181,7 @@ expect_true(grepl("Refusing to write a misleading live DALY atlas", empty_error,
 failed_dirs <- list.dirs(fail_root, recursive = FALSE, full.names = TRUE)
 expect_true(length(failed_dirs) == 1L, "Failed empty live runs should still leave one diagnostic run directory.")
 expect_file(file.path(failed_dirs[[1]], "outputs", "atlas_dalycare_access.csv"))
+expect_file(file.path(failed_dirs[[1]], "outputs", "atlas_run_action_items.csv"))
 expect_file(file.path(failed_dirs[[1]], "outputs", "output_manifest.csv"))
 
 Sys.setenv(DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN = "TRUE")
@@ -166,6 +192,8 @@ expect_true(identical(skipped_source$load_status[[1]], "skipped"), "Risky unreso
 expect_true(identical(skipped_source$chosen_strategy[[1]], "skipped_risky_full_load"), "Skipped source rows should record the memory guardrail strategy.")
 expect_true(identical(skipped_source$domain[[1]], "DALY"), "Skipped source rows should keep source-map metadata aligned in atlas_sources.csv.")
 expect_true(grepl("Skipped source:", skipped_source$message[[1]], fixed = TRUE), "Skipped source diagnostics should stay in the message column.")
+skip_actions <- utils::read.csv(file.path(skip_result$run_dir, "outputs", "atlas_run_action_items.csv"), stringsAsFactors = FALSE)
+expect_true(any(skip_actions$table_name == "large_dataset" & skip_actions$action_id == "skipped_risky_full_load"), "Skipped risky full-load sources should appear in run action items.")
 if (exists("load_dataset", envir = .GlobalEnv, inherits = FALSE)) rm(load_dataset, envir = .GlobalEnv)
 if (is.na(old_db_profile)) Sys.unsetenv("DALYCARE_ATLAS_DB_PROFILE") else Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = old_db_profile)
 if (is.na(old_max_full_load)) Sys.unsetenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS") else Sys.setenv(DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS = old_max_full_load)

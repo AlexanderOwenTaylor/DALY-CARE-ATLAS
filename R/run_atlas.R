@@ -53,6 +53,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     db_adapter = db_adapter,
     source_resolution = source_resolution
   )
+  access_report <- adjust_access_report_for_actual_impact(
+    access_report,
+    db_adapter = db_adapter,
+    memory_plan = memory_plan
+  )
   for (i in seq_len(nrow(access_report))) {
     if (access_report$status[[i]] %in% c("warning", "error")) {
       log_event(access_report$status[[i]], access_report$table_name[[i]], paste(access_report$check_id[[i]], access_report$message[[i]]))
@@ -252,11 +257,20 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     checks <- bind_rows_base(list(checks, check_row("", "empty_live_run_refused", "error", message)))
     log_event("error", "", message)
   }
+  action_items <- atlas_run_action_items(
+    access_report = access_report,
+    source_resolution = source_resolution,
+    memory_plan = memory_plan,
+    sources = sources,
+    panels = panels,
+    checks = checks
+  )
 
   output_paths <- list()
   output_paths$source_resolution <- write_csv(source_resolution, file.path(output_dir, "atlas_source_resolution.csv"))
   output_paths$dalycare_access <- write_csv(access_report, file.path(output_dir, "atlas_dalycare_access.csv"))
   output_paths$memory_plan <- write_csv(memory_plan, file.path(output_dir, "atlas_memory_plan.csv"))
+  output_paths$action_items <- write_csv(action_items, file.path(output_dir, "atlas_run_action_items.csv"))
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
   output_paths$columns <- write_csv(columns, file.path(output_dir, "atlas_columns.csv"))
@@ -292,6 +306,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_column_profiles <- safe_read_output_csv(output_paths$column_profiles, column_profiles)
   payload_column_top_values <- safe_read_output_csv(output_paths$column_top_values, column_top_values)
   payload_run_summary <- safe_read_output_csv(output_paths$run_summary, run_summary)
+  payload_action_items <- safe_read_output_csv(output_paths$action_items, action_items)
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
   })
@@ -302,6 +317,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     column_profiles = payload_column_profiles,
     column_top_values = payload_column_top_values,
     run_summary = payload_run_summary,
+    action_items = payload_action_items,
     source_resolution = source_resolution,
     memory_plan = memory_plan
   )

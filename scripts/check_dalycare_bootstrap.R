@@ -14,6 +14,7 @@ source(file.path(project_root, "R", "npu_dictionary.R"))
 source(file.path(project_root, "R", "code_panels.R"))
 source(file.path(project_root, "R", "profiler.R"))
 source(file.path(project_root, "R", "db_profile.R"))
+source(file.path(project_root, "R", "action_items.R"))
 source(file.path(project_root, "R", "dalycare_preflight.R"))
 
 attempt_load <- toupper(Sys.getenv("DALYCARE_PREFLIGHT_ATTEMPT_LOAD", unset = "FALSE")) %in% c("1", "TRUE", "YES", "Y")

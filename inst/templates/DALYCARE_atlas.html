@@ -688,14 +688,28 @@
 
     <section class="tab-page" id="tab-infrastructure">
       <div class="sub-nav" aria-label="Infrastructure sections">
-        <button class="sub-tab active" data-sub="infra-catalog">Catalog</button>
+        <button class="sub-tab active" data-sub="infra-actions">Action Items</button>
+        <button class="sub-tab" data-sub="infra-catalog">Catalog</button>
         <button class="sub-tab" data-sub="infra-columns">Column Explorer</button>
         <button class="sub-tab" data-sub="infra-resolution">Resolution</button>
         <button class="sub-tab" data-sub="infra-memory">Memory Plan</button>
         <button class="sub-tab" data-sub="infra-panels">Panels</button>
         <button class="sub-tab" data-sub="infra-qa">QA</button>
       </div>
-      <div class="sub-pane active" id="infra-catalog">
+      <div class="sub-pane active" id="infra-actions">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 class="panel-title">Run Action Items</h2>
+            <p class="panel-sub">Blocking errors, non-blocking warnings, unresolved sources, temporal flags, and memory guardrail decisions with operator actions.</p>
+          </div>
+          <div class="panel-body">
+            <div id="action-summary-cards" class="grid"></div>
+            <div style="height:14px"></div>
+            <div id="run-action-items"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="infra-catalog">
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-title">Resource Catalog</h2>
@@ -785,6 +799,8 @@
       const columnTopValues = payload.column_top_value_rows || [];
       const columnSummary = payload.column_profile_summary || [];
       const qaItems = payload.qa_items || [];
+      const actionItems = payload.action_items || [];
+      const actionSummary = payload.action_summary || [];
       const npuCards = payload.npu_cards || {};
       const detectiveCards = payload.detective_cards || {};
       const isotypeCards = payload.isotype_cards || {};
@@ -1065,12 +1081,12 @@
         const rows = limit ? items.slice(0, limit) : items;
         setHtml(targetId, rows.map(item => `
           <article class="qa-item ${escapeHtml(item.severity || "")}">
-            <div>${severityBadge(item.severity)} <strong>${escapeHtml(item.check_id || "check")}</strong> <span class="mini">${escapeHtml(item.table_name || "")}</span></div>
-            <div class="mini">${escapeHtml(item.message || "")}</div>
+            <div>${severityBadge(item.severity)} <strong>${escapeHtml(item.check_id || item.action_id || item.category || "check")}</strong> <span class="mini">${escapeHtml(item.table_name || "")}</span></div>
+            <div class="mini">${escapeHtml(item.message || item.reason || item.recommended_action || "")}</div>
           </article>
         `).join("") || `<div class="empty">No QA rows available.</div>`);
       }
-      renderQa("qa-preview", qaItems, 8);
+      renderQa("qa-preview", actionItems.length ? actionItems : qaItems, 8);
       renderQa("qa-list", qaItems);
       document.getElementById("qa-severity-filter").addEventListener("change", event => {
         const wanted = event.target.value;
@@ -1176,6 +1192,16 @@
         setHtml("ehr-sds-cards", sourceTiles(aotEhr.sds_lpr, "No SDS/LPR sources were mapped in this run."));
         setHtml("ehr-views-cards", sourceTiles(aotEhr.daly_views, "No DALY view sources were mapped in this run."));
 
+        const actionRows = aotInfrastructure.action_items || actionItems;
+        const actionSummaryRows = aotInfrastructure.action_summary || actionSummary;
+        setHtml("action-summary-cards", actionSummaryRows.map(row => `
+          <article class="card">
+            <div class="mini">${escapeHtml(row.severity || "")}</div>
+            <h3>${escapeHtml(row.category || "Run item")}</h3>
+            <div class="big">${formatNumber(row.n_items || 0)}</div>
+          </article>
+        `).join("") || `<div class="empty">No blocking or actionable run items were generated.</div>`);
+        setHtml("run-action-items", rowsForTable(actionRows, 300));
         setHtml("infrastructure-resolution", rowsForTable(aotInfrastructure.resolution || [], 200));
         setHtml("infrastructure-skipped", rowsForTable(aotInfrastructure.skipped_sources || [], 200));
         setHtml("infrastructure-memory-plan", rowsForTable(aotInfrastructure.memory_plan || [], 200));

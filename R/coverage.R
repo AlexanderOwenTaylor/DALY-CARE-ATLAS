@@ -305,15 +305,20 @@ dbi_temporal_coverage_years <- function(conn, table_ref, column_profiles, source
   if (is.null(conn) || is.null(table_ref)) return(empty_temporal_coverage_years())
   date_column <- coverage_date_column_from_profiles(column_profiles)
   if (is.na(date_column) || !nzchar(date_column)) return(empty_temporal_coverage_years())
+  date_profile <- coverage_date_profile(column_profiles, date_column)
   qcol <- DBI::dbQuoteIdentifier(conn, date_column)
+  year_expr <- dbi_date_year_expression(
+    qcol,
+    column_type = date_profile$column_type[[1]] %||% "",
+    column_class = date_profile$column_class[[1]] %||% ""
+  )
   lower <- coverage_display_year_min()
   upper <- coverage_display_year_max()
   sql <- paste0(
-    "select extract(year from ", qcol, "::date)::integer as year, count(*) as n_rows ",
-    "from ", table_ref,
-    " where ", qcol, " is not null ",
-    "and extract(year from ", qcol, "::date)::integer between ", as.integer(lower), " and ", as.integer(upper), " ",
-    "group by extract(year from ", qcol, "::date)::integer ",
+    "select year, count(*) as n_rows ",
+    "from (select ", year_expr, " as year from ", table_ref, " where ", qcol, " is not null) atlas_years ",
+    "where year between ", as.integer(lower), " and ", as.integer(upper), " ",
+    "group by year ",
     "having count(*) >= ", as.integer(normalize_min_cell_count(min_cell_count)),
     " order by year"
   )
