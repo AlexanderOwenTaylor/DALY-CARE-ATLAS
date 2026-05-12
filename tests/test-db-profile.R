@@ -7,12 +7,16 @@ old_max_full_load <- Sys.getenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS", unset = NA)
 old_allow_empty <- Sys.getenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN", unset = NA)
 old_db_access <- Sys.getenv("DALYCARE_DB_ACCESS_PATH", unset = NA)
 old_max_text_distinct <- Sys.getenv("DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS", unset = NA)
+old_db_stream_rows <- Sys.getenv("DALYCARE_ATLAS_DB_STREAM_ROWS", unset = NA)
+old_stream_threshold <- Sys.getenv("DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS", unset = NA)
 on.exit({
   if (is.na(old_db_profile)) Sys.unsetenv("DALYCARE_ATLAS_DB_PROFILE") else Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = old_db_profile)
   if (is.na(old_max_full_load)) Sys.unsetenv("DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS") else Sys.setenv(DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS = old_max_full_load)
   if (is.na(old_allow_empty)) Sys.unsetenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN") else Sys.setenv(DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN = old_allow_empty)
   if (is.na(old_db_access)) Sys.unsetenv("DALYCARE_DB_ACCESS_PATH") else Sys.setenv(DALYCARE_DB_ACCESS_PATH = old_db_access)
   if (is.na(old_max_text_distinct)) Sys.unsetenv("DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS") else Sys.setenv(DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS = old_max_text_distinct)
+  if (is.na(old_db_stream_rows)) Sys.unsetenv("DALYCARE_ATLAS_DB_STREAM_ROWS") else Sys.setenv(DALYCARE_ATLAS_DB_STREAM_ROWS = old_db_stream_rows)
+  if (is.na(old_stream_threshold)) Sys.unsetenv("DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS") else Sys.setenv(DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS = old_stream_threshold)
   if (exists("load_dataset", envir = .GlobalEnv, inherits = FALSE)) rm(load_dataset, envir = .GlobalEnv)
 }, add = TRUE)
 Sys.setenv(DALYCARE_ATLAS_DB_PROFILE = "TRUE", DALYCARE_ATLAS_MAX_FULL_LOAD_ROWS = "3")
@@ -162,6 +166,39 @@ expect_false(dbi_skip_distinct_count("text", "text", 100), "DB profiling should 
 expect_false(dbi_skip_distinct_count("integer", "int4", 1000000), "DB profiling should keep distinct counts for non-text columns.")
 expect_true(likely_text_date_column("Reg_Diagnose_dt", "text", "text"), "DB profiling should treat DALY text _dt aliases as date-like.")
 expect_true(grepl("regexp_replace", dbi_date_year_expression("\"Reg_Diagnose_dt\"", "text", "text"), fixed = TRUE), "Text-date year extraction should be SQL-side and aggregate-safe.")
+
+Sys.setenv(DALYCARE_ATLAS_DB_STREAM_ROWS = "TRUE", DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS = "100")
+expect_equal(dbi_profile_strategy(101, "full"), "stream_column", "Large DB tables should use cursor/chunk streaming by default.")
+expect_equal(dbi_profile_strategy(100, "full"), "sql_aggregate", "Small DB tables should keep the exact SQL aggregate path.")
+expect_equal(dbi_profile_strategy(1000000, "schema"), "schema_metadata", "Schema mode should not scan data values.")
+
+formerly_skipped_map <- utils::read.delim(file.path(root, "config", "source-map.dalycare.tsv"), stringsAsFactors = FALSE, check.names = FALSE)
+formerly_skipped_names <- c(
+  "SDS_t_tumor", "SDS_lab_forsker", "SDS_t_dodsaarsag_2",
+  "view_diagnoses_all_hosp_region", "view_dalycare_diagnoses",
+  "view_date_death", "view_date_followup", "view_true_date_death",
+  "view_patient_table_os"
+)
+formerly_skipped_map <- formerly_skipped_map[formerly_skipped_map$table_name %in% formerly_skipped_names, , drop = FALSE]
+formerly_skipped_tables <- data.frame(
+  db_name = c("import", "import", "import", "core", "core", "core"),
+  schema = rep("public", 6),
+  table = c("SDS_t_tumor", "SDS_lab_forsker", "SDS_t_dodsaarsag_2", "diagnoses_all", "t_dalycare_diagnoses", "patient"),
+  stringsAsFactors = FALSE
+)
+formerly_skipped_adapter <- list(
+  list_tables = function() formerly_skipped_tables,
+  table_row_count = function(db_name, schema, table) {
+    rows <- c(SDS_t_tumor = 106316, SDS_lab_forsker = 129855400, SDS_t_dodsaarsag_2 = 28521,
+              diagnoses_all = 1000, t_dalycare_diagnoses = 1000, patient = 1000)
+    if (table %in% names(rows)) unname(rows[[table]]) else 1000
+  }
+)
+formerly_skipped_resolution <- resolve_dalycare_sources(formerly_skipped_map, db_adapter = formerly_skipped_adapter)
+expect_true(all(formerly_skipped_resolution$resolution_status == "resolved"), "The 9 formerly skipped DALY sources should resolve through exact or explicit backing-table mappings.")
+formerly_skipped_plan <- memory_plan_for_sources(formerly_skipped_map, formerly_skipped_resolution)
+expect_false(any(formerly_skipped_plan$chosen_strategy == "skipped_risky_full_load"), "Resolved formerly skipped sources should not be source-level skipped.")
+expect_true(any(formerly_skipped_plan$table_name == "SDS_lab_forsker" & formerly_skipped_plan$chosen_strategy == "db_chunked"), "Huge resolved DALY tables should use DB chunked streaming instead of exact aggregate scans.")
 
 skip_map <- tempfile(fileext = ".tsv")
 writeLines(c(

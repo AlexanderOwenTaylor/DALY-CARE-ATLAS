@@ -35,15 +35,15 @@ SDS_organisationer	dataset	SDS_organisationer	52	summary	SDS	LPR3	organisations	
 SDS_epikur	dataset	SDS_epikur	53	summary	SDS	ClinicalText	epikur	auto					FALSE
 SDS_indberetningmedpris	dataset	SDS_indberetningmedpris	54	summary	SDS	Medication	medicine_with_price	auto					FALSE
 SDS_pato	dataset	SDS_pato	55	summary	SDS	Pathology	pathology	auto					FALSE
-SDS_t_tumor	dataset	SDS_t_tumor	56	summary	SDS	Tumor	tumor	auto					FALSE
-SDS_lab_forsker	dataset	SDS_lab_forsker	57	summary	SDS	Laboratory	lab	auto					FALSE
-SDS_t_dodsaarsag_2	dataset	SDS_t_dodsaarsag_2	58	summary	SDS	Mortality	death_cause	auto					FALSE
+SDS_t_tumor	dataset	SDS_t_tumor	56	summary	SDS	Tumor	tumor	auto	import	public	SDS_t_tumor		FALSE
+SDS_lab_forsker	dataset	SDS_lab_forsker	57	summary	SDS	Laboratory	lab	auto	import	public	SDS_lab_forsker		FALSE
+SDS_t_dodsaarsag_2	dataset	SDS_t_dodsaarsag_2	58	summary	SDS	Mortality	death_cause	auto	import	public	SDS_t_dodsaarsag_2		FALSE
 t_dalycare_diagnoses	dataset	t_dalycare_diagnoses	70	summary	DALY Views	Diagnosis	canonical_diagnosis_table	auto					FALSE
 view_diagnosses_all	dataset	view_diagnosses_all	71	schema	DALY Views	Diagnosis	documented_view	auto					FALSE
-view_diagnoses_all_hosp_region	dataset	view_diagnoses_all_hosp_region	72	schema	DALY Views	Diagnosis	documented_view	auto					FALSE
-view_dalycare_diagnoses	dataset	view_dalycare_diagnoses	73	schema	DALY Views	Diagnosis	documented_view	auto					FALSE
-view_date_death	dataset	view_date_death	74	schema	DALY Views	Survival	documented_view	auto					FALSE
-view_date_followup	dataset	view_date_followup	75	schema	DALY Views	Survival	documented_view	auto					FALSE
-view_true_date_death	dataset	view_true_date_death	76	schema	DALY Views	Survival	documented_view	auto					FALSE
-view_patient_table_os	dataset	view_patient_table_os	77	schema	DALY Views	Survival	documented_view	auto					FALSE
+view_diagnoses_all_hosp_region	dataset	view_diagnoses_all_hosp_region	72	schema	DALY Views	Diagnosis	documented_view	auto	core	public	diagnoses_all		FALSE
+view_dalycare_diagnoses	dataset	view_dalycare_diagnoses	73	schema	DALY Views	Diagnosis	documented_view	auto	core	public	t_dalycare_diagnoses		FALSE
+view_date_death	dataset	view_date_death	74	schema	DALY Views	Survival	documented_view	auto	core	public	patient		FALSE
+view_date_followup	dataset	view_date_followup	75	schema	DALY Views	Survival	documented_view	auto	core	public	patient		FALSE
+view_true_date_death	dataset	view_true_date_death	76	schema	DALY Views	Survival	documented_view	auto	core	public	patient		FALSE
+view_patient_table_os	dataset	view_patient_table_os	77	schema	DALY Views	Survival	documented_view	auto	core	public	patient		FALSE
 view_create_patient_table	dataset	view_create_patient_table	78	schema	DALY Views	Survival	documented_view	auto					FALSE

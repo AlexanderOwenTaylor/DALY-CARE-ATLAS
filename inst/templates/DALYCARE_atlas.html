@@ -751,7 +751,7 @@
         </div>
       </div>
       <div class="sub-pane" id="infra-resolution"><div class="panel"><div class="panel-head"><h2 class="panel-title">Source Resolution</h2><p class="panel-sub">DB/source resolution diagnostics and skipped or missing sources.</p></div><div class="panel-body"><div id="infrastructure-resolution"></div><div style="height:14px"></div><div id="infrastructure-skipped"></div></div></div></div>
-      <div class="sub-pane" id="infra-memory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Memory Plan</h2><p class="panel-sub">Per-source load strategy and memory guardrail metadata when available.</p></div><div class="panel-body"><div id="infrastructure-memory-plan"></div></div></div></div>
+      <div class="sub-pane" id="infra-memory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Memory Plan</h2><p class="panel-sub">Per-source load strategy, streamed DB query logs, and memory guardrail metadata when available.</p></div><div class="panel-body"><h3>Source Strategy</h3><div id="infrastructure-memory-plan"></div><div style="height:14px"></div><h3>DB Budget Actions</h3><div id="infrastructure-db-budget-actions"></div><div style="height:14px"></div><h3>DB Query Log</h3><div id="infrastructure-db-query-log"></div></div></div></div>
       <div class="sub-pane" id="infra-panels">
         <div class="panel">
           <div class="panel-head">
@@ -1205,6 +1205,8 @@
         setHtml("infrastructure-resolution", rowsForTable(aotInfrastructure.resolution || [], 200));
         setHtml("infrastructure-skipped", rowsForTable(aotInfrastructure.skipped_sources || [], 200));
         setHtml("infrastructure-memory-plan", rowsForTable(aotInfrastructure.memory_plan || [], 200));
+        setHtml("infrastructure-db-budget-actions", rowsForTable(aotInfrastructure.db_budget_actions || [], 200));
+        setHtml("infrastructure-db-query-log", rowsForTable(aotInfrastructure.db_query_log || [], 300));
       }
 
       fillSelect("catalog-domain-filter", uniqueValues(catalogRows, "domain"));

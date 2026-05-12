@@ -297,6 +297,37 @@ atlas_run_action_items <- function(access_report = NULL,
   out[order(ranks, out$category, out$table_name, out$action_id), , drop = FALSE]
 }
 
+db_budget_actions_as_run_action_items <- function(db_budget_actions, sources = NULL) {
+  if (!is.data.frame(db_budget_actions) || !nrow(db_budget_actions)) return(empty_run_action_items())
+  rows <- lapply(seq_len(nrow(db_budget_actions)), function(i) {
+    row <- db_budget_actions[i, , drop = FALSE]
+    action_item_row(
+      severity = row$severity[[1]] %||% "warning",
+      category = row$category[[1]] %||% "DB budget",
+      action_id = row$action_id[[1]] %||% "db_budget_action",
+      table_name = row$table_name[[1]] %||% "",
+      sources = sources,
+      reason = row$reason[[1]] %||% "",
+      current_behavior = row$current_behavior[[1]] %||% "",
+      recommended_action = row$recommended_action[[1]] %||% "",
+      evidence = paste(
+        c(
+          if ("column_name" %in% names(row)) paste0("column=", row$column_name[[1]]) else "",
+          if ("query_category" %in% names(row)) paste0("query_category=", row$query_category[[1]]) else "",
+          if ("estimated_rows" %in% names(row)) paste0("estimated_rows=", row$estimated_rows[[1]]) else ""
+        ),
+        collapse = "; "
+      )
+    )
+  })
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) return(empty_run_action_items())
+  severity_rank <- c(error = 1L, warning = 2L, info = 3L, ok = 4L)
+  ranks <- severity_rank[out$severity]
+  ranks[is.na(ranks)] <- 99L
+  out[order(ranks, out$category, out$table_name, out$action_id), , drop = FALSE]
+}
+
 action_item_summary <- function(action_items) {
   if (!is.data.frame(action_items) || nrow(action_items) == 0) {
     return(empty_df(severity = character(), category = character(), n_items = integer()))

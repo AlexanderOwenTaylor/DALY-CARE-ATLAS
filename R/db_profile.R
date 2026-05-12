@@ -14,6 +14,50 @@ atlas_max_text_distinct_rows <- function() {
   normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_TEXT_DISTINCT_ROWS", unset = "1000000"), default = 1000000L)
 }
 
+atlas_db_budget_mode <- function() {
+  normalize_atlas_logical(Sys.getenv("DALYCARE_ATLAS_DB_BUDGET_MODE", unset = "TRUE"), default = TRUE)
+}
+
+atlas_db_stream_rows <- function() {
+  normalize_atlas_logical(Sys.getenv("DALYCARE_ATLAS_DB_STREAM_ROWS", unset = "TRUE"), default = TRUE)
+}
+
+atlas_stream_chunk_size <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_STREAM_CHUNK_SIZE", unset = "50000"), default = 50000L)
+}
+
+atlas_stream_threshold_rows <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS", unset = "1000000"), default = 1000000L)
+}
+
+atlas_max_tracked_categories <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_TRACKED_CATEGORIES", unset = "5000"), default = 5000L)
+}
+
+atlas_quantile_sample_size <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_QUANTILE_SAMPLE_SIZE", unset = "100000"), default = 100000L)
+}
+
+atlas_max_exact_agg_rows <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_EXACT_AGG_ROWS", unset = "1000000"), default = 1000000L)
+}
+
+atlas_max_code_scan_rows <- function() {
+  normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_MAX_CODE_SCAN_ROWS", unset = "10000000"), default = 10000000L)
+}
+
+atlas_db_work_mem <- function() {
+  Sys.getenv("DALYCARE_ATLAS_DB_WORK_MEM", unset = "64MB")
+}
+
+atlas_db_temp_file_limit <- function() {
+  Sys.getenv("DALYCARE_ATLAS_DB_TEMP_FILE_LIMIT", unset = "20GB")
+}
+
+atlas_db_statement_timeout <- function() {
+  Sys.getenv("DALYCARE_ATLAS_DB_STATEMENT_TIMEOUT", unset = "20min")
+}
+
 dalycare_standard_bootstrap_path <- function() {
   "/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R"
 }
@@ -137,10 +181,12 @@ dalycare_db_adapter <- function(bootstrap_path = "", env = .GlobalEnv) {
   if (!length(connections)) {
     return(NULL)
   }
+  budget_settings <- dbi_apply_budget_settings(connections)
 
   list(
     adapter_name = "DBI",
     connections = connections,
+    budget_settings = budget_settings,
     access = dalycare_db_access_metadata(
       bootstrap_path = bootstrap_path,
       connection_names = names(connections)
@@ -259,6 +305,18 @@ dalycare_access_report <- function(project_root = ".",
   } else {
     conn_names <- names(db_adapter$connections %||% list())
     add("ok", "db_adapter_available", paste("DB adapter available with", length(conn_names), "connection(s)."), detail = paste(conn_names, collapse = ","))
+    budget_settings <- db_adapter$budget_settings %||% data.frame()
+    if (is.data.frame(budget_settings) && nrow(budget_settings)) {
+      for (i in seq_len(nrow(budget_settings))) {
+        add(
+          budget_settings$status[[i]],
+          paste0("db_budget_setting_", budget_settings$setting[[i]]),
+          paste("DB budget setting", budget_settings$setting[[i]], budget_settings$message[[i]]),
+          db_name = budget_settings$db_name[[i]],
+          detail = paste0("value=", budget_settings$value[[i]])
+        )
+      }
+    }
     tables <- adapter_list_tables(db_adapter)
     if (!nrow(tables)) {
       add("warning", "db_catalog_empty", "DB adapter returned no tables or views in the DALY atlas schema universe.")
@@ -408,6 +466,41 @@ connection_db_name <- function(conn, fallback) {
   if (!nzchar(value)) fallback else value
 }
 
+dbi_apply_budget_settings <- function(connections) {
+  if (!length(connections) || !requireNamespace("DBI", quietly = TRUE)) {
+    return(empty_df(db_name = character(), setting = character(), value = character(), status = character(), message = character()))
+  }
+  settings <- data.frame(
+    setting = c("default_transaction_read_only", "work_mem", "temp_file_limit", "statement_timeout"),
+    value = c("on", atlas_db_work_mem(), atlas_db_temp_file_limit(), atlas_db_statement_timeout()),
+    stringsAsFactors = FALSE
+  )
+  rows <- list()
+  for (db_name in names(connections)) {
+    conn <- connections[[db_name]]
+    for (i in seq_len(nrow(settings))) {
+      setting <- settings$setting[[i]]
+      value <- settings$value[[i]]
+      sql <- paste0("set ", setting, " = ", DBI::dbQuoteString(conn, value))
+      result <- tryCatch({
+        DBI::dbExecute(conn, sql)
+        list(status = "ok", message = "setting applied")
+      }, error = function(e) {
+        list(status = "warning", message = conditionMessage(e))
+      })
+      rows[[length(rows) + 1L]] <- data.frame(
+        db_name = db_name,
+        setting = setting,
+        value = value,
+        status = result$status,
+        message = result$message,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  bind_rows_base(rows)
+}
+
 adapter_list_tables <- function(db_adapter) {
   if (is.null(db_adapter) || !is.function(db_adapter$list_tables)) {
     return(empty_source_resolution_tables())
@@ -418,6 +511,97 @@ adapter_list_tables <- function(db_adapter) {
 
 empty_source_resolution_tables <- function() {
   empty_df(db_name = character(), schema = character(), table = character())
+}
+
+empty_db_query_log <- function() {
+  empty_df(
+    table_name = character(),
+    column_name = character(),
+    query_category = character(),
+    strategy = character(),
+    estimated_rows = numeric(),
+    chunks_fetched = integer(),
+    status = character(),
+    budget_decision = character(),
+    elapsed_ms = numeric(),
+    message = character()
+  )
+}
+
+empty_db_budget_actions <- function() {
+  empty_df(
+    severity = character(),
+    category = character(),
+    action_id = character(),
+    table_name = character(),
+    column_name = character(),
+    query_category = character(),
+    estimated_rows = numeric(),
+    reason = character(),
+    current_behavior = character(),
+    recommended_action = character()
+  )
+}
+
+new_db_budget_context <- function(table_name, row_count) {
+  query_log <- list()
+  budget_actions <- list()
+  action_keys <- character()
+  add_log <- function(column_name = "", query_category = "", status = "ok",
+                      budget_decision = "executed", message = "", elapsed_ms = NA_real_,
+                      strategy = "sql_aggregate", chunks_fetched = NA_integer_) {
+    query_log[[length(query_log) + 1L]] <<- data.frame(
+      table_name = table_name %||% "",
+      column_name = column_name %||% "",
+      query_category = query_category %||% "",
+      strategy = strategy %||% "",
+      estimated_rows = suppressWarnings(as.numeric(row_count %||% NA_real_)),
+      chunks_fetched = suppressWarnings(as.integer(chunks_fetched %||% NA_integer_)),
+      status = status %||% "",
+      budget_decision = budget_decision %||% "",
+      elapsed_ms = suppressWarnings(as.numeric(elapsed_ms %||% NA_real_)),
+      message = message %||% "",
+      stringsAsFactors = FALSE
+    )
+  }
+  add_action <- function(column_name = "", query_category = "", reason = "",
+                         current_behavior = "Exact aggregate skipped by DB budget.",
+                         recommended_action = "Raise the DALYCARE_ATLAS_* budget environment variables only for a deliberately provisioned exact run.") {
+    key <- paste(table_name, query_category, column_name, sep = "\r")
+    if (key %in% action_keys) return(invisible(FALSE))
+    action_keys <<- c(action_keys, key)
+    budget_actions[[length(budget_actions) + 1L]] <<- data.frame(
+      severity = "warning",
+      category = "DB budget",
+      action_id = "db_budget_skipped",
+      table_name = table_name %||% "",
+      column_name = column_name %||% "",
+      query_category = query_category %||% "",
+      estimated_rows = suppressWarnings(as.numeric(row_count %||% NA_real_)),
+      reason = reason %||% "",
+      current_behavior = current_behavior,
+      recommended_action = recommended_action,
+      stringsAsFactors = FALSE
+    )
+    invisible(TRUE)
+  }
+  should_skip <- function(query_category, row_limit, column_name = "", reason = "") {
+    n <- suppressWarnings(as.numeric(row_count %||% NA_real_))
+    if (!atlas_db_budget_mode() || is.na(n) || n <= row_limit) return(FALSE)
+    msg <- if (nzchar(reason)) reason else paste0("estimated_rows=", n, " exceeds budget_rows=", row_limit)
+    add_log(column_name, query_category, "budget_skipped", "skipped_by_row_budget", msg)
+    add_action(column_name, query_category, msg)
+    TRUE
+  }
+  list(
+    table_name = table_name,
+    row_count = row_count,
+    add_log = add_log,
+    add_action = add_action,
+    should_skip = should_skip,
+    query_log = function() bind_rows_base(query_log),
+    budget_actions = function() bind_rows_base(budget_actions)
+  )
 }
 
 normalize_table_locations <- function(tables) {
@@ -585,20 +769,34 @@ match_table_location <- function(record, tables) {
   requested_db <- source_record_value(record, "db_name")
   requested_schema <- source_record_value(record, "schema")
   requested_table <- source_record_value(record, "table")
-  candidates <- dalycare_table_candidates(record)
-  if (nzchar(requested_table)) candidates <- unique(c(requested_table, candidates))
-  candidates <- candidates[nzchar(candidates)]
   table_key <- normalized_table_key(tables$table)
-  candidate_keys <- normalized_table_key(candidates)
-  ix <- which(table_key %in% candidate_keys)
-  if (nzchar(requested_db)) {
-    ix <- ix[tolower(tables$db_name[ix]) == tolower(requested_db)]
+  filtered_matches <- function(candidates) {
+    candidates <- unique(candidates[nzchar(candidates)])
+    if (!length(candidates)) return(tables[0, , drop = FALSE])
+    ix <- which(table_key %in% normalized_table_key(candidates))
+    if (nzchar(requested_db)) {
+      ix <- ix[tolower(tables$db_name[ix]) == tolower(requested_db)]
+    }
+    if (nzchar(requested_schema)) {
+      ix <- ix[tolower(tables$schema[ix]) == tolower(requested_schema)]
+    }
+    if (!length(ix)) return(tables[0, , drop = FALSE])
+    tables[ix, , drop = FALSE]
   }
-  if (nzchar(requested_schema)) {
-    ix <- ix[tolower(tables$schema[ix]) == tolower(requested_schema)]
-  }
-  if (!length(ix)) return(tables[0, , drop = FALSE])
-  tables[ix, , drop = FALSE]
+
+  exact_candidates <- unique(c(
+    requested_table,
+    source_record_value(record, "source"),
+    source_record_value(record, "table_name"),
+    make.names(source_record_value(record, "source")),
+    make.names(source_record_value(record, "table_name"))
+  ))
+  exact_matches <- filtered_matches(exact_candidates)
+  if (nrow(exact_matches)) return(exact_matches)
+
+  alias_matches <- filtered_matches(dalycare_table_candidates(record))
+  if (!nrow(alias_matches)) return(tables[0, , drop = FALSE])
+  alias_matches
 }
 
 dalycare_table_candidates <- function(record) {
@@ -748,10 +946,13 @@ memory_plan_for_source <- function(record, source_index, resolution) {
     message <- "Source map requested skip."
   } else if (isTRUE(db_enabled) && identical(resolution$resolution_status[[1]], "resolved") &&
              !identical(requested_strategy, "dataset_full_load_fallback")) {
-    chosen_strategy <- if (identical(requested_strategy, "db_chunked")) "db_chunked" else "db_aggregate"
+    should_stream <- isTRUE(atlas_db_stream_rows()) &&
+      !is.na(row_count) &&
+      row_count > atlas_stream_threshold_rows()
+    chosen_strategy <- if (identical(requested_strategy, "db_chunked") || isTRUE(should_stream)) "db_chunked" else "db_aggregate"
     status <- "ok"
     message <- if (identical(chosen_strategy, "db_chunked")) {
-      "Resolved source will use DB chunked profiling."
+      "Resolved source will use DB cursor/chunk profiling for large-table memory safety."
     } else {
       "Resolved source will use DB aggregate profiling."
     }
@@ -849,6 +1050,8 @@ normalize_profile_result <- function(out) {
   out$checks <- out$checks %||% empty_df()
   out$value_frequencies <- out$value_frequencies %||% empty_value_frequencies()
   out$panels <- out$panels %||% list()
+  out$db_query_log <- out$db_query_log %||% empty_db_query_log()
+  out$db_budget_actions <- out$db_budget_actions %||% empty_db_budget_actions()
   out
 }
 
@@ -914,16 +1117,33 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
   schema_info <- dbi_table_schema(connections, db_name, schema, table)
   row_count <- dbi_table_row_count(connections, db_name, schema, table)
   table_ref <- dbi_table_ref(conn, schema, table)
-  column_profiles <- dbi_column_profiles(
+  budget_context <- new_db_budget_context(table_name, row_count)
+  profile_strategy <- dbi_profile_strategy(row_count, profile_mode)
+  budget_context$add_log(
+    column_name = "",
+    query_category = "table_profile",
+    status = "ok",
+    budget_decision = profile_strategy,
+    message = paste("Selected DB profile strategy:", profile_strategy),
+    strategy = profile_strategy
+  )
+  profile_bundle <- dbi_column_profile_bundle(
     conn = conn,
     table_ref = table_ref,
     schema_info = schema_info,
     table_name = table_name,
     row_count = row_count,
-    profile_mode = profile_mode
+    profile_mode = profile_mode,
+    profile_strategy = profile_strategy,
+    top_n = top_n,
+    min_cell_count = min_cell_count,
+    budget_context = budget_context
   )
+  column_profiles <- profile_bundle$column_profiles
   columns <- dbi_columns_from_profiles(column_profiles)
-  top_values <- if (identical(profile_mode, "full")) {
+  top_values <- if (!is.null(profile_bundle$column_top_values)) {
+    profile_bundle$column_top_values
+  } else if (identical(profile_mode, "full")) {
     dbi_column_top_values(
       conn = conn,
       table_ref = table_ref,
@@ -973,6 +1193,9 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
       source_row = source_row,
       conn = conn,
       table_ref = table_ref,
+      profile_strategy = profile_strategy,
+      stream_profile_bundle = profile_bundle,
+      budget_context = budget_context,
       npu_dictionary = npu_dictionary,
       npu_surfaces = npu_surfaces,
       isotype_vectors = isotype_vectors,
@@ -987,7 +1210,383 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
     column_top_values = top_values,
     checks = dbi_checks_from_columns(table_name, schema_info$column_name),
     value_frequencies = frequencies,
-    panels = panels
+    panels = panels,
+    db_query_log = budget_context$query_log(),
+    db_budget_actions = budget_context$budget_actions()
+  )
+}
+
+dbi_profile_strategy <- function(row_count, profile_mode = "full") {
+  if (identical(normalize_profile_mode(profile_mode), "schema")) return("schema_metadata")
+  n <- suppressWarnings(as.numeric(row_count %||% NA_real_))
+  if (isTRUE(atlas_db_stream_rows()) && !is.na(n) && n > atlas_stream_threshold_rows()) {
+    return("stream_column")
+  }
+  "sql_aggregate"
+}
+
+dbi_column_profile_bundle <- function(conn, table_ref, schema_info, table_name, row_count, profile_mode,
+                                      profile_strategy = "sql_aggregate", top_n = 10L,
+                                      min_cell_count = atlas_min_cell_count(),
+                                      budget_context = new_db_budget_context(table_name, row_count)) {
+  profile_strategy <- profile_strategy %||% "sql_aggregate"
+  if (identical(profile_strategy, "schema_metadata")) {
+    return(list(
+      column_profiles = dbi_schema_column_profiles(schema_info, table_name, row_count),
+      column_top_values = empty_column_top_values(),
+      categorical_counts = list(),
+      date_year_counts = list()
+    ))
+  }
+  if (identical(profile_strategy, "stream_column")) {
+    return(dbi_stream_column_profiles(
+      conn = conn,
+      table_ref = table_ref,
+      schema_info = schema_info,
+      table_name = table_name,
+      row_count = row_count,
+      profile_mode = profile_mode,
+      top_n = top_n,
+      min_cell_count = min_cell_count,
+      budget_context = budget_context
+    ))
+  }
+  list(
+    column_profiles = dbi_column_profiles(conn, table_ref, schema_info, table_name, row_count, profile_mode),
+    column_top_values = NULL,
+    categorical_counts = list(),
+    date_year_counts = list()
+  )
+}
+
+dbi_schema_column_profiles <- function(schema_info, table_name, row_count) {
+  if (!nrow(schema_info)) return(empty_column_profiles())
+  rows <- lapply(seq_len(nrow(schema_info)), function(i) {
+    info <- schema_info[i, , drop = FALSE]
+    column_name <- as.character(info$column_name[[1]])
+    column_type <- as.character(info$data_type[[1]] %||% "")
+    column_class <- as.character(info$udt_name[[1]] %||% column_type)
+    is_sensitive <- is_sensitive_column(column_name)
+    is_sql_date <- sql_type_is_date(column_type, column_class)
+    is_text_date <- likely_text_date_column(column_name, column_type, column_class)
+    is_date_like <- (is_sql_date || is_text_date) && !is_sensitive
+    is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive && !is_date_like
+    data.frame(
+      table_name = table_name,
+      column_name = column_name,
+      column_type = column_type,
+      column_class = column_class,
+      profile_kind = if (is_sensitive) "sensitive" else if (is_date_like) "date" else if (is_numeric_like) "numeric" else "categorical",
+      n_rows = row_count,
+      n_available = NA_real_,
+      pct_available = NA_real_,
+      n_missing = NA_real_,
+      pct_missing = NA_real_,
+      n_distinct_capped = NA_real_,
+      is_sensitive = is_sensitive,
+      is_date_like = is_date_like,
+      is_numeric_like = is_numeric_like,
+      min = NA_real_,
+      mean = NA_real_,
+      median = NA_real_,
+      p25 = NA_real_,
+      p75 = NA_real_,
+      max = NA_real_,
+      min_date = NA_character_,
+      max_date = NA_character_,
+      stringsAsFactors = FALSE
+    )
+  })
+  bind_rows_base(rows)
+}
+
+dbi_stream_column_profiles <- function(conn, table_ref, schema_info, table_name, row_count, profile_mode,
+                                       top_n = 10L, min_cell_count = atlas_min_cell_count(),
+                                       budget_context = new_db_budget_context(table_name, row_count)) {
+  if (!nrow(schema_info)) {
+    return(list(
+      column_profiles = empty_column_profiles(),
+      column_top_values = empty_column_top_values(),
+      categorical_counts = list(),
+      date_year_counts = list()
+    ))
+  }
+  rows <- list()
+  top_values <- list()
+  categorical_counts <- list()
+  date_year_counts <- list()
+  for (i in seq_len(nrow(schema_info))) {
+    info <- schema_info[i, , drop = FALSE]
+    prof <- dbi_stream_column_profile(
+      conn = conn,
+      table_ref = table_ref,
+      info = info,
+      table_name = table_name,
+      row_count = row_count,
+      profile_mode = profile_mode,
+      top_n = top_n,
+      min_cell_count = min_cell_count,
+      budget_context = budget_context
+    )
+    rows[[length(rows) + 1L]] <- prof$profile
+    if (nrow(prof$top_values)) top_values[[length(top_values) + 1L]] <- prof$top_values
+    if (length(prof$categorical_counts)) categorical_counts[[prof$profile$column_name[[1]]]] <- prof$categorical_counts
+    if (length(prof$date_year_counts)) date_year_counts[[prof$profile$column_name[[1]]]] <- prof$date_year_counts
+    gc(verbose = FALSE)
+  }
+  list(
+    column_profiles = bind_rows_base(rows),
+    column_top_values = {
+      out <- bind_rows_base(top_values)
+      if (!nrow(out)) empty_column_top_values() else out
+    },
+    categorical_counts = categorical_counts,
+    date_year_counts = date_year_counts
+  )
+}
+
+dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_count, profile_mode,
+                                      top_n = 10L, min_cell_count = atlas_min_cell_count(),
+                                      budget_context = new_db_budget_context(table_name, row_count)) {
+  column_name <- as.character(info$column_name[[1]])
+  column_type <- as.character(info$data_type[[1]] %||% "")
+  column_class <- as.character(info$udt_name[[1]] %||% column_type)
+  is_sensitive <- is_sensitive_column(column_name)
+  is_sql_date <- sql_type_is_date(column_type, column_class)
+  is_text_date <- likely_text_date_column(column_name, column_type, column_class)
+  is_date_like <- (is_sql_date || is_text_date) && !is_sensitive
+  is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive && !is_date_like
+  profile_kind <- if (is_sensitive) "sensitive" else if (is_date_like) "date" else if (is_numeric_like) "numeric" else "categorical"
+  qcol <- DBI::dbQuoteIdentifier(conn, column_name)
+  select_expr <- if (is_sensitive) {
+    paste0("(", qcol, " is null or btrim(", qcol, "::text) = '') as is_missing")
+  } else {
+    paste0(qcol, " as value")
+  }
+  sql <- paste0("select ", select_expr, " from ", table_ref)
+  chunk_size <- atlas_stream_chunk_size()
+  started <- proc.time()[["elapsed"]]
+  result <- NULL
+  chunks <- 0L
+  total_rows <- 0
+  n_missing <- 0
+  numeric_n <- 0
+  numeric_sum <- 0
+  numeric_min <- Inf
+  numeric_max <- -Inf
+  numeric_sample <- numeric()
+  sample_limit <- atlas_quantile_sample_size()
+  date_min <- as.Date(NA)
+  date_max <- as.Date(NA)
+  year_counts <- new.env(parent = emptyenv())
+  category_counts <- new.env(parent = emptyenv())
+  category_overflow <- FALSE
+  max_categories <- atlas_max_tracked_categories()
+  status <- "ok"
+  message <- "streamed one column in bounded chunks"
+
+  update_categories <- function(values) {
+    if (category_overflow || !length(values)) return(invisible(NULL))
+    values <- truncate_value(values)
+    tab <- table(values, useNA = "no")
+    if (!length(tab)) return(invisible(NULL))
+    for (nm in names(tab)) {
+      old <- if (exists(nm, envir = category_counts, inherits = FALSE)) get(nm, envir = category_counts, inherits = FALSE) else 0
+      assign(nm, old + as.integer(tab[[nm]]), envir = category_counts)
+    }
+    if (length(ls(envir = category_counts, all.names = TRUE)) > max_categories) {
+      rm(list = ls(envir = category_counts, all.names = TRUE), envir = category_counts)
+      category_overflow <<- TRUE
+    }
+    invisible(NULL)
+  }
+  update_years <- function(values) {
+    dates <- safe_as_date(values)
+    dates <- dates[!is.na(dates)]
+    if (!length(dates)) return(invisible(NULL))
+    date_min <<- if (is.na(date_min)) min(dates) else min(date_min, min(dates))
+    date_max <<- if (is.na(date_max)) max(dates) else max(date_max, max(dates))
+    years <- suppressWarnings(as.integer(format(dates, "%Y")))
+    years <- years[!is.na(years)]
+    if (!length(years)) return(invisible(NULL))
+    tab <- table(years)
+    for (nm in names(tab)) {
+      old <- if (exists(nm, envir = year_counts, inherits = FALSE)) get(nm, envir = year_counts, inherits = FALSE) else 0
+      assign(nm, old + as.integer(tab[[nm]]), envir = year_counts)
+    }
+    invisible(NULL)
+  }
+  update_numeric <- function(values) {
+    nums <- suppressWarnings(as.numeric(as.character(values)))
+    nums <- nums[!is.na(nums)]
+    if (!length(nums)) return(invisible(NULL))
+    numeric_n <<- numeric_n + length(nums)
+    numeric_sum <<- numeric_sum + sum(nums)
+    numeric_min <<- min(numeric_min, min(nums))
+    numeric_max <<- max(numeric_max, max(nums))
+    if (length(numeric_sample) < sample_limit) {
+      room <- sample_limit - length(numeric_sample)
+      numeric_sample <<- c(numeric_sample, head(nums, room))
+    }
+    invisible(NULL)
+  }
+
+  tryCatch({
+    result <- DBI::dbSendQuery(conn, sql)
+    repeat {
+      chunk <- DBI::dbFetch(result, n = chunk_size)
+      if (!nrow(chunk)) break
+      chunks <- chunks + 1L
+      total_rows <- total_rows + nrow(chunk)
+      if (is_sensitive) {
+        missing <- as.logical(chunk[[1]])
+        missing[is.na(missing)] <- TRUE
+        n_missing <- n_missing + sum(missing)
+        next
+      }
+      values <- chunk[[1]]
+      missing <- is.na(values) | trimws(as.character(values)) == ""
+      n_missing <- n_missing + sum(missing)
+      available <- values[!missing]
+      if (!length(available)) next
+      if (is_numeric_like) {
+        update_numeric(available)
+      } else if (is_date_like) {
+        update_years(available)
+      } else if (!identical(normalize_profile_mode(profile_mode), "schema")) {
+        update_categories(as.character(available))
+      }
+    }
+  }, error = function(e) {
+    status <<- "error"
+    message <<- conditionMessage(e)
+  }, finally = {
+    if (!is.null(result)) {
+      try(DBI::dbClearResult(result), silent = TRUE)
+    }
+  })
+  elapsed_ms <- round(1000 * (proc.time()[["elapsed"]] - started), 1)
+  budget_context$add_log(
+    column_name = column_name,
+    query_category = "column_stream",
+    status = status,
+    budget_decision = if (identical(status, "ok")) "streamed" else "stream_failed",
+    message = message,
+    elapsed_ms = elapsed_ms,
+    strategy = "stream_column",
+    chunks_fetched = chunks
+  )
+  if (is_numeric_like && numeric_n > sample_limit) {
+    budget_context$add_action(
+      column_name = column_name,
+      query_category = "numeric_quantiles",
+      reason = paste("median/p25/p75 estimated from first", sample_limit, "non-missing streamed numeric values."),
+      current_behavior = "Exact min, max, mean, availability, and missingness were streamed; quantiles are bounded-sample approximations.",
+      recommended_action = "Increase DALYCARE_ATLAS_QUANTILE_SAMPLE_SIZE for tighter approximate quantiles, or lower the streaming threshold for a provisioned exact SQL run."
+    )
+  }
+  if (category_overflow) {
+    budget_context$add_action(
+      column_name = column_name,
+      query_category = "categorical_top_values",
+      reason = paste("distinct values exceeded DALYCARE_ATLAS_MAX_TRACKED_CATEGORIES =", max_categories),
+      current_behavior = "The atlas kept coverage/missingness but suppressed value display for this high-cardinality column.",
+      recommended_action = "Raise DALYCARE_ATLAS_MAX_TRACKED_CATEGORIES only for a targeted run if this column is safe and operationally important."
+    )
+  }
+
+  n_rows <- suppressWarnings(as.numeric(row_count %||% total_rows))
+  if (is.na(n_rows) || n_rows < total_rows) n_rows <- total_rows
+  n_available <- if (is.na(n_rows)) NA_real_ else n_rows - n_missing
+  numeric_stats <- if (is_numeric_like && numeric_n > 0) {
+    list(
+      min = numeric_min,
+      mean = numeric_sum / numeric_n,
+      median = stats::median(numeric_sample, na.rm = TRUE),
+      p25 = as.numeric(stats::quantile(numeric_sample, 0.25, na.rm = TRUE, names = FALSE)),
+      p75 = as.numeric(stats::quantile(numeric_sample, 0.75, na.rm = TRUE, names = FALSE)),
+      max = numeric_max
+    )
+  } else {
+    list(min = NA_real_, mean = NA_real_, median = NA_real_, p25 = NA_real_, p75 = NA_real_, max = NA_real_)
+  }
+  date_stats <- if (is_date_like && !is.na(date_min) && !is.na(date_max)) {
+    list(min_date = as.character(date_min), max_date = as.character(date_max))
+  } else {
+    list(min_date = NA_character_, max_date = NA_character_)
+  }
+  category_names <- if (!category_overflow) ls(envir = category_counts, all.names = TRUE) else character()
+  counts <- if (length(category_names)) {
+    stats::setNames(vapply(category_names, function(nm) get(nm, envir = category_counts, inherits = FALSE), integer(1)), category_names)
+  } else {
+    integer()
+  }
+  n_distinct <- if (is_sensitive) {
+    NA_real_
+  } else if (category_overflow) {
+    max_categories + 1L
+  } else if (profile_kind == "categorical") {
+    length(counts)
+  } else {
+    NA_real_
+  }
+  top_values <- empty_column_top_values()
+  if (identical(normalize_profile_mode(profile_mode), "full") && profile_kind == "categorical" &&
+      !category_overflow && length(counts) && length(counts) <= 100L) {
+    keep <- counts[counts >= normalize_min_cell_count(min_cell_count)]
+    if (length(keep)) {
+      keep <- sort(keep, decreasing = TRUE)
+      keep <- head(keep, top_n)
+      labels <- names(keep)
+      keep <- keep[!looks_cpr_like(labels)]
+      labels <- names(keep)
+      if (length(keep)) {
+        top_values <- data.frame(
+          table_name = table_name,
+          column_name = column_name,
+          value = labels,
+          n = as.integer(keep),
+          pct_rows = vapply(as.integer(keep), safe_pct, numeric(1), denom = n_rows),
+          stringsAsFactors = FALSE
+        )
+      }
+    }
+  }
+  year_names <- ls(envir = year_counts, all.names = TRUE)
+  year_count_values <- if (length(year_names)) {
+    stats::setNames(vapply(year_names, function(nm) get(nm, envir = year_counts, inherits = FALSE), integer(1)), year_names)
+  } else {
+    integer()
+  }
+  list(
+    profile = data.frame(
+      table_name = table_name,
+      column_name = column_name,
+      column_type = column_type,
+      column_class = column_class,
+      profile_kind = profile_kind,
+      n_rows = n_rows,
+      n_available = n_available,
+      pct_available = safe_pct(n_available, n_rows),
+      n_missing = n_missing,
+      pct_missing = safe_pct(n_missing, n_rows),
+      n_distinct_capped = pmin(n_distinct, 100000),
+      is_sensitive = is_sensitive,
+      is_date_like = is_date_like,
+      is_numeric_like = is_numeric_like,
+      min = numeric_stats$min,
+      mean = numeric_stats$mean,
+      median = numeric_stats$median,
+      p25 = numeric_stats$p25,
+      p75 = numeric_stats$p75,
+      max = numeric_stats$max,
+      min_date = date_stats$min_date,
+      max_date = date_stats$max_date,
+      stringsAsFactors = FALSE
+    ),
+    top_values = top_values,
+    categorical_counts = counts,
+    date_year_counts = year_count_values
   )
 }
 
@@ -1653,28 +2252,234 @@ dbi_damyda_numeric_panel <- function(conn, table_ref, column_profiles, source_ro
   out
 }
 
+stream_counts_for_column <- function(stream_profile_bundle, column_name) {
+  if (is.null(stream_profile_bundle) || is.na(column_name) || !nzchar(column_name)) return(integer())
+  counts <- stream_profile_bundle$categorical_counts %||% list()
+  if (!column_name %in% names(counts)) return(integer())
+  counts[[column_name]]
+}
+
+stream_year_counts_for_column <- function(stream_profile_bundle, column_name) {
+  if (is.null(stream_profile_bundle) || is.na(column_name) || !nzchar(column_name)) return(integer())
+  counts <- stream_profile_bundle$date_year_counts %||% list()
+  if (!column_name %in% names(counts)) return(integer())
+  counts[[column_name]]
+}
+
+dbi_temporal_coverage_years_from_stream <- function(column_profiles, source_row, stream_profile_bundle,
+                                                    min_cell_count = atlas_min_cell_count()) {
+  date_column <- coverage_date_column_from_profiles(column_profiles)
+  counts <- stream_year_counts_for_column(stream_profile_bundle, date_column)
+  if (!length(counts)) return(empty_temporal_coverage_years())
+  years <- suppressWarnings(as.integer(names(counts)))
+  n_rows <- suppressWarnings(as.integer(counts))
+  keep <- !is.na(years) &
+    years >= coverage_display_year_min() &
+    years <= coverage_display_year_max() &
+    n_rows >= normalize_min_cell_count(min_cell_count)
+  if (!any(keep)) return(empty_temporal_coverage_years())
+  data.frame(
+    table_name = source_row$table_name[[1]],
+    domain = "",
+    subdomain = "",
+    atlas_role = "",
+    date_column = date_column,
+    year = years[keep],
+    n_rows = n_rows[keep],
+    pct_rows = vapply(n_rows[keep], safe_pct, numeric(1), denom = source_row$n_rows[[1]]),
+    coverage_basis = "streamed_event_date_counts",
+    stringsAsFactors = FALSE
+  )
+}
+
+dbi_spatial_region_counts_from_stream <- function(column_profiles, source_row, stream_profile_bundle,
+                                                  min_cell_count = atlas_min_cell_count()) {
+  region_col <- region_column_from_profiles(column_profiles)
+  counts <- stream_counts_for_column(stream_profile_bundle, region_col)
+  if (!length(counts)) return(empty_spatial_region_counts())
+  code <- normalize_dk_region(names(counts))
+  out <- data.frame(
+    table_name = source_row$table_name[[1]],
+    domain = "",
+    subdomain = "",
+    atlas_role = "",
+    region_column = region_col,
+    region_code = code,
+    n_rows = suppressWarnings(as.integer(counts)),
+    stringsAsFactors = FALSE
+  )
+  out <- out[!is.na(out$region_code) & nzchar(out$region_code), , drop = FALSE]
+  out <- out[out$n_rows >= normalize_min_cell_count(min_cell_count), , drop = FALSE]
+  if (!nrow(out)) return(empty_spatial_region_counts())
+  out <- aggregate(n_rows ~ table_name + domain + subdomain + atlas_role + region_column + region_code, data = out, FUN = sum)
+  ref <- dk_region_reference()
+  out <- merge(out, ref[, c("region_code", "region_name")], by = "region_code", all.x = TRUE, sort = FALSE)
+  out$pct_rows <- vapply(out$n_rows, safe_pct, numeric(1), denom = source_row$n_rows[[1]])
+  out$count_basis <- "streamed_region_column_counts"
+  out[, c("table_name", "domain", "subdomain", "atlas_role", "region_column", "region_code", "region_name", "n_rows", "pct_rows", "count_basis"), drop = FALSE]
+}
+
+dbi_registry_categorical_panel_from_top_values <- function(column_profiles, source_row, registry, top_values) {
+  specs <- dbi_registry_categorical_specs(registry)
+  if (!length(specs) || !is.data.frame(top_values) || !nrow(top_values)) return(empty_registry_categorical())
+  rows <- lapply(specs, function(spec) {
+    column_name <- dbi_registry_column(column_profiles, spec$candidates)
+    if (is.na(column_name) || !nzchar(column_name)) return(empty_registry_categorical())
+    values <- top_values[top_values$column_name == column_name, , drop = FALSE]
+    if (!nrow(values)) return(empty_registry_categorical())
+    data.frame(
+      table_name = source_row$table_name[[1]],
+      registry = registry,
+      facet = spec$facet,
+      source_column = column_name,
+      label = values$value,
+      n = suppressWarnings(as.integer(values$n)),
+      pct_rows = values$pct_rows,
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) empty_registry_categorical() else out
+}
+
+dbi_damyda_numeric_panel_from_profiles <- function(column_profiles, source_row) {
+  rows <- lapply(dbi_damyda_numeric_specs(), function(spec) {
+    column_name <- dbi_registry_column(column_profiles, spec$candidates)
+    if (is.na(column_name) || !nzchar(column_name)) return(empty_registry_numeric())
+    profile <- column_profiles[column_profiles$column_name == column_name, , drop = FALSE]
+    if (!nrow(profile) || !isTRUE(as.logical(profile$is_numeric_like[[1]]))) return(empty_registry_numeric())
+    data.frame(
+      table_name = source_row$table_name[[1]],
+      registry = "DaMyDa",
+      field = spec$field,
+      source_column = column_name,
+      unit = spec$unit %||% NA_character_,
+      n_available = suppressWarnings(as.integer(profile$n_available[[1]] %||% 0L)),
+      pct_available = suppressWarnings(as.numeric(profile$pct_available[[1]] %||% NA_real_)),
+      mean = suppressWarnings(as.numeric(profile$mean[[1]] %||% NA_real_)),
+      median = suppressWarnings(as.numeric(profile$median[[1]] %||% NA_real_)),
+      p25 = suppressWarnings(as.numeric(profile$p25[[1]] %||% NA_real_)),
+      p75 = suppressWarnings(as.numeric(profile$p75[[1]] %||% NA_real_)),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) empty_registry_numeric() else out
+}
+
+stream_npu_counts_from_bundle <- function(stream_profile_bundle, code_column, row_count,
+                                          min_cell_count = 1L) {
+  counts <- stream_counts_for_column(stream_profile_bundle, code_column)
+  if (!length(counts)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
+  codes <- normalize_npu_code(names(counts))
+  ok <- !is.na(codes) & nzchar(codes)
+  if (!any(ok)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
+  tmp <- data.frame(npu_code = codes[ok], n_observed = suppressWarnings(as.integer(counts[ok])), stringsAsFactors = FALSE)
+  agg <- aggregate(n_observed ~ npu_code, data = tmp, FUN = sum)
+  agg <- agg[agg$n_observed >= normalize_min_cell_count(min_cell_count), , drop = FALSE]
+  if (!nrow(agg)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
+  agg$pct_rows <- vapply(agg$n_observed, safe_pct, numeric(1), denom = row_count)
+  agg[order(-agg$n_observed, agg$npu_code), , drop = FALSE]
+}
+
+dbi_mm_treatment_code_counts_from_stream <- function(column_profiles, source_row, treatment_families,
+                                                     stream_profile_bundle,
+                                                     min_cell_count = atlas_min_cell_count()) {
+  if (is.null(treatment_families) || !nrow(treatment_families)) return(empty_mm_treatment_code_counts())
+  table_name <- source_row$table_name[[1]]
+  code_cols <- dbi_treatment_code_columns(column_profiles, table_name)
+  if (!length(code_cols)) return(empty_mm_treatment_code_counts())
+  min_cell_count <- normalize_min_cell_count(min_cell_count)
+  rows <- list()
+  for (code_col in code_cols) {
+    counts <- stream_counts_for_column(stream_profile_bundle, code_col)
+    if (!length(counts)) next
+    values <- normalize_generic_code(names(counts))
+    n_values <- suppressWarnings(as.integer(counts))
+    for (i in seq_len(nrow(treatment_families))) {
+      rule <- treatment_families[i, , drop = FALSE]
+      code <- normalize_generic_code(rule$code[[1]])
+      matched <- if (identical(rule$match_type[[1]], "prefix")) startsWith(values, code) & nzchar(values) else values == code & nzchar(values)
+      n_rows <- sum(n_values[matched], na.rm = TRUE)
+      if (is.na(n_rows) || n_rows < min_cell_count) next
+      rows[[length(rows) + 1L]] <- data.frame(
+        table_name = table_name,
+        code_column = code_col,
+        code_system = rule$code_system[[1]],
+        family = rule$family[[1]],
+        match_type = rule$match_type[[1]],
+        code = rule$code[[1]],
+        label = rule$label[[1]],
+        n_rows = as.integer(n_rows),
+        pct_rows = safe_pct(n_rows, source_row$n_rows[[1]]),
+        n_patients = NA_integer_,
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  out <- bind_rows_base(rows)
+  if (!nrow(out)) return(empty_mm_treatment_code_counts())
+  out[order(-out$n_rows, out$table_name, out$family, out$code), , drop = FALSE]
+}
+
+dbi_mm_treatment_source_summary_from_stream <- function(code_counts, source_row,
+                                                        min_cell_count = atlas_min_cell_count()) {
+  if (is.null(code_counts) || !nrow(code_counts)) return(empty_mm_treatment_source_summary())
+  matched_rows <- sum(suppressWarnings(as.integer(code_counts$n_rows)), na.rm = TRUE)
+  if (is.na(matched_rows) || matched_rows < normalize_min_cell_count(min_cell_count)) return(empty_mm_treatment_source_summary())
+  data.frame(
+    table_name = source_row$table_name[[1]],
+    n_rows_scanned = source_row$n_rows[[1]],
+    matched_rows = as.integer(matched_rows),
+    pct_rows_matched = safe_pct(matched_rows, source_row$n_rows[[1]]),
+    matched_patients = NA_integer_,
+    min_date = source_row$min_date[[1]],
+    max_date = source_row$max_date[[1]],
+    stringsAsFactors = FALSE
+  )
+}
+
 dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, table_ref = NULL,
+                                     profile_strategy = "sql_aggregate",
+                                     stream_profile_bundle = NULL,
+                                     budget_context = new_db_budget_context(source_row$table_name[[1]], source_row$n_rows[[1]]),
                                      npu_dictionary = NULL,
                                      npu_surfaces = NULL,
                                      isotype_vectors = NULL,
                                      treatment_families = NULL,
                                      min_cell_count = atlas_min_cell_count()) {
   panels <- list()
+  streamed <- identical(profile_strategy, "stream_column")
   if (!is.null(conn) && !is.null(table_ref)) {
-    panels$atlas_temporal_coverage_years <- dbi_temporal_coverage_years(
-      conn = conn,
-      table_ref = table_ref,
-      column_profiles = column_profiles,
-      source_row = source_row,
-      min_cell_count = min_cell_count
-    )
-    panels$atlas_spatial_region_counts <- dbi_spatial_region_counts(
-      conn = conn,
-      table_ref = table_ref,
-      column_profiles = column_profiles,
-      source_row = source_row,
-      min_cell_count = min_cell_count
-    )
+    if (streamed) {
+      panels$atlas_temporal_coverage_years <- dbi_temporal_coverage_years_from_stream(
+        column_profiles = column_profiles,
+        source_row = source_row,
+        stream_profile_bundle = stream_profile_bundle,
+        min_cell_count = min_cell_count
+      )
+      panels$atlas_spatial_region_counts <- dbi_spatial_region_counts_from_stream(
+        column_profiles = column_profiles,
+        source_row = source_row,
+        stream_profile_bundle = stream_profile_bundle,
+        min_cell_count = min_cell_count
+      )
+    } else {
+      panels$atlas_temporal_coverage_years <- dbi_temporal_coverage_years(
+        conn = conn,
+        table_ref = table_ref,
+        column_profiles = column_profiles,
+        source_row = source_row,
+        min_cell_count = min_cell_count
+      )
+      panels$atlas_spatial_region_counts <- dbi_spatial_region_counts(
+        conn = conn,
+        table_ref = table_ref,
+        column_profiles = column_profiles,
+        source_row = source_row,
+        min_cell_count = min_cell_count
+      )
+    }
   }
   registry <- registry_name(source_row$table_name[[1]])
   if (!is.na(registry)) {
@@ -1690,31 +2495,45 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
     )
     if (!is.null(conn) && !is.null(table_ref)) {
       if (identical(registry, "DaMyDa")) {
-        panels$damyda_clinical_profile <- dbi_registry_categorical_panel(
-          conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count
-        )
-        panels$damyda_numeric_fields <- dbi_damyda_numeric_panel(conn, table_ref, column_profiles, source_row)
+        panels$damyda_clinical_profile <- if (streamed) {
+          dbi_registry_categorical_panel_from_top_values(column_profiles, source_row, registry, stream_profile_bundle$column_top_values)
+        } else {
+          dbi_registry_categorical_panel(conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count)
+        }
+        panels$damyda_numeric_fields <- if (streamed) {
+          dbi_damyda_numeric_panel_from_profiles(column_profiles, source_row)
+        } else {
+          dbi_damyda_numeric_panel(conn, table_ref, column_profiles, source_row)
+        }
       } else if (identical(registry, "LYFO")) {
-        panels$lyfo_clinical_profile <- dbi_registry_categorical_panel(
-          conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count
-        )
+        panels$lyfo_clinical_profile <- if (streamed) {
+          dbi_registry_categorical_panel_from_top_values(column_profiles, source_row, registry, stream_profile_bundle$column_top_values)
+        } else {
+          dbi_registry_categorical_panel(conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count)
+        }
       } else if (identical(registry, "CLL")) {
-        panels$cll_clinical_profile <- dbi_registry_categorical_panel(
-          conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count
-        )
+        panels$cll_clinical_profile <- if (streamed) {
+          dbi_registry_categorical_panel_from_top_values(column_profiles, source_row, registry, stream_profile_bundle$column_top_values)
+        } else {
+          dbi_registry_categorical_panel(conn, table_ref, column_profiles, source_row, registry, min_cell_count = min_cell_count)
+        }
       }
     }
   }
   if (!is.null(conn) && !is.null(table_ref) && !is.null(npu_dictionary) && nrow(npu_dictionary)) {
     code_column <- npu_code_column_from_names(column_profiles$column_name)
-    counts <- dbi_npu_code_counts(
-      conn = conn,
-      table_ref = table_ref,
-      column_name = code_column,
-      table_name = source_row$table_name[[1]],
-      row_count = source_row$n_rows[[1]],
-      min_cell_count = 1L
-    )
+    counts <- if (streamed) {
+      stream_npu_counts_from_bundle(stream_profile_bundle, code_column, source_row$n_rows[[1]], min_cell_count = 1L)
+    } else {
+      dbi_npu_code_counts(
+        conn = conn,
+        table_ref = table_ref,
+        column_name = code_column,
+        table_name = source_row$table_name[[1]],
+        row_count = source_row$n_rows[[1]],
+        min_cell_count = 1L
+      )
+    }
     panels$lab_npu_code_coverage <- npu_lab_code_coverage_from_counts(
       counts = counts,
       table_name = source_row$table_name[[1]],
@@ -1755,17 +2574,30 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
       surfaces = npu_surfaces,
       min_cell_count = min_cell_count
     )
-    panels$npu_detective_source_year <- dbi_npu_source_year_panel(
-      conn = conn,
-      table_ref = table_ref,
-      code_column = code_column,
-      year_column = source_row$date_column_guess[[1]],
-      table_name = source_row$table_name[[1]],
-      row_count = source_row$n_rows[[1]],
-      dictionary = npu_dictionary,
-      surfaces = npu_surfaces,
-      min_cell_count = min_cell_count
-    )
+    panels$npu_detective_source_year <- if (streamed) {
+      if (!is.na(code_column) && nzchar(code_column) && nrow(counts)) {
+        budget_context$add_action(
+          column_name = code_column,
+          query_category = "npu_source_year",
+          reason = "large-table streaming mode avoids two-column code/date scans by default",
+          current_behavior = "NPU code inventory is exact from streamed code-column counts; source-year NPU cross-tab is omitted.",
+          recommended_action = "Run a targeted NPU source-year query for the specific lab source if this cross-tab is needed."
+        )
+      }
+      empty_npu_detective_source_year()
+    } else {
+      dbi_npu_source_year_panel(
+        conn = conn,
+        table_ref = table_ref,
+        code_column = code_column,
+        year_column = source_row$date_column_guess[[1]],
+        table_name = source_row$table_name[[1]],
+        row_count = source_row$n_rows[[1]],
+        dictionary = npu_dictionary,
+        surfaces = npu_surfaces,
+        min_cell_count = min_cell_count
+      )
+    }
     panels$isotype_code_usage <- isotype_code_usage_from_counts(
       counts = counts,
       table_name = source_row$table_name[[1]],
@@ -1782,22 +2614,40 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
     )
   }
   if (!is.null(conn) && !is.null(table_ref) && !is.null(treatment_families) && nrow(treatment_families)) {
-    panels$mm_treatment_code_counts <- dbi_mm_treatment_code_counts(
-      conn = conn,
-      table_ref = table_ref,
-      column_profiles = column_profiles,
-      source_row = source_row,
-      treatment_families = treatment_families,
-      min_cell_count = min_cell_count
-    )
-    panels$mm_treatment_source_summary <- dbi_mm_treatment_source_summary(
-      conn = conn,
-      table_ref = table_ref,
-      column_profiles = column_profiles,
-      source_row = source_row,
-      treatment_families = treatment_families,
-      min_cell_count = min_cell_count
-    )
+    panels$mm_treatment_code_counts <- if (streamed) {
+      dbi_mm_treatment_code_counts_from_stream(
+        column_profiles = column_profiles,
+        source_row = source_row,
+        treatment_families = treatment_families,
+        stream_profile_bundle = stream_profile_bundle,
+        min_cell_count = min_cell_count
+      )
+    } else {
+      dbi_mm_treatment_code_counts(
+        conn = conn,
+        table_ref = table_ref,
+        column_profiles = column_profiles,
+        source_row = source_row,
+        treatment_families = treatment_families,
+        min_cell_count = min_cell_count
+      )
+    }
+    panels$mm_treatment_source_summary <- if (streamed) {
+      dbi_mm_treatment_source_summary_from_stream(
+        code_counts = panels$mm_treatment_code_counts,
+        source_row = source_row,
+        min_cell_count = min_cell_count
+      )
+    } else {
+      dbi_mm_treatment_source_summary(
+        conn = conn,
+        table_ref = table_ref,
+        column_profiles = column_profiles,
+        source_row = source_row,
+        treatment_families = treatment_families,
+        min_cell_count = min_cell_count
+      )
+    }
   }
   panels
 }

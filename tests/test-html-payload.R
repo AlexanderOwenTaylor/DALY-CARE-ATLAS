@@ -302,9 +302,35 @@ payload <- atlas_payload(
   column_profiles = column_profiles,
   column_top_values = column_top_values,
   run_summary = run_summary,
-  action_items = action_items
+  action_items = action_items,
+  db_query_log = data.frame(
+    table_name = "example_labs",
+    column_name = "value",
+    query_category = "column_stream",
+    strategy = "stream_column",
+    estimated_rows = 10,
+    chunks_fetched = 1,
+    status = "ok",
+    budget_decision = "streamed",
+    elapsed_ms = 1,
+    message = "test",
+    stringsAsFactors = FALSE
+  ),
+  db_budget_actions = data.frame(
+    severity = "warning",
+    category = "DB budget",
+    action_id = "db_budget_skipped",
+    table_name = "example_labs",
+    column_name = "value",
+    query_category = "numeric_quantiles",
+    estimated_rows = 10,
+    reason = "test",
+    current_behavior = "test",
+    recommended_action = "test",
+    stringsAsFactors = FALSE
+  )
 )
-expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
+expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
 expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
 expect_true(all(c("aot_temporal_coverage", "aot_spatial_coverage", "aot_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
@@ -317,6 +343,8 @@ expect_true(length(payload$aot_treatment_sections$code_families) > 0, "AOT treat
 expect_true(length(payload$aot_infrastructure_sections$catalog) > 0, "AOT infrastructure sections should include catalog rows.")
 expect_true(length(payload$aot_infrastructure_sections$action_items) > 0, "AOT infrastructure sections should include action item rows.")
 expect_true(length(payload$aot_infrastructure_sections$action_summary) > 0, "AOT infrastructure sections should include action item summaries.")
+expect_true(length(payload$aot_infrastructure_sections$db_budget_actions) > 0, "AOT infrastructure sections should include DB budget action rows.")
+expect_true(length(payload$aot_infrastructure_sections$db_query_log) > 0, "AOT infrastructure sections should include DB query log rows.")
 expect_true(length(payload$aot_temporal_coverage$sources) > 0, "AOT temporal coverage should include source coverage rows.")
 expect_true(length(payload$aot_temporal_coverage$years) > 0, "AOT temporal coverage should include year rows.")
 expect_true(length(payload$aot_spatial_coverage$region_coverage) > 0, "AOT spatial coverage should include region coverage rows.")

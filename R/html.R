@@ -22,7 +22,8 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
 atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels,
                           column_profiles = NULL, column_top_values = NULL,
                           run_summary = NULL, action_items = NULL, source_resolution = NULL,
-                          memory_plan = NULL) {
+                          memory_plan = NULL, db_query_log = NULL,
+                          db_budget_actions = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -31,6 +32,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_column_profiles <- public_column_profile_rows(column_profiles)
   public_column_top_values <- sanitize_public_frame(column_top_values)
   public_action_items <- sanitize_public_frame(action_items)
+  public_db_query_log <- public_db_diagnostics(db_query_log)
+  public_db_budget_actions <- public_db_diagnostics(db_budget_actions)
   list(
     run_id = run_id,
     generated_at = generated_at,
@@ -73,7 +76,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
       run_summary = run_summary,
       action_items = action_items,
       source_resolution = source_resolution,
-      memory_plan = memory_plan
+      memory_plan = memory_plan,
+      db_query_log = db_query_log,
+      db_budget_actions = db_budget_actions
     ),
     registry_cards = registry_cards(panels),
     panel_groups = public_rows(panel_groups(panels), max_rows = 100),
@@ -83,6 +88,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
+    db_query_log = public_rows(public_db_query_log, max_rows = 3000),
+    db_budget_actions = public_rows(public_db_budget_actions, max_rows = 1000),
     source_domains = public_rows(source_domain_summary(sources), max_rows = 100),
     sources = public_rows(public_sources(sources), max_rows = 500),
     checks = public_rows(public_checks, max_rows = 500),
@@ -130,7 +137,7 @@ aot_nav <- function() {
     list(
       id = "infrastructure",
       label = "Infrastructure",
-      sub_tabs = c("Catalog", "Columns", "Resolution", "Memory plan", "Panels", "QA")
+      sub_tabs = c("Catalog", "Columns", "Resolution", "Memory plan", "DB budget", "Panels", "QA")
     )
   )
 }
@@ -241,11 +248,14 @@ aot_dk_choropleth <- function(panels) {
 
 aot_infrastructure_sections <- function(sources, checks, panels, column_profiles, run_summary = NULL,
                                         action_items = NULL,
-                                        source_resolution = NULL, memory_plan = NULL) {
+                                        source_resolution = NULL, memory_plan = NULL,
+                                        db_query_log = NULL, db_budget_actions = NULL) {
   safe_sources <- public_sources(sources)
   list(
     action_items = public_rows(sanitize_public_frame(action_items), max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
+    db_budget_actions = public_rows(public_db_diagnostics(db_budget_actions), max_rows = 1000),
+    db_query_log = public_rows(public_db_diagnostics(db_query_log), max_rows = 3000),
     catalog = public_rows(catalog_rows(sources), max_rows = 1000),
     columns = public_rows(public_column_profile_rows(column_profiles), max_rows = 3000),
     column_summary = public_rows(column_profile_summary(column_profiles), max_rows = 200),
@@ -753,6 +763,16 @@ public_column_profile_rows <- function(column_profiles) {
     for (nm in intersect(c("min", "mean", "median", "p25", "p75", "max", "min_date", "max_date"), names(out))) {
       out[[nm]][sensitive] <- NA
     }
+    out$column_name[sensitive] <- "[sensitive]"
+  }
+  out
+}
+
+public_db_diagnostics <- function(rows) {
+  if (!is.data.frame(rows) || !nrow(rows)) return(rows)
+  out <- sanitize_public_frame(rows)
+  if ("column_name" %in% names(out)) {
+    sensitive <- vapply(out$column_name, is_public_identifier_column, logical(1))
     out$column_name[sensitive] <- "[sensitive]"
   }
   out

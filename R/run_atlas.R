@@ -93,6 +93,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   column_top_value_rows <- list()
   check_rows <- list()
   frequency_rows <- list()
+  db_query_log_rows <- list()
+  db_budget_action_rows <- list()
   panels <- list(
     lab_npu_code_coverage = data.frame(stringsAsFactors = FALSE),
     npu_dictionary_summary = panel_npu_dictionary_summary(npu_dictionary),
@@ -228,6 +230,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     append_csv_rows(result$column_top_values, stream_paths$column_top_values)
     append_csv_rows(result$checks, stream_paths$checks)
     append_csv_rows(result$value_frequencies, stream_paths$value_frequencies)
+    if (is.data.frame(result$db_query_log) && nrow(result$db_query_log)) {
+      db_query_log_rows[[length(db_query_log_rows) + 1L]] <- result$db_query_log
+    }
+    if (is.data.frame(result$db_budget_actions) && nrow(result$db_budget_actions)) {
+      db_budget_action_rows[[length(db_budget_action_rows) + 1L]] <- result$db_budget_actions
+    }
     for (panel_name in names(result$panels)) {
       panels[[panel_name]] <- bind_rows_base(list(panels[[panel_name]], result$panels[[panel_name]]))
     }
@@ -244,6 +252,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   access_checks <- access_report_checks(access_report)
   if (nrow(access_checks)) checks <- bind_rows_base(list(checks, access_checks))
   frequencies <- safe_read_output_csv(stream_paths$value_frequencies, bind_rows_base(frequency_rows))
+  db_query_log <- bind_rows_base(db_query_log_rows)
+  if (!nrow(db_query_log)) db_query_log <- empty_db_query_log()
+  db_budget_actions <- bind_rows_base(db_budget_action_rows)
+  if (!nrow(db_budget_actions)) db_budget_actions <- empty_db_budget_actions()
   panels <- build_coverage_panels(
     sources = sources,
     column_profiles = column_profiles,
@@ -265,11 +277,17 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels = panels,
     checks = checks
   )
+  budget_action_items <- db_budget_actions_as_run_action_items(db_budget_actions, sources = sources)
+  if (nrow(budget_action_items)) {
+    action_items <- bind_rows_base(list(action_items, budget_action_items))
+  }
 
   output_paths <- list()
   output_paths$source_resolution <- write_csv(source_resolution, file.path(output_dir, "atlas_source_resolution.csv"))
   output_paths$dalycare_access <- write_csv(access_report, file.path(output_dir, "atlas_dalycare_access.csv"))
   output_paths$memory_plan <- write_csv(memory_plan, file.path(output_dir, "atlas_memory_plan.csv"))
+  output_paths$db_query_log <- write_tsv(db_query_log, file.path(output_dir, "atlas_db_query_log.tsv"))
+  output_paths$db_budget_actions <- write_csv(db_budget_actions, file.path(output_dir, "atlas_db_budget_actions.csv"))
   output_paths$action_items <- write_csv(action_items, file.path(output_dir, "atlas_run_action_items.csv"))
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
@@ -307,6 +325,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_column_top_values <- safe_read_output_csv(output_paths$column_top_values, column_top_values)
   payload_run_summary <- safe_read_output_csv(output_paths$run_summary, run_summary)
   payload_action_items <- safe_read_output_csv(output_paths$action_items, action_items)
+  payload_db_query_log <- safe_read_output_csv(output_paths$db_query_log, db_query_log)
+  payload_db_budget_actions <- safe_read_output_csv(output_paths$db_budget_actions, db_budget_actions)
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
   })
@@ -319,7 +339,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     run_summary = payload_run_summary,
     action_items = payload_action_items,
     source_resolution = source_resolution,
-    memory_plan = memory_plan
+    memory_plan = memory_plan,
+    db_query_log = payload_db_query_log,
+    db_budget_actions = payload_db_budget_actions
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
@@ -567,6 +589,7 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
     data.frame(metric = "value_frequency_rows", value = as.character(nrow(frequencies)), stringsAsFactors = FALSE),
     data.frame(metric = "panel_rows", value = as.character(panel_rows), stringsAsFactors = FALSE),
     data.frame(metric = "db_aggregate_sources", value = as.character(sum(sources$chosen_strategy == "db_aggregate", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "db_chunked_sources", value = as.character(sum(sources$chosen_strategy == "db_chunked", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "dataset_full_load_fallback_sources", value = as.character(sum(sources$chosen_strategy == "dataset_full_load_fallback", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "skipped_risky_full_load_sources", value = as.character(sum(sources$chosen_strategy == "skipped_risky_full_load", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "min_cell_count", value = as.character(atlas_min_cell_count()), stringsAsFactors = FALSE)
