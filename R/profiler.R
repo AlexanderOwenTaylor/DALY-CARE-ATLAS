@@ -350,7 +350,17 @@ profile_panels <- function(data, table_name, profile_mode = "full", min_cell_cou
     medication_atc_groups = panel_atc_groups(data, table_name),
     damyda_feature_coverage = panel_damyda_features(data, table_name),
     registry_clinical_summary = panel_registry_summary(data, table_name),
-    sp_operational_sources = panel_sp_sources(data, table_name)
+    sp_operational_sources = panel_sp_sources(data, table_name),
+    atlas_temporal_coverage_years = panel_temporal_coverage_years(
+      data,
+      table_name,
+      min_cell_count = min_cell_count
+    ),
+    atlas_spatial_region_counts = panel_spatial_region_counts(
+      data,
+      table_name,
+      min_cell_count = min_cell_count
+    )
   )
   if (identical(profile_mode, "summary")) {
     return(summary_panels)

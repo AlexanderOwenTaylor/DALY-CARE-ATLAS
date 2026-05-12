@@ -311,6 +311,59 @@
       align-items: center;
       font-size: 12px;
     }
+    .heatmap-wrap { overflow-x: auto; }
+    .heatmap {
+      min-width: 760px;
+      border-spacing: 2px;
+      border-collapse: separate;
+    }
+    .heatmap th, .heatmap td {
+      border: 0;
+      padding: 4px 5px;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .heatmap .row-label {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 650;
+    }
+    .heat-cell {
+      display: block;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: #eef3f5;
+      border: 1px solid rgba(24, 33, 42, .05);
+    }
+    .heat-cell.c1 { background: #d7e8e0; }
+    .heat-cell.c2 { background: #9fcbbb; }
+    .heat-cell.c3 { background: #5a9f86; }
+    .heat-cell.c4 { background: #145c47; }
+    .dk-shell {
+      display: grid;
+      grid-template-columns: minmax(300px, .9fr) minmax(320px, 1.1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .dk-map svg { width: 100%; max-height: 430px; }
+    .dk-region { cursor: pointer; transition: opacity .15s, filter .15s; }
+    .dk-region:hover { filter: brightness(1.05); }
+    .dk-region.active { stroke: #111; stroke-width: 4; }
+    .coverage-pill {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .coverage-pill.nationwide, .coverage-pill.observed { background: var(--green-soft); color: var(--green); }
+    .coverage-pill.ehr, .coverage-pill.available { background: var(--blue-soft); color: var(--blue); }
+    .coverage-pill.none, .coverage-pill.mapped_not_loaded { background: var(--red-soft); color: var(--red); }
     .track {
       height: 9px;
       border-radius: 999px;
@@ -386,6 +439,7 @@
       .catalog-row, .column-row { grid-template-columns: 1fr; }
       .bar-row { grid-template-columns: 1fr; }
       .aot-lead { grid-template-columns: 1fr; }
+      .dk-shell { grid-template-columns: 1fr; }
       .toolbar label, input[type="search"], select { width: 100%; }
     }
   </style>
@@ -424,6 +478,8 @@
       <div class="sub-nav" aria-label="Overview sections">
         <button class="sub-tab active" data-sub="overview-summary">Run Metrics</button>
         <button class="sub-tab" data-sub="overview-coverage">Coverage</button>
+        <button class="sub-tab" data-sub="overview-temporal">Temporal Coverage</button>
+        <button class="sub-tab" data-sub="overview-spatial">Regional Coverage</button>
         <button class="sub-tab" data-sub="overview-qa">Priority QA</button>
       </div>
       <div class="sub-pane active" id="overview-summary">
@@ -454,6 +510,44 @@
             <p class="panel-sub">Loaded, skipped, missing, and failed source counts grouped by domain/subdomain/status.</p>
           </div>
           <div class="panel-body"><div id="aot-source-availability"></div></div>
+        </div>
+      </div>
+      <div class="sub-pane" id="overview-temporal">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Temporal coverage</p>
+            <h2 class="panel-title">Source-Year Coverage Heatmap</h2>
+            <p class="panel-sub">Coverage by year from aggregate source/date metadata and DB-side year counts when available. Sentinel dates are kept out of the displayed figure.</p>
+          </div>
+          <div class="panel-body">
+            <div id="temporal-summary" class="grid" style="margin-bottom:14px"></div>
+            <div id="temporal-heatmap" class="heatmap-wrap"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="overview-spatial">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Regional coverage</p>
+            <h2 class="panel-title">Denmark Choropleth And Source Matrix</h2>
+            <p class="panel-sub">Five-region Denmark view using protected registry counts where present and source-coverage status otherwise.</p>
+          </div>
+          <div class="panel-body">
+            <div class="dk-shell">
+              <div>
+                <div class="card">
+                  <h3>Interactive choropleth</h3>
+                  <p class="mini">Click a region to inspect coverage, DaMyDa counts, and regional source status.</p>
+                  <div id="dkMap" class="dk-map"></div>
+                </div>
+                <div class="card" style="margin-top:12px">
+                  <h3>Region matrix</h3>
+                  <div class="table-wrap"><table id="regionMatrix"></table></div>
+                </div>
+              </div>
+              <div id="regionDetail"></div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="sub-pane" id="overview-qa">
@@ -702,7 +796,11 @@
       const aotTreatment = payload.aot_treatment_sections || {};
       const aotLaboratory = payload.aot_laboratory_sections || {};
       const aotEhr = payload.aot_ehr_sections || {};
+      const aotTemporal = payload.aot_temporal_coverage || {};
+      const aotSpatial = payload.aot_spatial_coverage || {};
+      const aotDk = payload.aot_dk_choropleth || {};
       const aotInfrastructure = payload.aot_infrastructure_sections || {};
+      const regionState = { code: null };
 
       function text(value) {
         if (value === null || value === undefined) return "";
@@ -745,6 +843,147 @@
             <p class="mini">${escapeHtml(row.min_date || "")}${row.max_date ? " to " + escapeHtml(row.max_date) : ""}</p>
           </article>
         `).join("")}</div>`;
+      }
+      function cssClass(value) {
+        return text(value).toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+      }
+      function renderTemporalCoverage() {
+        const sources = aotTemporal.sources || [];
+        const years = aotTemporal.years || [];
+        const summary = aotTemporal.summary || [];
+        setHtml("temporal-summary", summary.map(row => `
+          <article class="card">
+            <h3>${escapeHtml(row.domain || "Unassigned")}</h3>
+            <div class="kpi-row">
+              <div class="kpi"><b>${formatNumber(row.n_sources)}</b><span class="mini">sources</span></div>
+              <div class="kpi"><b>${escapeHtml(row.display_min_year || "")}</b><span class="mini">first display year</span></div>
+              <div class="kpi"><b>${escapeHtml(row.display_max_year || "")}</b><span class="mini">last display year</span></div>
+            </div>
+          </article>
+        `).join("") || `<div class="empty">No temporal coverage summary was generated.</div>`);
+        if (!sources.length) {
+          setHtml("temporal-heatmap", `<div class="empty">No temporal coverage rows were generated.</div>`);
+          return;
+        }
+        const allYears = Array.from(new Set(years.map(row => Number(row.year)).filter(Number.isFinite))).sort((a, b) => a - b);
+        const fallbackYears = [];
+        sources.forEach(row => {
+          const start = Number(row.display_min_year);
+          const end = Number(row.display_max_year);
+          if (Number.isFinite(start) && Number.isFinite(end)) {
+            for (let y = start; y <= end; y += 1) fallbackYears.push(y);
+          }
+        });
+        const yearAxis = (allYears.length ? allYears : Array.from(new Set(fallbackYears)).sort((a, b) => a - b)).filter(y => y >= 2000);
+        if (!yearAxis.length) {
+          setHtml("temporal-heatmap", rowsForTable(sources, 100));
+          return;
+        }
+        const countKey = row => `${row.table_name}\u0001${row.year}`;
+        const counts = Object.fromEntries(years.map(row => [countKey(row), numberValue(row.n_rows)]));
+        const maxCount = Math.max(...Object.values(counts), 1);
+        const sourceRows = sources.filter(row => row.display_min_year && row.display_max_year).slice(0, 80);
+        const html = `<table class="heatmap"><thead><tr><th>Source</th>${yearAxis.map(y => `<th>${String(y).slice(2)}</th>`).join("")}</tr></thead><tbody>${sourceRows.map(src => {
+          const start = Number(src.display_min_year);
+          const end = Number(src.display_max_year);
+          return `<tr><td class="row-label"><span class="badge">${escapeHtml(src.domain || "")}</span> ${escapeHtml(src.table_name || "")}</td>${yearAxis.map(y => {
+            const n = counts[`${src.table_name}\u0001${y}`];
+            const inRange = Number.isFinite(start) && Number.isFinite(end) && y >= start && y <= end;
+            const intensity = Number.isFinite(n) && n > 0 ? Math.max(1, Math.ceil(n / maxCount * 4)) : inRange ? 1 : 0;
+            return `<td><span class="heat-cell c${intensity}" title="${escapeHtml(src.table_name)} ${y}${Number.isFinite(n) ? `: ${formatNumber(n)} rows` : inRange ? ": date range coverage" : ": no displayed coverage"}"></span></td>`;
+          }).join("")}</tr>`;
+        }).join("")}</tbody></table>`;
+        setHtml("temporal-heatmap", html);
+      }
+      function regionFill(region, maxValue) {
+        const value = numberValue(region.choropleth_value);
+        const t = maxValue > 0 ? value / maxValue : 0;
+        const alpha = Math.max(0.22, Math.min(0.9, 0.25 + t * 0.65));
+        return region.ehr_status === "ehr" || region.ehr_status === "observed"
+          ? `rgba(29, 78, 122, ${alpha})`
+          : `rgba(20, 92, 71, ${alpha})`;
+      }
+      function renderDenmarkMap() {
+        const regions = aotDk.map_regions || [];
+        if (!regions.length) {
+          setHtml("dkMap", `<div class="empty">No Denmark choropleth regions were generated.</div>`);
+          setHtml("regionDetail", `<div class="empty">No regional detail available.</div>`);
+          return;
+        }
+        if (!regionState.code) regionState.code = regions[0].region_code;
+        const maxValue = Math.max(...regions.map(row => numberValue(row.choropleth_value)), 1);
+        const paths = regions.map(row => {
+          const active = row.region_code === regionState.code ? " active" : "";
+          return `<path class="dk-region${active}" data-region-code="${escapeHtml(row.region_code)}" d="${escapeHtml(row.svg_path)}" fill="${regionFill(row, maxValue)}" stroke="white" stroke-width="2"><title>${escapeHtml(row.region_name)} - ${formatNumber(row.choropleth_value)} (${escapeHtml(row.choropleth_basis)})</title></path>`;
+        }).join("");
+        setHtml("dkMap", `<svg viewBox="40 0 540 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Denmark regional choropleth">
+          <rect x="40" y="0" width="500" height="430" rx="12" fill="rgba(29,78,122,0.03)"/>
+          ${paths}
+          <text x="148" y="85" font-size="9" fill="white" text-anchor="middle" pointer-events="none" font-weight="600">North</text>
+          <text x="135" y="230" font-size="9" fill="white" text-anchor="middle" pointer-events="none" font-weight="600">Central</text>
+          <text x="110" y="365" font-size="9" fill="white" text-anchor="middle" pointer-events="none" font-weight="600">South</text>
+          <text x="340" y="262" font-size="9" fill="white" text-anchor="middle" pointer-events="none" font-weight="600">Zealand</text>
+          <text x="405" y="218" font-size="9" fill="white" text-anchor="middle" pointer-events="none" font-weight="600">Capital</text>
+          <text x="520" y="225" font-size="7" fill="white" text-anchor="middle" pointer-events="none">Bornholm</text>
+        </svg>`);
+        document.querySelectorAll(".dk-region").forEach(path => {
+          path.addEventListener("click", () => {
+            regionState.code = path.dataset.regionCode;
+            renderDenmarkMap();
+            renderRegionDetail();
+          });
+        });
+      }
+      function coveragePill(status) {
+        const s = text(status || "unknown");
+        return `<span class="coverage-pill ${cssClass(s)}">${escapeHtml(s)}</span>`;
+      }
+      function renderRegionMatrix() {
+        const coverage = aotSpatial.region_coverage || [];
+        const regions = aotDk.map_regions || [];
+        if (!coverage.length || !regions.length) {
+          setHtml("regionMatrix", `<tr><td>No regional coverage matrix was generated.</td></tr>`);
+          return;
+        }
+        const domains = Array.from(new Set(coverage.map(row => row.domain).filter(Boolean)));
+        const head = `<tr><th>Domain</th>${regions.map(r => `<th>${escapeHtml(r.display_label)}</th>`).join("")}</tr>`;
+        const body = domains.map(domain => `<tr><td>${escapeHtml(domain)}</td>${regions.map(region => {
+          const row = coverage.find(item => item.domain === domain && item.region_code === region.region_code) || {};
+          return `<td>${coveragePill(row.coverage_status)}</td>`;
+        }).join("")}</tr>`).join("");
+        setHtml("regionMatrix", head + body);
+      }
+      function renderRegionDetail() {
+        const regions = aotDk.regions || [];
+        const region = regions.find(row => row.region_code === regionState.code) || regions[0];
+        if (!region) {
+          setHtml("regionDetail", `<div class="empty">No region selected.</div>`);
+          return;
+        }
+        const regionCounts = (aotSpatial.region_counts || []).filter(row => row.region_code === region.region_code);
+        setHtml("regionDetail", `
+          <article class="card">
+            <h3>${escapeHtml(region.region_name)}</h3>
+            <div class="kpi-row">
+              <div class="kpi"><b>${formatNumber(region.damyda_n)}</b><span class="mini">DaMyDa rows</span></div>
+              <div class="kpi"><b>${formatNumber(region.pct_total)}%</b><span class="mini">share of mapped regions</span></div>
+              <div class="kpi"><b>${coveragePill(region.ehr_status)}</b><span class="mini">SP / EHR</span></div>
+              <div class="kpi"><b>${coveragePill(region.lab_status)}</b><span class="mini">lab gradient</span></div>
+            </div>
+            <p class="mini">${escapeHtml(region.story || "")}</p>
+            <p class="mini">Basis: ${escapeHtml(region.choropleth_basis || "")}</p>
+          </article>
+          <div style="height:12px"></div>
+          <article class="card">
+            <h3>Observed Regional Counts</h3>
+            ${regionCounts.length ? rowsForTable(regionCounts, 50) : `<div class="empty">No source-specific region counts for this region.</div>`}
+          </article>
+        `);
+      }
+      function renderSpatialCoverage() {
+        renderDenmarkMap();
+        renderRegionMatrix();
+        renderRegionDetail();
       }
       function uniqueValues(rows, key) {
         return Array.from(new Set((rows || []).map(row => row[key]).filter(Boolean))).sort();
@@ -819,6 +1058,8 @@
       `).join("") || `<div class="empty">No source domains were available.</div>`);
       setHtml("aot-largest-sources", rowsForTable(aotOverview.largest_sources || [], 20));
       setHtml("aot-source-availability", rowsForTable(aotOverview.source_availability || [], 200));
+      renderTemporalCoverage();
+      renderSpatialCoverage();
 
       function renderQa(targetId, items, limit) {
         const rows = limit ? items.slice(0, limit) : items;

@@ -59,6 +59,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     aot_treatment_sections = aot_treatment_sections(sources, panels),
     aot_laboratory_sections = aot_laboratory_sections(sources, panels),
     aot_ehr_sections = aot_ehr_sections(sources),
+    aot_temporal_coverage = aot_temporal_coverage(panels),
+    aot_spatial_coverage = aot_spatial_coverage(panels),
+    aot_dk_choropleth = aot_dk_choropleth(panels),
     aot_infrastructure_sections = aot_infrastructure_sections(
       sources = sources,
       checks = checks,
@@ -86,7 +89,7 @@ aot_nav <- function() {
     list(
       id = "overview",
       label = "Overview",
-      sub_tabs = c("Run metrics", "Coverage", "Priority QA")
+      sub_tabs = c("Run metrics", "Coverage", "Temporal coverage", "Regional coverage", "Priority QA")
     ),
     list(
       id = "quickstart",
@@ -198,6 +201,36 @@ aot_ehr_sections <- function(sources) {
   )
 }
 
+aot_temporal_coverage <- function(panels) {
+  coverage <- panel_or_empty(panels, "atlas_temporal_coverage")
+  years <- panel_or_empty(panels, "atlas_temporal_coverage_years")
+  list(
+    sources = public_rows(coverage, max_rows = 500),
+    years = public_rows(years, max_rows = 5000),
+    summary = public_rows(aot_temporal_summary(coverage, years), max_rows = 100)
+  )
+}
+
+aot_spatial_coverage <- function(panels) {
+  list(
+    region_counts = public_rows(panel_or_empty(panels, "atlas_spatial_region_counts"), max_rows = 1000),
+    region_coverage = public_rows(panel_or_empty(panels, "atlas_spatial_region_coverage"), max_rows = 500)
+  )
+}
+
+aot_dk_choropleth <- function(panels) {
+  regions <- panel_or_empty(panels, "atlas_dk_choropleth_regions")
+  map_regions <- if (is.data.frame(regions) && nrow(regions) && "map_include" %in% names(regions)) {
+    regions[as.logical(regions$map_include), , drop = FALSE]
+  } else {
+    data.frame()
+  }
+  list(
+    regions = public_rows(regions, max_rows = 20),
+    map_regions = public_rows(map_regions, max_rows = 10)
+  )
+}
+
 aot_infrastructure_sections <- function(sources, checks, panels, column_profiles, run_summary = NULL,
                                         source_resolution = NULL, memory_plan = NULL) {
   safe_sources <- public_sources(sources)
@@ -212,6 +245,36 @@ aot_infrastructure_sections <- function(sources, checks, panels, column_profiles
     qa = public_rows(qa_items(checks), max_rows = 500),
     run_summary = public_rows(run_summary, max_rows = 100)
   )
+}
+
+aot_temporal_summary <- function(coverage, years) {
+  if (!is.data.frame(coverage) || !nrow(coverage)) return(data.frame())
+  has_years <- is.data.frame(years) && nrow(years)
+  out <- aggregate(
+    list(n_sources = coverage$table_name),
+    by = list(domain = coverage$domain),
+    FUN = length
+  )
+  available <- coverage[!is.na(coverage$display_min_year) & !is.na(coverage$display_max_year), , drop = FALSE]
+  min_year <- if (nrow(available)) {
+    aggregate(display_min_year ~ domain, data = available, FUN = min)
+  } else {
+    data.frame(domain = character(), display_min_year = integer())
+  }
+  max_year <- if (nrow(available)) {
+    aggregate(display_max_year ~ domain, data = available, FUN = max)
+  } else {
+    data.frame(domain = character(), display_max_year = integer())
+  }
+  out <- merge(out, min_year, by = "domain", all.x = TRUE)
+  out <- merge(out, max_year, by = "domain", all.x = TRUE)
+  out$n_year_rows <- if (has_years) {
+    counts <- aggregate(year ~ domain, data = years, FUN = length)
+    counts$year[match(out$domain, counts$domain)]
+  } else {
+    0L
+  }
+  out
 }
 
 aot_registry_panel_bundle <- function(panels, registry) {
@@ -622,6 +685,11 @@ panel_title <- function(name) {
     lyfo_clinical_profile = "LYFO Clinical Profile",
     cll_clinical_profile = "CLL Clinical Profile",
     sp_operational_sources = "SP Operational Sources",
+    atlas_temporal_coverage = "Temporal Coverage",
+    atlas_temporal_coverage_years = "Temporal Coverage By Year",
+    atlas_spatial_region_counts = "Spatial Region Counts",
+    atlas_spatial_region_coverage = "Spatial Region Coverage",
+    atlas_dk_choropleth_regions = "Denmark Choropleth Regions",
     source_availability_drift = "Source Availability Drift"
   )
   named_value(titles, name, title_from_name(name))
@@ -650,6 +718,11 @@ panel_group <- function(name) {
     lyfo_clinical_profile = "Clinical Registries",
     cll_clinical_profile = "Clinical Registries",
     sp_operational_sources = "SP Operations",
+    atlas_temporal_coverage = "Coverage Figures",
+    atlas_temporal_coverage_years = "Coverage Figures",
+    atlas_spatial_region_counts = "Coverage Figures",
+    atlas_spatial_region_coverage = "Coverage Figures",
+    atlas_dk_choropleth_regions = "Coverage Figures",
     source_availability_drift = "Run QA"
   )
   named_value(groups, name, "Atlas Panels")
@@ -661,9 +734,34 @@ public_column_profile_rows <- function(column_profiles) {
   if ("is_sensitive" %in% names(out) && "column_name" %in% names(out)) {
     sensitive <- as.logical(out$is_sensitive)
     sensitive[is.na(sensitive)] <- FALSE
+    sensitive <- sensitive | vapply(out$column_name, is_public_identifier_column, logical(1))
+    out$is_sensitive <- sensitive
+    if ("profile_kind" %in% names(out)) out$profile_kind[sensitive] <- "sensitive"
+    if ("is_numeric_like" %in% names(out)) out$is_numeric_like[sensitive] <- FALSE
+    if ("is_date_like" %in% names(out)) out$is_date_like[sensitive] <- FALSE
+    for (nm in intersect(c("min", "mean", "median", "p25", "p75", "max", "min_date", "max_date"), names(out))) {
+      out[[nm]][sensitive] <- NA
+    }
     out$column_name[sensitive] <- "[sensitive]"
   }
   out
+}
+
+is_public_identifier_column <- function(name) {
+  name <- tolower(as.character(name %||% ""))
+  grepl(
+    paste(
+      c(
+        "^id$", "(^|_)id($|_)", "_id$", "identifier", "uuid", "guid",
+        "(^|_)key($|_)", "record_id", "order_med_id", "contact_serial",
+        "recnum", "recordnum", "record_number", "pat_id", "person", "patient",
+        "borger", "cpr", "pnr", "civil"
+      ),
+      collapse = "|"
+    ),
+    name,
+    ignore.case = TRUE
+  )
 }
 
 column_profile_summary <- function(column_profiles) {

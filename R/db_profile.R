@@ -1495,6 +1495,22 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
                                      treatment_families = NULL,
                                      min_cell_count = atlas_min_cell_count()) {
   panels <- list()
+  if (!is.null(conn) && !is.null(table_ref)) {
+    panels$atlas_temporal_coverage_years <- dbi_temporal_coverage_years(
+      conn = conn,
+      table_ref = table_ref,
+      column_profiles = column_profiles,
+      source_row = source_row,
+      min_cell_count = min_cell_count
+    )
+    panels$atlas_spatial_region_counts <- dbi_spatial_region_counts(
+      conn = conn,
+      table_ref = table_ref,
+      column_profiles = column_profiles,
+      source_row = source_row,
+      min_cell_count = min_cell_count
+    )
+  }
   registry <- registry_name(source_row$table_name[[1]])
   if (!is.na(registry)) {
     panels$registry_clinical_summary <- data.frame(

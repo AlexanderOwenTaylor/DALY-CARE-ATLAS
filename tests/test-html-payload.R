@@ -134,6 +134,76 @@ panels <- list(
     max_date = "2021-06-02",
     stringsAsFactors = FALSE
   ),
+  atlas_temporal_coverage = data.frame(
+    table_name = c("example_labs", "RKKP_DaMyDa"),
+    domain = c("SP", "RKKP"),
+    subdomain = c("Laboratory", "DaMyDa"),
+    atlas_role = c("fixture", "clinical_registry"),
+    n_rows = c(10, 4),
+    date_column = c("samplingdate", "diagnosis_date"),
+    raw_min_date = c("2020-01-01", "2021-01-01"),
+    raw_max_date = c("2020-01-03", "2021-04-01"),
+    display_min_year = c(2020, 2021),
+    display_max_year = c(2020, 2021),
+    display_min_date = c("2020-01-01", "2021-01-01"),
+    display_max_date = c("2020-12-31", "2021-12-31"),
+    pct_available = c(100, 100),
+    date_qc = "ok",
+    stringsAsFactors = FALSE
+  ),
+  atlas_temporal_coverage_years = data.frame(
+    table_name = c("example_labs", "RKKP_DaMyDa"),
+    domain = c("SP", "RKKP"),
+    subdomain = c("Laboratory", "DaMyDa"),
+    atlas_role = c("fixture", "clinical_registry"),
+    date_column = c("samplingdate", "diagnosis_date"),
+    year = c(2020, 2021),
+    n_rows = c(10, 4),
+    pct_rows = c(100, 100),
+    coverage_basis = "event_date_counts",
+    stringsAsFactors = FALSE
+  ),
+  atlas_spatial_region_counts = data.frame(
+    table_name = "RKKP_DaMyDa",
+    domain = "RKKP",
+    subdomain = "DaMyDa",
+    atlas_role = "clinical_registry",
+    region_column = "Region",
+    region_code = "1084",
+    region_name = "Capital Region",
+    n_rows = 4,
+    pct_rows = 100,
+    count_basis = "region_column_counts",
+    stringsAsFactors = FALSE
+  ),
+  atlas_spatial_region_coverage = data.frame(
+    region_code = "1084",
+    region_name = "Capital Region",
+    display_label = "Capital",
+    domain = "SP",
+    coverage_status = "ehr",
+    loaded_sources = 1,
+    mapped_sources = 1,
+    n_rows = 10,
+    basis = "source_metadata",
+    stringsAsFactors = FALSE
+  ),
+  atlas_dk_choropleth_regions = data.frame(
+    region_code = "1084",
+    region_name = "Capital Region",
+    display_label = "Capital",
+    map_order = 1,
+    map_include = TRUE,
+    svg_path = "M0 0 L1 0 L1 1 Z",
+    choropleth_value = 4,
+    pct_total = 100,
+    choropleth_basis = "DaMyDa region count",
+    damyda_n = 4,
+    ehr_status = "ehr",
+    lab_status = "capital",
+    story = "fixture",
+    stringsAsFactors = FALSE
+  ),
   registry_clinical_summary = data.frame(
     table_name = "RKKP_DaMyDa",
     registry = "DaMyDa",
@@ -221,6 +291,7 @@ payload <- atlas_payload(
 )
 expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
 expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
+expect_true(all(c("aot_temporal_coverage", "aot_spatial_coverage", "aot_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
 expect_true(length(payload$aot_nav) == 8L, "AOT navigation should expose the V33-style top-level domains.")
 expect_true(any(vapply(payload$aot_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "AOT navigation should include Disease Registries.")
@@ -229,6 +300,10 @@ expect_true(length(payload$aot_registry_sections$damyda) > 0, "AOT registry sect
 expect_true(length(payload$aot_laboratory_sections$npu$summary) > 0, "AOT laboratory sections should include NPU dictionary summaries.")
 expect_true(length(payload$aot_treatment_sections$code_families) > 0, "AOT treatment sections should include treatment-code family summaries.")
 expect_true(length(payload$aot_infrastructure_sections$catalog) > 0, "AOT infrastructure sections should include catalog rows.")
+expect_true(length(payload$aot_temporal_coverage$sources) > 0, "AOT temporal coverage should include source coverage rows.")
+expect_true(length(payload$aot_temporal_coverage$years) > 0, "AOT temporal coverage should include year rows.")
+expect_true(length(payload$aot_spatial_coverage$region_coverage) > 0, "AOT spatial coverage should include region coverage rows.")
+expect_true(length(payload$aot_dk_choropleth$map_regions) > 0, "AOT Denmark choropleth should include map regions.")
 expect_true(length(payload$domain_cards) == 2L, "Domain cards should be derived from source domains.")
 expect_true(length(payload$catalog_rows) == 2L, "Catalog rows should be derived from source rows.")
 expect_true(length(payload$column_profile_rows) == 2L, "Column profile rows should be included in the public payload.")
@@ -260,6 +335,9 @@ view_json <- atlas_to_json(list(
   aot_treatment_sections = payload$aot_treatment_sections,
   aot_laboratory_sections = payload$aot_laboratory_sections,
   aot_ehr_sections = payload$aot_ehr_sections,
+  aot_temporal_coverage = payload$aot_temporal_coverage,
+  aot_spatial_coverage = payload$aot_spatial_coverage,
+  aot_dk_choropleth = payload$aot_dk_choropleth,
   aot_infrastructure_sections = payload$aot_infrastructure_sections,
   registry_cards = payload$registry_cards,
   panel_groups = payload$panel_groups,

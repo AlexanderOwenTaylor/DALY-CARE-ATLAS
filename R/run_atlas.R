@@ -110,6 +110,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     lyfo_clinical_profile = empty_registry_categorical(),
     cll_clinical_profile = empty_registry_categorical(),
     sp_operational_sources = data.frame(stringsAsFactors = FALSE),
+    atlas_temporal_coverage = empty_temporal_coverage(),
+    atlas_temporal_coverage_years = empty_temporal_coverage_years(),
+    atlas_spatial_region_counts = empty_spatial_region_counts(),
+    atlas_spatial_region_coverage = empty_spatial_region_coverage(),
+    atlas_dk_choropleth_regions = empty_dk_choropleth_regions(),
     source_availability_drift = data.frame(stringsAsFactors = FALSE)
   )
   stream_paths <- list(
@@ -234,6 +239,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   access_checks <- access_report_checks(access_report)
   if (nrow(access_checks)) checks <- bind_rows_base(list(checks, access_checks))
   frequencies <- safe_read_output_csv(stream_paths$value_frequencies, bind_rows_base(frequency_rows))
+  panels <- build_coverage_panels(
+    sources = sources,
+    column_profiles = column_profiles,
+    panels = panels,
+    min_cell_count = atlas_min_cell_count()
+  )
   panels$source_availability_drift <- source_availability_panel(sources)
   empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
   if (isTRUE(empty_live_refused)) {
