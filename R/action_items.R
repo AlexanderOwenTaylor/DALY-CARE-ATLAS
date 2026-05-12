@@ -17,7 +17,7 @@ empty_run_action_items <- function() {
 access_report_has_ok <- function(access_report, check_id) {
   is.data.frame(access_report) &&
     nrow(access_report) > 0 &&
-    check_id %in% names(access_report) &&
+    "check_id" %in% names(access_report) &&
     "status" %in% names(access_report) &&
     any(access_report$check_id == check_id & access_report$status == "ok", na.rm = TRUE)
 }

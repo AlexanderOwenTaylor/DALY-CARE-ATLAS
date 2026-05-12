@@ -112,6 +112,36 @@ column_top_values <- read_csv_or_empty(file.path(mock_output_dir, "atlas_column_
 run_summary <- read_csv_or_empty(file.path(mock_output_dir, "atlas_run_summary.csv"))
 source_resolution <- read_csv_or_empty(file.path(mock_output_dir, "atlas_source_resolution.csv"))
 memory_plan <- read_csv_or_empty(file.path(mock_output_dir, "atlas_memory_plan.csv"))
+action_items <- read_csv_or_empty(file.path(mock_output_dir, "atlas_run_action_items.csv"))
+access_report <- read_csv_or_empty(file.path(mock_output_dir, "atlas_dalycare_access.csv"))
+db_available_in_access_report <- is.data.frame(access_report) &&
+  nrow(access_report) > 0 &&
+  all(c("check_id", "status") %in% names(access_report)) &&
+  any(access_report$check_id == "db_adapter_available" & access_report$status == "ok", na.rm = TRUE)
+access_report <- adjust_access_report_for_actual_impact(
+  access_report,
+  db_adapter = if (db_available_in_access_report) list() else NULL,
+  memory_plan = memory_plan
+)
+if (nrow(access_report)) {
+  write_csv(access_report, file.path(mock_output_dir, "atlas_dalycare_access.csv"))
+}
+if (nrow(checks) && nrow(access_report) && all(c("check_id", "status", "message", "detail") %in% names(access_report))) {
+  for (i in seq_len(nrow(access_report))) {
+    check_id <- paste0("dalycare_access_", access_report$check_id[[i]])
+    hit <- which(checks$check_id == check_id)
+    if (length(hit)) {
+      checks$severity[hit] <- if (access_report$status[[i]] %in% c("error", "warning")) access_report$status[[i]] else "info"
+      checks$message[hit] <- paste(access_report$message[[i]] %||% "", access_report$detail[[i]] %||% "")
+    }
+  }
+  write_csv(checks, file.path(mock_output_dir, "atlas_checks.csv"))
+}
+if (nrow(run_summary) && all(c("metric", "value") %in% names(run_summary))) {
+  run_summary$value[run_summary$metric == "warnings"] <- as.character(sum(checks$severity == "warning", na.rm = TRUE))
+  run_summary$value[run_summary$metric == "errors"] <- as.character(sum(checks$severity == "error", na.rm = TRUE))
+  write_csv(run_summary, file.path(mock_output_dir, "atlas_run_summary.csv"))
+}
 
 panel_files <- list.files(mock_panel_dir, pattern = "[.]csv$", full.names = TRUE)
 panels <- lapply(panel_files, read_csv_or_empty)
@@ -127,6 +157,16 @@ for (panel_name in names(panels)) {
   write_csv(panels[[panel_name]], file.path(mock_panel_dir, paste0(panel_name, ".csv")))
 }
 
+action_items <- atlas_run_action_items(
+  access_report = access_report,
+  source_resolution = source_resolution,
+  memory_plan = memory_plan,
+  sources = sources,
+  panels = panels,
+  checks = checks
+)
+write_csv(action_items, file.path(mock_output_dir, "atlas_run_action_items.csv"))
+
 generated_at <- named_value(stats::setNames(run_summary$value, run_summary$metric), "generated_at", atlas_timestamp())
 run_id <- named_value(stats::setNames(run_summary$value, run_summary$metric), "run_id", basename(run_dir))
 payload <- atlas_payload(
@@ -139,6 +179,7 @@ payload <- atlas_payload(
   column_profiles = column_profiles,
   column_top_values = column_top_values,
   run_summary = run_summary,
+  action_items = action_items,
   source_resolution = source_resolution,
   memory_plan = memory_plan
 )
