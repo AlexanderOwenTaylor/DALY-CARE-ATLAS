@@ -299,8 +299,21 @@ atlas_run_action_items <- function(access_report = NULL,
 
 db_budget_actions_as_run_action_items <- function(db_budget_actions, sources = NULL) {
   if (!is.data.frame(db_budget_actions) || !nrow(db_budget_actions)) return(empty_run_action_items())
-  rows <- lapply(seq_len(nrow(db_budget_actions)), function(i) {
-    row <- db_budget_actions[i, , drop = FALSE]
+  group_cols <- intersect(
+    c("severity", "category", "action_id", "table_name", "query_category", "reason", "current_behavior", "recommended_action", "estimated_rows"),
+    names(db_budget_actions)
+  )
+  if (!length(group_cols)) return(empty_run_action_items())
+  groups <- split(db_budget_actions, interaction(db_budget_actions[, group_cols, drop = FALSE], drop = TRUE, lex.order = TRUE))
+  rows <- lapply(groups, function(group) {
+    row <- group[1, , drop = FALSE]
+    columns <- trimws(as.character(if ("column_name" %in% names(group)) group$column_name else character()))
+    columns <- sort(unique(columns[!(is.na(columns) | columns == "")]))
+    column_evidence <- if (length(columns)) {
+      paste0("columns=", paste(head(columns, 8L), collapse = "|"), if (length(columns) > 8L) paste0("|+", length(columns) - 8L, " more") else "")
+    } else {
+      ""
+    }
     action_item_row(
       severity = row$severity[[1]] %||% "warning",
       category = row$category[[1]] %||% "DB budget",
@@ -312,7 +325,8 @@ db_budget_actions_as_run_action_items <- function(db_budget_actions, sources = N
       recommended_action = row$recommended_action[[1]] %||% "",
       evidence = paste(
         c(
-          if ("column_name" %in% names(row)) paste0("column=", row$column_name[[1]]) else "",
+          column_evidence,
+          paste0("n_columns=", length(columns)),
           if ("query_category" %in% names(row)) paste0("query_category=", row$query_category[[1]]) else "",
           if ("estimated_rows" %in% names(row)) paste0("estimated_rows=", row$estimated_rows[[1]]) else ""
         ),

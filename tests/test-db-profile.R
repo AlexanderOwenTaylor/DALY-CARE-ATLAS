@@ -165,7 +165,28 @@ expect_true(dbi_skip_distinct_count("text", "text", 101), "DB profiling should s
 expect_false(dbi_skip_distinct_count("text", "text", 100), "DB profiling should keep distinct counts for small text columns.")
 expect_false(dbi_skip_distinct_count("integer", "int4", 1000000), "DB profiling should keep distinct counts for non-text columns.")
 expect_true(likely_text_date_column("Reg_Diagnose_dt", "text", "text"), "DB profiling should treat DALY text _dt aliases as date-like.")
+expect_true(likely_text_date_column("samplingtime", "text", "text"), "DB profiling should treat text time aliases as date-like.")
+expect_false(likely_text_date_column("diagnosekode", "text", "text"), "DB profiling should not treat diagnosis code fields as date-like.")
+expect_false(likely_text_date_column("diagnosetype", "text", "text"), "DB profiling should not treat diagnosis type fields as date-like.")
 expect_true(grepl("regexp_replace", dbi_date_year_expression("\"Reg_Diagnose_dt\"", "text", "text"), fixed = TRUE), "Text-date year extraction should be SQL-side and aggregate-safe.")
+expect_equal(atlas_elapsed_label(65), "01:05", "DB progress helpers should format short elapsed times for RStudio heartbeats.")
+expect_equal(atlas_format_count(1234567), "1,234,567", "DB progress helpers should format row counts for RStudio heartbeats.")
+
+budget_items <- db_budget_actions_as_run_action_items(data.frame(
+  severity = "warning",
+  category = "DB budget",
+  action_id = "db_budget_skipped",
+  table_name = "huge_table",
+  column_name = c("a", "b"),
+  query_category = "numeric_quantiles",
+  estimated_rows = 10000000,
+  reason = "sampled quantiles",
+  current_behavior = "approximate quantiles",
+  recommended_action = "increase sample only if needed",
+  stringsAsFactors = FALSE
+))
+expect_equal(nrow(budget_items), 1L, "Repeated DB budget warnings should be grouped into one operator action item.")
+expect_true(grepl("n_columns=2", budget_items$evidence[[1]], fixed = TRUE), "Grouped DB budget action items should preserve column-count evidence.")
 
 Sys.setenv(DALYCARE_ATLAS_DB_STREAM_ROWS = "TRUE", DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS = "100")
 expect_equal(dbi_profile_strategy(101, "full"), "stream_column", "Large DB tables should use cursor/chunk streaming by default.")

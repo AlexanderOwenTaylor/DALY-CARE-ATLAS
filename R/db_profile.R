@@ -26,6 +26,31 @@ atlas_stream_chunk_size <- function() {
   normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_STREAM_CHUNK_SIZE", unset = "50000"), default = 50000L)
 }
 
+atlas_progress_seconds <- function() {
+  value <- suppressWarnings(as.numeric(Sys.getenv("DALYCARE_ATLAS_PROGRESS_SECONDS", unset = "30")))
+  if (is.na(value) || value <= 0) 30 else value
+}
+
+atlas_progress_enabled <- function() {
+  normalize_atlas_logical(Sys.getenv("DALYCARE_ATLAS_PROGRESS", unset = "TRUE"), default = TRUE)
+}
+
+atlas_format_count <- function(x) {
+  x <- suppressWarnings(as.numeric(x))
+  if (is.na(x)) return("?")
+  format(round(x), big.mark = ",", scientific = FALSE, trim = TRUE)
+}
+
+atlas_elapsed_label <- function(seconds) {
+  seconds <- suppressWarnings(as.numeric(seconds))
+  if (is.na(seconds) || seconds < 0) return("00:00")
+  seconds <- floor(seconds)
+  h <- seconds %/% 3600
+  m <- (seconds %% 3600) %/% 60
+  s <- seconds %% 60
+  if (h > 0) sprintf("%02d:%02d:%02d", h, m, s) else sprintf("%02d:%02d", m, s)
+}
+
 atlas_stream_threshold_rows <- function() {
   normalize_positive_integer(Sys.getenv("DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS", unset = "1000000"), default = 1000000L)
 }
@@ -1326,7 +1351,9 @@ dbi_stream_column_profiles <- function(conn, table_ref, schema_info, table_name,
       profile_mode = profile_mode,
       top_n = top_n,
       min_cell_count = min_cell_count,
-      budget_context = budget_context
+      budget_context = budget_context,
+      column_index = i,
+      column_total = nrow(schema_info)
     )
     rows[[length(rows) + 1L]] <- prof$profile
     if (nrow(prof$top_values)) top_values[[length(top_values) + 1L]] <- prof$top_values
@@ -1347,7 +1374,8 @@ dbi_stream_column_profiles <- function(conn, table_ref, schema_info, table_name,
 
 dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_count, profile_mode,
                                       top_n = 10L, min_cell_count = atlas_min_cell_count(),
-                                      budget_context = new_db_budget_context(table_name, row_count)) {
+                                      budget_context = new_db_budget_context(table_name, row_count),
+                                      column_index = NA_integer_, column_total = NA_integer_) {
   column_name <- as.character(info$column_name[[1]])
   column_type <- as.character(info$data_type[[1]] %||% "")
   column_class <- as.character(info$udt_name[[1]] %||% column_type)
@@ -1369,6 +1397,9 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
   result <- NULL
   chunks <- 0L
   total_rows <- 0
+  estimated_chunks <- if (!is.na(suppressWarnings(as.numeric(row_count))) && row_count > 0) ceiling(as.numeric(row_count) / chunk_size) else NA_integer_
+  progress_interval <- atlas_progress_seconds()
+  last_progress <- started
   n_missing <- 0
   numeric_n <- 0
   numeric_sum <- 0
@@ -1384,6 +1415,42 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
   max_categories <- atlas_max_tracked_categories()
   status <- "ok"
   message <- "streamed one column in bounded chunks"
+
+  progress_line <- function(final = FALSE) {
+    if (!atlas_progress_enabled()) return(invisible(NULL))
+    elapsed <- proc.time()[["elapsed"]] - started
+    if (!isTRUE(final) && chunks > 0L && elapsed - (last_progress - started) < progress_interval) {
+      return(invisible(NULL))
+    }
+    chunk_label <- if (is.na(estimated_chunks)) as.character(chunks) else paste0(chunks, "/", estimated_chunks)
+    row_label <- paste0(atlas_format_count(total_rows), "/", atlas_format_count(row_count))
+    prefix <- if (isTRUE(final) && !identical(status, "ok")) "failed" else if (isTRUE(final)) "done" else "progress"
+    cat(sprintf(
+      "      %s: column %s/%s %s: chunk %s, rows %s, elapsed %s\n",
+      prefix,
+      atlas_format_count(column_index),
+      atlas_format_count(column_total),
+      column_name,
+      chunk_label,
+      row_label,
+      atlas_elapsed_label(elapsed)
+    ))
+    flush.console()
+    last_progress <<- proc.time()[["elapsed"]]
+    invisible(NULL)
+  }
+
+  if (atlas_progress_enabled()) {
+    cat(sprintf(
+      "      streaming column %s/%s %s (%s rows, chunk %s)\n",
+      atlas_format_count(column_index),
+      atlas_format_count(column_total),
+      column_name,
+      atlas_format_count(row_count),
+      atlas_format_count(chunk_size)
+    ))
+    flush.console()
+  }
 
   update_categories <- function(values) {
     if (category_overflow || !length(values)) return(invisible(NULL))
@@ -1438,6 +1505,7 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
       if (!nrow(chunk)) break
       chunks <- chunks + 1L
       total_rows <- total_rows + nrow(chunk)
+      progress_line()
       if (is_sensitive) {
         missing <- as.logical(chunk[[1]])
         missing[is.na(missing)] <- TRUE
@@ -1465,6 +1533,7 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
       try(DBI::dbClearResult(result), silent = TRUE)
     }
   })
+  progress_line(final = TRUE)
   elapsed_ms <- round(1000 * (proc.time()[["elapsed"]] - started), 1)
   budget_context$add_log(
     column_name = column_name,
@@ -1780,21 +1849,26 @@ sql_type_is_date <- function(column_type, column_class = "") {
 likely_text_date_column <- function(column_name, column_type, column_class = "") {
   if (!sql_type_is_text(column_type, column_class)) return(FALSE)
   name <- tolower(as.character(column_name %||% ""))
+  if (grepl("kode|code|type|navn|name|list|status|diagnosekode|diagnosetype|aktionsdiagnose|dx_", name)) {
+    return(FALSE)
+  }
   grepl(
     paste(
       c(
         "(^|_)dt$",
         "_dt$",
-        "(^|_)dato$",
-        "date$",
-        "diagnose",
+        "dato$",
+        "(^|_)date$",
         "diagnosedato",
-        "kontakt.*dato",
-        "behandling.*dato",
-        "treatment.*date",
-        "response.*date",
+        "diagnos.*(_dt|dato|date)$",
+        "kontakt.*(dato|date|time|dttm)$",
+        "behandling.*(dato|date)$",
+        "treatment.*date$",
+        "response.*date$",
         "startdato",
-        "slutdato"
+        "slutdato",
+        "time$",
+        "dttm$"
       ),
       collapse = "|"
     ),
