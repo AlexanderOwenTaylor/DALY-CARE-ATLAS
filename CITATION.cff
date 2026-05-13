@@ -1,0 +1,6 @@
+cff-version: 1.2.0
+title: "DALY-CARE Atlas"
+message: "If you use the generated DALY-CARE Atlas review artifact, retain the page credit: Built by Alexander Owen Taylor."
+authors:
+  - family-names: "Taylor"
+    given-names: "Alexander Owen"

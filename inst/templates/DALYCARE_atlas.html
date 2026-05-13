@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="author" content="Alexander Owen Taylor">
   <title>DALY-CARE Atlas</title>
   <style>
     :root {
@@ -167,7 +168,7 @@
       display: grid;
       gap: 16px;
     }
-    .aot-lead {
+    .review-lead {
       display: grid;
       grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
       gap: 16px;
@@ -433,12 +434,23 @@
       color: var(--muted);
       background: var(--surface-2);
     }
+    .site-footer {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px 34px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .site-footer .credit {
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
     @media (max-width: 820px) {
       .hero { padding: 24px 18px 20px; }
       main { padding: 16px 14px 34px; }
       .catalog-row, .column-row { grid-template-columns: 1fr; }
       .bar-row { grid-template-columns: 1fr; }
-      .aot-lead { grid-template-columns: 1fr; }
+      .review-lead { grid-template-columns: 1fr; }
       .dk-shell { grid-template-columns: 1fr; }
       .toolbar label, input[type="search"], select { width: 100%; }
     }
@@ -454,6 +466,7 @@
       <div class="hero-meta">
         <span id="run-id">Run pending</span>
         <span id="generated-at">Generated pending</span>
+        <span id="builder-credit">Built by Alexander Owen Taylor</span>
         <span id="qa-badge" class="badge">QA pending</span>
       </div>
       <div id="hero-metrics" class="hero-metrics"></div>
@@ -484,7 +497,19 @@
         <button class="sub-tab" data-sub="overview-qa">Priority QA</button>
       </div>
       <div class="sub-pane active" id="overview-summary">
-        <div class="aot-lead">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Scope and provenance</p>
+            <h2 class="panel-title">Scope & Definitional Notes</h2>
+            <p class="panel-sub">Compact interpretation notes derived from the current run, with transparent generated-atlas credit.</p>
+          </div>
+          <div class="panel-body">
+            <div id="scope-notes" class="grid"></div>
+            <div style="height:14px"></div>
+            <div id="domain-jump-links" class="grid"></div>
+          </div>
+        </div>
+        <div class="review-lead">
           <div class="panel">
             <div class="panel-head">
               <p class="section-kicker">Run overview</p>
@@ -499,7 +524,7 @@
               <h2 class="panel-title">DB-Backed Scale Signals</h2>
               <p class="panel-sub">The largest resolved or profiled sources, derived from source metadata only.</p>
             </div>
-            <div class="panel-body"><div id="aot-largest-sources"></div></div>
+            <div class="panel-body"><div id="review-largest-sources"></div></div>
           </div>
         </div>
       </div>
@@ -510,7 +535,13 @@
             <h2 class="panel-title">Source Availability By Domain</h2>
             <p class="panel-sub">Loaded, skipped, missing, and failed source counts grouped by domain/subdomain/status.</p>
           </div>
-          <div class="panel-body"><div id="aot-source-availability"></div></div>
+          <div class="panel-body">
+            <div id="review-source-availability"></div>
+            <div style="height:14px"></div>
+            <h3>Module Readiness</h3>
+            <p class="mini">V33-style review modules derived from source metadata and protected panel outputs.</p>
+            <div id="module-readiness"></div>
+          </div>
         </div>
       </div>
       <div class="sub-pane" id="overview-temporal">
@@ -839,6 +870,10 @@
     </section>
   </main>
 
+  <footer class="site-footer">
+    <div class="credit" id="footer-credit">Built by Alexander Owen Taylor</div>
+  </footer>
+
   <script>
     (function () {
       const payload = window.DALYCARE_ATLAS_PAYLOAD || {};
@@ -857,17 +892,21 @@
       const treatmentCards = payload.treatment_cards || {};
       const situationCards = payload.situation_report_cards || [];
       const registryCards = payload.registry_cards || {};
-      const aotOverview = payload.aot_overview || {};
-      const aotRegistry = payload.aot_registry_sections || {};
-      const aotClinical = payload.aot_clinical_sections || {};
-      const aotTreatment = payload.aot_treatment_sections || {};
-      const aotLaboratory = payload.aot_laboratory_sections || {};
-      const aotSituation = payload.aot_situation_sections || {};
-      const aotEhr = payload.aot_ehr_sections || {};
-      const aotTemporal = payload.aot_temporal_coverage || {};
-      const aotSpatial = payload.aot_spatial_coverage || {};
-      const aotDk = payload.aot_dk_choropleth || {};
-      const aotInfrastructure = payload.aot_infrastructure_sections || {};
+      const builderCredit = payload.builder_credit || "Built by Alexander Owen Taylor";
+      const reviewScopeNotes = payload.review_scope_notes || [];
+      const reviewModuleReadiness = payload.review_module_readiness || [];
+      const reviewDomainJumpLinks = payload.review_domain_jump_links || [];
+      const reviewOverview = payload.review_overview || {};
+      const reviewRegistry = payload.review_registry_sections || {};
+      const reviewClinical = payload.review_clinical_sections || {};
+      const reviewTreatment = payload.review_treatment_sections || {};
+      const reviewLaboratory = payload.review_laboratory_sections || {};
+      const reviewSituation = payload.review_situation_sections || {};
+      const reviewEhr = payload.review_ehr_sections || {};
+      const reviewTemporal = payload.review_temporal_coverage || {};
+      const reviewSpatial = payload.review_spatial_coverage || {};
+      const reviewDk = payload.review_dk_choropleth || {};
+      const reviewInfrastructure = payload.review_infrastructure_sections || {};
       const regionState = { code: null };
 
       function text(value) {
@@ -916,9 +955,9 @@
         return text(value).toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
       }
       function renderTemporalCoverage() {
-        const sources = aotTemporal.sources || [];
-        const years = aotTemporal.years || [];
-        const summary = aotTemporal.summary || [];
+        const sources = reviewTemporal.sources || [];
+        const years = reviewTemporal.years || [];
+        const summary = reviewTemporal.summary || [];
         setHtml("temporal-summary", summary.map(row => `
           <article class="card">
             <h3>${escapeHtml(row.domain || "Unassigned")}</h3>
@@ -972,7 +1011,7 @@
           : `rgba(20, 92, 71, ${alpha})`;
       }
       function renderDenmarkMap() {
-        const regions = aotDk.map_regions || [];
+        const regions = reviewDk.map_regions || [];
         if (!regions.length) {
           setHtml("dkMap", `<div class="empty">No Denmark choropleth regions were generated.</div>`);
           setHtml("regionDetail", `<div class="empty">No regional detail available.</div>`);
@@ -1007,8 +1046,8 @@
         return `<span class="coverage-pill ${cssClass(s)}">${escapeHtml(s)}</span>`;
       }
       function renderRegionMatrix() {
-        const coverage = aotSpatial.region_coverage || [];
-        const regions = aotDk.map_regions || [];
+        const coverage = reviewSpatial.region_coverage || [];
+        const regions = reviewDk.map_regions || [];
         if (!coverage.length || !regions.length) {
           setHtml("regionMatrix", `<tr><td>No regional coverage matrix was generated.</td></tr>`);
           return;
@@ -1022,13 +1061,13 @@
         setHtml("regionMatrix", head + body);
       }
       function renderRegionDetail() {
-        const regions = aotDk.regions || [];
+        const regions = reviewDk.regions || [];
         const region = regions.find(row => row.region_code === regionState.code) || regions[0];
         if (!region) {
           setHtml("regionDetail", `<div class="empty">No region selected.</div>`);
           return;
         }
-        const regionCounts = (aotSpatial.region_counts || []).filter(row => row.region_code === region.region_code);
+        const regionCounts = (reviewSpatial.region_counts || []).filter(row => row.region_code === region.region_code);
         setHtml("regionDetail", `
           <article class="card">
             <h3>${escapeHtml(region.region_name)}</h3>
@@ -1076,6 +1115,8 @@
       document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
       document.getElementById("generated-at").textContent = `Generated ${payload.generated_at || "unknown"}`;
+      document.getElementById("builder-credit").textContent = builderCredit;
+      document.getElementById("footer-credit").textContent = builderCredit;
       const errors = numberValue(metric("errors").value);
       const warnings = numberValue(metric("warnings").value);
       const qaBadge = document.getElementById("qa-badge");
@@ -1112,6 +1153,23 @@
         });
       });
 
+      setHtml("scope-notes", reviewScopeNotes.map(row => `
+        <article class="card">
+          <h3>${escapeHtml(row.note || "Note")}</h3>
+          <p class="mini">${escapeHtml(row.detail || "")}</p>
+        </article>
+      `).join("") || `<div class="empty">No scope notes were generated.</div>`);
+      setHtml("domain-jump-links", reviewDomainJumpLinks.map(row => `
+        <article class="card">
+          <div class="mini">${escapeHtml(row.domain || "")}</div>
+          <h3>${escapeHtml(row.label || row.target_tab || "Review section")}</h3>
+          <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(row.target_tab || "overview")}">Open section</button>
+        </article>
+      `).join(""));
+      document.querySelectorAll("[data-jump-tab]").forEach(button => {
+        button.addEventListener("click", () => activateTab(button.dataset.jumpTab || "overview"));
+      });
+
       setHtml("domain-cards", (payload.domain_cards || []).map(card => `
         <article class="card">
           <h3>${escapeHtml(card.domain || "Unassigned")}</h3>
@@ -1124,8 +1182,9 @@
           <p class="mini">${escapeHtml(card.atlas_roles || "No atlas roles recorded")}</p>
         </article>
       `).join("") || `<div class="empty">No source domains were available.</div>`);
-      setHtml("aot-largest-sources", rowsForTable(aotOverview.largest_sources || [], 20));
-      setHtml("aot-source-availability", rowsForTable(aotOverview.source_availability || [], 200));
+      setHtml("review-largest-sources", rowsForTable(reviewOverview.largest_sources || [], 20));
+      setHtml("review-source-availability", rowsForTable(reviewOverview.source_availability || [], 200));
+      setHtml("module-readiness", rowsForTable(reviewModuleReadiness.length ? reviewModuleReadiness : (reviewOverview.module_readiness || []), 100));
       renderTemporalCoverage();
       renderSpatialCoverage();
 
@@ -1142,7 +1201,7 @@
       renderQa("qa-list", qaItems);
 
       function renderSituationReport() {
-        const cards = aotSituation.cards || situationCards || [];
+        const cards = reviewSituation.cards || situationCards || [];
         setHtml("situation-cards", cards.map(row => {
           const status = row.definition_status || "unknown";
           const freshness = row.freshness_status || "unknown";
@@ -1161,9 +1220,9 @@
             <p class="mini">${escapeHtml(row.message || "")}</p>
           </article>`;
         }).join("") || `<div class="empty">No Situation Report metrics were generated.</div>`);
-        setHtml("situation-breakdowns-table", rowsForTable(aotSituation.breakdowns || [], 500));
-        setHtml("situation-freshness-table", rowsForTable(aotSituation.freshness || [], 300));
-        setHtml("situation-definitions-table", rowsForTable(aotSituation.definitions || [], 100));
+        setHtml("situation-breakdowns-table", rowsForTable(reviewSituation.breakdowns || [], 500));
+        setHtml("situation-freshness-table", rowsForTable(reviewSituation.freshness || [], 300));
+        setHtml("situation-definitions-table", rowsForTable(reviewSituation.definitions || [], 100));
       }
       renderSituationReport();
       document.getElementById("qa-severity-filter").addEventListener("change", event => {
@@ -1248,30 +1307,30 @@
           </section>
         `).join("") || `<div class="empty">No registry detail panels were available.</div>`);
       }
-      function renderAotSections() {
-        renderRegistryDetail("registry-damyda", aotRegistry.damyda);
-        renderRegistryDetail("registry-lyfo", aotRegistry.lyfo);
-        renderRegistryDetail("registry-cll", aotRegistry.cll);
-        setHtml("registry-summary-table", rowsForTable(aotRegistry.summary || [], 100));
+      function renderReviewSections() {
+        renderRegistryDetail("registry-damyda", reviewRegistry.damyda);
+        renderRegistryDetail("registry-lyfo", reviewRegistry.lyfo);
+        renderRegistryDetail("registry-cll", reviewRegistry.cll);
+        setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
 
-        setHtml("clinical-diagnoses-cards", sourceTiles(aotClinical.diagnoses, "No diagnosis-like sources were mapped in this run."));
-        setHtml("clinical-admissions-cards", sourceTiles(aotClinical.admissions, "No admission/contact sources were mapped in this run."));
-        setHtml("clinical-imaging-cards", sourceTiles(aotClinical.imaging, "No imaging-like sources were mapped in this run."));
-        setHtml("clinical-vitals-cards", sourceTiles(aotClinical.vitals, "No vitals-like sources were mapped in this run."));
-        setHtml("clinical-notes-cards", sourceTiles(aotClinical.notes, "No notes or epikur sources were mapped in this run."));
-        setHtml("clinical-social-cards", sourceTiles(aotClinical.social_history, "No social-history sources were mapped in this run."));
+        setHtml("clinical-diagnoses-cards", sourceTiles(reviewClinical.diagnoses, "No diagnosis-like sources were mapped in this run."));
+        setHtml("clinical-admissions-cards", sourceTiles(reviewClinical.admissions, "No admission/contact sources were mapped in this run."));
+        setHtml("clinical-imaging-cards", sourceTiles(reviewClinical.imaging, "No imaging-like sources were mapped in this run."));
+        setHtml("clinical-vitals-cards", sourceTiles(reviewClinical.vitals, "No vitals-like sources were mapped in this run."));
+        setHtml("clinical-notes-cards", sourceTiles(reviewClinical.notes, "No notes or epikur sources were mapped in this run."));
+        setHtml("clinical-social-cards", sourceTiles(reviewClinical.social_history, "No social-history sources were mapped in this run."));
 
-        setHtml("treatment-source-cards", sourceTiles(aotTreatment.treatment_sources, "No treatment-like sources were mapped in this run."));
-        setHtml("treatment-medicine-cards", sourceTiles((aotTreatment.treatment_sources || []).filter(row => /medicin|medicine|atc|administered|ordered/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No medicine/ATC-like sources were mapped in this run."));
-        setHtml("treatment-procedure-cards", sourceTiles((aotTreatment.treatment_sources || []).filter(row => /procedure|sks|behandling|treatment|plan/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No procedure/SKS-like sources were mapped in this run."));
+        setHtml("treatment-source-cards", sourceTiles(reviewTreatment.treatment_sources, "No treatment-like sources were mapped in this run."));
+        setHtml("treatment-medicine-cards", sourceTiles((reviewTreatment.treatment_sources || []).filter(row => /medicin|medicine|atc|administered|ordered/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No medicine/ATC-like sources were mapped in this run."));
+        setHtml("treatment-procedure-cards", sourceTiles((reviewTreatment.treatment_sources || []).filter(row => /procedure|sks|behandling|treatment|plan/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No procedure/SKS-like sources were mapped in this run."));
 
-        setHtml("laboratory-source-cards", sourceTiles(aotLaboratory.lab_sources, "No lab-like sources were mapped in this run."));
-        setHtml("ehr-sp-cards", sourceTiles(aotEhr.sp, "No SP sources were mapped in this run."));
-        setHtml("ehr-sds-cards", sourceTiles(aotEhr.sds_lpr, "No SDS/LPR sources were mapped in this run."));
-        setHtml("ehr-views-cards", sourceTiles(aotEhr.daly_views, "No DALY view sources were mapped in this run."));
+        setHtml("laboratory-source-cards", sourceTiles(reviewLaboratory.lab_sources, "No lab-like sources were mapped in this run."));
+        setHtml("ehr-sp-cards", sourceTiles(reviewEhr.sp, "No SP sources were mapped in this run."));
+        setHtml("ehr-sds-cards", sourceTiles(reviewEhr.sds_lpr, "No SDS/LPR sources were mapped in this run."));
+        setHtml("ehr-views-cards", sourceTiles(reviewEhr.daly_views, "No DALY view sources were mapped in this run."));
 
-        const actionRows = aotInfrastructure.action_items || actionItems;
-        const actionSummaryRows = aotInfrastructure.action_summary || actionSummary;
+        const actionRows = reviewInfrastructure.action_items || actionItems;
+        const actionSummaryRows = reviewInfrastructure.action_summary || actionSummary;
         setHtml("action-summary-cards", actionSummaryRows.map(row => `
           <article class="card">
             <div class="mini">${escapeHtml(row.severity || "")}</div>
@@ -1280,11 +1339,11 @@
           </article>
         `).join("") || `<div class="empty">No blocking or actionable run items were generated.</div>`);
         setHtml("run-action-items", rowsForTable(actionRows, 300));
-        setHtml("infrastructure-resolution", rowsForTable(aotInfrastructure.resolution || [], 200));
-        setHtml("infrastructure-skipped", rowsForTable(aotInfrastructure.skipped_sources || [], 200));
-        setHtml("infrastructure-memory-plan", rowsForTable(aotInfrastructure.memory_plan || [], 200));
-        setHtml("infrastructure-db-budget-actions", rowsForTable(aotInfrastructure.db_budget_actions || [], 200));
-        setHtml("infrastructure-db-query-log", rowsForTable(aotInfrastructure.db_query_log || [], 300));
+        setHtml("infrastructure-resolution", rowsForTable(reviewInfrastructure.resolution || [], 200));
+        setHtml("infrastructure-skipped", rowsForTable(reviewInfrastructure.skipped_sources || [], 200));
+        setHtml("infrastructure-memory-plan", rowsForTable(reviewInfrastructure.memory_plan || [], 200));
+        setHtml("infrastructure-db-budget-actions", rowsForTable(reviewInfrastructure.db_budget_actions || [], 200));
+        setHtml("infrastructure-db-query-log", rowsForTable(reviewInfrastructure.db_query_log || [], 300));
       }
 
       fillSelect("catalog-domain-filter", uniqueValues(catalogRows, "domain"));
@@ -1383,7 +1442,7 @@
       }
       renderNpuCards();
       renderCodeDiscoveryCards();
-      renderAotSections();
+      renderReviewSections();
       setHtml("registry-cards", Object.keys(registryCards).map(name => {
         const card = registryCards[name];
         const facets = card.facets || [];

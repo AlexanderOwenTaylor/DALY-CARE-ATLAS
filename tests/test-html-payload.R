@@ -370,28 +370,32 @@ payload <- atlas_payload(
     stringsAsFactors = FALSE
   )
 )
-expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "situation_report_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
-expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_situation_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
-expect_true(all(c("aot_temporal_coverage", "aot_spatial_coverage", "aot_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
+expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "situation_report_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the review-grade view model sections.")
+expect_true(all(c("review_nav", "review_overview", "review_registry_sections", "review_clinical_sections", "review_treatment_sections", "review_laboratory_sections", "review_situation_sections", "review_ehr_sections", "review_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style review view-model sections.")
+expect_true(all(c("review_temporal_coverage", "review_spatial_coverage", "review_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
+expect_true(all(c("builder_credit", "review_scope_notes", "review_data_landscape", "review_module_readiness", "review_domain_jump_links") %in% names(payload)), "Payload should include transparent credit and neutral review metadata.")
+expect_equal(payload$builder_credit, "Built by Alexander Owen Taylor", "Payload should carry transparent generated-atlas credit.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
-expect_true(length(payload$aot_nav) == 9L, "AOT navigation should expose the V33-style top-level domains.")
-expect_true(any(vapply(payload$aot_nav, function(row) identical(row$label, "Situation Report"), logical(1))), "AOT navigation should include Situation Report.")
-expect_true(any(vapply(payload$aot_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "AOT navigation should include Disease Registries.")
-expect_true(length(payload$aot_overview$source_availability) > 0, "AOT overview should derive source availability summaries from source rows.")
-expect_true(length(payload$aot_registry_sections$damyda) > 0, "AOT registry sections should include DaMyDa panels when available.")
-expect_true(length(payload$aot_laboratory_sections$npu$summary) > 0, "AOT laboratory sections should include NPU dictionary summaries.")
-expect_true(length(payload$aot_treatment_sections$code_families) > 0, "AOT treatment sections should include treatment-code family summaries.")
-expect_true(length(payload$aot_situation_sections$cards) > 0, "AOT Situation Report sections should include headline cards.")
-expect_true(length(payload$aot_situation_sections$freshness) > 0, "AOT Situation Report sections should include freshness rows.")
-expect_true(length(payload$aot_infrastructure_sections$catalog) > 0, "AOT infrastructure sections should include catalog rows.")
-expect_true(length(payload$aot_infrastructure_sections$action_items) > 0, "AOT infrastructure sections should include action item rows.")
-expect_true(length(payload$aot_infrastructure_sections$action_summary) > 0, "AOT infrastructure sections should include action item summaries.")
-expect_true(length(payload$aot_infrastructure_sections$db_budget_actions) > 0, "AOT infrastructure sections should include DB budget action rows.")
-expect_true(length(payload$aot_infrastructure_sections$db_query_log) > 0, "AOT infrastructure sections should include DB query log rows.")
-expect_true(length(payload$aot_temporal_coverage$sources) > 0, "AOT temporal coverage should include source coverage rows.")
-expect_true(length(payload$aot_temporal_coverage$years) > 0, "AOT temporal coverage should include year rows.")
-expect_true(length(payload$aot_spatial_coverage$region_coverage) > 0, "AOT spatial coverage should include region coverage rows.")
-expect_true(length(payload$aot_dk_choropleth$map_regions) > 0, "AOT Denmark choropleth should include map regions.")
+expect_true(length(payload$review_nav) == 9L, "review navigation should expose the V33-style top-level domains.")
+expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Situation Report"), logical(1))), "review navigation should include Situation Report.")
+expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "review navigation should include Disease Registries.")
+expect_true(length(payload$review_overview$source_availability) > 0, "review overview should derive source availability summaries from source rows.")
+expect_true(length(payload$review_scope_notes) > 0, "Review scope notes should be populated.")
+expect_true(length(payload$review_domain_jump_links) > 0, "Review jump links should be populated.")
+expect_true(length(payload$review_registry_sections$damyda) > 0, "review registry sections should include DaMyDa panels when available.")
+expect_true(length(payload$review_laboratory_sections$npu$summary) > 0, "review laboratory sections should include NPU dictionary summaries.")
+expect_true(length(payload$review_treatment_sections$code_families) > 0, "review treatment sections should include treatment-code family summaries.")
+expect_true(length(payload$review_situation_sections$cards) > 0, "review Situation Report sections should include headline cards.")
+expect_true(length(payload$review_situation_sections$freshness) > 0, "review Situation Report sections should include freshness rows.")
+expect_true(length(payload$review_infrastructure_sections$catalog) > 0, "review infrastructure sections should include catalog rows.")
+expect_true(length(payload$review_infrastructure_sections$action_items) > 0, "review infrastructure sections should include action item rows.")
+expect_true(length(payload$review_infrastructure_sections$action_summary) > 0, "review infrastructure sections should include action item summaries.")
+expect_true(length(payload$review_infrastructure_sections$db_budget_actions) > 0, "review infrastructure sections should include DB budget action rows.")
+expect_true(length(payload$review_infrastructure_sections$db_query_log) > 0, "review infrastructure sections should include DB query log rows.")
+expect_true(length(payload$review_temporal_coverage$sources) > 0, "review temporal coverage should include source coverage rows.")
+expect_true(length(payload$review_temporal_coverage$years) > 0, "review temporal coverage should include year rows.")
+expect_true(length(payload$review_spatial_coverage$region_coverage) > 0, "review spatial coverage should include region coverage rows.")
+expect_true(length(payload$review_dk_choropleth$map_regions) > 0, "review Denmark choropleth should include map regions.")
 expect_true(length(payload$domain_cards) == 2L, "Domain cards should be derived from source domains.")
 expect_true(length(payload$catalog_rows) == 2L, "Catalog rows should be derived from source rows.")
 expect_true(length(payload$column_profile_rows) == 2L, "Column profile rows should be included in the public payload.")
@@ -407,8 +411,15 @@ expect_true(length(payload$situation_report_cards) > 0, "Situation Report cards 
 expect_true(length(payload$registry_cards) == 1L, "Registry cards should be generated when registry panels exist.")
 expect_true("DaMyDa" %in% names(payload$registry_cards), "Registry cards should be keyed by registry name.")
 expect_true(any(vapply(payload$panel_groups, function(row) identical(row$panel_name, "damyda_clinical_profile"), logical(1))), "Panel groups should include generated panel metadata.")
+payload_key_text <- paste(names(payload), collapse = "\n")
+expect_false(grepl("aot|AOT|Alexander", payload_key_text), "Public payload keys should use neutral names.")
 
 view_json <- atlas_to_json(list(
+  builder_credit = payload$builder_credit,
+  review_scope_notes = payload$review_scope_notes,
+  review_data_landscape = payload$review_data_landscape,
+  review_module_readiness = payload$review_module_readiness,
+  review_domain_jump_links = payload$review_domain_jump_links,
   hero_metrics = payload$hero_metrics,
   domain_cards = payload$domain_cards,
   catalog_rows = payload$catalog_rows,
@@ -420,18 +431,18 @@ view_json <- atlas_to_json(list(
   isotype_cards = payload$isotype_cards,
   treatment_cards = payload$treatment_cards,
   situation_report_cards = payload$situation_report_cards,
-  aot_nav = payload$aot_nav,
-  aot_overview = payload$aot_overview,
-  aot_registry_sections = payload$aot_registry_sections,
-  aot_clinical_sections = payload$aot_clinical_sections,
-  aot_treatment_sections = payload$aot_treatment_sections,
-  aot_laboratory_sections = payload$aot_laboratory_sections,
-  aot_situation_sections = payload$aot_situation_sections,
-  aot_ehr_sections = payload$aot_ehr_sections,
-  aot_temporal_coverage = payload$aot_temporal_coverage,
-  aot_spatial_coverage = payload$aot_spatial_coverage,
-  aot_dk_choropleth = payload$aot_dk_choropleth,
-  aot_infrastructure_sections = payload$aot_infrastructure_sections,
+  review_nav = payload$review_nav,
+  review_overview = payload$review_overview,
+  review_registry_sections = payload$review_registry_sections,
+  review_clinical_sections = payload$review_clinical_sections,
+  review_treatment_sections = payload$review_treatment_sections,
+  review_laboratory_sections = payload$review_laboratory_sections,
+  review_situation_sections = payload$review_situation_sections,
+  review_ehr_sections = payload$review_ehr_sections,
+  review_temporal_coverage = payload$review_temporal_coverage,
+  review_spatial_coverage = payload$review_spatial_coverage,
+  review_dk_choropleth = payload$review_dk_choropleth,
+  review_infrastructure_sections = payload$review_infrastructure_sections,
   registry_cards = payload$registry_cards,
   panel_groups = payload$panel_groups,
   column_profile_rows = payload$column_profile_rows,

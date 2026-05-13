@@ -276,6 +276,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   for (panel_name in names(situation_panels)) {
     panels[[panel_name]] <- situation_panels[[panel_name]]
   }
+  panels$atlas_module_readiness <- atlas_module_readiness(sources, panels)
   empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
   if (isTRUE(empty_live_refused)) {
     message <- empty_live_run_message(source_map, source_resolution)
@@ -589,6 +590,7 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
   rows <- list(
     data.frame(metric = "run_id", value = run_id, stringsAsFactors = FALSE),
     data.frame(metric = "generated_at", value = generated_at, stringsAsFactors = FALSE),
+    data.frame(metric = "builder_credit", value = atlas_builder_credit(), stringsAsFactors = FALSE),
     data.frame(metric = "mapped_sources", value = as.character(nrow(source_map)), stringsAsFactors = FALSE),
     data.frame(metric = "loaded_sources", value = as.character(sum(sources$load_status == "ok", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "failed_sources", value = as.character(sum(sources$load_status == "failed", na.rm = TRUE)), stringsAsFactors = FALSE),
