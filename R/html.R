@@ -205,7 +205,8 @@ aot_situation_sections <- function(panels) {
   breakdowns <- panel_or_empty(panels, "situation_report_breakdowns")
   freshness <- panel_or_empty(panels, "situation_report_freshness")
   definition_cols <- intersect(c(
-    "metric_id", "label", "window_days", "source_table", "date_column",
+    "metric_id", "label", "n_rows", "window_days", "as_of_date", "source_table", "date_column",
+    "definition_basis", "n_cohort", "pct_cohort",
     "definition_status", "freshness_status", "message"
   ), names(summary))
   definitions <- if (length(definition_cols)) summary[, definition_cols, drop = FALSE] else data.frame()

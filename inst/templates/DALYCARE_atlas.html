@@ -1147,14 +1147,15 @@
           const status = row.definition_status || "unknown";
           const freshness = row.freshness_status || "unknown";
           const value = row.n_patients ? formatNumber(row.n_patients) : (status === "ok" ? "0" : "Unavailable");
+          const pctCohort = row.pct_cohort ? `${formatNumber(row.pct_cohort)}%` : "";
           return `<article class="card">
             <div><span class="badge ${cssClass(status)}">${escapeHtml(status)}</span> <span class="badge ${cssClass(freshness)}">${escapeHtml(freshness)}</span></div>
             <h3>${escapeHtml(row.label || row.metric_id || "Metric")}</h3>
             <div class="big">${value}</div>
             <div class="kpi-row">
-              <div class="kpi"><b>${formatNumber(row.n_rows || "")}</b><span class="mini">rows</span></div>
+              <div class="kpi"><b>${escapeHtml(pctCohort)}</b><span class="mini">of cohort</span></div>
               <div class="kpi"><b>${escapeHtml(row.window_days || "current")}</b><span class="mini">window days</span></div>
-              <div class="kpi"><b>${escapeHtml(row.as_of_date || "")}</b><span class="mini">as of</span></div>
+              <div class="kpi"><b>${escapeHtml(row.as_of_date || "")}</b><span class="mini">data as of</span></div>
             </div>
             <p class="mini">${escapeHtml(row.source_table || "No source")} ${row.date_column ? "- " + escapeHtml(row.date_column) : ""}</p>
             <p class="mini">${escapeHtml(row.message || "")}</p>

@@ -97,6 +97,8 @@ expect_true(grepl("dkMap", html, fixed = TRUE), "HTML should include a Denmark c
 expect_true(grepl("regionMatrix", html, fixed = TRUE), "HTML should include a region coverage matrix container.")
 expect_true(grepl("dk-region", html, fixed = TRUE), "HTML should include clickable Denmark region handlers.")
 expect_true(grepl("situation-cards", html, fixed = TRUE), "HTML should include Situation Report card containers.")
+expect_true(grepl("of cohort", html, fixed = TRUE), "Situation Report cards should show patient counts as a share of the cohort.")
+expect_true(grepl("data as of", html, fixed = TRUE), "Situation Report cards should label source dates as data-as-of anchors.")
 payload <- paste(readLines(result$payload, warn = FALSE), collapse = "\n")
 expect_true(grepl("damyda_clinical_profile", payload, fixed = TRUE), "Payload should include the DaMyDa clinical profile panel.")
 expect_true(grepl("lyfo_clinical_profile", payload, fixed = TRUE), "Payload should include the LYFO clinical profile panel.")
@@ -210,6 +212,9 @@ expect_true("1" %in% run_summary$value[run_summary$metric == "min_cell_count"], 
 
 action_items <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_run_action_items.csv"), stringsAsFactors = FALSE)
 expect_true(all(c("severity", "action_id", "recommended_action") %in% names(action_items)), "Run action items should include severity, action id, and operator action columns.")
+
+situation_summary <- utils::read.csv(file.path(result$run_dir, "outputs", "panels", "situation_report_summary.csv"), stringsAsFactors = FALSE)
+expect_true(all(c("definition_basis", "n_cohort", "pct_cohort") %in% names(situation_summary)), "Situation Report summary should include definition and cohort-audit columns.")
 
 log_text <- paste(readLines(file.path(result$run_dir, "logs", "atlas_execution_log.tsv"), warn = FALSE), collapse = "\n")
 expect_true(grepl("Run summary:", log_text, fixed = TRUE), "Execution log should include a run summary line.")
