@@ -171,6 +171,12 @@ Sys.setenv(DALYCARE_ATLAS_DB_STREAM_ROWS = "TRUE", DALYCARE_ATLAS_STREAM_THRESHO
 expect_equal(dbi_profile_strategy(101, "full"), "stream_column", "Large DB tables should use cursor/chunk streaming by default.")
 expect_equal(dbi_profile_strategy(100, "full"), "sql_aggregate", "Small DB tables should keep the exact SQL aggregate path.")
 expect_equal(dbi_profile_strategy(1000000, "schema"), "schema_metadata", "Schema mode should not scan data values.")
+count_env <- new.env(parent = emptyenv())
+assign("A", 1, envir = count_env)
+assign("B", 2.5, envir = count_env)
+count_vec <- env_numeric_counts(count_env)
+expect_equal(unname(count_vec["A"]), 1, "Streamed count extraction should accept integer-like counts.")
+expect_equal(unname(count_vec["B"]), 2.5, "Streamed count extraction should not fail when R stores counts as doubles.")
 
 formerly_skipped_map <- utils::read.delim(file.path(root, "config", "source-map.dalycare.tsv"), stringsAsFactors = FALSE, check.names = FALSE)
 formerly_skipped_names <- c(

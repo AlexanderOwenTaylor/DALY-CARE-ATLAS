@@ -1515,12 +1515,7 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
   } else {
     list(min_date = NA_character_, max_date = NA_character_)
   }
-  category_names <- if (!category_overflow) ls(envir = category_counts, all.names = TRUE) else character()
-  counts <- if (length(category_names)) {
-    stats::setNames(vapply(category_names, function(nm) get(nm, envir = category_counts, inherits = FALSE), integer(1)), category_names)
-  } else {
-    integer()
-  }
+  counts <- if (!category_overflow) env_numeric_counts(category_counts) else numeric()
   n_distinct <- if (is_sensitive) {
     NA_real_
   } else if (category_overflow) {
@@ -1552,12 +1547,7 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
       }
     }
   }
-  year_names <- ls(envir = year_counts, all.names = TRUE)
-  year_count_values <- if (length(year_names)) {
-    stats::setNames(vapply(year_names, function(nm) get(nm, envir = year_counts, inherits = FALSE), integer(1)), year_names)
-  } else {
-    integer()
-  }
+  year_count_values <- env_numeric_counts(year_counts)
   list(
     profile = data.frame(
       table_name = table_name,
@@ -1587,6 +1577,15 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
     top_values = top_values,
     categorical_counts = counts,
     date_year_counts = year_count_values
+  )
+}
+
+env_numeric_counts <- function(env) {
+  names <- ls(envir = env, all.names = TRUE)
+  if (!length(names)) return(numeric())
+  stats::setNames(
+    vapply(names, function(nm) suppressWarnings(as.numeric(get(nm, envir = env, inherits = FALSE))), numeric(1)),
+    names
   )
 }
 
