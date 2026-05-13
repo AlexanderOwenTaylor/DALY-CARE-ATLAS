@@ -463,6 +463,7 @@
   <nav class="nav">
     <div class="nav-inner">
       <button class="tab-button active" data-tab="overview">Overview</button>
+      <button class="tab-button" data-tab="situation">Situation Report</button>
       <button class="tab-button" data-tab="quickstart">Quick Start</button>
       <button class="tab-button" data-tab="registries">Disease Registries</button>
       <button class="tab-button" data-tab="clinical">Clinical Data</button>
@@ -558,6 +559,55 @@
             <p class="panel-sub">Errors and warnings appear before routine checks so the first screen behaves like a review artifact.</p>
           </div>
           <div class="panel-body"><div id="qa-preview" class="qa-list"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-page" id="tab-situation">
+      <div class="sub-nav" aria-label="Situation Report sections">
+        <button class="sub-tab active" data-sub="situation-headlines">Headlines</button>
+        <button class="sub-tab" data-sub="situation-breakdowns">Breakdowns</button>
+        <button class="sub-tab" data-sub="situation-freshness">Freshness</button>
+        <button class="sub-tab" data-sub="situation-definitions">Definitions</button>
+      </div>
+      <div class="sub-pane active" id="situation-headlines">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Data-as-of operational state</p>
+            <h2 class="panel-title">Situation Report</h2>
+            <p class="panel-sub">Current and recent DALY-cohort state counts. Each metric uses its own aggregate source date as the anchor and records definition/freshness status.</p>
+          </div>
+          <div class="panel-body"><div id="situation-cards" class="grid"></div></div>
+        </div>
+      </div>
+      <div class="sub-pane" id="situation-breakdowns">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Suppressed breakdowns</p>
+            <h2 class="panel-title">Metric Breakdowns</h2>
+            <p class="panel-sub">Region, hospital, source, and registry breakdowns are shown only when aggregate counts meet the configured minimum cell count.</p>
+          </div>
+          <div class="panel-body"><div id="situation-breakdowns-table"></div></div>
+        </div>
+      </div>
+      <div class="sub-pane" id="situation-freshness">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Source freshness</p>
+            <h2 class="panel-title">Data Lag And Anchors</h2>
+            <p class="panel-sub">Metric-specific max dates, lag days, and freshness warnings derived from aggregate source metadata.</p>
+          </div>
+          <div class="panel-body"><div id="situation-freshness-table"></div></div>
+        </div>
+      </div>
+      <div class="sub-pane" id="situation-definitions">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Audit definitions</p>
+            <h2 class="panel-title">Metric Definitions</h2>
+            <p class="panel-sub">Source table, date column, definition status, and operator-facing message for each Situation Report metric.</p>
+          </div>
+          <div class="panel-body"><div id="situation-definitions-table"></div></div>
         </div>
       </div>
     </section>
@@ -805,12 +855,14 @@
       const detectiveCards = payload.detective_cards || {};
       const isotypeCards = payload.isotype_cards || {};
       const treatmentCards = payload.treatment_cards || {};
+      const situationCards = payload.situation_report_cards || [];
       const registryCards = payload.registry_cards || {};
       const aotOverview = payload.aot_overview || {};
       const aotRegistry = payload.aot_registry_sections || {};
       const aotClinical = payload.aot_clinical_sections || {};
       const aotTreatment = payload.aot_treatment_sections || {};
       const aotLaboratory = payload.aot_laboratory_sections || {};
+      const aotSituation = payload.aot_situation_sections || {};
       const aotEhr = payload.aot_ehr_sections || {};
       const aotTemporal = payload.aot_temporal_coverage || {};
       const aotSpatial = payload.aot_spatial_coverage || {};
@@ -1088,6 +1140,31 @@
       }
       renderQa("qa-preview", actionItems.length ? actionItems : qaItems, 8);
       renderQa("qa-list", qaItems);
+
+      function renderSituationReport() {
+        const cards = aotSituation.cards || situationCards || [];
+        setHtml("situation-cards", cards.map(row => {
+          const status = row.definition_status || "unknown";
+          const freshness = row.freshness_status || "unknown";
+          const value = row.n_patients ? formatNumber(row.n_patients) : (status === "ok" ? "0" : "Unavailable");
+          return `<article class="card">
+            <div><span class="badge ${cssClass(status)}">${escapeHtml(status)}</span> <span class="badge ${cssClass(freshness)}">${escapeHtml(freshness)}</span></div>
+            <h3>${escapeHtml(row.label || row.metric_id || "Metric")}</h3>
+            <div class="big">${value}</div>
+            <div class="kpi-row">
+              <div class="kpi"><b>${formatNumber(row.n_rows || "")}</b><span class="mini">rows</span></div>
+              <div class="kpi"><b>${escapeHtml(row.window_days || "current")}</b><span class="mini">window days</span></div>
+              <div class="kpi"><b>${escapeHtml(row.as_of_date || "")}</b><span class="mini">as of</span></div>
+            </div>
+            <p class="mini">${escapeHtml(row.source_table || "No source")} ${row.date_column ? "- " + escapeHtml(row.date_column) : ""}</p>
+            <p class="mini">${escapeHtml(row.message || "")}</p>
+          </article>`;
+        }).join("") || `<div class="empty">No Situation Report metrics were generated.</div>`);
+        setHtml("situation-breakdowns-table", rowsForTable(aotSituation.breakdowns || [], 500));
+        setHtml("situation-freshness-table", rowsForTable(aotSituation.freshness || [], 300));
+        setHtml("situation-definitions-table", rowsForTable(aotSituation.definitions || [], 100));
+      }
+      renderSituationReport();
       document.getElementById("qa-severity-filter").addEventListener("change", event => {
         const wanted = event.target.value;
         renderQa("qa-list", wanted ? qaItems.filter(item => item.severity === wanted) : qaItems);

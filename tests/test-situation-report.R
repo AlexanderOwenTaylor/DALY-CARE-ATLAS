@@ -1,0 +1,109 @@
+root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
+Sys.setenv(DALYCARE_MIN_CELL_COUNT = "1")
+source(file.path(root, "tests", "helper.R"))
+source_test_runtime(root)
+
+icu <- data.frame(
+  patientid = c("p1", "p2", "p3", "p4"),
+  icu_stay_start = as.Date(c("2026-04-20", "2026-05-01", "2026-04-01", "2026-05-11")),
+  icu_stay_end = as.Date(c(NA, "2026-05-10", "2026-04-03", NA)),
+  stringsAsFactors = FALSE
+)
+current_ita <- situation_current_interval_from_data(
+  icu,
+  metric_id = "currently_ita",
+  label = "Currently in ITA/ICU",
+  start_col = "icu_stay_start",
+  end_col = "icu_stay_end",
+  min_cell_count = 1L
+)
+expect_equal(current_ita$n_patients[[1]], 2L, "Current interval metrics should count patients active at the source-specific as-of date.")
+expect_equal(current_ita$as_of_date[[1]], "2026-05-11", "Current interval metrics should anchor to the source max date.")
+
+diagnoses <- data.frame(
+  patientid = c("p1", "p2", "p2", "p3", "p4"),
+  date_diagnosis = as.Date(c("2026-04-01", "2026-04-15", "2026-05-10", "2026-05-11", "2026-05-12")),
+  stringsAsFactors = FALSE
+)
+recent_dx <- situation_recent_from_data(
+  diagnoses,
+  metric_id = "diagnosed_30d",
+  label = "Diagnosed in past 30 days",
+  date_col = "date_diagnosis",
+  min_cell_count = 1L
+)
+expect_equal(recent_dx$n_patients[[1]], 3L, "Recent metrics should count distinct patients inside the data-as-of window.")
+expect_equal(recent_dx$n_rows[[1]], 4L, "Recent metrics should retain aggregate row counts separately from distinct patients.")
+expect_equal(recent_dx$as_of_date[[1]], "2026-05-12", "Recent metrics should anchor to the source max date.")
+
+suppressed_dx <- situation_recent_from_data(
+  diagnoses,
+  metric_id = "diagnosed_30d",
+  label = "Diagnosed in past 30 days",
+  date_col = "date_diagnosis",
+  min_cell_count = 10L
+)
+expect_equal(suppressed_dx$definition_status[[1]], "suppressed", "Situation metrics should suppress small public counts.")
+expect_true(is.na(suppressed_dx$n_patients[[1]]), "Suppressed Situation metrics should not expose patient counts.")
+
+fallback <- build_situation_report_panels(
+  sources = data.frame(table_name = "example", stringsAsFactors = FALSE),
+  column_profiles = data.frame(
+    table_name = "example",
+    column_name = "event_date",
+    profile_kind = "date",
+    max_date = "2026-05-12",
+    stringsAsFactors = FALSE
+  ),
+  min_cell_count = 1L
+)
+expect_true(all(c("situation_report_summary", "situation_report_breakdowns", "situation_report_freshness") %in% names(fallback)), "Situation builder should return all panel outputs.")
+expect_true(any(fallback$situation_report_summary$definition_status == "unavailable"), "Missing live DB access should produce unavailable metric rows rather than failing.")
+expect_true(nrow(fallback$situation_report_freshness) > 0, "Fallback freshness should reuse aggregate column-profile date ranges when available.")
+
+fake_adapter <- list(
+  situation_report = function(...) {
+    list(
+      situation_report_summary = data.frame(
+        metric_id = "currently_admitted",
+        label = "Currently admitted",
+        n_patients = 12,
+        n_rows = 14,
+        window_days = NA_integer_,
+        as_of_date = "2026-05-12",
+        source_table = "SP_ADT_haendelser",
+        date_column = "event_time",
+        definition_status = "ok",
+        freshness_status = "current",
+        message = "DB aggregate profiling succeeded.",
+        stringsAsFactors = FALSE
+      ),
+      situation_report_breakdowns = data.frame(
+        metric_id = "currently_admitted",
+        label = "Currently admitted",
+        breakdown_type = "source",
+        breakdown_value = "SP_ADT_haendelser",
+        n_patients = 12,
+        n_rows = 14,
+        pct_patients = 100,
+        source_table = "SP_ADT_haendelser",
+        as_of_date = "2026-05-12",
+        stringsAsFactors = FALSE
+      ),
+      situation_report_freshness = data.frame(
+        metric_id = "currently_admitted",
+        source_table = "SP_ADT_haendelser",
+        date_column = "event_time",
+        max_date = "2026-05-12",
+        as_of_date = "2026-05-12",
+        lag_days = 0,
+        freshness_status = "current",
+        message = "Source date matches the freshest situation-report source.",
+        stringsAsFactors = FALSE
+      )
+    )
+  }
+)
+fake <- build_situation_report_panels(db_adapter = fake_adapter, min_cell_count = 1L)
+expect_equal(fake$situation_report_summary$n_patients[[1]], 12, "Custom DB adapters should be able to supply aggregate Situation Report panels.")
+expect_equal(fake$situation_report_breakdowns$breakdown_type[[1]], "source", "Situation Report breakdown panels should be preserved.")

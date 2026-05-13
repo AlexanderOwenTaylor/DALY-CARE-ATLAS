@@ -51,6 +51,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     detective_cards = detective_cards(panels),
     isotype_cards = isotype_cards(panels),
     treatment_cards = treatment_cards(panels),
+    situation_report_cards = situation_report_cards(panels),
     aot_nav = aot_nav(),
     aot_overview = aot_overview(
       sources = sources,
@@ -64,6 +65,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     aot_clinical_sections = aot_clinical_sections(sources),
     aot_treatment_sections = aot_treatment_sections(sources, panels),
     aot_laboratory_sections = aot_laboratory_sections(sources, panels),
+    aot_situation_sections = aot_situation_sections(panels),
     aot_ehr_sections = aot_ehr_sections(sources),
     aot_temporal_coverage = aot_temporal_coverage(panels),
     aot_spatial_coverage = aot_spatial_coverage(panels),
@@ -103,6 +105,11 @@ aot_nav <- function() {
       id = "overview",
       label = "Overview",
       sub_tabs = c("Run metrics", "Coverage", "Temporal coverage", "Regional coverage", "Priority QA")
+    ),
+    list(
+      id = "situation",
+      label = "Situation Report",
+      sub_tabs = c("Headlines", "Breakdowns", "Freshness", "Definitions")
     ),
     list(
       id = "quickstart",
@@ -190,6 +197,23 @@ aot_treatment_sections <- function(sources, panels) {
       c("behandling", "treatment", "medicin", "medicine", "atc", "procedure", "sks", "plan", "ordered", "administered")
     ), max_rows = 150),
     panels = public_rows(aot_panel_index(panels, c("mm_treatment", "treatment")), max_rows = 50)
+  )
+}
+
+aot_situation_sections <- function(panels) {
+  summary <- panel_or_empty(panels, "situation_report_summary")
+  breakdowns <- panel_or_empty(panels, "situation_report_breakdowns")
+  freshness <- panel_or_empty(panels, "situation_report_freshness")
+  definition_cols <- intersect(c(
+    "metric_id", "label", "window_days", "source_table", "date_column",
+    "definition_status", "freshness_status", "message"
+  ), names(summary))
+  definitions <- if (length(definition_cols)) summary[, definition_cols, drop = FALSE] else data.frame()
+  list(
+    cards = public_rows(summary, max_rows = 100),
+    breakdowns = public_rows(breakdowns, max_rows = 1000),
+    freshness = public_rows(freshness, max_rows = 500),
+    definitions = public_rows(definitions, max_rows = 100)
   )
 }
 
@@ -631,6 +655,10 @@ treatment_cards <- function(panels) {
   )
 }
 
+situation_report_cards <- function(panels) {
+  public_rows(panel_or_empty(panels, "situation_report_summary"), max_rows = 100)
+}
+
 registry_panel_for <- function(panels, registry) {
   panel_name <- switch(
     registry,
@@ -711,6 +739,9 @@ panel_title <- function(name) {
     atlas_spatial_region_counts = "Spatial Region Counts",
     atlas_spatial_region_coverage = "Spatial Region Coverage",
     atlas_dk_choropleth_regions = "Denmark Choropleth Regions",
+    situation_report_summary = "Situation Report Summary",
+    situation_report_breakdowns = "Situation Report Breakdowns",
+    situation_report_freshness = "Situation Report Freshness",
     source_availability_drift = "Source Availability Drift"
   )
   named_value(titles, name, title_from_name(name))
@@ -744,6 +775,9 @@ panel_group <- function(name) {
     atlas_spatial_region_counts = "Coverage Figures",
     atlas_spatial_region_coverage = "Coverage Figures",
     atlas_dk_choropleth_regions = "Coverage Figures",
+    situation_report_summary = "Situation Report",
+    situation_report_breakdowns = "Situation Report",
+    situation_report_freshness = "Situation Report",
     source_availability_drift = "Run QA"
   )
   named_value(groups, name, "Atlas Panels")

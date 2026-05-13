@@ -134,6 +134,43 @@ panels <- list(
     max_date = "2021-06-02",
     stringsAsFactors = FALSE
   ),
+  situation_report_summary = data.frame(
+    metric_id = "diagnosed_30d",
+    label = "Diagnosed in past 30 days",
+    n_patients = 7,
+    n_rows = 8,
+    window_days = 30,
+    as_of_date = "2026-05-01",
+    source_table = "t_dalycare_diagnoses",
+    date_column = "date_diagnosis",
+    definition_status = "ok",
+    freshness_status = "current",
+    message = "Aggregate DB-side count.",
+    stringsAsFactors = FALSE
+  ),
+  situation_report_breakdowns = data.frame(
+    metric_id = "diagnosed_30d",
+    label = "Diagnosed in past 30 days",
+    breakdown_type = "source",
+    breakdown_value = "t_dalycare_diagnoses",
+    n_patients = 7,
+    n_rows = 8,
+    pct_patients = 100,
+    source_table = "t_dalycare_diagnoses",
+    as_of_date = "2026-05-01",
+    stringsAsFactors = FALSE
+  ),
+  situation_report_freshness = data.frame(
+    metric_id = "diagnosed_30d",
+    source_table = "t_dalycare_diagnoses",
+    date_column = "date_diagnosis",
+    max_date = "2026-05-01",
+    as_of_date = "2026-05-01",
+    lag_days = 0,
+    freshness_status = "current",
+    message = "Source date matches the freshest situation-report source.",
+    stringsAsFactors = FALSE
+  ),
   atlas_temporal_coverage = data.frame(
     table_name = c("example_labs", "RKKP_DaMyDa"),
     domain = c("SP", "RKKP"),
@@ -330,16 +367,19 @@ payload <- atlas_payload(
     stringsAsFactors = FALSE
   )
 )
-expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
-expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
+expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "situation_report_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the AOT-grade view model sections.")
+expect_true(all(c("aot_nav", "aot_overview", "aot_registry_sections", "aot_clinical_sections", "aot_treatment_sections", "aot_laboratory_sections", "aot_situation_sections", "aot_ehr_sections", "aot_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style AOT view-model sections.")
 expect_true(all(c("aot_temporal_coverage", "aot_spatial_coverage", "aot_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
-expect_true(length(payload$aot_nav) == 8L, "AOT navigation should expose the V33-style top-level domains.")
+expect_true(length(payload$aot_nav) == 9L, "AOT navigation should expose the V33-style top-level domains.")
+expect_true(any(vapply(payload$aot_nav, function(row) identical(row$label, "Situation Report"), logical(1))), "AOT navigation should include Situation Report.")
 expect_true(any(vapply(payload$aot_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "AOT navigation should include Disease Registries.")
 expect_true(length(payload$aot_overview$source_availability) > 0, "AOT overview should derive source availability summaries from source rows.")
 expect_true(length(payload$aot_registry_sections$damyda) > 0, "AOT registry sections should include DaMyDa panels when available.")
 expect_true(length(payload$aot_laboratory_sections$npu$summary) > 0, "AOT laboratory sections should include NPU dictionary summaries.")
 expect_true(length(payload$aot_treatment_sections$code_families) > 0, "AOT treatment sections should include treatment-code family summaries.")
+expect_true(length(payload$aot_situation_sections$cards) > 0, "AOT Situation Report sections should include headline cards.")
+expect_true(length(payload$aot_situation_sections$freshness) > 0, "AOT Situation Report sections should include freshness rows.")
 expect_true(length(payload$aot_infrastructure_sections$catalog) > 0, "AOT infrastructure sections should include catalog rows.")
 expect_true(length(payload$aot_infrastructure_sections$action_items) > 0, "AOT infrastructure sections should include action item rows.")
 expect_true(length(payload$aot_infrastructure_sections$action_summary) > 0, "AOT infrastructure sections should include action item summaries.")
@@ -360,6 +400,7 @@ expect_true(length(payload$npu_cards$observed_vectors) > 0, "NPU cards should in
 expect_true(length(payload$detective_cards$observed_codes) > 0, "NPU detective cards should include observed code inventory.")
 expect_true(length(payload$isotype_cards$code_usage) > 0, "Isotype cards should include observed code usage.")
 expect_true(length(payload$treatment_cards$code_families) > 0, "Treatment cards should include MM treatment code counts.")
+expect_true(length(payload$situation_report_cards) > 0, "Situation Report cards should include headline metrics.")
 expect_true(length(payload$registry_cards) == 1L, "Registry cards should be generated when registry panels exist.")
 expect_true("DaMyDa" %in% names(payload$registry_cards), "Registry cards should be keyed by registry name.")
 expect_true(any(vapply(payload$panel_groups, function(row) identical(row$panel_name, "damyda_clinical_profile"), logical(1))), "Panel groups should include generated panel metadata.")
@@ -375,12 +416,14 @@ view_json <- atlas_to_json(list(
   detective_cards = payload$detective_cards,
   isotype_cards = payload$isotype_cards,
   treatment_cards = payload$treatment_cards,
+  situation_report_cards = payload$situation_report_cards,
   aot_nav = payload$aot_nav,
   aot_overview = payload$aot_overview,
   aot_registry_sections = payload$aot_registry_sections,
   aot_clinical_sections = payload$aot_clinical_sections,
   aot_treatment_sections = payload$aot_treatment_sections,
   aot_laboratory_sections = payload$aot_laboratory_sections,
+  aot_situation_sections = payload$aot_situation_sections,
   aot_ehr_sections = payload$aot_ehr_sections,
   aot_temporal_coverage = payload$aot_temporal_coverage,
   aot_spatial_coverage = payload$aot_spatial_coverage,

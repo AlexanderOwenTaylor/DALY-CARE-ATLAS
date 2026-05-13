@@ -122,6 +122,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     atlas_spatial_region_counts = empty_spatial_region_counts(),
     atlas_spatial_region_coverage = empty_spatial_region_coverage(),
     atlas_dk_choropleth_regions = empty_dk_choropleth_regions(),
+    situation_report_summary = empty_situation_report_summary(),
+    situation_report_breakdowns = empty_situation_report_breakdowns(),
+    situation_report_freshness = empty_situation_report_freshness(),
     source_availability_drift = data.frame(stringsAsFactors = FALSE)
   )
   stream_paths <- list(
@@ -263,6 +266,16 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     min_cell_count = atlas_min_cell_count()
   )
   panels$source_availability_drift <- source_availability_panel(sources)
+  situation_panels <- build_situation_report_panels(
+    source_resolution = source_resolution,
+    db_adapter = db_adapter,
+    sources = sources,
+    column_profiles = column_profiles,
+    min_cell_count = atlas_min_cell_count()
+  )
+  for (panel_name in names(situation_panels)) {
+    panels[[panel_name]] <- situation_panels[[panel_name]]
+  }
   empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
   if (isTRUE(empty_live_refused)) {
     message <- empty_live_run_message(source_map, source_resolution)
