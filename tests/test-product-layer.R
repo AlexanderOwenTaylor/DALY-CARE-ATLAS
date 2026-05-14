@@ -67,6 +67,10 @@ required_panels <- c(
   "clinical_microbiology", "treatment", "laboratory_npu", "clinical_pathology", "clinical_biobank"
 )
 expect_true(all(required_panels %in% domain_panels$panel_id), "All required domain panels should be present.")
+vitals_panel <- domain_panels[domain_panels$panel_id == "clinical_vitals", , drop = FALSE]
+social_panel <- domain_panels[domain_panels$panel_id == "clinical_social_history", , drop = FALSE]
+expect_true(all(c(vitals_panel$count_scope, vitals_panel$denominator_scope, vitals_panel$profile_scope) == "cartography_scan"), "Vitals product panel should carry cartography-scan panel-level scope.")
+expect_true(all(c(social_panel$count_scope, social_panel$denominator_scope, social_panel$profile_scope) == "cartography_scan"), "Social History product panel should carry cartography-scan panel-level scope.")
 for (panel_id in required_panels) {
   panel <- domain_panels[domain_panels$panel_id == panel_id, , drop = FALSE]
   expect_true(nzchar(panel$clinical_purpose[[1]]), paste("Panel should have clinical purpose:", panel_id))
@@ -87,6 +91,12 @@ expect_true(grepl("Not asked", domain_panels$caveats[domain_panels$panel_id == "
 
 damyda_sections <- distributions$display_value[distributions$panel_id == "reg_damyda" & distributions$distribution_type == "clinical_section"]
 expect_true(all(c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Raw fields") %in% damyda_sections), "DaMyDa should expose required structured blocks.")
+damyda_raw <- raw_fields[raw_fields$panel_id == "reg_damyda", , drop = FALSE]
+for (column in c("Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl", "Reg_ProcentKlonalePlasmaceller", "Stadie", "Reg_PerformanceStatus", "Reg_Knogleforandringer", "IND_Relaps", "Cyto_FishUdfoert")) {
+  if (any(semantic$dictionary$source_name == "RKKP_DaMyDa" & semantic$dictionary$raw_column == column)) {
+    expect_true(any(damyda_raw$raw_column == column), paste("DaMyDa raw fields should include evidenced column:", column))
+  }
+}
 
 imaging_sections <- distributions$display_value[distributions$panel_id == "clinical_imaging" & distributions$distribution_type == "clinical_section"]
 expect_true(all(c("Nationwide procedure-code imaging", "Registry modality fields", "EHR-native imaging metadata/report text") %in% imaging_sections), "Imaging panel should preserve the three-layer framing.")

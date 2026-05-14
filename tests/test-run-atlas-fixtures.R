@@ -111,12 +111,30 @@ expect_true(grepl("clinical-variable-cards", html, fixed = TRUE), "HTML should i
 expect_true(grepl("renderDomainPanel", html, fixed = TRUE), "HTML should include the product-layer domain panel renderer.")
 expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML should include the dedicated Vitals renderer.")
 expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "HTML should include the dedicated Social History renderer.")
+expect_true(grepl("function renderDaMyDaPanel()", html, fixed = TRUE), "HTML should include the dedicated DaMyDa renderer.")
+expect_false(grepl("renderRegistryDetail(\"registry-damyda\", \"reg_damyda\")", html, fixed = TRUE), "DaMyDa should not be rendered through the generic registry detail renderer.")
+expect_true(grepl("renderRegistryDetail(\"registry-lyfo\", \"reg_lyfo\")", html, fixed = TRUE), "LYFO rendering should remain on the current generic registry detail path.")
+expect_true(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, fixed = TRUE), "CLL rendering should remain on the current generic registry detail path.")
 expect_false(grepl("setHtml(\"clinical-vitals-cards\", renderDomainPanel(\"clinical_vitals\"))", html, fixed = TRUE), "Vitals should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("setHtml(\"clinical-social-cards\", renderDomainPanel(\"clinical_social_history\"))", html, fixed = TRUE), "Social History should not be rendered through the generic domain panel renderer.")
+expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-clinical-vitals\"", html, fixed = TRUE), "Vitals should not show a second open generic raw-field block.")
+expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-clinical-social\"", html, fixed = TRUE), "Social History should not show a second open generic raw-field block.")
+expect_true(grepl("Additional semantic hits", html, fixed = TRUE), "Dedicated Vitals/Social panels should keep generic semantic hits collapsed.")
 expect_false(grepl("Vitals Sources", html, fixed = TRUE), "Vitals heading should no longer say Vitals Sources.")
 expect_false(grepl("Social History Sources", html, fixed = TRUE), "Social History heading should no longer say Social History Sources.")
 expect_true(grepl("Vital signs and anthropometrics", html, fixed = TRUE), "Vitals heading should use the clinician-facing title.")
 expect_true(grepl("Social history: smoking and alcohol", html, fixed = TRUE), "Social History heading should use the clinician-facing title.")
+expect_true(grepl("DaMyDa: myeloma registry review", html, fixed = TRUE), "DaMyDa heading should use the clinician-facing registry title.")
+expect_true(grepl("date span not reliable in current aggregate output", html, fixed = TRUE), "DaMyDa renderer should include the date-quality fallback.")
+for (needle in c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Cytogenetics/FISH availability", "Cytogenetics/FISH result fields", "Raw names / data lineage", "Use cases and caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should contain section:", needle))
+}
+for (needle in c("RKKP_DaMyDa", "registry entries", "variables", "not available in current aggregate output", "Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl", "Reg_ProcentKlonalePlasmaceller", "Stadie", "Reg_PerformanceStatus", "Reg_Knogleforandringer", "IND_Relaps", "Cyto_FishUdfoert")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should visibly contain:", needle))
+}
+for (needle in c("n_available", "pct_available", "mean", "median", "p25", "p75", "unit", "source_column")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa numeric renderer should use field:", needle))
+}
 vaegt <- paste0("V", intToUtf8(0x00E6), "gt")
 hoejde <- paste0("H", intToUtf8(0x00F8), "jde")
 for (needle in c("SP_VitaleVaerdier", "patientid", "displayname", "numericvalue", vaegt, hoejde)) {
@@ -357,10 +375,14 @@ expect_true(any(panel_distributions$panel_id == "clinical_social_history" & pane
 expect_true(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "drikker" & panel_distributions$display_value == "Alcohol use yes"), "Social History panel distributions should include alcohol value maps.")
 expect_false(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "ryger" & panel_distributions$raw_value == "Ja" & panel_distributions$display_value == "Alcohol use yes"), "Smoking Ja should not be grouped as alcohol use.")
 expect_false(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "drikker" & panel_distributions$raw_value == "Ja" & panel_distributions$display_value == "Current smoker"), "Alcohol Ja should not be grouped as current smoker.")
+vitals_panel <- domain_panels[domain_panels$panel_id == "clinical_vitals", , drop = FALSE]
+social_panel <- domain_panels[domain_panels$panel_id == "clinical_social_history", , drop = FALSE]
+expect_true(all(c(vitals_panel$count_scope, vitals_panel$denominator_scope, vitals_panel$profile_scope) == "cartography_scan"), "Vitals panel-level scopes should reflect cartography-scan evidence.")
+expect_true(all(c(social_panel$count_scope, social_panel$denominator_scope, social_panel$profile_scope) == "cartography_scan"), "Social History panel-level scopes should reflect cartography-scan evidence.")
 expect_equal(sum(clinical_concepts$clinical_concept_id == "bmi"), 1L, "Clinical concept output should contain only one BMI row.")
 expect_true(grepl("derived from height and weight", clinical_concepts$purpose[clinical_concepts$clinical_concept_id == "bmi"], ignore.case = TRUE), "BMI concept should be described as derived from height and weight.")
 if (any(clinical_concepts$clinical_concept_id %in% c("weight", "height") & !is.na(clinical_concepts$n_patients))) {
-  expect_true(grepl("patientCountForConcept", html, fixed = TRUE), "Vitals renderer should use concept patient counts when available.")
+  expect_true(grepl("patientCountForConcept(conceptId, [\"SP_VitaleVaerdier\"])", html, fixed = TRUE), "Vitals renderer should use source-specific SP_VitaleVaerdier patient counts when available.")
 }
 expect_true(any(domain_panels$panel_id == "clinical_vitals" & grepl("Repeated measures", domain_panels$caveats, fixed = TRUE)), "Vitals product panel should carry repeated-measures caveat.")
 expect_true(any(panel_distributions$panel_id == "clinical_imaging" & panel_distributions$display_value == "EHR-native imaging metadata/report text"), "Imaging panel should preserve EHR-native imaging layer.")

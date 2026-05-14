@@ -731,14 +731,22 @@ product_domain_panels <- function(raw_fields, kpis, distributions, concepts) {
       caveats = specs$caveats[[i]],
       missing_upstream_file = missing,
       parity_status = status,
-      count_scope = product_merge_scopes(c(panel_kpi$count_scope, panel_dist$count_scope, panel_raw$count_scope)),
-      denominator_scope = product_merge_scopes(c(panel_kpi$denominator_scope, panel_dist$denominator_scope, panel_raw$denominator_scope)),
-      profile_scope = product_merge_scopes(c(panel_kpi$profile_scope, panel_dist$profile_scope, panel_raw$profile_scope)),
+      count_scope = product_panel_scope(panel_id, c(panel_kpi$count_scope, panel_dist$count_scope, panel_raw$count_scope)),
+      denominator_scope = product_panel_scope(panel_id, c(panel_kpi$denominator_scope, panel_dist$denominator_scope, panel_raw$denominator_scope)),
+      profile_scope = product_panel_scope(panel_id, c(panel_kpi$profile_scope, panel_dist$profile_scope, panel_raw$profile_scope)),
       sort_order = specs$sort_order[[i]],
       stringsAsFactors = FALSE
     )
   })
   align_product_frame(bind_rows_base(rows), names(empty_domain_panels()))
+}
+
+product_panel_scope <- function(panel_id, scopes) {
+  scopes <- unique_nonblank(scopes)
+  if (panel_id %in% c("clinical_vitals", "clinical_social_history") && "cartography_scan" %in% scopes) {
+    return("cartography_scan")
+  }
+  product_merge_scopes(scopes)
 }
 
 product_panel_parity <- function(domain_panels, kpis, distributions, raw_fields) {

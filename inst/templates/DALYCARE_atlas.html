@@ -907,7 +907,7 @@
           <div class="panel-body"><div id="registry-cards" class="grid"></div></div>
         </div>
       </div>
-      <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa Detail</h2><p class="panel-sub">Facets and numeric registry panels from protected CSV outputs.</p></div><div class="panel-body"><div id="registry-damyda"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-damyda"></div></div></div></div></div>
+      <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa: myeloma registry review</h2><p class="panel-sub">Clinician-facing review of aggregate DaMyDa source shape, baseline markers, staging, treatment, response, bone disease, and cytogenetics/FISH fields.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
       <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO Detail</h2><p class="panel-sub">LYFO registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-lyfo"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-lyfo"></div></div></div></div></div>
       <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL Detail</h2><p class="panel-sub">CLL registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-cll"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-cll"></div></div></div></div></div>
       <div class="sub-pane" id="reg-inventory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Registry Inventory</h2><p class="panel-sub">Clinical registry summary rows and related panels.</p></div><div class="panel-body"><div id="registry-summary-table"></div></div></div></div>
@@ -925,9 +925,9 @@
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging Sources</h2><p class="panel-sub">SP billed imaging and radiology-like sources.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-imaging"></div></div></div></div></div>
-      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-vitals"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-social"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
     </section>
 
     <section class="tab-page" id="tab-treatment">
@@ -1324,7 +1324,8 @@
         });
       }
       function setHtml(id, html) {
-        document.getElementById(id).innerHTML = html;
+        const node = document.getElementById(id);
+        if (node) node.innerHTML = html;
       }
       function severityBadge(severity) {
         const s = text(severity || "ok").toLowerCase();
@@ -1373,9 +1374,15 @@
       function conceptById(id) {
         return clinicalConceptRows.find(row => row.clinical_concept_id === id) || null;
       }
-      function patientCountForConcept(id) {
+      function patientCountForConcept(id, sourceVariants) {
         const concept = conceptById(id);
-        return concept && text(concept.n_patients).trim() ? formatNumber(concept.n_patients) : "not available";
+        if (!concept || !text(concept.n_patients).trim()) return "not available";
+        if (Array.isArray(sourceVariants) && sourceVariants.length) {
+          const sourceText = normalizeClinicalKey([concept.best_source, concept.primary_sources, concept.evidence_files].join(" "));
+          const ok = sourceVariants.some(source => sourceText.includes(normalizeClinicalKey(source)));
+          if (!ok) return "not available";
+        }
+        return formatNumber(concept.n_patients);
       }
       function scanScopeNote(rows) {
         const scopes = Array.from(new Set((rows || []).flatMap(row => [row.count_scope, row.denominator_scope, row.profile_scope]).filter(Boolean)));
@@ -1532,7 +1539,7 @@
           <p class="mini">Descriptor in <code>displayname</code>: <strong>${escapeHtml(descriptorKeys[0])}</strong></p>
           <div class="stat-grid">
             <div class="stat-cell"><span class="mini">Rows</span><b>${rowCountFromRows(rows)}</b></div>
-            <div class="stat-cell"><span class="mini">Patients</span><b>${patientCountForConcept(conceptId)}</b></div>
+            <div class="stat-cell"><span class="mini">Patients</span><b>${patientCountForConcept(conceptId, ["SP_VitaleVaerdier"])}</b></div>
             <div class="stat-cell"><span class="mini">Unit</span><b>${escapeHtml(unit || "not available")}</b></div>
             <div class="stat-cell"><span class="mini">p05</span><b>${escapeHtml(statisticFromRows(rows, "p05_numeric"))}</b></div>
             <div class="stat-cell"><span class="mini">Median</span><b>${escapeHtml(statisticFromRows(rows, "median_numeric"))}</b></div>
@@ -1681,6 +1688,163 @@
               { label: "Open Smoking Status concept", query: "Smoking status ryger" },
               { label: "Open Alcohol Use concept", query: "Alcohol use drikker" }
             ])}
+          </div>
+        </div>`;
+      }
+      function panelRows(name) {
+        const rows = panels[name];
+        return Array.isArray(rows) ? rows : [];
+      }
+      function hasDisplayValue(value) {
+        return text(value).trim() !== "" && !/^NA$/i.test(text(value).trim());
+      }
+      function metricOrUnavailable(value, suffix) {
+        if (!hasDisplayValue(value)) return "not available";
+        return `${formatNumber(value)}${suffix ? " " + suffix : ""}`;
+      }
+      function damydaSummaryRow() {
+        return panelRows("registry_clinical_summary").find(row =>
+          /damyda/i.test([row.registry, row.table_name].join(" "))
+        ) || {};
+      }
+      function plausibleDamydaDate(value) {
+        const raw = text(value).trim();
+        if (!raw || /9999|3118|2207|2106/i.test(raw)) return false;
+        const match = raw.match(/^(\d{4})/);
+        if (!match) return false;
+        const year = Number(match[1]);
+        const maxYear = new Date().getFullYear() + 1;
+        return year >= 1990 && year <= maxYear;
+      }
+      function damydaDateSpan(row) {
+        const minDate = row.min_date;
+        const maxDate = row.max_date;
+        if (!plausibleDamydaDate(minDate) || !plausibleDamydaDate(maxDate)) {
+          return "date span not reliable in current aggregate output";
+        }
+        return `${escapeHtml(minDate)} to ${escapeHtml(maxDate)}`;
+      }
+      function damydaClinicalRows() {
+        return panelRows("damyda_clinical_profile").filter(row => /damyda/i.test([row.registry, row.table_name].join(" ")));
+      }
+      function damydaNumericRows() {
+        return panelRows("damyda_numeric_fields").filter(row => /damyda/i.test([row.registry, row.table_name].join(" ")));
+      }
+      function rowMatchesKeys(row, keys) {
+        const hay = normalizeClinicalKey([
+          row.field, row.facet, row.source_column, row.clinical_variable, row.raw_column,
+          row.raw_descriptor, row.raw_field_label, row.display_value
+        ].filter(Boolean).join(" "));
+        return keys.some(key => hay.includes(normalizeClinicalKey(key)));
+      }
+      function damydaNumericHit(keys) {
+        return damydaNumericRows().find(row => rowMatchesKeys(row, keys)) || null;
+      }
+      function damydaNumericValue(row, field) {
+        return row && hasDisplayValue(row[field]) ? formatNumber(row[field]) : "not available";
+      }
+      function renderDaMyDaNumericCard(label, keys) {
+        const row = damydaNumericHit(keys);
+        return `<article class="stat-card">
+          <h3>${escapeHtml(label)}</h3>
+          <p class="mini">Source column: <code>${escapeHtml(row && row.source_column ? row.source_column : "not available")}</code></p>
+          <div class="stat-grid">
+            <div class="stat-cell"><span class="mini">n available</span><b>${damydaNumericValue(row, "n_available")}</b></div>
+            <div class="stat-cell"><span class="mini">% available</span><b>${damydaNumericValue(row, "pct_available")}</b></div>
+            <div class="stat-cell"><span class="mini">Mean</span><b>${damydaNumericValue(row, "mean")}</b></div>
+            <div class="stat-cell"><span class="mini">Median</span><b>${damydaNumericValue(row, "median")}</b></div>
+            <div class="stat-cell"><span class="mini">p25</span><b>${damydaNumericValue(row, "p25")}</b></div>
+            <div class="stat-cell"><span class="mini">p75</span><b>${damydaNumericValue(row, "p75")}</b></div>
+            <div class="stat-cell"><span class="mini">Unit</span><b>${escapeHtml(row && row.unit ? row.unit : "not available")}</b></div>
+          </div>
+        </article>`;
+      }
+      function damydaFacetRows(keys) {
+        return damydaClinicalRows().filter(row => rowMatchesKeys(row, keys));
+      }
+      function renderDaMyDaFacetGroup(title, keys, note) {
+        const rows = damydaFacetRows(keys).slice(0, 12);
+        const body = rows.length ? rows.map(row => `
+          <div class="value-row">
+            <code>${escapeHtml(row.source_column || "")}</code>
+            <div>${escapeHtml(row.label || "")}</div>
+            <div><strong>${formatNumber(row.n)}</strong></div>
+            <div class="mini" style="grid-column:1 / -1">${escapeHtml(row.facet || "")}${hasDisplayValue(row.pct_rows) ? " - " + escapeHtml(row.pct_rows) + "% of rows" : ""}</div>
+          </div>
+        `).join("") : `<div class="empty">No aggregate rows for this DaMyDa block were generated in the current output.</div>`;
+        return `<article class="value-map-card">
+          <h3>${escapeHtml(title)}</h3>
+          ${note ? `<p class="mini">${escapeHtml(note)}</p>` : ""}
+          ${body}
+        </article>`;
+      }
+      function damydaRawRows() {
+        return panelRawFieldRows.filter(row =>
+          row.panel_id === "reg_damyda" || rowSourceMatches(row, ["RKKP_DaMyDa", "DaMyDa"])
+        );
+      }
+      function damydaRawPriority(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.raw_descriptor, row.raw_code, row.raw_field_label, row.clinical_variable].join(" "));
+        const order = [
+          "reg haemoglobin", "hb", "reg creatinin mikmoll", "crea", "reg ldh",
+          "reg albumin gl", "alb", "reg beta2microglobulin gl", "b2m",
+          "reg procentklonaleplasmaceller", "stadie", "reg performancestatus",
+          "reg knogleforandringer", "ind relaps", "reg relaps", "cyto fishudfoert",
+          "fish udfoert", "fish"
+        ];
+        const idx = order.findIndex(pattern => key.includes(normalizeClinicalKey(pattern)));
+        return idx < 0 ? 999 : idx;
+      }
+      function renderDaMyDaRawLineage() {
+        const rows = damydaRawRows();
+        const confirmed = rows.filter(row => !/not_present|unresolved|expected/i.test(text(row.mapping_status)));
+        confirmed.sort((a, b) => damydaRawPriority(a) - damydaRawPriority(b));
+        const expected = rows.filter(row => /not_present|unresolved|expected/i.test(text(row.mapping_status)));
+        return `<div class="lineage-block">
+          <h3>Raw names / data lineage</h3>
+          ${confirmed.length ? renderRawFieldList(confirmed, 24) : `<div class="empty">No confirmed DaMyDa raw-field mappings were generated.</div>`}
+          <details class="lineage-block">
+            <summary>Expected but not found / unresolved fields</summary>
+            ${expected.length ? renderRawFieldList(expected, 24) : `<div class="empty">No expected-but-not-found DaMyDa rows were generated.</div>`}
+          </details>
+        </div>`;
+      }
+      function renderDaMyDaPanel() {
+        const summary = damydaSummaryRow();
+        return `<div class="focused-panel damyda-panel">
+          <div class="source-shape">
+            <div class="source-fact"><span class="mini">Registry source</span><b>RKKP_DaMyDa</b></div>
+            <div class="source-fact"><span class="mini">Registry entries</span><b>${metricOrUnavailable(summary.n_rows, "registry entries")}</b></div>
+            <div class="source-fact"><span class="mini">Variables</span><b>${metricOrUnavailable(summary.n_cols, "variables")}</b></div>
+            <div class="source-fact"><span class="mini">Patients</span><b>${hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not available in current aggregate output"}</b></div>
+            <div class="source-fact"><span class="mini">Date span</span><b>${damydaDateSpan(summary)}</b></div>
+          </div>
+          <div class="lineage-block">
+            <h3>Baseline disease markers</h3>
+            <div class="grid">
+              ${renderDaMyDaNumericCard("Haemoglobin", ["haemoglobin", "Reg_Haemoglobin", "HB"])}
+              ${renderDaMyDaNumericCard("Creatinine", ["creatinine", "Reg_Creatinin_mikmoll", "Reg_Creatinin", "CREA"])}
+              ${renderDaMyDaNumericCard("LDH", ["ldh", "Reg_LDH", "LDH"])}
+              ${renderDaMyDaNumericCard("Albumin", ["albumin", "Reg_Albumin_gl", "ALB"])}
+              ${renderDaMyDaNumericCard("Beta-2 microglobulin", ["beta2_microglobulin", "Reg_Beta2Microglobulin_gl", "B2M"])}
+              ${renderDaMyDaNumericCard("Clonal plasma-cell percentage", ["clonal_plasma_cells", "Reg_ProcentKlonalePlasmaceller", "plasma_cells"])}
+              ${renderDaMyDaNumericCard("Calcium", ["calcium", "Reg_Calcium"])}
+              ${renderDaMyDaNumericCard("M-component / light chains", ["m_component", "Reg_PlasmaMKomponent", "kappa", "lambda", "light"])}
+            </div>
+          </div>
+          <div class="value-map-grid">
+            ${renderDaMyDaFacetGroup("Staging/risk", ["stage", "Stadie", "performance_status", "Reg_PerformanceStatus", "charlson"], "Stage and performance-status fields are availability summaries; derive risk models only after confirming definitions.")}
+            ${renderDaMyDaFacetGroup("Treatment", ["treatment_flag", "primary_treatment", "secondary_treatment", "followup_treatment", "Reg_Behandlet"], "Treatment rows are registry treatment indicators or categories, not a complete medication timeline.")}
+            ${renderDaMyDaFacetGroup("Response/relapse", ["response", "relapse", "followup", "IND_Relaps", "Reg_Relaps"], "Response and relapse fields may be registration or follow-up specific.")}
+            ${renderDaMyDaFacetGroup("Bone disease / imaging", ["bone_disease", "bone_disease_type", "imaging", "Reg_Knogleforandringer", "Reg_Billeddiagnostik"], "Bone and imaging fields describe registry evidence, not image pixels or report text.")}
+            ${renderDaMyDaFacetGroup("Cytogenetics/FISH availability", ["cytogenetics_fish_done", "Cyto_FishUdfoert", "Reg_FISH_Udfoert"], "Operational FISH/cytogenetics availability fields are separated from result interpretation.")}
+            ${renderDaMyDaFacetGroup("Cytogenetics/FISH result fields", ["cytogenetics_iscn", "cytogenetics_ploidy", "cytogenetics_abnormality", "Reg_ISCN_Resultat", "Reg_Ploidi", "Reg_FISH_Abnormitet"], "Do not treat operational metadata as cytogenetic risk markers without validating the raw result field.")}
+          </div>
+          ${renderDaMyDaRawLineage()}
+          <div class="lineage-block">
+            <h3>Use cases and caveats</h3>
+            <p>Use DaMyDa for myeloma registry availability: baseline disease markers, staging, bone disease, selected treatment/response/relapse fields, and FISH/cytogenetics field presence.</p>
+            <p class="mini">Caveats: registry completeness and field definitions vary by period and form version. Aggregate counts here are not patient-level extracts, and missing fields should be treated as unavailable until confirmed in current DALY output.</p>
           </div>
         </div>`;
       }
@@ -1879,7 +2043,7 @@
         setHtml(targetId, renderDomainPanel(section));
       }
       function renderReviewSections() {
-        renderRegistryDetail("registry-damyda", "reg_damyda");
+        setHtml("registry-damyda", renderDaMyDaPanel());
         renderRegistryDetail("registry-lyfo", "reg_lyfo");
         renderRegistryDetail("registry-cll", "reg_cll");
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
