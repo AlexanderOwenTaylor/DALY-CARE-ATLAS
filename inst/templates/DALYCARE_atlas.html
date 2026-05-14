@@ -455,6 +455,102 @@
       color: var(--muted);
       background: var(--surface-2);
     }
+    .focused-panel {
+      display: grid;
+      gap: 14px;
+    }
+    .source-shape {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .source-fact {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface-2);
+      padding: 12px;
+    }
+    .source-fact b {
+      display: block;
+      font-size: 15px;
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+    }
+    .stat-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+    }
+    .stat-card h3 {
+      margin: 0 0 10px;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .stat-cell {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      min-width: 0;
+    }
+    .stat-cell b {
+      display: block;
+      font-size: 16px;
+      overflow-wrap: anywhere;
+    }
+    .value-map-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 12px;
+    }
+    .value-map-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
+    }
+    .value-row {
+      display: grid;
+      grid-template-columns: minmax(86px, 0.9fr) minmax(140px, 1.2fr) minmax(70px, 0.5fr);
+      gap: 8px;
+      align-items: center;
+      padding: 8px 0;
+      border-top: 1px solid var(--line);
+    }
+    .value-row:first-of-type {
+      border-top: 0;
+    }
+    .value-row code {
+      overflow-wrap: anywhere;
+    }
+    .caveat-callout {
+      border-left: 4px solid var(--gold);
+      background: #fff9e8;
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: #573f00;
+    }
+    .concept-link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .concept-link-button {
+      border: 1px solid var(--blue);
+      border-radius: 8px;
+      background: #eef6ff;
+      color: var(--blue);
+      cursor: pointer;
+      padding: 8px 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .concept-link-button:hover {
+      background: #ddeefe;
+    }
     .site-footer {
       max-width: 1440px;
       margin: 0 auto;
@@ -473,6 +569,7 @@
       .bar-row { grid-template-columns: 1fr; }
       .review-lead { grid-template-columns: 1fr; }
       .dk-shell { grid-template-columns: 1fr; }
+      .stat-grid, .value-row { grid-template-columns: 1fr; }
       .toolbar label, input[type="search"], select { width: 100%; }
     }
   </style>
@@ -1237,6 +1334,63 @@
         const bits = [row.count_scope, row.denominator_scope, row.profile_scope].filter(Boolean);
         return bits.length ? `<span class="mini">scope: ${escapeHtml(Array.from(new Set(bits)).join(" / "))}</span>` : "";
       }
+      function normalizeClinicalKey(value) {
+        return text(value || "")
+          .toLowerCase()
+          .replace(/æ/g, "ae")
+          .replace(/ø/g, "oe")
+          .replace(/å/g, "aa")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]/g, "");
+      }
+      function sourceKey(row) {
+        return normalizeClinicalKey([row.source_name, row.object_name, row.table_name].filter(Boolean).join(" "));
+      }
+      function rowSourceMatches(row, variants) {
+        const key = sourceKey(row);
+        return variants.some(variant => key.includes(normalizeClinicalKey(variant)));
+      }
+      function descriptorMatches(row, variants) {
+        const key = normalizeClinicalKey([row.raw_descriptor, row.display_value, row.clinical_variable].filter(Boolean).join(" "));
+        return variants.some(variant => key.includes(normalizeClinicalKey(variant)));
+      }
+      function fieldMatches(row, variants) {
+        const key = normalizeClinicalKey([row.raw_column, row.raw_field_label, row.raw_value, row.raw_code].filter(Boolean).join(" "));
+        return variants.some(variant => key.includes(normalizeClinicalKey(variant)));
+      }
+      function displayValue(value) {
+        return text(value || "").trim() || "not available";
+      }
+      function statisticFromRows(rows, statistic) {
+        const hit = (rows || []).find(row => text(row.statistic) === statistic);
+        return hit ? displayValue(hit.statistic_value) : "not available";
+      }
+      function rowCountFromRows(rows) {
+        const hit = (rows || []).find(row => text(row.n).trim());
+        return hit ? formatNumber(hit.n) : "not available";
+      }
+      function jumpToClinicalConcept(query) {
+        activateTab("variables");
+        const variablesPage = document.getElementById("tab-variables");
+        if (variablesPage) {
+          variablesPage.querySelectorAll(".sub-tab").forEach(button => button.classList.toggle("active", button.dataset.sub === "variables-concepts"));
+          variablesPage.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === "variables-concepts"));
+        }
+        const search = document.getElementById("clinical-variable-search");
+        const group = document.getElementById("clinical-variable-group-filter");
+        const status = document.getElementById("clinical-variable-status-filter");
+        if (group) group.value = "";
+        if (status) status.value = "";
+        if (search) {
+          search.value = query || "";
+          search.dispatchEvent(new Event("input", { bubbles: true }));
+        } else {
+          renderClinicalVariables();
+        }
+        const cards = document.getElementById("clinical-variable-cards");
+        if (cards) cards.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       function rawFieldDisplay(row) {
         return row.raw_field_label || semanticRawName(row) || row.raw_column || row.raw_code || row.source_name || "";
       }
@@ -1345,6 +1499,145 @@
           <div class="lineage-block"><h3>Use cases and caveats</h3><p>${escapeHtml(panel.use_cases || "")}</p><p class="mini">${escapeHtml(panel.caveats || "")}</p>${panel.missing_upstream_file ? `<p class="mini"><strong>Missing upstream:</strong> ${escapeHtml(panel.missing_upstream_file)}</p>` : ""}${scopeLabel(panel)}</div>
         </div>`;
       }
+      function conceptButtons(buttons) {
+        return `<div class="concept-link-row">${buttons.map(button => `
+          <button type="button" class="concept-link-button" data-concept-search="${escapeHtml(button.query)}">${escapeHtml(button.label)}</button>
+        `).join("")}</div>`;
+      }
+      function renderVitalsStatCard(label, descriptorKeys) {
+        const rows = panelDistributionRows.filter(row =>
+          row.panel_id === "clinical_vitals" &&
+          row.distribution_type === "numeric_summary" &&
+          descriptorMatches(row, descriptorKeys)
+        );
+        return `<article class="stat-card">
+          <h3>${escapeHtml(label)}</h3>
+          <p class="mini">Descriptor in <code>displayname</code>: <strong>${escapeHtml(descriptorKeys[0])}</strong></p>
+          <div class="stat-grid">
+            <div class="stat-cell"><span class="mini">Rows</span><b>${rowCountFromRows(rows)}</b></div>
+            <div class="stat-cell"><span class="mini">p05</span><b>${escapeHtml(statisticFromRows(rows, "p05_numeric"))}</b></div>
+            <div class="stat-cell"><span class="mini">Median</span><b>${escapeHtml(statisticFromRows(rows, "median_numeric"))}</b></div>
+            <div class="stat-cell"><span class="mini">p95</span><b>${escapeHtml(statisticFromRows(rows, "p95_numeric"))}</b></div>
+          </div>
+          <p class="mini">${rows.length ? scopeLabel(rows[0]) : "scope: not available"}</p>
+        </article>`;
+      }
+      function renderVitalsPanel() {
+        const raw = panelRawFieldRows.filter(row =>
+          row.panel_id === "clinical_vitals" ||
+          rowSourceMatches(row, ["SP_VitaleVaerdier", "SP Vitale Vaerdier", "SP Vitaleværdier"])
+        );
+        const rawBits = renderRawFieldList(raw.filter(row =>
+          fieldMatches(row, ["displayname", "numericvalue"]) ||
+          descriptorMatches(row, ["Vægt", "Højde", "Vaegt", "Hoejde"])
+        ), 8);
+        return `<div class="focused-panel vitals-panel">
+          <div class="source-shape">
+            <div class="source-fact"><span class="mini">Source</span><b>SP_VitaleVaerdier</b></div>
+            <div class="source-fact"><span class="mini">Patient ID column</span><b>patientid</b></div>
+            <div class="source-fact"><span class="mini">Descriptor column</span><b>displayname</b></div>
+            <div class="source-fact"><span class="mini">Value column</span><b>numericvalue</b></div>
+          </div>
+          <div class="grid">
+            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt", "VÃ¦gt"])}
+            ${renderVitalsStatCard("Height", ["Højde", "Hoejde", "HÃ¸jde"])}
+          </div>
+          <div class="lineage-block">
+            <h3>Raw names / data lineage</h3>
+            ${rawBits}
+          </div>
+          <div class="caveat-callout">
+            <strong>Caveat:</strong> Repeated measures require a baseline window relative to diagnosis and outlier filtering before deriving patient-level height, weight, or BMI.
+          </div>
+          <div class="lineage-block">
+            <h3>Clinical Variables links</h3>
+            ${conceptButtons([
+              { label: "Open Height concept", query: "Height" },
+              { label: "Open Weight concept", query: "Weight" },
+              { label: "Open Height / Weight / BMI concepts", query: "Height Weight BMI" }
+            ])}
+          </div>
+        </div>`;
+      }
+      function renderSocialValueRows(rawColumn, expected) {
+        const rows = panelDistributionRows.filter(row =>
+          row.panel_id === "clinical_social_history" &&
+          normalizeClinicalKey(row.raw_column) === normalizeClinicalKey(rawColumn)
+        );
+        return expected.map(item => {
+          const hit = rows.find(row => normalizeClinicalKey(row.raw_value) === normalizeClinicalKey(item.raw));
+          return `<div class="value-row">
+            <code>${escapeHtml(item.raw)}</code>
+            <div>${escapeHtml(hit ? (hit.display_value || item.display) : item.display)}</div>
+            <div><strong>${hit ? formatNumber(hit.n) : "not available"}</strong></div>
+            <div class="mini" style="grid-column:1 / -1">${hit ? scopeLabel(hit) : "not available in current aggregate output"}</div>
+          </div>`;
+        }).join("");
+      }
+      function socialHasUnknownMissing(rawColumn) {
+        return panelDistributionRows.some(row =>
+          row.panel_id === "clinical_social_history" &&
+          normalizeClinicalKey(row.raw_column) === normalizeClinicalKey(rawColumn) &&
+          /unknown|missing|ukendt|mangler/i.test([row.raw_value, row.display_value, row.value_class].join(" "))
+        );
+      }
+      function renderSocialHistoryPanel() {
+        const raw = panelRawFieldRows.filter(row =>
+          row.panel_id === "clinical_social_history" ||
+          rowSourceMatches(row, ["SP_Social_Hx", "SP_SocialHX", "SP Social Hx"])
+        );
+        const smokingExpected = [
+          { raw: "Er holdt op", display: "Former smoker" },
+          { raw: "Aldrig", display: "Never smoker" },
+          { raw: "Ja", display: "Current smoker" },
+          { raw: "Ikke spurgt", display: "Not asked" },
+          { raw: "Passiv", display: "Passive exposure" }
+        ];
+        const alcoholExpected = [
+          { raw: "Ja", display: "Alcohol use yes" },
+          { raw: "Nej", display: "No alcohol use" },
+          { raw: "Ikke aktuelt", display: "Not applicable" },
+          { raw: "Aldrig", display: "Never drinks" },
+          { raw: "Ikke spurgt", display: "Not asked" },
+          { raw: "Udskyd", display: "Deferred" }
+        ];
+        const unknownNote = (socialHasUnknownMissing("ryger") || socialHasUnknownMissing("drikker"))
+          ? "Unknown/missing-like categories are present in the aggregate value maps above where observed."
+          : "Unknown and true missing were not separately quantified in this output.";
+        return `<div class="focused-panel social-history-panel">
+          <div class="source-shape">
+            <div class="source-fact"><span class="mini">Source</span><b>SP_Social_Hx</b></div>
+            <div class="source-fact"><span class="mini">Smoking raw column</span><b>ryger</b></div>
+            <div class="source-fact"><span class="mini">Alcohol raw column</span><b>drikker</b></div>
+          </div>
+          <div class="value-map-grid">
+            <article class="value-map-card">
+              <h3>Smoking status</h3>
+              <p class="mini"><code>SP_Social_Hx.ryger</code></p>
+              ${renderSocialValueRows("ryger", smokingExpected)}
+            </article>
+            <article class="value-map-card">
+              <h3>Alcohol use</h3>
+              <p class="mini"><code>SP_Social_Hx.drikker</code></p>
+              ${renderSocialValueRows("drikker", alcoholExpected)}
+            </article>
+          </div>
+          <div class="lineage-block">
+            <h3>Raw names / data lineage</h3>
+            ${renderRawFieldList(raw.filter(row => fieldMatches(row, ["ryger", "drikker"])), 8)}
+          </div>
+          <div class="caveat-callout">
+            <strong>Caveat:</strong> Not asked, unknown, deferred, not applicable, and true missing values require separate handling. ${escapeHtml(unknownNote)} Row-level social-history observations do not necessarily equal current patient-level status.
+          </div>
+          <div class="lineage-block">
+            <h3>Clinical Variables links</h3>
+            ${conceptButtons([
+              { label: "Open Smoking Status concept", query: "Smoking status ryger" },
+              { label: "Open Alcohol Use concept", query: "Alcohol use drikker" }
+            ])}
+          </div>
+        </div>`;
+      }
 
       document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
@@ -1385,6 +1678,11 @@
             page.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === button.dataset.sub));
           });
         });
+      });
+      document.addEventListener("click", event => {
+        const button = event.target.closest("[data-concept-search]");
+        if (!button) return;
+        jumpToClinicalConcept(button.dataset.conceptSearch || "");
       });
 
       setHtml("scope-notes", reviewScopeNotes.map(row => `
@@ -1543,9 +1841,9 @@
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
         setHtml("clinical-imaging-cards", renderDomainPanel("clinical_imaging"));
-        setHtml("clinical-vitals-cards", renderDomainPanel("clinical_vitals"));
+        setHtml("clinical-vitals-cards", renderVitalsPanel());
         setHtml("clinical-notes-cards", renderDomainPanel("clinical_notes"));
-        setHtml("clinical-social-cards", renderDomainPanel("clinical_social_history"));
+        setHtml("clinical-social-cards", renderSocialHistoryPanel());
 
         setHtml("treatment-source-cards", sourceTiles(reviewTreatment.treatment_sources, "No treatment-like sources were mapped in this run."));
         setHtml("treatment-medicine-cards", sourceTiles((reviewTreatment.treatment_sources || []).filter(row => /medicin|medicine|atc|administered|ordered/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No medicine/ATC-like sources were mapped in this run."));
