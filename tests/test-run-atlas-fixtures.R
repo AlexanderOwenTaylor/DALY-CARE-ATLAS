@@ -113,6 +113,10 @@ expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML sho
 expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "HTML should include the dedicated Social History renderer.")
 expect_false(grepl("setHtml(\"clinical-vitals-cards\", renderDomainPanel(\"clinical_vitals\"))", html, fixed = TRUE), "Vitals should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("setHtml(\"clinical-social-cards\", renderDomainPanel(\"clinical_social_history\"))", html, fixed = TRUE), "Social History should not be rendered through the generic domain panel renderer.")
+expect_false(grepl("Vitals Sources", html, fixed = TRUE), "Vitals heading should no longer say Vitals Sources.")
+expect_false(grepl("Social History Sources", html, fixed = TRUE), "Social History heading should no longer say Social History Sources.")
+expect_true(grepl("Vital signs and anthropometrics", html, fixed = TRUE), "Vitals heading should use the clinician-facing title.")
+expect_true(grepl("Social history: smoking and alcohol", html, fixed = TRUE), "Social History heading should use the clinician-facing title.")
 vaegt <- paste0("V", intToUtf8(0x00E6), "gt")
 hoejde <- paste0("H", intToUtf8(0x00F8), "jde")
 for (needle in c("SP_VitaleVaerdier", "patientid", "displayname", "numericvalue", vaegt, hoejde)) {
@@ -125,6 +129,14 @@ expect_true(grepl("jumpToClinicalConcept", html, fixed = TRUE), "Concept-link bu
 expect_true(grepl("Repeated measures", html, fixed = TRUE) && grepl("baseline window", html, fixed = TRUE) && grepl("outlier filtering", html, fixed = TRUE), "Vitals renderer should include the required caveat.")
 expect_true(grepl("Unknown and true missing were not separately quantified in this output", html, fixed = TRUE), "Social History renderer should include the unknown/missing evidence note.")
 expect_true(grepl("Row-level social-history observations do not necessarily equal current patient-level status", html, fixed = TRUE), "Social History renderer should include the row-level caveat.")
+expect_true(grepl("Patients", html, fixed = TRUE), "Vitals stat cards should render patient-count fields.")
+expect_true(grepl("<span class=\"mini\">Unit</span><b>${escapeHtml(unit || \"not available\")}</b>", html, fixed = TRUE), "Vitals stat cards should render units with a not-available fallback.")
+expect_true(grepl("renderVitalsStatCard(\"Weight\", [\"Vægt\", \"Vaegt\", \"VÃ¦gt\"], \"weight\", \"kg\")", html, fixed = TRUE), "Vitals stat cards should render kg for weight.")
+expect_true(grepl("renderVitalsStatCard(\"Height\", [\"Højde\", \"Hoejde\", \"HÃ¸jde\"], \"height\", \"cm\")", html, fixed = TRUE), "Vitals stat cards should render cm for height.")
+expect_true(grepl("scope: mixed; displayed distributions are cartography_scan", html, fixed = TRUE) || grepl("scope: displayed distributions are cartography_scan", html, fixed = TRUE), "Vitals/Social renderer should expose cartography-scan scope.")
+bmi_label <- paste("BMI", intToUtf8(0x2014), "derived from height and weight")
+expect_true(grepl(bmi_label, html, fixed = TRUE), "Vitals lineage should label BMI as derived from height and weight.")
+expect_true(grepl("const priorityRows = [weightRow, heightRow, numericRow].filter(Boolean)", html, fixed = TRUE), "Vitals renderer should order priority raw lineage as Vægt, Højde, numericvalue.")
 expect_true(grepl("semantic-search", html, fixed = TRUE), "HTML should include semantic dictionary search.")
 expect_true(grepl("semantic-group-filter", html, fixed = TRUE), "HTML should include semantic dictionary group filtering.")
 expect_true(grepl("semantic-panel-filter", html, fixed = TRUE), "HTML should include semantic dictionary panel filtering.")
@@ -323,6 +335,19 @@ expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX
 expect_true(any(panel_raw_fields$source_name == "SP_VitaleVaerdier" & panel_raw_fields$raw_column == "displayname" & panel_raw_fields$raw_descriptor == vaegt), "Panel raw fields should include SP_VitaleVaerdier displayname=Vægt.")
 expect_true(any(panel_raw_fields$source_name == "SP_VitaleVaerdier" & panel_raw_fields$raw_column == "displayname" & panel_raw_fields$raw_descriptor == hoejde), "Panel raw fields should include SP_VitaleVaerdier displayname=Højde.")
 expect_true(any(panel_raw_fields$source_name == "SP_VitaleVaerdier" & panel_raw_fields$raw_column == "numericvalue"), "Panel raw fields should include SP_VitaleVaerdier numericvalue.")
+vital_raw <- panel_raw_fields[panel_raw_fields$panel_id == "clinical_vitals", , drop = FALSE]
+priority_labels <- c(
+  vital_raw$raw_field_label[which(vital_raw$raw_column == "displayname" & vital_raw$raw_descriptor == vaegt)[1]],
+  vital_raw$raw_field_label[which(vital_raw$raw_column == "displayname" & vital_raw$raw_descriptor == hoejde)[1]],
+  vital_raw$raw_field_label[which(vital_raw$raw_column == "numericvalue")[1]]
+)
+priority_labels <- priority_labels[!is.na(priority_labels)]
+priority_renderable <- paste(priority_labels, collapse = "\n")
+expect_true(grepl(vaegt, priority_renderable, fixed = TRUE), "Renderable Vitals priority lineage should contain Vægt.")
+expect_true(grepl(hoejde, priority_renderable, fixed = TRUE), "Renderable Vitals priority lineage should contain Højde.")
+expect_true(grepl("numericvalue", priority_renderable, fixed = TRUE), "Renderable Vitals priority lineage should contain numericvalue.")
+expect_true(regexpr(vaegt, priority_renderable, fixed = TRUE)[[1]] < regexpr(hoejde, priority_renderable, fixed = TRUE)[[1]], "Renderable Vitals priority lineage should place Vægt before Højde.")
+expect_true(regexpr(hoejde, priority_renderable, fixed = TRUE)[[1]] < regexpr("numericvalue", priority_renderable, fixed = TRUE)[[1]], "Renderable Vitals priority lineage should place Højde before numericvalue.")
 expect_true(any(panel_raw_fields$raw_column == "ryger" & panel_raw_fields$clinical_variable == "Smoking status"), "Panel raw fields should include ryger to Smoking status.")
 expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX") & panel_raw_fields$raw_column == "ryger"), "Panel raw fields should include SP_Social_Hx.ryger.")
 expect_true(any(panel_raw_fields$raw_column == "numericvalue" & panel_raw_fields$clinical_variable == "Vital numeric measurement value"), "Panel raw fields should include numericvalue as the vital measurement value.")
@@ -332,6 +357,11 @@ expect_true(any(panel_distributions$panel_id == "clinical_social_history" & pane
 expect_true(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "drikker" & panel_distributions$display_value == "Alcohol use yes"), "Social History panel distributions should include alcohol value maps.")
 expect_false(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "ryger" & panel_distributions$raw_value == "Ja" & panel_distributions$display_value == "Alcohol use yes"), "Smoking Ja should not be grouped as alcohol use.")
 expect_false(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "drikker" & panel_distributions$raw_value == "Ja" & panel_distributions$display_value == "Current smoker"), "Alcohol Ja should not be grouped as current smoker.")
+expect_equal(sum(clinical_concepts$clinical_concept_id == "bmi"), 1L, "Clinical concept output should contain only one BMI row.")
+expect_true(grepl("derived from height and weight", clinical_concepts$purpose[clinical_concepts$clinical_concept_id == "bmi"], ignore.case = TRUE), "BMI concept should be described as derived from height and weight.")
+if (any(clinical_concepts$clinical_concept_id %in% c("weight", "height") & !is.na(clinical_concepts$n_patients))) {
+  expect_true(grepl("patientCountForConcept", html, fixed = TRUE), "Vitals renderer should use concept patient counts when available.")
+}
 expect_true(any(domain_panels$panel_id == "clinical_vitals" & grepl("Repeated measures", domain_panels$caveats, fixed = TRUE)), "Vitals product panel should carry repeated-measures caveat.")
 expect_true(any(panel_distributions$panel_id == "clinical_imaging" & panel_distributions$display_value == "EHR-native imaging metadata/report text"), "Imaging panel should preserve EHR-native imaging layer.")
 expect_true(any(panel_distributions$panel_id == "clinical_microbiology" & grepl("SP blood-culture workflow", panel_distributions$display_value, fixed = TRUE)), "Microbiology panel should include SP blood-culture workflow.")

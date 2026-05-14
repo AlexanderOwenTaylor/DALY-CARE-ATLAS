@@ -391,8 +391,42 @@ product_clinical_concepts <- function(dictionary, value_map, code_map, panel_lin
   })
   out <- bind_rows_base(rows)
   out <- bind_rows_base(list(out, product_derived_concepts(dictionary, raw_fields)))
+  out <- product_dedupe_clinical_concepts(out)
   out <- out[order(out$clinical_group, out$clinical_variable), , drop = FALSE]
   align_product_frame(out, names(empty_clinical_concepts()))
+}
+
+product_dedupe_clinical_concepts <- function(x) {
+  if (!is.data.frame(x) || !nrow(x)) return(empty_clinical_concepts())
+  rows <- lapply(split(x, x$clinical_concept_id), function(group) {
+    if (nrow(group) == 1L) return(group)
+    id <- group$clinical_concept_id[[1]]
+    derived <- grepl("derived", paste(group$mapping_status_summary, group$caveats, group$purpose), ignore.case = TRUE)
+    base_index <- if (identical(id, "bmi") && any(derived)) which(derived)[1] else 1L
+    base <- group[base_index, , drop = FALSE]
+    scopes <- unique_nonblank(c(group$count_scope, group$denominator_scope, group$profile_scope))
+    base$primary_sources <- paste(unique_nonblank(group$primary_sources), collapse = "; ")
+    base$raw_field_count <- sum(suppressWarnings(as.numeric(group$raw_field_count)), na.rm = TRUE)
+    base$value_map_count <- sum(suppressWarnings(as.numeric(group$value_map_count)), na.rm = TRUE)
+    base$code_map_count <- sum(suppressWarnings(as.numeric(group$code_map_count)), na.rm = TRUE)
+    base$evidence_files <- paste(unique_nonblank(group$evidence_files), collapse = "; ")
+    base$mapping_status_summary <- paste(unique_nonblank(group$mapping_status_summary), collapse = "; ")
+    base$n_rows <- product_sum_numeric(group$n_rows)
+    base$n_patients <- product_sum_numeric(group$n_patients)
+    base$count_scope <- product_merge_scopes(scopes)
+    base$denominator_scope <- product_merge_scopes(scopes)
+    base$profile_scope <- product_merge_scopes(scopes)
+    base$related_panel_ids <- paste(unique_nonblank(group$related_panel_ids), collapse = "; ")
+    base$search_terms <- semantic_terms(c(group$search_terms, group$clinical_variable, group$clinical_concept_id))
+    if (identical(id, "bmi")) {
+      base$clinical_variable <- "BMI"
+      base$purpose <- "BMI derived from height and weight evidence when both are available."
+      base$caveats <- "BMI is derived from height and weight and is not treated as directly stored unless a source proves otherwise."
+      base$concept_status <- if (any(group$concept_status == "available", na.rm = TRUE)) "available" else "partial"
+    }
+    base
+  })
+  bind_rows_base(rows)
 }
 
 product_derived_concepts <- function(dictionary, raw_fields) {

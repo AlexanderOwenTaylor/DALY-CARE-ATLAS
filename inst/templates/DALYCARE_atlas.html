@@ -925,9 +925,9 @@
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging Sources</h2><p class="panel-sub">SP billed imaging and radiology-like sources.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-imaging"></div></div></div></div></div>
-      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vitals Sources</h2><p class="panel-sub">Vitals-like sources and columns when mapped.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-vitals"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-vitals"></div></div></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social History Sources</h2><p class="panel-sub">Social-history and lifestyle-like sources when available.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-social"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-social"></div></div></div></div></div>
     </section>
 
     <section class="tab-page" id="tab-treatment">
@@ -1370,6 +1370,23 @@
         const hit = (rows || []).find(row => text(row.n).trim());
         return hit ? formatNumber(hit.n) : "not available";
       }
+      function conceptById(id) {
+        return clinicalConceptRows.find(row => row.clinical_concept_id === id) || null;
+      }
+      function patientCountForConcept(id) {
+        const concept = conceptById(id);
+        return concept && text(concept.n_patients).trim() ? formatNumber(concept.n_patients) : "not available";
+      }
+      function scanScopeNote(rows) {
+        const scopes = Array.from(new Set((rows || []).flatMap(row => [row.count_scope, row.denominator_scope, row.profile_scope]).filter(Boolean)));
+        if (!scopes.length) return "scope: not available";
+        if (scopes.includes("cartography_scan") && scopes.length > 1) return "scope: mixed; displayed distributions are cartography_scan";
+        if (scopes.includes("cartography_scan")) return "scope: displayed distributions are cartography_scan";
+        return `scope: ${escapeHtml(scopes.join(" / "))}`;
+      }
+      function firstMatchingRow(rows, predicate) {
+        return (rows || []).find(predicate) || null;
+      }
       function jumpToClinicalConcept(query) {
         activateTab("variables");
         const variablesPage = document.getElementById("tab-variables");
@@ -1504,7 +1521,7 @@
           <button type="button" class="concept-link-button" data-concept-search="${escapeHtml(button.query)}">${escapeHtml(button.label)}</button>
         `).join("")}</div>`;
       }
-      function renderVitalsStatCard(label, descriptorKeys) {
+      function renderVitalsStatCard(label, descriptorKeys, conceptId, unit) {
         const rows = panelDistributionRows.filter(row =>
           row.panel_id === "clinical_vitals" &&
           row.distribution_type === "numeric_summary" &&
@@ -1515,22 +1532,45 @@
           <p class="mini">Descriptor in <code>displayname</code>: <strong>${escapeHtml(descriptorKeys[0])}</strong></p>
           <div class="stat-grid">
             <div class="stat-cell"><span class="mini">Rows</span><b>${rowCountFromRows(rows)}</b></div>
+            <div class="stat-cell"><span class="mini">Patients</span><b>${patientCountForConcept(conceptId)}</b></div>
+            <div class="stat-cell"><span class="mini">Unit</span><b>${escapeHtml(unit || "not available")}</b></div>
             <div class="stat-cell"><span class="mini">p05</span><b>${escapeHtml(statisticFromRows(rows, "p05_numeric"))}</b></div>
             <div class="stat-cell"><span class="mini">Median</span><b>${escapeHtml(statisticFromRows(rows, "median_numeric"))}</b></div>
             <div class="stat-cell"><span class="mini">p95</span><b>${escapeHtml(statisticFromRows(rows, "p95_numeric"))}</b></div>
           </div>
-          <p class="mini">${rows.length ? scopeLabel(rows[0]) : "scope: not available"}</p>
+          <p class="mini">${scanScopeNote(rows)}</p>
         </article>`;
+      }
+      function renderVitalsPriorityLineage(rows) {
+        const bmi = conceptById("bmi");
+        const lineage = (rows || []).map(row => `
+          <div class="lineage-item">
+            <strong>${escapeHtml(rawFieldDisplay(row))}</strong>
+            <div class="mini">${escapeHtml(row.evidence_file || "")}${row.mapping_status ? " - " + escapeHtml(row.mapping_status) : ""}</div>
+            ${scopeLabel(row)}
+          </div>
+        `).join("");
+        const bmiLine = bmi ? `
+          <div class="lineage-item">
+            <strong>BMI — derived from height and weight</strong>
+            <div class="mini">${escapeHtml(bmi.evidence_files || "")}</div>
+            <span class="mini">${escapeHtml(bmi.caveats || "BMI is derived unless direct stored evidence is proven.")}</span>
+          </div>
+        ` : "";
+        return `<div class="lineage-list vitals-priority-lineage">${lineage}${bmiLine}</div>`;
       }
       function renderVitalsPanel() {
         const raw = panelRawFieldRows.filter(row =>
           row.panel_id === "clinical_vitals" ||
           rowSourceMatches(row, ["SP_VitaleVaerdier", "SP Vitale Vaerdier", "SP Vitaleværdier"])
         );
-        const rawBits = renderRawFieldList(raw.filter(row =>
-          fieldMatches(row, ["displayname", "numericvalue"]) ||
-          descriptorMatches(row, ["Vægt", "Højde", "Vaegt", "Hoejde"])
-        ), 8);
+        const weightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Vægt", "Vaegt", "VÃ¦gt"]));
+        const heightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Højde", "Hoejde", "HÃ¸jde"]));
+        const numericRow = firstMatchingRow(raw, row => fieldMatches(row, ["numericvalue"]));
+        const priorityRows = [weightRow, heightRow, numericRow].filter(Boolean);
+        const priorityKeys = new Set(priorityRows.map(row => row.semantic_id || rawFieldDisplay(row)));
+        const otherRaw = raw.filter(row => !priorityKeys.has(row.semantic_id || rawFieldDisplay(row)));
+        const allVitalsDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_vitals");
         return `<div class="focused-panel vitals-panel">
           <div class="source-shape">
             <div class="source-fact"><span class="mini">Source</span><b>SP_VitaleVaerdier</b></div>
@@ -1539,12 +1579,17 @@
             <div class="source-fact"><span class="mini">Value column</span><b>numericvalue</b></div>
           </div>
           <div class="grid">
-            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt", "VÃ¦gt"])}
-            ${renderVitalsStatCard("Height", ["Højde", "Hoejde", "HÃ¸jde"])}
+            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt", "VÃ¦gt"], "weight", "kg")}
+            ${renderVitalsStatCard("Height", ["Højde", "Hoejde", "HÃ¸jde"], "height", "cm")}
           </div>
           <div class="lineage-block">
-            <h3>Raw names / data lineage</h3>
-            ${rawBits}
+            <h3>Priority raw names / data lineage</h3>
+            ${priorityRows.length ? renderVitalsPriorityLineage(priorityRows) : `<div class="empty">No priority anthropometric lineage rows were generated.</div>`}
+            <p class="mini">${scanScopeNote(allVitalsDistributions)}</p>
+          </div>
+          <div class="lineage-block">
+            <h3>Other vital-sign descriptors</h3>
+            ${otherRaw.length ? renderRawFieldList(otherRaw, 16) : `<div class="empty">No additional vital-sign descriptors were generated for this output.</div>`}
           </div>
           <div class="caveat-callout">
             <strong>Caveat:</strong> Repeated measures require a baseline window relative to diagnosis and outlier filtering before deriving patient-level height, weight, or BMI.
@@ -1604,6 +1649,7 @@
         const unknownNote = (socialHasUnknownMissing("ryger") || socialHasUnknownMissing("drikker"))
           ? "Unknown/missing-like categories are present in the aggregate value maps above where observed."
           : "Unknown and true missing were not separately quantified in this output.";
+        const socialDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_social_history");
         return `<div class="focused-panel social-history-panel">
           <div class="source-shape">
             <div class="source-fact"><span class="mini">Source</span><b>SP_Social_Hx</b></div>
@@ -1627,7 +1673,7 @@
             ${renderRawFieldList(raw.filter(row => fieldMatches(row, ["ryger", "drikker"])), 8)}
           </div>
           <div class="caveat-callout">
-            <strong>Caveat:</strong> Not asked, unknown, deferred, not applicable, and true missing values require separate handling. ${escapeHtml(unknownNote)} Row-level social-history observations do not necessarily equal current patient-level status.
+            <strong>Caveat:</strong> Not asked, unknown, deferred, not applicable, and true missing values require separate handling. ${escapeHtml(unknownNote)} Row-level social-history observations do not necessarily equal current patient-level status. ${escapeHtml(scanScopeNote(socialDistributions))}
           </div>
           <div class="lineage-block">
             <h3>Clinical Variables links</h3>

@@ -103,6 +103,10 @@ for (concept_id in intersect(c("haemoglobin", "creatinine", "egfr", "leukocytes"
 
 required_concepts <- c("height", "weight", "bmi", "smoking_status", "alcohol_use", "ldh", "haemoglobin", "creatinine", "egfr", "imaging_availability", "microbiology_infection_data")
 expect_true(all(required_concepts %in% concepts$clinical_concept_id), "Clinical Variables should include required concept cards.")
+expect_equal(sum(concepts$clinical_concept_id == "bmi"), 1L, "Clinical Variables should contain exactly one BMI concept row.")
+bmi_row <- concepts[concepts$clinical_concept_id == "bmi", , drop = FALSE]
+expect_true(grepl("derived from height and weight", bmi_row$purpose[[1]], ignore.case = TRUE), "BMI concept should be labelled as derived from height and weight.")
+expect_true(grepl("derived", bmi_row$caveats[[1]], ignore.case = TRUE), "BMI concept should preserve the derived-concept caveat.")
 
 search_product <- function(query) {
   hay <- paste(
