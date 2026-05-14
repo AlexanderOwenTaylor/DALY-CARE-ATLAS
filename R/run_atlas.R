@@ -287,6 +287,14 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels = panels,
     min_cell_count = atlas_min_cell_count()
   )
+  product_outputs <- build_product_layer_outputs(
+    semantic_outputs = semantic_outputs,
+    sources = sources,
+    panels = panels,
+    column_profiles = column_profiles,
+    min_cell_count = atlas_min_cell_count(),
+    project_root = project_root
+  )
   empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
   if (isTRUE(empty_live_refused)) {
     message <- empty_live_run_message(source_map, source_resolution)
@@ -324,6 +332,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$semantic_value_map <- write_csv(semantic_outputs$value_map, file.path(output_dir, "atlas_semantic_value_map.csv"))
   output_paths$semantic_code_map <- write_csv(semantic_outputs$code_map, file.path(output_dir, "atlas_semantic_code_map.csv"))
   output_paths$semantic_panel_links <- write_csv(semantic_outputs$panel_links, file.path(output_dir, "atlas_semantic_panel_links.csv"))
+  output_paths$clinical_concepts <- write_csv(product_outputs$clinical_concepts, file.path(output_dir, "atlas_clinical_concepts.csv"))
+  output_paths$domain_panels <- write_csv(product_outputs$domain_panels, file.path(output_dir, "atlas_domain_panels.csv"))
+  output_paths$panel_kpis <- write_csv(product_outputs$panel_kpis, file.path(output_dir, "atlas_panel_kpis.csv"))
+  output_paths$panel_distributions <- write_csv(product_outputs$panel_distributions, file.path(output_dir, "atlas_panel_distributions.csv"))
+  output_paths$panel_raw_fields <- write_csv(product_outputs$panel_raw_fields, file.path(output_dir, "atlas_panel_raw_fields.csv"))
+  output_paths$panel_parity <- write_csv(product_outputs$panel_parity, file.path(output_dir, "atlas_panel_parity.csv"))
   run_summary <- atlas_run_summary(
     run_id, generated_at, source_map, sources, columns, checks, frequencies, panels,
     column_profiles = column_profiles,
@@ -359,6 +373,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_semantic_value_map <- safe_read_output_csv(output_paths$semantic_value_map, semantic_outputs$value_map)
   payload_semantic_code_map <- safe_read_output_csv(output_paths$semantic_code_map, semantic_outputs$code_map)
   payload_semantic_panel_links <- safe_read_output_csv(output_paths$semantic_panel_links, semantic_outputs$panel_links)
+  payload_clinical_concepts <- safe_read_output_csv(output_paths$clinical_concepts, product_outputs$clinical_concepts)
+  payload_domain_panels <- safe_read_output_csv(output_paths$domain_panels, product_outputs$domain_panels)
+  payload_panel_kpis <- safe_read_output_csv(output_paths$panel_kpis, product_outputs$panel_kpis)
+  payload_panel_distributions <- safe_read_output_csv(output_paths$panel_distributions, product_outputs$panel_distributions)
+  payload_panel_raw_fields <- safe_read_output_csv(output_paths$panel_raw_fields, product_outputs$panel_raw_fields)
+  payload_panel_parity <- safe_read_output_csv(output_paths$panel_parity, product_outputs$panel_parity)
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
   })
@@ -377,7 +397,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     semantic_dictionary = payload_semantic_dictionary,
     semantic_value_map = payload_semantic_value_map,
     semantic_code_map = payload_semantic_code_map,
-    semantic_panel_links = payload_semantic_panel_links
+    semantic_panel_links = payload_semantic_panel_links,
+    clinical_concepts = payload_clinical_concepts,
+    domain_panels = payload_domain_panels,
+    panel_kpis_product = payload_panel_kpis,
+    panel_distributions = payload_panel_distributions,
+    panel_raw_fields = payload_panel_raw_fields,
+    panel_parity = payload_panel_parity
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")

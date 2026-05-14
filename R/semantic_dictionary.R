@@ -195,12 +195,13 @@ build_semantic_outputs <- function(project_root = ".", sources = NULL, column_pr
   } else if (nrow(dictionary)) {
     panel_links <- semantic_dedupe_panel_links(bind_rows_base(list(panel_links, semantic_panel_links_for_dictionary(dictionary))))
   }
-  list(
+  out <- list(
     dictionary = align_semantic_frame(dictionary, semantic_dictionary_columns()),
     value_map = align_semantic_frame(value_map, semantic_value_map_columns()),
     code_map = align_semantic_frame(code_map, semantic_code_map_columns()),
     panel_links = align_semantic_frame(panel_links, semantic_panel_links_columns())
   )
+  normalize_semantic_source_names(out)
 }
 
 semantic_social_history <- function(project_root, min_cell_count) {
@@ -1142,7 +1143,7 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
     count_col <- intersect(c("n_rows", "n"), names(x))[1]
     if (is.na(val_col) || is.na(count_col)) next
     if (!is.na(col_col)) {
-      x <- x[!vapply(x[[col_col]], is_sensitive_column, logical(1)), , drop = FALSE]
+      x <- x[!vapply(x[[col_col]], semantic_identifier_like_column, logical(1)), , drop = FALSE]
     }
     source_name <- if ("source_name" %in% names(x)) x$source_name else rep(sub("^cartography_|_value_counts\\.tsv$|_top_snomed\\.tsv$", "", file), nrow(x))
     object_name <- if ("object_name" %in% names(x)) x$object_name else source_name
@@ -1153,6 +1154,7 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
     for (i in seq_len(nrow(x))) {
       code <- x[[val_col]][[i]]
       column <- if (!is.na(col_col)) x[[col_col]][[i]] else ""
+      if (semantic_identifier_like_column(column)) next
       n <- semantic_suppress_count(x[[count_col]][[i]], min_cell_count)
       variable <- semantic_domain_variable(clinical_group, code, column)
       row_source <- semantic_vector_value(source_name, i)
@@ -1210,6 +1212,12 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
     dictionary = dictionary,
     code_map = semantic_dedupe_code_map(bind_rows_base(code_rows))
   )
+}
+
+semantic_identifier_like_column <- function(name) {
+  name <- as.character(name %||% "")
+  is_sensitive_column(name) ||
+    grepl("(^id$|_id$|(^|_)id_|identifier|patient|person|cpr|pnr|recnum|record|rekv)", name, ignore.case = TRUE)
 }
 
 semantic_dictionary_from_code_map <- function(code_map, clinical_group, subgroup, data_shape) {
@@ -1448,4 +1456,89 @@ semantic_summary <- function(dictionary, value_map, code_map, panel_links) {
     ),
     stringsAsFactors = FALSE
   )
+}
+
+normalize_semantic_source_names <- function(outputs) {
+  outputs$dictionary <- normalize_semantic_source_frame(outputs$dictionary)
+  outputs$value_map <- normalize_semantic_source_frame(outputs$value_map)
+  outputs$code_map <- normalize_semantic_source_frame(outputs$code_map)
+  outputs
+}
+
+normalize_semantic_source_frame <- function(x) {
+  if (!is.data.frame(x) || !nrow(x) || !"source_name" %in% names(x)) return(x)
+  evidence <- if ("evidence_file" %in% names(x)) x$evidence_file else rep("", nrow(x))
+  object <- if ("object_name" %in% names(x)) x$object_name else rep("", nrow(x))
+  for (i in seq_len(nrow(x))) {
+    source <- as.character(x$source_name[[i]] %||% "")
+    recovered <- semantic_recover_source_name(source, evidence[[i]] %||% "", object[[i]] %||% "")
+    if (nzchar(recovered)) {
+      x$source_name[[i]] <- recovered
+      if ("object_name" %in% names(x) && semantic_source_looks_like_evidence_file(x$object_name[[i]] %||% "")) {
+        x$object_name[[i]] <- recovered
+      }
+    }
+  }
+  x
+}
+
+semantic_source_looks_like_evidence_file <- function(x) {
+  x <- as.character(x %||% "")
+  grepl("[.](tsv|csv)$", x, ignore.case = TRUE) ||
+    grepl("^cartography_|_value_counts$|_value_counts[.]|_top_|_summary[.]", x, ignore.case = TRUE)
+}
+
+semantic_recover_source_name <- function(source_name, evidence_file = "", object_name = "") {
+  source_name <- as.character(source_name %||% "")
+  evidence_file <- as.character(evidence_file %||% "")
+  object_name <- as.character(object_name %||% "")
+  if (nzchar(source_name) && !semantic_source_looks_like_evidence_file(source_name)) {
+    return(source_name)
+  }
+  key <- tolower(paste(source_name, object_name, evidence_file, sep = " "))
+  patterns <- list(
+    "SP_Social_Hx" = c("social_hx", "socialhx"),
+    "SP_VitaleVaerdier" = c("vitalevaerdier", "vital"),
+    "RKKP_DaMyDa" = c("damyda"),
+    "RKKP_LYFO" = c("lyfo"),
+    "RKKP_CLL" = c("rkkp_cll", "cll_treat", "ibrutinib"),
+    "SP_AlleProvesvar" = c("alleproevesvar", "alleprovesvar"),
+    "SDS_lab_forsker" = c("sds_lab_forsker"),
+    "LABKA" = c("labka"),
+    "PERSIMUNE_biochemistry" = c("persimune_biochem", "persimune_biochemistry"),
+    "SP_BilleddiagnostikeUndersoegelser_Del1" = c("billeddiagnostik_del1", "billeddiagnostikeundersoegelser_del1"),
+    "SDS_t_sksube" = c("sds_t_sksube"),
+    "SDS_procedurer_andre" = c("sds_procedure_andre", "procedurer_andre"),
+    "SDS_procedurer_kirurgi" = c("sds_procedure_kirurgi", "procedurer_kirurgi"),
+    "SP_Bloddyrkning_Del1" = c("bloddyrkning_del1"),
+    "SP_Bloddyrkning_Del2" = c("bloddyrkning_del2"),
+    "SP_Bloddyrkning_Del3" = c("bloddyrkning_del3"),
+    "SP_Bloddyrkning_Del4" = c("bloddyrkning_del4"),
+    "PERSIMUNE_microbiology_analysis" = c("microbiology_analysis", "micro_analysis"),
+    "PERSIMUNE_microbiology_culture_resistance" = c("culture_resistance"),
+    "PERSIMUNE_microbiology_culture" = c("microbiology_culture", "micro_culture"),
+    "PERSIMUNE_microbiology_microscopy" = c("microbiology_microscopy"),
+    "SP_AdministreretMedicin" = c("administreret_medicin"),
+    "SP_OrdineretMedicin" = c("ordineretmedicin", "rx_med"),
+    "SP_Behandlingsplaner_Del1" = c("behandlingsplaner_del1"),
+    "SP_Behandlingsplaner_Del2" = c("behandlingsplaner_del2"),
+    "SP_ADT_haendelser" = c("adt_haendelser"),
+    "SP_Journalnotater_Del1" = c("journalnotater_del1"),
+    "SP_Journalnotater_Del2" = c("journalnotater_del2"),
+    "SDS_epikur" = c("epikur"),
+    "SDS_ekokur" = c("ekokur"),
+    "SMR_medicine" = c("smr_atc"),
+    "SDS_pato" = c("sds_pato", "pato_top_snomed", "pato_value"),
+    "SDS_t_mikro" = c("sds_t_mikro"),
+    "SDS_t_tumor" = c("sds_t_tumor", "tumor_value"),
+    "SDS_t_dodsaarsag_2" = c("dodsaarsag_2"),
+    "LAB_biobank_samples" = c("biobank_samples")
+  )
+  for (nm in names(patterns)) {
+    if (any(vapply(patterns[[nm]], function(pattern) grepl(pattern, key, fixed = TRUE), logical(1)))) {
+      return(nm)
+    }
+  }
+  if (nzchar(object_name) && !semantic_source_looks_like_evidence_file(object_name)) return(object_name)
+  source_name
 }

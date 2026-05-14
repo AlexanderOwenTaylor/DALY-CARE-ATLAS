@@ -101,7 +101,10 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           memory_plan = NULL, db_query_log = NULL,
                           db_budget_actions = NULL,
                           semantic_dictionary = NULL, semantic_value_map = NULL,
-                          semantic_code_map = NULL, semantic_panel_links = NULL) {
+                          semantic_code_map = NULL, semantic_panel_links = NULL,
+                          clinical_concepts = NULL, domain_panels = NULL,
+                          panel_kpis_product = NULL, panel_distributions = NULL,
+                          panel_raw_fields = NULL, panel_parity = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -109,6 +112,12 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(semantic_value_map)) semantic_value_map <- empty_semantic_value_map()
   if (is.null(semantic_code_map)) semantic_code_map <- empty_semantic_code_map()
   if (is.null(semantic_panel_links)) semantic_panel_links <- empty_semantic_panel_links()
+  if (is.null(clinical_concepts)) clinical_concepts <- empty_clinical_concepts()
+  if (is.null(domain_panels)) domain_panels <- empty_domain_panels()
+  if (is.null(panel_kpis_product)) panel_kpis_product <- empty_panel_kpis()
+  if (is.null(panel_distributions)) panel_distributions <- empty_panel_distributions()
+  if (is.null(panel_raw_fields)) panel_raw_fields <- empty_panel_raw_fields()
+  if (is.null(panel_parity)) panel_parity <- empty_panel_parity()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
   public_column_profiles <- public_column_profile_rows(column_profiles)
@@ -120,6 +129,12 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_semantic_value_map <- sanitize_public_frame(semantic_value_map)
   public_semantic_code_map <- sanitize_public_frame(semantic_code_map)
   public_semantic_panel_links <- sanitize_public_frame(semantic_panel_links)
+  public_clinical_concepts <- sanitize_public_frame(clinical_concepts)
+  public_domain_panels <- sanitize_public_frame(domain_panels)
+  public_panel_kpis <- sanitize_public_frame(panel_kpis_product)
+  public_panel_distributions <- sanitize_public_frame(panel_distributions)
+  public_panel_raw_fields <- sanitize_public_frame(panel_raw_fields)
+  public_panel_parity <- sanitize_public_frame(panel_parity)
   module_readiness <- panel_or_empty(panels, "atlas_module_readiness")
   list(
     run_id = run_id,
@@ -147,6 +162,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     review_temporal_date_quality = public_rows(panel_or_empty(panels, "atlas_temporal_date_quality"), max_rows = 500),
     review_semantic_summary = public_rows(semantic_summary(semantic_dictionary, semantic_value_map, semantic_code_map, semantic_panel_links), max_rows = 100),
     review_domain_jump_links = review_domain_jump_links(),
+    review_clinical_variables = review_clinical_variables(clinical_concepts, panel_raw_fields, panel_distributions, panel_kpis_product),
     review_nav = review_nav(),
     review_overview = review_overview(
       sources = sources,
@@ -186,6 +202,12 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     semantic_value_map_rows = public_rows(public_semantic_value_map, max_rows = 5000),
     semantic_code_map_rows = public_rows(public_semantic_code_map, max_rows = 5000),
     semantic_panel_links = public_rows(public_semantic_panel_links, max_rows = 5000),
+    clinical_concept_rows = public_rows(public_clinical_concepts, max_rows = 5000),
+    domain_panel_rows = public_rows(public_domain_panels, max_rows = 500),
+    panel_kpi_rows = public_rows(public_panel_kpis, max_rows = 2000),
+    panel_distribution_rows = public_rows(public_panel_distributions, max_rows = 5000),
+    panel_raw_field_rows = public_rows(public_panel_raw_fields, max_rows = 5000),
+    panel_parity_rows = public_rows(public_panel_parity, max_rows = 500),
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
@@ -208,6 +230,11 @@ review_nav <- function() {
       id = "overview",
       label = "Overview",
       sub_tabs = c("Run metrics", "Coverage", "Temporal coverage", "Regional coverage", "Priority QA")
+    ),
+    list(
+      id = "variables",
+      label = "Clinical Variables",
+      sub_tabs = c("Concept cards", "Raw names", "Distributions", "Related panels")
     ),
     list(
       id = "situation",
@@ -304,6 +331,7 @@ review_data_landscape <- function(sources, panels) {
 
 review_domain_jump_links <- function() {
   list(
+    list(domain = "Clinical Variables", target_tab = "variables", label = "Find concepts, raw names, value maps, and related panels"),
     list(domain = "Situation Report", target_tab = "situation", label = "Current and recent activity"),
     list(domain = "Registries", target_tab = "registries", label = "DaMyDa, LYFO, and CLL registry review"),
     list(domain = "Clinical Data", target_tab = "clinical", label = "Diagnoses, admissions, imaging, notes, vitals, and social history"),
@@ -311,6 +339,15 @@ review_domain_jump_links <- function() {
     list(domain = "Laboratory", target_tab = "laboratory", label = "NPU dictionary, detective, isotype, and lab source evidence"),
     list(domain = "EHR Modules", target_tab = "ehr", label = "SP, SDS/LPR, and DALY view source readiness"),
     list(domain = "Infrastructure", target_tab = "infrastructure", label = "Resolution, streaming, DB budget, QA, and generated panels")
+  )
+}
+
+review_clinical_variables <- function(clinical_concepts, panel_raw_fields, panel_distributions, panel_kpis) {
+  list(
+    concepts = public_rows(clinical_concepts, max_rows = 5000),
+    raw_fields = public_rows(panel_raw_fields, max_rows = 5000),
+    distributions = public_rows(panel_distributions, max_rows = 5000),
+    kpis = public_rows(panel_kpis, max_rows = 2000)
   )
 }
 

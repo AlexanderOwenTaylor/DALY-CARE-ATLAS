@@ -497,13 +497,14 @@
   <nav class="nav">
     <div class="nav-inner">
       <button class="tab-button active" data-tab="overview">Overview</button>
+      <button class="tab-button" data-tab="variables">Clinical Variables</button>
       <button class="tab-button" data-tab="situation">Situation Report</button>
       <button class="tab-button" data-tab="quickstart">Quick Start</button>
-      <button class="tab-button" data-tab="dictionary">Data Dictionary</button>
       <button class="tab-button" data-tab="registries">Disease Registries</button>
       <button class="tab-button" data-tab="clinical">Clinical Data</button>
       <button class="tab-button" data-tab="treatment">Treatment</button>
       <button class="tab-button" data-tab="laboratory">Laboratory</button>
+      <button class="tab-button" data-tab="dictionary">Data Dictionary</button>
       <button class="tab-button" data-tab="ehr">EHR Modules</button>
       <button class="tab-button" data-tab="infrastructure">Infrastructure</button>
     </div>
@@ -613,6 +614,42 @@
           </div>
           <div class="panel-body"><div id="qa-preview" class="qa-list"></div></div>
         </div>
+      </div>
+    </section>
+
+    <section class="tab-page" id="tab-variables">
+      <div class="sub-nav" aria-label="Clinical Variables sections">
+        <button class="sub-tab active" data-sub="variables-concepts">Concept Cards</button>
+        <button class="sub-tab" data-sub="variables-lineage">Raw Names</button>
+        <button class="sub-tab" data-sub="variables-distributions">Distributions</button>
+        <button class="sub-tab" data-sub="variables-panels">Related Panels</button>
+      </div>
+      <div class="sub-pane active" id="variables-concepts">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Find variables</p>
+            <h2 class="panel-title">Clinical Variables</h2>
+            <p class="panel-sub">Clinician-facing concept cards powered by semantic lineage, value maps, code maps, domain panels, and cartography evidence.</p>
+          </div>
+          <div class="panel-body">
+            <div class="toolbar">
+              <label>Search <input id="clinical-variable-search" type="search" placeholder="height, weight, BMI, smoking, ryger, drikker, LDH, NPU02319, PET, CT, blood culture, IGHV"></label>
+              <label>Group <select id="clinical-variable-group-filter"><option value="">All groups</option></select></label>
+              <label>Status <select id="clinical-variable-status-filter"><option value="">All statuses</option></select></label>
+            </div>
+            <div id="clinical-variable-count" class="mini"></div>
+            <div id="clinical-variable-cards" class="grid"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="variables-lineage">
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Raw Names / Data Lineage</h2><p class="panel-sub">Panel-facing raw fields: source, column, descriptor, code, value, concept, evidence file, and scope labels.</p></div><div class="panel-body"><div id="clinical-variable-raw-fields"></div></div></div>
+      </div>
+      <div class="sub-pane" id="variables-distributions">
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Concept Distributions</h2><p class="panel-sub">Value maps, code maps, numeric summaries, and panel section rows with count/profile scope labels.</p></div><div class="panel-body"><div id="clinical-variable-distributions"></div></div></div>
+      </div>
+      <div class="sub-pane" id="variables-panels">
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Related Domain Panels</h2><p class="panel-sub">Clinician-facing panels linked to concepts and raw fields.</p></div><div class="panel-body"><div id="clinical-variable-panel-links"></div></div></div>
       </div>
     </section>
 
@@ -986,6 +1023,12 @@
       const semanticCodeRows = payload.semantic_code_map_rows || [];
       const semanticPanelLinks = payload.semantic_panel_links || [];
       const semanticSummary = payload.review_semantic_summary || [];
+      const clinicalConceptRows = payload.clinical_concept_rows || [];
+      const domainPanelRows = payload.domain_panel_rows || [];
+      const panelKpiRows = payload.panel_kpi_rows || [];
+      const panelDistributionRows = payload.panel_distribution_rows || [];
+      const panelRawFieldRows = payload.panel_raw_field_rows || [];
+      const panelParityRows = payload.panel_parity_rows || [];
       const regionState = { code: null };
 
       function text(value) {
@@ -1190,6 +1233,118 @@
         const s = text(severity || "ok").toLowerCase();
         return `<span class="badge ${escapeHtml(s)}">${escapeHtml(s.toUpperCase())}</span>`;
       }
+      function scopeLabel(row) {
+        const bits = [row.count_scope, row.denominator_scope, row.profile_scope].filter(Boolean);
+        return bits.length ? `<span class="mini">scope: ${escapeHtml(Array.from(new Set(bits)).join(" / "))}</span>` : "";
+      }
+      function rawFieldDisplay(row) {
+        return row.raw_field_label || semanticRawName(row) || row.raw_column || row.raw_code || row.source_name || "";
+      }
+      function panelTitle(panelId) {
+        const panel = domainPanelRows.find(row => row.panel_id === panelId);
+        return panel ? (panel.panel_title || panelId) : panelId;
+      }
+      function rowsForConcept(concept) {
+        const id = concept.clinical_concept_id || "";
+        const variable = concept.clinical_variable || "";
+        return {
+          raw: panelRawFieldRows.filter(row => row.clinical_concept_id === id || row.clinical_variable === variable),
+          dist: panelDistributionRows.filter(row => row.clinical_concept_id === id || row.clinical_variable === variable),
+          panels: (concept.related_panel_ids || "").split(";").map(s => s.trim()).filter(Boolean)
+        };
+      }
+      function conceptHay(concept) {
+        const related = rowsForConcept(concept);
+        return [
+          concept.clinical_concept_id, concept.clinical_variable, concept.clinical_group,
+          concept.clinical_subgroup, concept.purpose, concept.best_source,
+          concept.primary_sources, concept.use_cases, concept.caveats, concept.evidence_files,
+          concept.search_terms,
+          related.raw.map(rawFieldDisplay).join(" "),
+          related.dist.map(row => [row.raw_value, row.display_value, row.raw_code, row.source_name].join(" ")).join(" "),
+          related.panels.join(" ")
+        ].join(" ").toLowerCase();
+      }
+      function renderRawFieldList(rows, limit) {
+        const shown = (rows || []).slice(0, limit || 12);
+        if (!shown.length) return `<div class="empty">No panel-facing raw fields have been generated for this item.</div>`;
+        return `<div class="lineage-list">${shown.map(row => `
+          <div class="lineage-item">
+            <strong>${escapeHtml(rawFieldDisplay(row))}</strong>
+            <div class="mini">${escapeHtml(row.evidence_file || "")}${row.mapping_status ? " - " + escapeHtml(row.mapping_status) : ""}</div>
+            ${scopeLabel(row)}
+          </div>
+        `).join("")}</div>`;
+      }
+      function renderDistributionRows(rows, limit) {
+        const shown = (rows || []).filter(row => row.distribution_type !== "clinical_section").slice(0, limit || 12);
+        if (!shown.length) return `<div class="empty">No value/code/numeric distribution rows were generated for this item.</div>`;
+        return `<div class="bar-list">${shown.map(row => {
+          const label = row.display_value || row.raw_value || row.raw_code || row.statistic || row.clinical_variable || "";
+          const val = row.statistic_value || row.n || "";
+          return `<div class="bar-row"><div title="${escapeHtml(label)}">${escapeHtml(label)}</div><div class="track"><div class="fill" style="width:${Math.max(8, Math.min(100, numberValue(row.pct) || 35))}%"></div></div><div>${escapeHtml(val)}</div></div>
+            <div class="mini">${escapeHtml(row.distribution_type || "")} ${scopeLabel(row)}</div>`;
+        }).join("")}</div>`;
+      }
+      function renderConceptCard(concept) {
+        const related = rowsForConcept(concept);
+        const status = concept.concept_status || "available";
+        return `<article class="card concept-card">
+          <div><span class="badge ${escapeHtml(status)}">${escapeHtml(status)}</span> <span class="badge">${escapeHtml(concept.clinical_group || "Clinical")}</span></div>
+          <h3>${escapeHtml(concept.clinical_variable || "Clinical variable")}</h3>
+          <p>${escapeHtml(concept.purpose || "")}</p>
+          <div class="kpi-row">
+            <div class="kpi"><b>${escapeHtml(concept.best_source || "")}</b><span class="mini">best source</span></div>
+            <div class="kpi"><b>${formatNumber(concept.raw_field_count)}</b><span class="mini">raw fields</span></div>
+            <div class="kpi"><b>${formatNumber(concept.value_map_count)}</b><span class="mini">value maps</span></div>
+            <div class="kpi"><b>${formatNumber(concept.code_map_count)}</b><span class="mini">code maps</span></div>
+          </div>
+          <div class="lineage-block"><h3>Raw names / data lineage</h3>${renderRawFieldList(related.raw, 8)}</div>
+          <div class="lineage-block"><h3>Values and summaries</h3>${renderDistributionRows(related.dist, 8)}</div>
+          <p class="mini"><strong>Related panels:</strong> ${escapeHtml(related.panels.map(panelTitle).join("; ") || concept.related_panel_ids || "")}</p>
+          <p class="mini"><strong>Evidence:</strong> ${escapeHtml(concept.evidence_files || "")}</p>
+          <p class="mini"><strong>Caveat:</strong> ${escapeHtml(concept.caveats || "")}</p>
+          ${scopeLabel(concept)}
+        </article>`;
+      }
+      function renderClinicalVariables() {
+        const q = document.getElementById("clinical-variable-search").value.trim().toLowerCase();
+        const group = document.getElementById("clinical-variable-group-filter").value;
+        const status = document.getElementById("clinical-variable-status-filter").value;
+        const filtered = clinicalConceptRows.filter(row => {
+          return (!q || conceptHay(row).includes(q)) &&
+            (!group || row.clinical_group === group) &&
+            (!status || row.concept_status === status);
+        });
+        document.getElementById("clinical-variable-count").textContent = `${filtered.length} of ${clinicalConceptRows.length} clinical concepts shown`;
+        setHtml("clinical-variable-cards", filtered.slice(0, 120).map(renderConceptCard).join("") || `<div class="empty">No clinical concept cards match the current filters.</div>`);
+        const ids = new Set(filtered.map(row => row.clinical_concept_id));
+        setHtml("clinical-variable-raw-fields", rowsForTable(panelRawFieldRows.filter(row => ids.has(row.clinical_concept_id)).slice(0, 500), 500));
+        setHtml("clinical-variable-distributions", rowsForTable(panelDistributionRows.filter(row => ids.has(row.clinical_concept_id)).slice(0, 500), 500));
+        setHtml("clinical-variable-panel-links", rowsForTable(domainPanelRows.filter(row => (filtered.map(c => c.related_panel_ids || "").join(";")).includes(row.panel_id)), 200));
+      }
+      function renderDomainPanel(panelId) {
+        const panel = domainPanelRows.find(row => row.panel_id === panelId);
+        if (!panel) return `<div class="empty">No generated product-layer domain panel for ${escapeHtml(panelId)}.</div>`;
+        const kpis = panelKpiRows.filter(row => row.panel_id === panelId);
+        const distributions = panelDistributionRows.filter(row => row.panel_id === panelId);
+        const sections = distributions.filter(row => row.distribution_type === "clinical_section");
+        const raw = panelRawFieldRows.filter(row => row.panel_id === panelId);
+        const conceptIds = Array.from(new Set(raw.map(row => row.clinical_concept_id).filter(Boolean)));
+        const concepts = clinicalConceptRows.filter(row => conceptIds.includes(row.clinical_concept_id));
+        const nonSectionDistributions = distributions.filter(row => row.distribution_type !== "clinical_section");
+        return `<div class="domain-panel" data-domain-panel="${escapeHtml(panelId)}">
+          <div><span class="badge ${escapeHtml(panel.panel_status || "")}">${escapeHtml(panel.panel_status || "unknown")}</span> <span class="badge">${escapeHtml(panel.panel_section || "")}</span></div>
+          <h3>${escapeHtml(panel.panel_title || panelId)}</h3>
+          <p>${escapeHtml(panel.clinical_purpose || "")}</p>
+          <div class="lineage-block"><h3>Clinical sections</h3>${sections.length ? `<div class="grid">${sections.map(row => `<article class="card"><h3>${escapeHtml(row.display_value || row.clinical_variable || "")}</h3><p class="mini">${escapeHtml(row.value_class || "section")}</p></article>`).join("")}</div>` : `<div class="empty">No structured section rows were generated for this panel.</div>`}</div>
+          <div class="lineage-block"><h3>KPIs</h3>${kpis.length ? `<div class="grid">${kpis.slice(0, 12).map(row => `<article class="card"><div class="mini">${escapeHtml(row.label || "")}</div><h3>${formatNumber(row.value)}</h3><p class="mini">${escapeHtml(row.unit || "")} ${scopeLabel(row)}</p></article>`).join("")}</div>` : `<div class="empty">No KPI rows were generated for this panel.</div>`}</div>
+          <div class="lineage-block"><h3>Distributions</h3>${renderDistributionRows(nonSectionDistributions, 16)}</div>
+          <div class="lineage-block"><h3>Key raw fields / What are these called in the data?</h3>${renderRawFieldList(raw, 24)}</div>
+          <div class="lineage-block"><h3>Related clinical variables</h3>${concepts.length ? concepts.slice(0, 16).map(row => `<span class="lineage-chip">${escapeHtml(row.clinical_variable)} (${escapeHtml(row.concept_status || "")})</span>`).join("") : `<div class="empty">No related clinical concept rows were linked to this panel.</div>`}</div>
+          <div class="lineage-block"><h3>Use cases and caveats</h3><p>${escapeHtml(panel.use_cases || "")}</p><p class="mini">${escapeHtml(panel.caveats || "")}</p>${panel.missing_upstream_file ? `<p class="mini"><strong>Missing upstream:</strong> ${escapeHtml(panel.missing_upstream_file)}</p>` : ""}${scopeLabel(panel)}</div>
+        </div>`;
+      }
 
       document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
@@ -1377,27 +1532,20 @@
       }
 
       function renderRegistryDetail(targetId, section) {
-        const bundle = section || {};
-        const rows = Object.keys(bundle).map(name => ({ name, rows: bundle[name] || [] }));
-        setHtml(targetId, rows.map(item => `
-          <section class="card" style="margin-bottom:12px">
-            <h3>${escapeHtml(item.name)}</h3>
-            ${rowsForTable(item.rows, 80)}
-          </section>
-        `).join("") || `<div class="empty">No registry detail panels were available.</div>`);
+        setHtml(targetId, renderDomainPanel(section));
       }
       function renderReviewSections() {
-        renderRegistryDetail("registry-damyda", reviewRegistry.damyda);
-        renderRegistryDetail("registry-lyfo", reviewRegistry.lyfo);
-        renderRegistryDetail("registry-cll", reviewRegistry.cll);
+        renderRegistryDetail("registry-damyda", "reg_damyda");
+        renderRegistryDetail("registry-lyfo", "reg_lyfo");
+        renderRegistryDetail("registry-cll", "reg_cll");
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
 
-        setHtml("clinical-diagnoses-cards", sourceTiles(reviewClinical.diagnoses, "No diagnosis-like sources were mapped in this run."));
-        setHtml("clinical-admissions-cards", sourceTiles(reviewClinical.admissions, "No admission/contact sources were mapped in this run."));
-        setHtml("clinical-imaging-cards", sourceTiles(reviewClinical.imaging, "No imaging-like sources were mapped in this run."));
-        setHtml("clinical-vitals-cards", sourceTiles(reviewClinical.vitals, "No vitals-like sources were mapped in this run."));
-        setHtml("clinical-notes-cards", sourceTiles(reviewClinical.notes, "No notes or epikur sources were mapped in this run."));
-        setHtml("clinical-social-cards", sourceTiles(reviewClinical.social_history, "No social-history sources were mapped in this run."));
+        setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
+        setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
+        setHtml("clinical-imaging-cards", renderDomainPanel("clinical_imaging"));
+        setHtml("clinical-vitals-cards", renderDomainPanel("clinical_vitals"));
+        setHtml("clinical-notes-cards", renderDomainPanel("clinical_notes"));
+        setHtml("clinical-social-cards", renderDomainPanel("clinical_social_history"));
 
         setHtml("treatment-source-cards", sourceTiles(reviewTreatment.treatment_sources, "No treatment-like sources were mapped in this run."));
         setHtml("treatment-medicine-cards", sourceTiles((reviewTreatment.treatment_sources || []).filter(row => /medicin|medicine|atc|administered|ordered/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No medicine/ATC-like sources were mapped in this run."));
@@ -1479,6 +1627,14 @@
         document.getElementById(id).addEventListener("change", renderCatalog);
       });
       renderCatalog();
+
+      fillSelect("clinical-variable-group-filter", uniqueValues(clinicalConceptRows, "clinical_group"));
+      fillSelect("clinical-variable-status-filter", uniqueValues(clinicalConceptRows, "concept_status"));
+      ["clinical-variable-search", "clinical-variable-group-filter", "clinical-variable-status-filter"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderClinicalVariables);
+        document.getElementById(id).addEventListener("change", renderClinicalVariables);
+      });
+      renderClinicalVariables();
 
       fillSelect("column-dataset-filter", uniqueValues(columnRows, "table_name"));
       fillSelect("column-domain-filter", uniqueValues(columnRows, "domain"));

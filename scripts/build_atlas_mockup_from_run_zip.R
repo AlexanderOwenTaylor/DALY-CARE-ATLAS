@@ -169,6 +169,32 @@ for (panel_name in names(panels)) {
   write_csv(panels[[panel_name]], file.path(mock_panel_dir, paste0(panel_name, ".csv")))
 }
 
+semantic_outputs <- build_semantic_outputs(
+  project_root = project_root,
+  sources = sources,
+  column_profiles = column_profiles,
+  panels = panels,
+  min_cell_count = atlas_min_cell_count()
+)
+product_outputs <- build_product_layer_outputs(
+  semantic_outputs = semantic_outputs,
+  sources = sources,
+  panels = panels,
+  column_profiles = column_profiles,
+  min_cell_count = atlas_min_cell_count(),
+  project_root = project_root
+)
+write_csv(semantic_outputs$dictionary, file.path(mock_output_dir, "atlas_semantic_data_dictionary.csv"))
+write_csv(semantic_outputs$value_map, file.path(mock_output_dir, "atlas_semantic_value_map.csv"))
+write_csv(semantic_outputs$code_map, file.path(mock_output_dir, "atlas_semantic_code_map.csv"))
+write_csv(semantic_outputs$panel_links, file.path(mock_output_dir, "atlas_semantic_panel_links.csv"))
+write_csv(product_outputs$clinical_concepts, file.path(mock_output_dir, "atlas_clinical_concepts.csv"))
+write_csv(product_outputs$domain_panels, file.path(mock_output_dir, "atlas_domain_panels.csv"))
+write_csv(product_outputs$panel_kpis, file.path(mock_output_dir, "atlas_panel_kpis.csv"))
+write_csv(product_outputs$panel_distributions, file.path(mock_output_dir, "atlas_panel_distributions.csv"))
+write_csv(product_outputs$panel_raw_fields, file.path(mock_output_dir, "atlas_panel_raw_fields.csv"))
+write_csv(product_outputs$panel_parity, file.path(mock_output_dir, "atlas_panel_parity.csv"))
+
 action_items <- atlas_run_action_items(
   access_report = access_report,
   source_resolution = source_resolution,
@@ -199,7 +225,17 @@ payload <- atlas_payload(
   source_resolution = source_resolution,
   memory_plan = memory_plan,
   db_query_log = db_query_log,
-  db_budget_actions = db_budget_actions
+  db_budget_actions = db_budget_actions,
+  semantic_dictionary = semantic_outputs$dictionary,
+  semantic_value_map = semantic_outputs$value_map,
+  semantic_code_map = semantic_outputs$code_map,
+  semantic_panel_links = semantic_outputs$panel_links,
+  clinical_concepts = product_outputs$clinical_concepts,
+  domain_panels = product_outputs$domain_panels,
+  panel_kpis_product = product_outputs$panel_kpis,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  panel_parity = product_outputs$panel_parity
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 
