@@ -33,6 +33,21 @@ expect_true(any(search_semantic("Højde")$clinical_variable == "Height"), "Searc
 expect_true(any(grepl("numericvalue", search_semantic("numericvalue")$raw_column, fixed = TRUE)), "Search for numericvalue should return the SP vital numeric value field.")
 expect_true(any(search_semantic("Reg_LDH")$clinical_variable == "LDH"), "Search for Reg_LDH should return DaMyDa LDH.")
 expect_true(any(search_semantic("Reg_Creatinin_mikmoll")$clinical_variable == "Creatinine"), "Search for Reg_Creatinin_mikmoll should return creatinine.")
+crp_rows <- dictionary[dictionary$source_name == "RKKP_DaMyDa" & dictionary$raw_column %in% c("Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll"), , drop = FALSE]
+expect_true(nrow(crp_rows) >= 2, "DaMyDa CRP fields should be present in the semantic dictionary.")
+expect_true(all(crp_rows$clinical_concept_id == "crp" & crp_rows$clinical_variable == "CRP"), "DaMyDa C-reactive protein fields should map to CRP.")
+expect_false(any(crp_rows$clinical_concept_id == "creatinine" | crp_rows$clinical_variable == "Creatinine"), "DaMyDa C-reactive protein fields must not map to creatinine.")
+corrected_calcium <- dictionary[dictionary$source_name == "RKKP_DaMyDa" & dictionary$raw_column == "Reg_CalciumAlbuminkorrigeret", , drop = FALSE]
+expect_true(nrow(corrected_calcium) > 0, "DaMyDa albumin-corrected calcium should be present in the semantic dictionary.")
+expect_true(all(corrected_calcium$clinical_concept_id == "albumin_corrected_calcium"), "DaMyDa albumin-corrected calcium should have a distinct concept id.")
+expect_false(any(corrected_calcium$clinical_concept_id == "albumin" | corrected_calcium$clinical_variable == "Albumin"), "DaMyDa albumin-corrected calcium must not map to albumin.")
+fish_availability <- dictionary[dictionary$source_name == "RKKP_DaMyDa" & dictionary$raw_column == "Cyto_FishUdfoert", , drop = FALSE]
+fish_probe <- dictionary[dictionary$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishProber_", dictionary$raw_column), , drop = FALSE]
+fish_result <- dictionary[dictionary$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishResultat_", dictionary$raw_column), , drop = FALSE]
+expect_true(any(fish_availability$clinical_concept_id == "fish_availability"), "Cyto_FishUdfoert should retain FISH availability context.")
+expect_true(nrow(fish_probe) > 0 && all(fish_probe$clinical_concept_id == "fish_probe"), "Cyto_FishProber fields should map to FISH probe context.")
+expect_true(nrow(fish_result) > 0 && all(fish_result$clinical_concept_id == "fish_result"), "Cyto_FishResultat fields should map to FISH result context.")
+expect_false(any(fish_probe$clinical_concept_id == "cytogenetic_risk"), "FISH probe fields must not collapse into generic cytogenetic risk.")
 expect_true(any(search_semantic("NPU02319")$clinical_variable == "Haemoglobin"), "Search for NPU02319 should return haemoglobin.")
 expect_true(any(search_semantic("DNK35302")$clinical_variable == "eGFR"), "Search for DNK35302 should return eGFR.")
 expect_true(any(search_semantic("NPU19748")$clinical_variable == "Leukocytes"), "Search for NPU19748 should return leukocytes.")

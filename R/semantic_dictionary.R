@@ -913,10 +913,160 @@ semantic_registry_value_rows <- function(values, registry, min_cell_count) {
   bind_rows_base(unlist(rows, recursive = FALSE))
 }
 
+damyda_registry_column_definition <- function(column, key, mk) {
+  exact <- function(values) {
+    key %in% vapply(values, semantic_id_from, character(1))
+  }
+  starts_with <- function(prefixes) {
+    any(startsWith(key, vapply(prefixes, semantic_id_from, character(1))))
+  }
+
+  if (exact(c("Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll"))) {
+    return(mk(
+      "crp",
+      "CRP",
+      "Laboratory at registration",
+      "C-reactive protein measured in the DaMyDa registry.",
+      "numeric",
+      "high",
+      "confirmed",
+      c("CRP", "C-reactive protein", "inflammation", column),
+      "Registry CRP fields require unit-aware interpretation."
+    ))
+  }
+
+  if (exact(c(
+    "Reg_Creatinin_mikmoll",
+    "Reg_Creatinin_mmoll",
+    "PB_Creatinin_MikMoll",
+    "PB_Creatinin_mMoll",
+    "PB_CreatininSeneste",
+    "CREA"
+  ))) {
+    return(mk(
+      "creatinine",
+      "Creatinine",
+      "Laboratory at registration",
+      "Creatinine field in the registry.",
+      "numeric",
+      "high",
+      "confirmed",
+      c("creatinine", "renal function", column),
+      "Creatinine units may vary by source field."
+    ))
+  }
+
+  if (exact(c("Reg_Albumin_gl", "ALB"))) {
+    return(mk(
+      "albumin",
+      "Albumin",
+      "Laboratory at registration",
+      "Albumin field in the registry.",
+      "numeric",
+      "high",
+      "confirmed",
+      c("albumin", column),
+      "Albumin is a baseline biochemical marker."
+    ))
+  }
+
+  if (exact("Reg_CalciumAlbuminkorrigeret")) {
+    return(mk(
+      "albumin_corrected_calcium",
+      "Albumin-corrected calcium",
+      "Laboratory at registration",
+      "Albumin-corrected calcium field in the registry.",
+      "numeric",
+      "high",
+      "confirmed",
+      c("calcium", "albumin corrected calcium", "bone disease", column),
+      "Corrected calcium is a calcium/bone-related biochemical marker, not an albumin measurement."
+    ))
+  }
+
+  if (exact(c("Reg_CalciumIoniseret", "Reg_Calcium"))) {
+    return(mk(
+      "calcium",
+      "Calcium",
+      "Laboratory at registration",
+      "Calcium field in the registry.",
+      "numeric",
+      "high",
+      "confirmed",
+      c("calcium", "bone disease", column),
+      "Calcium fields require source-specific unit interpretation."
+    ))
+  }
+
+  if (exact(c("Cyto_FishUdfoert", "Reg_FISH_Udfoert"))) {
+    return(mk(
+      "fish_availability",
+      "FISH/cytogenetics availability",
+      "Cytogenetics and molecular markers",
+      "Field indicating whether FISH/cytogenetics testing was performed.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("FISH", "cytogenetics", "availability", column),
+      "Operational availability field; it should not be interpreted as a cytogenetic risk marker."
+    ))
+  }
+
+  if (starts_with("Cyto_FishProber_")) {
+    return(mk(
+      "fish_probe",
+      "FISH probe field",
+      "Cytogenetics and molecular markers",
+      "Field describing a FISH probe tested in the DaMyDa cytogenetics module.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("FISH probe", "cytogenetics probe", column),
+      "Probe fields describe assay coverage and probe-specific evidence, not an interpreted risk category by themselves."
+    ))
+  }
+
+  if (starts_with("Cyto_FishResultat_")) {
+    return(mk(
+      "fish_result",
+      "FISH result field",
+      "Cytogenetics and molecular markers",
+      "Field describing a probe-specific FISH result in the DaMyDa cytogenetics module.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("FISH result", "cytogenetics result", column),
+      "Probe-specific result fields require clinical grouping before interpretation as cytogenetic risk."
+    ))
+  }
+
+  if (exact(c("Reg_FISH_Abnormitet", "Reg_CYTOGENRES", "Reg_ISCN_Resultat", "Reg_Ploidi"))) {
+    return(mk(
+      "cytogenetic_risk",
+      "Cytogenetic/FISH interpretation",
+      "Cytogenetics and molecular markers",
+      "Interpreted cytogenetic or FISH result-summary field.",
+      "categorical",
+      "medium",
+      "confirmed",
+      c("cytogenetic risk", "FISH abnormality", column),
+      "Only interpreted abnormality or summary fields should be treated as cytogenetic risk signals."
+    ))
+  }
+
+  NULL
+}
+
 registry_column_definition <- function(column, registry) {
   key <- semantic_id_from(column)
   mk <- function(concept_id, variable, subgroup, meaning, value_type = "categorical", confidence = "medium", status = "inferred", terms = character(), caveat = "Registry field mapping is based on cartography evidence and should be checked against the registry data dictionary.") {
     list(concept_id = concept_id, variable = variable, subgroup = subgroup, meaning = meaning, value_type = value_type, confidence = confidence, status = status, terms = terms, caveat = caveat)
+  }
+  if (grepl("damyda", registry, ignore.case = TRUE)) {
+    damyda_definition <- damyda_registry_column_definition(column, key, mk)
+    if (!is.null(damyda_definition)) {
+      return(damyda_definition)
+    }
   }
   patterns <- list(
     list("ldh", mk("ldh", "LDH", "Laboratory at registration", "Lactate dehydrogenase field in the registry.", "numeric", "high", "confirmed", c("LDH", "Reg_LDH"))),

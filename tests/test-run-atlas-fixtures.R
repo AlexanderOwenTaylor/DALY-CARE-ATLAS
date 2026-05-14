@@ -126,9 +126,17 @@ expect_true(grepl("Vital signs and anthropometrics", html, fixed = TRUE), "Vital
 expect_true(grepl("Social history: smoking and alcohol", html, fixed = TRUE), "Social History heading should use the clinician-facing title.")
 expect_true(grepl("DaMyDa: myeloma registry review", html, fixed = TRUE), "DaMyDa heading should use the clinician-facing registry title.")
 expect_true(grepl("date span not reliable in current aggregate output", html, fixed = TRUE), "DaMyDa renderer should include the date-quality fallback.")
-for (needle in c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Cytogenetics/FISH availability", "Cytogenetics/FISH result fields", "Raw names / data lineage", "Use cases and caveats")) {
+for (needle in c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Cytogenetics/FISH availability", "Raw names / data lineage", "Use cases and caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should contain section:", needle))
 }
+for (needle in c("CRP / C-reactive protein", "Albumin-corrected calcium", "FISH probe fields", "FISH result fields", "Interpreted cytogenetic/FISH summary fields")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should contain corrected semantic section:", needle))
+}
+expect_false(grepl("Reg_CReaktivtProtein_gl -> Creatinine", html, fixed = TRUE), "DaMyDa renderer must not show C-reactive protein as creatinine.")
+expect_false(grepl("Reg_CReaktivtProtein_nMoll -> Creatinine", html, fixed = TRUE), "DaMyDa renderer must not show C-reactive protein as creatinine.")
+expect_false(grepl("Reg_CalciumAlbuminkorrigeret -> Albumin", html, fixed = TRUE), "DaMyDa renderer must not show albumin-corrected calcium as albumin.")
+expect_false(grepl("key.includes(normalizeClinicalKey(pattern))", html, fixed = TRUE), "DaMyDa raw-lineage priority should not rely on broad substring pattern matching.")
+expect_true(grepl("damydaColumnEquals", html, fixed = TRUE) && grepl("damydaColumnStartsWith", html, fixed = TRUE), "DaMyDa raw-lineage priority should use exact and anchored field matching.")
 for (needle in c("RKKP_DaMyDa", "registry entries", "variables", "not available in current aggregate output", "Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl", "Reg_ProcentKlonalePlasmaceller", "Stadie", "Reg_PerformanceStatus", "Reg_Knogleforandringer", "IND_Relaps", "Cyto_FishUdfoert")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should visibly contain:", needle))
 }
@@ -336,6 +344,16 @@ expect_true(any(semantic_dictionary$raw_descriptor == "Vægt" & semantic_diction
 expect_true(any(semantic_dictionary$raw_descriptor == "Højde" & semantic_dictionary$clinical_variable == "Height"), "Semantic output should map Højde to Height.")
 expect_true(any(semantic_dictionary$raw_column == "Reg_LDH" & semantic_dictionary$clinical_variable == "LDH"), "Semantic output should map Reg_LDH to LDH.")
 expect_true(any(semantic_dictionary$raw_column == "Reg_Creatinin_mikmoll" & semantic_dictionary$clinical_variable == "Creatinine"), "Semantic output should map Reg_Creatinin_mikmoll to creatinine.")
+run_crp <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_DaMyDa" & semantic_dictionary$raw_column %in% c("Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll"), , drop = FALSE]
+expect_true(nrow(run_crp) >= 2 && all(run_crp$clinical_concept_id == "crp" & run_crp$clinical_variable == "CRP"), "Run semantic output should map DaMyDa C-reactive protein fields to CRP.")
+expect_false(any(run_crp$clinical_concept_id == "creatinine" | run_crp$clinical_variable == "Creatinine"), "Run semantic output must not map DaMyDa C-reactive protein fields to creatinine.")
+run_corrected_calcium <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_DaMyDa" & semantic_dictionary$raw_column == "Reg_CalciumAlbuminkorrigeret", , drop = FALSE]
+expect_true(nrow(run_corrected_calcium) > 0 && all(run_corrected_calcium$clinical_concept_id == "albumin_corrected_calcium"), "Run semantic output should map DaMyDa albumin-corrected calcium to its own concept.")
+expect_false(any(run_corrected_calcium$clinical_concept_id == "albumin" | run_corrected_calcium$clinical_variable == "Albumin"), "Run semantic output must not map DaMyDa albumin-corrected calcium to albumin.")
+run_fish_probe <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishProber_", semantic_dictionary$raw_column), , drop = FALSE]
+run_fish_result <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishResultat_", semantic_dictionary$raw_column), , drop = FALSE]
+expect_true(nrow(run_fish_probe) > 0 && all(run_fish_probe$clinical_concept_id == "fish_probe"), "Run semantic output should preserve FISH probe context.")
+expect_true(nrow(run_fish_result) > 0 && all(run_fish_result$clinical_concept_id == "fish_result"), "Run semantic output should preserve FISH result context.")
 expect_true(any(semantic_dictionary$raw_code == "NPU02319" & semantic_dictionary$clinical_variable == "Haemoglobin"), "Semantic output should map NPU02319 to haemoglobin.")
 expect_true(any(semantic_dictionary$raw_code == "DNK35302" & semantic_dictionary$clinical_variable == "eGFR"), "Semantic output should map DNK35302 to eGFR.")
 expect_true(any(semantic_dictionary$raw_code == "NPU19748" & semantic_dictionary$clinical_variable == "Leukocytes"), "Semantic output should map NPU19748 to leukocytes.")

@@ -44,6 +44,19 @@ expect_true(has_raw("RKKP_DaMyDa", "Reg_LDH", variable = "LDH"), "Raw fields sho
 if (any(semantic$dictionary$source_name == "RKKP_DaMyDa" & semantic$dictionary$raw_column == "Reg_Creatinin_mikmoll")) {
   expect_true(has_raw("RKKP_DaMyDa", "Reg_Creatinin_mikmoll", variable = "Creatinine"), "Raw fields should map DaMyDa Reg_Creatinin_mikmoll to Creatinine when present.")
 }
+damyda_crp <- raw_fields[raw_fields$source_name == "RKKP_DaMyDa" & raw_fields$raw_column %in% c("Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll"), , drop = FALSE]
+expect_true(nrow(damyda_crp) >= 2, "DaMyDa CRP raw fields should flow into panel raw fields.")
+expect_true(all(damyda_crp$clinical_concept_id == "crp" & damyda_crp$clinical_variable == "CRP"), "DaMyDa CRP raw fields should remain CRP in product-layer rows.")
+expect_false(any(damyda_crp$clinical_concept_id == "creatinine" | damyda_crp$clinical_variable == "Creatinine"), "DaMyDa CRP raw fields must not appear under creatinine in product-layer rows.")
+damyda_corrected_calcium <- raw_fields[raw_fields$source_name == "RKKP_DaMyDa" & raw_fields$raw_column == "Reg_CalciumAlbuminkorrigeret", , drop = FALSE]
+expect_true(nrow(damyda_corrected_calcium) > 0, "DaMyDa albumin-corrected calcium should flow into panel raw fields.")
+expect_true(all(damyda_corrected_calcium$clinical_concept_id == "albumin_corrected_calcium"), "DaMyDa albumin-corrected calcium should keep its corrected-calcium concept.")
+expect_false(any(damyda_corrected_calcium$clinical_concept_id == "albumin" | damyda_corrected_calcium$clinical_variable == "Albumin"), "DaMyDa albumin-corrected calcium must not appear under albumin in product-layer rows.")
+damyda_fish_probe <- raw_fields[raw_fields$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishProber_", raw_fields$raw_column), , drop = FALSE]
+damyda_fish_result <- raw_fields[raw_fields$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishResultat_", raw_fields$raw_column), , drop = FALSE]
+expect_true(nrow(damyda_fish_probe) > 0 && all(damyda_fish_probe$clinical_concept_id == "fish_probe"), "FISH probe rows should keep FISH/probe context in product-layer rows.")
+expect_true(nrow(damyda_fish_result) > 0 && all(damyda_fish_result$clinical_concept_id == "fish_result"), "FISH result rows should keep FISH/result context in product-layer rows.")
+expect_false(any(damyda_fish_probe$clinical_concept_id == "cytogenetic_risk"), "FISH probe rows must not be described only as generic cytogenetic risk.")
 expect_true(has_raw("LABKA", code = "NPU02319", variable = "Haemoglobin") || has_raw("SDS_lab_forsker", code = "NPU02319", variable = "Haemoglobin"), "Raw fields should map NPU02319 to Haemoglobin.")
 expect_true(has_raw("LABKA", code = "DNK35302", variable = "eGFR") || has_raw("PERSIMUNE", code = "DNK35302", variable = "eGFR"), "Raw fields should map DNK35302 to eGFR.")
 expect_true(has_raw("LABKA", code = "NPU19748", variable = "Leukocytes") || has_raw("SDS_lab_forsker", code = "NPU19748", variable = "Leukocytes"), "Raw fields should map NPU19748 to Leukocytes.")

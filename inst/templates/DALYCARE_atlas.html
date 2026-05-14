@@ -1737,14 +1737,44 @@
         ].filter(Boolean).join(" "));
         return keys.some(key => hay.includes(normalizeClinicalKey(key)));
       }
-      function damydaNumericHit(keys) {
-        return damydaNumericRows().find(row => rowMatchesKeys(row, keys)) || null;
+      function damydaColumnKey(row) {
+        return normalizeClinicalKey(row.source_column || row.raw_column || row.field || row.raw_field_label || "");
+      }
+      function damydaColumnEquals(row, columns) {
+        const key = damydaColumnKey(row);
+        return columns.some(column => key === normalizeClinicalKey(column));
+      }
+      function damydaColumnStartsWith(row, prefixes) {
+        const key = damydaColumnKey(row);
+        return prefixes.some(prefix => key.startsWith(normalizeClinicalKey(prefix)));
+      }
+      const damydaExactFieldGroups = {
+        haemoglobin: ["Reg_Haemoglobin", "HB"],
+        creatinine: ["Reg_Creatinin_mikmoll", "Reg_Creatinin_mmoll", "PB_Creatinin_MikMoll", "PB_Creatinin_mMoll", "PB_CreatininSeneste", "CREA"],
+        crp: ["Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll"],
+        ldh: ["Reg_LDH", "LDH"],
+        albumin: ["Reg_Albumin_gl", "ALB"],
+        albuminCorrectedCalcium: ["Reg_CalciumAlbuminkorrigeret"],
+        beta2m: ["Reg_Beta2Microglobulin_gl", "B2M"],
+        plasmaCells: ["Reg_ProcentKlonalePlasmaceller"],
+        calcium: ["Reg_Calcium", "Reg_CalciumIoniseret"],
+        mComponent: ["Reg_PlasmaMKomponent", "Reg_SerumMKomponent", "Reg_UrinMKomponent"],
+        lightChains: ["Reg_FriKappa", "Reg_FriLambda", "Reg_KappaLambdaRatio"],
+        stage: ["Stadie"],
+        performanceStatus: ["Reg_PerformanceStatus"],
+        boneDisease: ["Reg_Knogleforandringer", "Reg_Knogleforandringer_type"],
+        relapse: ["IND_Relaps", "Reg_Relaps"],
+        fishAvailability: ["Cyto_FishUdfoert", "Reg_FISH_Udfoert"],
+        interpretedCytogenetics: ["Reg_FISH_Abnormitet", "Reg_CYTOGENRES", "Reg_ISCN_Resultat", "Reg_Ploidi"]
+      };
+      function damydaNumericHit(columns) {
+        return damydaNumericRows().find(row => damydaColumnEquals(row, columns)) || null;
       }
       function damydaNumericValue(row, field) {
         return row && hasDisplayValue(row[field]) ? formatNumber(row[field]) : "not available";
       }
-      function renderDaMyDaNumericCard(label, keys) {
-        const row = damydaNumericHit(keys);
+      function renderDaMyDaNumericCard(label, columns) {
+        const row = damydaNumericHit(columns);
         return `<article class="stat-card">
           <h3>${escapeHtml(label)}</h3>
           <p class="mini">Source column: <code>${escapeHtml(row && row.source_column ? row.source_column : "not available")}</code></p>
@@ -1778,21 +1808,44 @@
           ${body}
         </article>`;
       }
+      function renderDaMyDaRawGroup(title, columns, prefixes, note) {
+        const rows = damydaRawRows()
+          .filter(row => damydaColumnEquals(row, columns || []) || damydaColumnStartsWith(row, prefixes || []))
+          .slice(0, 16);
+        const body = rows.length ? renderRawFieldList(rows, 16) : `<div class="empty">No confirmed DaMyDa raw-field mappings were generated for this group.</div>`;
+        return `<article class="value-map-card">
+          <h3>${escapeHtml(title)}</h3>
+          ${note ? `<p class="mini">${escapeHtml(note)}</p>` : ""}
+          ${body}
+        </article>`;
+      }
       function damydaRawRows() {
         return panelRawFieldRows.filter(row =>
           row.panel_id === "reg_damyda" || rowSourceMatches(row, ["RKKP_DaMyDa", "DaMyDa"])
         );
       }
       function damydaRawPriority(row) {
-        const key = normalizeClinicalKey([row.raw_column, row.raw_descriptor, row.raw_code, row.raw_field_label, row.clinical_variable].join(" "));
-        const order = [
-          "reg haemoglobin", "hb", "reg creatinin mikmoll", "crea", "reg ldh",
-          "reg albumin gl", "alb", "reg beta2microglobulin gl", "b2m",
-          "reg procentklonaleplasmaceller", "stadie", "reg performancestatus",
-          "reg knogleforandringer", "ind relaps", "reg relaps", "cyto fishudfoert",
-          "fish udfoert", "fish"
+        const priorityGroups = [
+          { columns: damydaExactFieldGroups.haemoglobin },
+          { columns: damydaExactFieldGroups.creatinine },
+          { columns: damydaExactFieldGroups.crp },
+          { columns: damydaExactFieldGroups.ldh },
+          { columns: damydaExactFieldGroups.albumin },
+          { columns: damydaExactFieldGroups.albuminCorrectedCalcium },
+          { columns: damydaExactFieldGroups.beta2m },
+          { columns: damydaExactFieldGroups.plasmaCells },
+          { columns: damydaExactFieldGroups.stage },
+          { columns: damydaExactFieldGroups.performanceStatus },
+          { columns: damydaExactFieldGroups.boneDisease },
+          { columns: damydaExactFieldGroups.relapse },
+          { columns: damydaExactFieldGroups.fishAvailability },
+          { prefixes: ["Cyto_FishProber_"] },
+          { prefixes: ["Cyto_FishResultat_"] },
+          { columns: damydaExactFieldGroups.interpretedCytogenetics }
         ];
-        const idx = order.findIndex(pattern => key.includes(normalizeClinicalKey(pattern)));
+        const idx = priorityGroups.findIndex(group =>
+          damydaColumnEquals(row, group.columns || []) || damydaColumnStartsWith(row, group.prefixes || [])
+        );
         return idx < 0 ? 999 : idx;
       }
       function renderDaMyDaRawLineage() {
@@ -1822,14 +1875,17 @@
           <div class="lineage-block">
             <h3>Baseline disease markers</h3>
             <div class="grid">
-              ${renderDaMyDaNumericCard("Haemoglobin", ["haemoglobin", "Reg_Haemoglobin", "HB"])}
-              ${renderDaMyDaNumericCard("Creatinine", ["creatinine", "Reg_Creatinin_mikmoll", "Reg_Creatinin", "CREA"])}
-              ${renderDaMyDaNumericCard("LDH", ["ldh", "Reg_LDH", "LDH"])}
-              ${renderDaMyDaNumericCard("Albumin", ["albumin", "Reg_Albumin_gl", "ALB"])}
-              ${renderDaMyDaNumericCard("Beta-2 microglobulin", ["beta2_microglobulin", "Reg_Beta2Microglobulin_gl", "B2M"])}
-              ${renderDaMyDaNumericCard("Clonal plasma-cell percentage", ["clonal_plasma_cells", "Reg_ProcentKlonalePlasmaceller", "plasma_cells"])}
-              ${renderDaMyDaNumericCard("Calcium", ["calcium", "Reg_Calcium"])}
-              ${renderDaMyDaNumericCard("M-component / light chains", ["m_component", "Reg_PlasmaMKomponent", "kappa", "lambda", "light"])}
+              ${renderDaMyDaNumericCard("Haemoglobin", damydaExactFieldGroups.haemoglobin)}
+              ${renderDaMyDaNumericCard("Creatinine", damydaExactFieldGroups.creatinine)}
+              ${renderDaMyDaNumericCard("CRP / C-reactive protein", damydaExactFieldGroups.crp)}
+              ${renderDaMyDaNumericCard("LDH", damydaExactFieldGroups.ldh)}
+              ${renderDaMyDaNumericCard("Albumin", damydaExactFieldGroups.albumin)}
+              ${renderDaMyDaNumericCard("Albumin-corrected calcium", damydaExactFieldGroups.albuminCorrectedCalcium)}
+              ${renderDaMyDaNumericCard("Beta-2 microglobulin", damydaExactFieldGroups.beta2m)}
+              ${renderDaMyDaNumericCard("Clonal plasma-cell percentage", damydaExactFieldGroups.plasmaCells)}
+              ${renderDaMyDaNumericCard("Calcium", damydaExactFieldGroups.calcium)}
+              ${renderDaMyDaNumericCard("M-component", damydaExactFieldGroups.mComponent)}
+              ${renderDaMyDaNumericCard("Light chains", damydaExactFieldGroups.lightChains)}
             </div>
           </div>
           <div class="value-map-grid">
@@ -1838,7 +1894,9 @@
             ${renderDaMyDaFacetGroup("Response/relapse", ["response", "relapse", "followup", "IND_Relaps", "Reg_Relaps"], "Response and relapse fields may be registration or follow-up specific.")}
             ${renderDaMyDaFacetGroup("Bone disease / imaging", ["bone_disease", "bone_disease_type", "imaging", "Reg_Knogleforandringer", "Reg_Billeddiagnostik"], "Bone and imaging fields describe registry evidence, not image pixels or report text.")}
             ${renderDaMyDaFacetGroup("Cytogenetics/FISH availability", ["cytogenetics_fish_done", "Cyto_FishUdfoert", "Reg_FISH_Udfoert"], "Operational FISH/cytogenetics availability fields are separated from result interpretation.")}
-            ${renderDaMyDaFacetGroup("Cytogenetics/FISH result fields", ["cytogenetics_iscn", "cytogenetics_ploidy", "cytogenetics_abnormality", "Reg_ISCN_Resultat", "Reg_Ploidi", "Reg_FISH_Abnormitet"], "Do not treat operational metadata as cytogenetic risk markers without validating the raw result field.")}
+            ${renderDaMyDaRawGroup("FISH probe fields", [], ["Cyto_FishProber_"], "Probe fields describe which FISH assays were represented; they are not interpreted risk markers by themselves.")}
+            ${renderDaMyDaRawGroup("FISH result fields", [], ["Cyto_FishResultat_"], "Probe-specific results require clinical grouping before risk interpretation.")}
+            ${renderDaMyDaRawGroup("Interpreted cytogenetic/FISH summary fields", damydaExactFieldGroups.interpretedCytogenetics, [], "Only interpreted abnormality or summary fields are treated as cytogenetic risk signals.")}
           </div>
           ${renderDaMyDaRawLineage()}
           <div class="lineage-block">
