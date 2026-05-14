@@ -1057,6 +1057,220 @@ damyda_registry_column_definition <- function(column, key, mk) {
   NULL
 }
 
+lyfo_registry_column_definition <- function(column, key, mk) {
+  exact <- function(values) {
+    key %in% vapply(values, semantic_id_from, character(1))
+  }
+  starts_with <- function(prefixes) {
+    any(startsWith(key, vapply(prefixes, semantic_id_from, character(1))))
+  }
+
+  if (exact("subtype")) {
+    return(mk(
+      "lymphoma_subtype",
+      "Lymphoma subtype",
+      "Subtype",
+      "Lymphoma subtype aggregate derived from LYFO registry profile evidence.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("subtype", "DLBCL", "FL", "WM", "RKKP_LYFO"),
+      "Subtype labels are registry/profile categories and should be checked against LYFO definitions."
+    ))
+  }
+
+  if (exact(c("Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode"))) {
+    return(mk(
+      "lymphoma_subtype_code",
+      "WHO histology code",
+      "Subtype",
+      "WHO histology code field used for lymphoma subtype classification.",
+      "code",
+      "high",
+      "confirmed",
+      c("WHO histology", "histology code", "lymphoma subtype", column),
+      "Histology-code fields are subtype/code fields, not performance-status fields."
+    ))
+  }
+
+  if (exact("Reg_Stadium")) {
+    return(mk(
+      "ann_arbor_stage",
+      "Ann Arbor / lymphoma stage",
+      "Staging and risk",
+      "Ann Arbor lymphoma staging field in LYFO.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("Ann Arbor", "stage", "Reg_Stadium"),
+      "Stage categories require registry data-dictionary validation before study use."
+    ))
+  }
+
+  index_defs <- list(
+    IPI = c("ipi", "IPI", "International Prognostic Index"),
+    aaIPI = c("aaipi", "aaIPI", "age-adjusted International Prognostic Index"),
+    FLIPI = c("flipi", "FLIPI", "Follicular Lymphoma International Prognostic Index"),
+    FLIPI2 = c("flipi2", "FLIPI2", "Follicular Lymphoma International Prognostic Index 2"),
+    IPS = c("ips", "IPS", "International Prognostic Score")
+  )
+  for (field in names(index_defs)) {
+    if (exact(field)) {
+      def <- index_defs[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "Staging and risk",
+        paste(def[[3]], "field in LYFO."),
+        "categorical",
+        "high",
+        "confirmed",
+        c(def[[2]], def[[3]], column),
+        "Prognostic-index values preserve the raw index name and require LYFO definition checks."
+      ))
+    }
+  }
+
+  if (exact(c("Reg_BSymptomer"))) {
+    return(mk(
+      "b_symptoms",
+      "B symptoms",
+      "Presentation",
+      "B-symptom field in the LYFO registry.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("B symptoms", "fever", "night sweats", "weight loss", column),
+      "Unknown categories should remain distinct from no symptoms."
+    ))
+  }
+
+  if (exact(c("Reg_BulkSygdom"))) {
+    return(mk(
+      "bulk_disease",
+      "Bulky disease",
+      "Presentation",
+      "Bulky disease field in the LYFO registry.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("bulk disease", "bulky disease", column),
+      "Unknown categories should remain distinct from no bulky disease."
+    ))
+  }
+
+  if (exact(c("Reg_PerformanceStatusWHO", "Beh_PerformanceStatus", "Rec_Performancestatus"))) {
+    return(mk(
+      "performance_status",
+      "WHO performance status",
+      "Functional status",
+      "WHO or treatment/follow-up performance-status field in LYFO.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("performance status", "WHO performance", column),
+      "Only explicit performance-status fields should be mapped here."
+    ))
+  }
+
+  baseline_markers <- list(
+    Reg_Haemoglobin = c("haemoglobin", "Haemoglobin", "Haemoglobin laboratory field in LYFO."),
+    Reg_Albumin_gL = c("albumin", "Albumin", "Albumin laboratory field in LYFO."),
+    Reg_Albumin_mikmoll = c("albumin", "Albumin", "Albumin laboratory field in LYFO."),
+    Reg_CalciumAlbuminkorrigeret = c("albumin_corrected_calcium", "Albumin-corrected calcium", "Albumin-corrected calcium field in LYFO."),
+    Reg_CalciumIoniseret = c("ionised_calcium", "Ionised calcium", "Ionised calcium field in LYFO."),
+    Reg_Creatinin_mikmoll = c("creatinine", "Creatinine", "Creatinine laboratory field in LYFO."),
+    Reg_Creatinin_millimoll = c("creatinine", "Creatinine", "Creatinine laboratory field in LYFO."),
+    Reg_Lactatdehydrogenase = c("ldh", "LDH", "Lactate dehydrogenase field in LYFO."),
+    Reg_LDHVaerdi = c("ldh", "LDH", "LDH value field in LYFO."),
+    Reg_Beta2Microglobulin_mgL = c("beta_2_microglobulin", "Beta-2 microglobulin", "Beta-2 microglobulin field in LYFO."),
+    Reg_Beta2Microglobulin_nmL = c("beta_2_microglobulin", "Beta-2 microglobulin", "Beta-2 microglobulin field in LYFO."),
+    Reg_Leukocytter = c("leukocytes", "Leukocytes", "Leukocyte laboratory field in LYFO."),
+    Reg_Lymfocytter_mL = c("lymphocytes", "Lymphocytes", "Lymphocyte laboratory field in LYFO."),
+    Reg_Thrombocytter = c("platelets", "Platelets", "Platelet laboratory field in LYFO."),
+    Reg_Saenkning = c("esr", "ESR / sedimentation rate", "Sedimentation-rate field in LYFO."),
+    Reg_MProtein = c("m_protein", "M-protein", "M-protein field in LYFO.")
+  )
+  for (field in names(baseline_markers)) {
+    if (exact(field)) {
+      def <- baseline_markers[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "Baseline disease markers",
+        def[[3]],
+        "numeric",
+        "high",
+        "confirmed",
+        c(def[[2]], column),
+        "Baseline marker availability is registry evidence; use source-specific units and definitions."
+      ))
+    }
+  }
+
+  treatment_fields <- c(
+    "Beh_ErDerForetagetKemo",
+    "Beh_Kemoterapiregime1",
+    "Beh_Kemoterapiregime2",
+    "Beh_Kemoterapiregime3",
+    "Beh_KemoterapiStart_dt",
+    "Beh_KemoterapiSlut_dt",
+    "Beh_Immunoterapi",
+    "Beh_ImmunoterapiCyclusantal",
+    "Beh_CycluslaengdeReg1",
+    "Beh_CyclusAntalReg1",
+    "Beh_CycluslaengdeReg2",
+    "Beh_CyclusAntalReg2",
+    "Beh_CycluslaengdeReg3",
+    "Beh_CyclusAntalReg3",
+    "Beh_DosisIGray",
+    "Beh_AntalFraktioner"
+  )
+  if (exact(treatment_fields) || starts_with(c("Beh_Kemoterapi", "Beh_Cyclus", "Beh_Dosis", "Beh_AntalFraktioner"))) {
+    return(mk(
+      "lyfo_treatment_field",
+      "LYFO treatment/regimen field",
+      "Treatment and regimen",
+      "Registry treatment, regimen, date, cycle, immunotherapy, or radiotherapy field in LYFO.",
+      if (grepl("_dt$", column, ignore.case = TRUE)) "date" else "categorical",
+      "medium",
+      "confirmed",
+      c("treatment", "regimen", "chemotherapy", "immunotherapy", "radiotherapy", column),
+      "Registry treatment fields are treatment signals, not a complete medication administration record."
+    ))
+  }
+
+  if (exact(c("ind_relaps", "ind_fu")) || starts_with("Rec_")) {
+    return(mk(
+      "lyfo_followup_relapse",
+      "LYFO follow-up / relapse field",
+      "Response / follow-up / relapse",
+      "Relapse, follow-up, recurrence, response, toxicity, or recurrence-treatment field in LYFO.",
+      "categorical",
+      "medium",
+      "confirmed",
+      c("relapse", "follow-up", "recurrence", column),
+      "Follow-up fields can represent recurrence-specific registry forms or later treatment evidence."
+    ))
+  }
+
+  if (starts_with(c("Reg_Lokal_", "Reg_Sygdomslokal"))) {
+    return(mk(
+      "disease_localization",
+      if (exact("Reg_Lokal_Pancreas")) "Pancreas localization / extranodal disease site" else "Disease localization / involved site",
+      "Disease localization",
+      "Disease localization, nodal/extranodal involvement, or involved-site field in LYFO.",
+      "categorical",
+      "medium",
+      "confirmed",
+      c("disease localization", "involved site", "extranodal", column),
+      "Localization fields describe disease sites; they should not be interpreted as laboratory markers."
+    ))
+  }
+
+  NULL
+}
+
 registry_column_definition <- function(column, registry) {
   key <- semantic_id_from(column)
   mk <- function(concept_id, variable, subgroup, meaning, value_type = "categorical", confidence = "medium", status = "inferred", terms = character(), caveat = "Registry field mapping is based on cartography evidence and should be checked against the registry data dictionary.") {
@@ -1067,6 +1281,22 @@ registry_column_definition <- function(column, registry) {
     if (!is.null(damyda_definition)) {
       return(damyda_definition)
     }
+  }
+  if (grepl("lyfo", registry, ignore.case = TRUE)) {
+    lyfo_definition <- lyfo_registry_column_definition(column, key, mk)
+    if (!is.null(lyfo_definition)) {
+      return(lyfo_definition)
+    }
+    return(mk(
+      semantic_id_from(c(registry, column)),
+      column,
+      "LYFO registry field",
+      paste("Registry field", column),
+      "categorical",
+      "low",
+      "candidate",
+      c(column, registry)
+    ))
   }
   patterns <- list(
     list("ldh", mk("ldh", "LDH", "Laboratory at registration", "Lactate dehydrogenase field in the registry.", "numeric", "high", "confirmed", c("LDH", "Reg_LDH"))),

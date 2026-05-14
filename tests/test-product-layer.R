@@ -57,6 +57,33 @@ damyda_fish_result <- raw_fields[raw_fields$source_name == "RKKP_DaMyDa" & grepl
 expect_true(nrow(damyda_fish_probe) > 0 && all(damyda_fish_probe$clinical_concept_id == "fish_probe"), "FISH probe rows should keep FISH/probe context in product-layer rows.")
 expect_true(nrow(damyda_fish_result) > 0 && all(damyda_fish_result$clinical_concept_id == "fish_result"), "FISH result rows should keep FISH/result context in product-layer rows.")
 expect_false(any(damyda_fish_probe$clinical_concept_id == "cytogenetic_risk"), "FISH probe rows must not be described only as generic cytogenetic risk.")
+
+lyfo_raw <- raw_fields[raw_fields$source_name == "RKKP_LYFO", , drop = FALSE]
+lyfo_histology <- lyfo_raw[lyfo_raw$raw_column %in% c("Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode"), , drop = FALSE]
+expect_true(nrow(lyfo_histology) > 0, "LYFO histology rows should flow into product-layer raw fields.")
+expect_true(any(lyfo_histology$clinical_concept_id == "lymphoma_subtype_code" & lyfo_histology$clinical_variable == "WHO histology code"), "LYFO histology rows should keep subtype-code context in product-layer rows.")
+expect_false(any(lyfo_histology$clinical_concept_id == "performance_status" | lyfo_histology$clinical_variable == "Performance status"), "LYFO histology rows must not appear under performance status.")
+lyfo_performance <- lyfo_raw[lyfo_raw$raw_column %in% c("Reg_PerformanceStatusWHO", "Beh_PerformanceStatus", "Rec_Performancestatus"), , drop = FALSE]
+expect_true(nrow(lyfo_performance) > 0 && all(lyfo_performance$clinical_concept_id == "performance_status"), "LYFO performance rows should map to performance status in product-layer rows.")
+lyfo_corrected_calcium <- lyfo_raw[lyfo_raw$raw_column == "Reg_CalciumAlbuminkorrigeret", , drop = FALSE]
+expect_true(nrow(lyfo_corrected_calcium) > 0 && all(lyfo_corrected_calcium$clinical_concept_id == "albumin_corrected_calcium"), "LYFO albumin-corrected calcium should keep its corrected-calcium concept.")
+expect_false(any(lyfo_corrected_calcium$clinical_concept_id == "albumin" | lyfo_corrected_calcium$clinical_variable == "Albumin"), "LYFO albumin-corrected calcium must not appear under albumin.")
+lyfo_pancreas <- lyfo_raw[lyfo_raw$raw_column == "Reg_Lokal_Pancreas", , drop = FALSE]
+expect_true(nrow(lyfo_pancreas) > 0 && all(lyfo_pancreas$clinical_concept_id == "disease_localization"), "LYFO pancreas localization should stay in disease-localization context.")
+expect_false(any(lyfo_pancreas$clinical_concept_id == "creatinine" | lyfo_pancreas$clinical_variable == "Creatinine"), "LYFO pancreas localization must not appear under creatinine.")
+lyfo_ldh <- lyfo_raw[lyfo_raw$raw_column %in% c("Reg_Lactatdehydrogenase", "Reg_LDHVaerdi"), , drop = FALSE]
+if (nrow(lyfo_ldh)) {
+  expect_true(all(lyfo_ldh$clinical_concept_id == "ldh" & lyfo_ldh$clinical_variable == "LDH"), "LYFO LDH rows should keep LDH context.")
+}
+lyfo_index_expectations <- c(IPI = "ipi", aaIPI = "aaipi", FLIPI = "flipi", FLIPI2 = "flipi2", IPS = "ips")
+for (raw_field in names(lyfo_index_expectations)) {
+  concept <- unname(lyfo_index_expectations[[raw_field]])
+  rows <- lyfo_raw[lyfo_raw$raw_column == raw_field, , drop = FALSE]
+  if (nrow(rows)) {
+    expect_true(all(rows$clinical_concept_id == concept), paste("LYFO raw index should preserve concept id:", raw_field))
+    expect_true(all(rows$clinical_variable == raw_field), paste("LYFO raw index should preserve visible label:", raw_field))
+  }
+}
 expect_true(has_raw("LABKA", code = "NPU02319", variable = "Haemoglobin") || has_raw("SDS_lab_forsker", code = "NPU02319", variable = "Haemoglobin"), "Raw fields should map NPU02319 to Haemoglobin.")
 expect_true(has_raw("LABKA", code = "DNK35302", variable = "eGFR") || has_raw("PERSIMUNE", code = "DNK35302", variable = "eGFR"), "Raw fields should map DNK35302 to eGFR.")
 expect_true(has_raw("LABKA", code = "NPU19748", variable = "Leukocytes") || has_raw("SDS_lab_forsker", code = "NPU19748", variable = "Leukocytes"), "Raw fields should map NPU19748 to Leukocytes.")
@@ -108,6 +135,22 @@ damyda_raw <- raw_fields[raw_fields$panel_id == "reg_damyda", , drop = FALSE]
 for (column in c("Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl", "Reg_ProcentKlonalePlasmaceller", "Stadie", "Reg_PerformanceStatus", "Reg_Knogleforandringer", "IND_Relaps", "Cyto_FishUdfoert")) {
   if (any(semantic$dictionary$source_name == "RKKP_DaMyDa" & semantic$dictionary$raw_column == column)) {
     expect_true(any(damyda_raw$raw_column == column), paste("DaMyDa raw fields should include evidenced column:", column))
+  }
+}
+
+lyfo_sections <- distributions$display_value[distributions$panel_id == "reg_lyfo" & distributions$distribution_type == "clinical_section"]
+expect_true(all(c(
+  "Source / coverage", "Subtype mix", "Staging and risk", "B symptoms and bulk disease",
+  "Performance status", "Baseline disease markers", "Treatment and regimen fields",
+  "Response / follow-up / relapse fields", "Disease localization", "Raw names / data lineage",
+  "Use cases", "Caveats"
+) %in% lyfo_sections), "LYFO should expose required structured clinical sections.")
+lyfo_panel <- domain_panels[domain_panels$panel_id == "reg_lyfo", , drop = FALSE]
+expect_true(grepl("lymphoma registry review", lyfo_panel$panel_title[[1]], ignore.case = TRUE), "LYFO panel should use the clinician-facing registry title.")
+expect_true(grepl("subtype", lyfo_panel$clinical_purpose[[1]], ignore.case = TRUE) && grepl("Ann Arbor", lyfo_panel$clinical_purpose[[1]], fixed = TRUE), "LYFO panel purpose should describe lymphoma-specific registry use.")
+for (column in c("Reg_Stadium", "IPI", "aaIPI", "Reg_BSymptomer", "Reg_BulkSygdom", "Reg_PerformanceStatusWHO", "Reg_Haemoglobin", "Reg_Lactatdehydrogenase", "Reg_Creatinin_mikmoll", "Reg_CalciumAlbuminkorrigeret", "Beh_Kemoterapiregime1", "Beh_Immunoterapi", "ind_relaps", "Reg_Lokal_Pancreas", "Reg_WHOHistologikode1")) {
+  if (any(semantic$dictionary$source_name == "RKKP_LYFO" & semantic$dictionary$raw_column == column)) {
+    expect_true(any(lyfo_raw$raw_column == column), paste("LYFO raw fields should include evidenced column:", column))
   }
 }
 

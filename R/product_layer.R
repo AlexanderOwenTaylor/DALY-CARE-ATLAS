@@ -179,13 +179,13 @@ product_panel_specs <- function() {
       "Clinical Data", "Treatment", "Laboratory", "Laboratory", "Laboratory"
     ),
     panel_title = c(
-      "DaMyDa", "LYFO", "CLL", "Diagnosis Atlas", "Vitals", "Social History",
+      "DaMyDa", "LYFO: lymphoma registry review", "CLL", "Diagnosis Atlas", "Vitals", "Social History",
       "ADT", "Notes", "Imaging", "Microbiology", "Treatment", "Laboratory/NPU",
       "Pathology", "Biobank"
     ),
     clinical_purpose = c(
       "Myeloma registry review for baseline markers, staging, treatment, response, relapse, bone disease, imaging, and cytogenetic availability.",
-      "Lymphoma registry review for subtype, Ann Arbor stage, prognostic scores, B symptoms, treatment, response, and outcome availability.",
+      "Lymphoma registry review for subtype, Ann Arbor stage, prognostic scores, B symptoms, bulk disease, performance status, treatment/regimen fields, follow-up, and disease localization.",
       "CLL registry review for Binet stage, IGHV, FISH/cytogenetics, TP53, treatment, targeted therapy, response, and MRD availability.",
       "ICD10 diagnosis availability across DALY-CARE diagnosis tables and views.",
       "Physiological measurement availability from SP vital signs, including anthropometrics and repeated clinical observations.",
@@ -201,7 +201,7 @@ product_panel_specs <- function() {
     ),
     use_cases = c(
       "Myeloma cohort phenotyping; staging/risk stratification; renal/bone disease studies; treatment-response analyses.",
-      "Lymphoma subtype/risk studies; treatment patterns; response and survival analyses.",
+      "Lymphoma subtype cohort discovery; Ann Arbor stage and IPI/aaIPI risk adjustment; B-symptom and bulky-disease stratification; treatment/regimen field discovery; relapse/follow-up variable discovery; disease-localization review.",
       "CLL risk stratification; targeted therapy cohorts; molecular/cytogenetic subgroup analyses.",
       "Cohort definition; diagnosis validation; comorbidity and longitudinal disease history.",
       "Frailty, acute illness, deterioration, baseline anthropometrics, and longitudinal physiology studies.",
@@ -217,7 +217,7 @@ product_panel_specs <- function() {
     ),
     caveats = c(
       "Registry fields are wide-format and disease-specific; expected fields may be absent or renamed in cartography evidence.",
-      "Registry variable naming and subtype coding require disease-specific interpretation before modeling.",
+      "LYFO is a registry layer, not the complete medication administration record. Registry-coded fields require LYFO data-dictionary validation; counts/distributions may be cartography/profile outputs unless explicitly full-source.",
       "Molecular/treatment fields can be sparse; targeted therapy variables may live in curated companion tables.",
       "Diagnosis rows are not unique patients and may reflect repeated or refined coding over time.",
       "Repeated measures require baseline windows, outlier handling, and unit checks before patient-level analysis.",
@@ -607,7 +607,7 @@ product_vital_numeric_distributions <- function(project_root, start_sort = 1L) {
 product_registry_section_distributions <- function(start_sort = 1L) {
   specs <- list(
     reg_damyda = c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Cytogenetics/molecular", "Raw fields"),
-    reg_lyfo = c("Subtype", "Ann Arbor/stage", "IPI/aaIPI/risk", "B symptoms", "Treatment", "Response/outcomes", "Raw fields"),
+    reg_lyfo = c("Source / coverage", "Subtype mix", "Staging and risk", "B symptoms and bulk disease", "Performance status", "Baseline disease markers", "Treatment and regimen fields", "Response / follow-up / relapse fields", "Disease localization", "Raw names / data lineage", "Use cases", "Caveats"),
     reg_cll = c("Binet stage", "IGHV", "FISH/cytogenetics", "TP53 if available", "Treatment/targeted therapies", "Response/MRD if available", "Raw fields"),
     clinical_imaging = c("Nationwide procedure-code imaging", "Registry modality fields", "EHR-native imaging metadata/report text"),
     clinical_microbiology = c("PERSIMUNE analysis/culture/resistance/microscopy", "SP blood-culture workflow", "Sample material/result class/organism-domain framing")

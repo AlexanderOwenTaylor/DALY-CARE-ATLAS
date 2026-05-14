@@ -908,7 +908,7 @@
         </div>
       </div>
       <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa: myeloma registry review</h2><p class="panel-sub">Clinician-facing review of aggregate DaMyDa source shape, baseline markers, staging, treatment, response, bone disease, and cytogenetics/FISH fields.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
-      <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO Detail</h2><p class="panel-sub">LYFO registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-lyfo"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-lyfo"></div></div></div></div></div>
+      <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO: lymphoma registry review</h2><p class="panel-sub">Clinician-facing review of aggregate LYFO source shape, subtype, stage/risk, B symptoms, performance status, treatment fields, follow-up, and localization fields.</p></div><div class="panel-body"><div id="registry-lyfo"></div></div></div></div>
       <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL Detail</h2><p class="panel-sub">CLL registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-cll"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-cll"></div></div></div></div></div>
       <div class="sub-pane" id="reg-inventory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Registry Inventory</h2><p class="panel-sub">Clinical registry summary rows and related panels.</p></div><div class="panel-body"><div id="registry-summary-table"></div></div></div></div>
     </section>
@@ -1906,6 +1906,174 @@
           </div>
         </div>`;
       }
+      function lyfoSummaryRow() {
+        return panelRows("registry_clinical_summary").find(row =>
+          /lyfo/i.test([row.registry, row.table_name].join(" "))
+        ) || {};
+      }
+      function lyfoDateSpan(row) {
+        const minDate = row.min_date;
+        const maxDate = row.max_date;
+        if (!plausibleDamydaDate(minDate) || !plausibleDamydaDate(maxDate)) {
+          return "not available / not reliable in current aggregate output";
+        }
+        return `${escapeHtml(minDate)} to ${escapeHtml(maxDate)}`;
+      }
+      function lyfoClinicalRows() {
+        return panelRows("lyfo_clinical_profile").filter(row => /lyfo/i.test([row.registry, row.table_name].join(" ")));
+      }
+      function lyfoRawRows() {
+        return panelRawFieldRows.filter(row =>
+          row.panel_id === "reg_lyfo" || rowSourceMatches(row, ["RKKP_LYFO", "LYFO"])
+        );
+      }
+      function lyfoColumnKey(row) {
+        return normalizeClinicalKey(row.source_column || row.raw_column || row.field || row.raw_field_label || "");
+      }
+      function lyfoColumnEquals(row, columns) {
+        const key = lyfoColumnKey(row);
+        return (columns || []).some(column => key === normalizeClinicalKey(column));
+      }
+      function lyfoColumnStartsWith(row, prefixes) {
+        const key = lyfoColumnKey(row);
+        return (prefixes || []).some(prefix => key.startsWith(normalizeClinicalKey(prefix)));
+      }
+      const lyfoExactFieldGroups = {
+        subtype: ["subtype", "Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode"],
+        stageRisk: ["Reg_Stadium", "IPI", "aaIPI", "FLIPI", "FLIPI2", "IPS"],
+        bSymptomsBulk: ["Reg_BSymptomer", "Reg_BulkSygdom"],
+        performanceStatus: ["Reg_PerformanceStatusWHO", "Beh_PerformanceStatus", "Rec_Performancestatus"],
+        baselineMarkers: [
+          "Reg_Haemoglobin", "Reg_Albumin_gL", "Reg_Albumin_mikmoll",
+          "Reg_CalciumAlbuminkorrigeret", "Reg_CalciumIoniseret",
+          "Reg_Creatinin_mikmoll", "Reg_Creatinin_millimoll",
+          "Reg_Lactatdehydrogenase", "Reg_LDHVaerdi",
+          "Reg_Beta2Microglobulin_mgL", "Reg_Beta2Microglobulin_nmL",
+          "Reg_Leukocytter", "Reg_Lymfocytter_mL", "Reg_Thrombocytter",
+          "Reg_Saenkning", "Reg_MProtein"
+        ],
+        treatmentFields: [
+          "Beh_ErDerForetagetKemo", "Beh_Kemoterapiregime1", "Beh_Kemoterapiregime2",
+          "Beh_Kemoterapiregime3", "Beh_KemoterapiStart_dt", "Beh_KemoterapiSlut_dt",
+          "Beh_Immunoterapi", "Beh_ImmunoterapiCyclusantal", "Beh_CycluslaengdeReg1",
+          "Beh_CyclusAntalReg1", "Beh_CycluslaengdeReg2", "Beh_CyclusAntalReg2",
+          "Beh_CycluslaengdeReg3", "Beh_CyclusAntalReg3", "Beh_DosisIGray",
+          "Beh_AntalFraktioner"
+        ],
+        followupRelapse: ["ind_relaps", "ind_fu", "Rec_Behtoksicitet", "Rec_Performancestatus"],
+        localizationPriority: [
+          "Reg_Lokal_Pancreas", "Reg_Lokal_Knoglemarv", "Reg_Lokal_CNS",
+          "Reg_Lokal_Knogler", "Reg_Lokal_Milt", "Reg_Lokal_Lever",
+          "Reg_Lokal_Lunge", "Reg_Lokal_Hud"
+        ]
+      };
+      function lyfoFacetRows(facets) {
+        const wanted = (facets || []).map(normalizeClinicalKey);
+        return lyfoClinicalRows().filter(row => wanted.includes(normalizeClinicalKey(row.facet)));
+      }
+      function renderLYFOFacetGroup(title, facets, note) {
+        const rows = lyfoFacetRows(facets).slice(0, 14);
+        const body = rows.length ? rows.map(row => `
+          <div class="value-row">
+            <code>${escapeHtml(row.source_column || row.facet || "")}</code>
+            <div>${escapeHtml(row.label || "")}</div>
+            <div><strong>${formatNumber(row.n)}</strong></div>
+            <div class="mini" style="grid-column:1 / -1">${escapeHtml(row.facet || "")}${hasDisplayValue(row.pct_rows) ? " - " + escapeHtml(row.pct_rows) + "% of profile rows" : ""} - scope: cartography_scan aggregate profile</div>
+          </div>
+        `).join("") : `<div class="empty">not available in current aggregate output</div>`;
+        return `<article class="value-map-card">
+          <h3>${escapeHtml(title)}</h3>
+          ${note ? `<p class="mini">${escapeHtml(note)}</p>` : ""}
+          ${body}
+        </article>`;
+      }
+      function renderLYFORawGroup(title, columns, prefixes, note, limit) {
+        const rows = lyfoRawRows().filter(row =>
+          lyfoColumnEquals(row, columns || []) || lyfoColumnStartsWith(row, prefixes || [])
+        );
+        const shown = rows.slice(0, limit || 14);
+        const hidden = rows.slice(limit || 14);
+        const body = shown.length ? renderRawFieldList(shown, shown.length) : `<div class="empty">not available in current aggregate output</div>`;
+        return `<article class="value-map-card">
+          <h3>${escapeHtml(title)}</h3>
+          ${note ? `<p class="mini">${escapeHtml(note)}</p>` : ""}
+          ${body}
+          ${hidden.length ? `<details><summary>Show ${hidden.length} additional fields</summary>${renderRawFieldList(hidden, hidden.length)}</details>` : ""}
+        </article>`;
+      }
+      function lyfoRawPriority(row) {
+        const priorityGroups = [
+          { columns: lyfoExactFieldGroups.subtype },
+          { columns: lyfoExactFieldGroups.stageRisk },
+          { columns: lyfoExactFieldGroups.bSymptomsBulk },
+          { columns: lyfoExactFieldGroups.performanceStatus },
+          { columns: lyfoExactFieldGroups.baselineMarkers },
+          { columns: lyfoExactFieldGroups.treatmentFields },
+          { columns: lyfoExactFieldGroups.followupRelapse },
+          { columns: lyfoExactFieldGroups.localizationPriority },
+          { prefixes: ["Reg_Lokal_", "Reg_Sygdomslokal", "Rec_"] }
+        ];
+        const idx = priorityGroups.findIndex(group =>
+          lyfoColumnEquals(row, group.columns || []) || lyfoColumnStartsWith(row, group.prefixes || [])
+        );
+        return idx < 0 ? 999 : idx;
+      }
+      function renderLYFORawLineage() {
+        const rows = lyfoRawRows();
+        const confirmed = rows.filter(row => !/not_present|unresolved|expected|candidate/i.test(text(row.mapping_status)));
+        confirmed.sort((a, b) => lyfoRawPriority(a) - lyfoRawPriority(b));
+        const candidates = rows.filter(row => /candidate|low|not_present|unresolved|expected/i.test([row.mapping_status, row.mapping_confidence].join(" ")));
+        return `<div class="lineage-block">
+          <h3>Raw names / data lineage</h3>
+          ${confirmed.length ? renderRawFieldList(confirmed, 30) : `<div class="empty">not available in current aggregate output</div>`}
+          <details class="lineage-block">
+            <summary>Candidate / low-confidence LYFO fields</summary>
+            ${candidates.length ? renderRawFieldList(candidates, 40) : `<div class="empty">No candidate LYFO rows were generated.</div>`}
+          </details>
+        </div>`;
+      }
+      function renderLYFOPanel() {
+        const summary = lyfoSummaryRow();
+        return `<div class="focused-panel lyfo-panel">
+          <div class="lineage-block">
+            <h3>Source / coverage</h3>
+            <div class="source-shape">
+              <div class="source-fact"><span class="mini">Registry source</span><b>RKKP_LYFO</b></div>
+              <div class="source-fact"><span class="mini">Registry entries</span><b>${metricOrUnavailable(summary.n_rows, "registry entries")}</b></div>
+              <div class="source-fact"><span class="mini">Variables</span><b>${metricOrUnavailable(summary.n_cols, "variables")}</b></div>
+              <div class="source-fact"><span class="mini">Patients</span><b>${hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not available in current aggregate output"}</b></div>
+              <div class="source-fact"><span class="mini">Date span</span><b>${lyfoDateSpan(summary)}</b></div>
+            </div>
+          </div>
+          <div class="value-map-grid">
+            ${renderLYFOFacetGroup("Subtype mix", ["subtype"], "Subtype profile rows come from aggregate LYFO profile output.")}
+            ${renderLYFOFacetGroup("Staging and risk", ["ann_arbor_stage", "ipi"], "Ann Arbor / lymphoma stage and IPI are shown from aggregate profile facets; raw index names are preserved below.")}
+            ${renderLYFOFacetGroup("B symptoms and bulk disease", ["b_symptoms", "bulk_disease"], "UNK is retained as unknown and not merged with no.")}
+            ${renderLYFOFacetGroup("Performance status", ["performance_status"], "Only explicit performance-status fields are shown here; WHO histology codes are subtype/code fields.")}
+            ${renderLYFORawGroup("Baseline disease markers", lyfoExactFieldGroups.baselineMarkers, [], "Field availability for LYFO baseline markers. Numeric medians are not invented when no numeric panel exists.", 18)}
+            ${renderLYFORawGroup("Treatment and regimen fields", lyfoExactFieldGroups.treatmentFields, ["Beh_Kemoterapi", "Beh_Cyclus", "Beh_Dosis", "Beh_AntalFraktioner"], "Registry treatment/regimen fields are treatment signals. Specific regimens are not inferred unless present in aggregate evidence.", 18)}
+            ${renderLYFORawGroup("Response / follow-up / relapse fields", lyfoExactFieldGroups.followupRelapse, ["Rec_"], "Follow-up and recurrence fields are shown as registry availability/lineage evidence.", 18)}
+            ${renderLYFORawGroup("Disease localization", lyfoExactFieldGroups.localizationPriority, ["Reg_Lokal_", "Reg_Sygdomslokal"], "Localization fields describe involved sites and extranodal disease; they are not laboratory markers.", 12)}
+          </div>
+          ${renderLYFORawLineage()}
+          <div class="lineage-block">
+            <h3>Use cases</h3>
+            <ul>
+              <li>Lymphoma subtype cohort discovery.</li>
+              <li>Ann Arbor stage and IPI/aaIPI risk adjustment.</li>
+              <li>B-symptom and bulky-disease stratification.</li>
+              <li>Treatment/regimen field discovery.</li>
+              <li>Relapse/follow-up variable discovery.</li>
+              <li>Disease-localization/extranodal-involvement review.</li>
+            </ul>
+          </div>
+          <div class="lineage-block">
+            <h3>Caveats</h3>
+            <p>LYFO is a registry layer, not the complete medication administration record. Some fields are registry-coded and require the LYFO data dictionary for definitive interpretation.</p>
+            <p class="mini">Counts/distributions are aggregate cartography/profile outputs unless explicitly full-source. Date ranges are not displayed unless validated. Candidate raw fields are shown for discovery and need analyst validation before study use.</p>
+          </div>
+        </div>`;
+      }
 
       document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
@@ -2102,7 +2270,7 @@
       }
       function renderReviewSections() {
         setHtml("registry-damyda", renderDaMyDaPanel());
-        renderRegistryDetail("registry-lyfo", "reg_lyfo");
+        setHtml("registry-lyfo", renderLYFOPanel());
         renderRegistryDetail("registry-cll", "reg_cll");
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
 

@@ -48,6 +48,39 @@ expect_true(any(fish_availability$clinical_concept_id == "fish_availability"), "
 expect_true(nrow(fish_probe) > 0 && all(fish_probe$clinical_concept_id == "fish_probe"), "Cyto_FishProber fields should map to FISH probe context.")
 expect_true(nrow(fish_result) > 0 && all(fish_result$clinical_concept_id == "fish_result"), "Cyto_FishResultat fields should map to FISH result context.")
 expect_false(any(fish_probe$clinical_concept_id == "cytogenetic_risk"), "FISH probe fields must not collapse into generic cytogenetic risk.")
+
+lyfo_rows <- dictionary[dictionary$source_name == "RKKP_LYFO", , drop = FALSE]
+lyfo_histology <- lyfo_rows[lyfo_rows$raw_column %in% c("Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode"), , drop = FALSE]
+expect_true(nrow(lyfo_histology) > 0, "LYFO WHO histology fields should be present in the semantic dictionary when evidenced.")
+expect_true(any(lyfo_histology$clinical_concept_id == "lymphoma_subtype_code" & lyfo_histology$clinical_variable == "WHO histology code"), "LYFO WHO histology fields should map to subtype/histology-code context.")
+expect_false(any(lyfo_histology$clinical_concept_id == "performance_status" | lyfo_histology$clinical_variable == "Performance status"), "LYFO WHO histology fields must not map to performance status.")
+
+lyfo_performance <- lyfo_rows[lyfo_rows$raw_column %in% c("Reg_PerformanceStatusWHO", "Beh_PerformanceStatus", "Rec_Performancestatus"), , drop = FALSE]
+expect_true(nrow(lyfo_performance) > 0 && all(lyfo_performance$clinical_concept_id == "performance_status"), "LYFO performance-status fields should map to performance status.")
+lyfo_corrected_calcium <- lyfo_rows[lyfo_rows$raw_column == "Reg_CalciumAlbuminkorrigeret", , drop = FALSE]
+expect_true(nrow(lyfo_corrected_calcium) > 0, "LYFO albumin-corrected calcium should be present in the semantic dictionary.")
+expect_true(all(lyfo_corrected_calcium$clinical_concept_id == "albumin_corrected_calcium"), "LYFO albumin-corrected calcium should have a distinct concept id.")
+expect_false(any(lyfo_corrected_calcium$clinical_concept_id == "albumin" | lyfo_corrected_calcium$clinical_variable == "Albumin"), "LYFO albumin-corrected calcium must not map to albumin.")
+lyfo_pancreas <- lyfo_rows[lyfo_rows$raw_column == "Reg_Lokal_Pancreas", , drop = FALSE]
+expect_true(nrow(lyfo_pancreas) > 0 && all(lyfo_pancreas$clinical_concept_id == "disease_localization"), "LYFO pancreas localization should map to disease localization.")
+expect_false(any(lyfo_pancreas$clinical_concept_id == "creatinine" | lyfo_pancreas$clinical_variable == "Creatinine"), "LYFO pancreas localization must not map to creatinine.")
+lyfo_ldh <- lyfo_rows[lyfo_rows$raw_column %in% c("Reg_Lactatdehydrogenase", "Reg_LDHVaerdi"), , drop = FALSE]
+if (nrow(lyfo_ldh)) {
+  expect_true(all(lyfo_ldh$clinical_concept_id == "ldh" & lyfo_ldh$clinical_variable == "LDH"), "LYFO LDH fields should map to LDH.")
+}
+lyfo_b_symptoms <- lyfo_rows[lyfo_rows$raw_column == "Reg_BSymptomer", , drop = FALSE]
+lyfo_bulk <- lyfo_rows[lyfo_rows$raw_column == "Reg_BulkSygdom", , drop = FALSE]
+expect_true(nrow(lyfo_b_symptoms) > 0 && all(lyfo_b_symptoms$clinical_concept_id == "b_symptoms"), "LYFO B-symptom field should map to B symptoms.")
+expect_true(nrow(lyfo_bulk) > 0 && all(lyfo_bulk$clinical_concept_id == "bulk_disease"), "LYFO bulk-disease field should map to bulk disease.")
+index_expectations <- c(IPI = "ipi", aaIPI = "aaipi", FLIPI = "flipi", FLIPI2 = "flipi2", IPS = "ips")
+for (raw_field in names(index_expectations)) {
+  concept <- unname(index_expectations[[raw_field]])
+  rows <- lyfo_rows[lyfo_rows$raw_column == raw_field, , drop = FALSE]
+  if (nrow(rows)) {
+    expect_true(all(rows$clinical_concept_id == concept), paste("LYFO prognostic index should preserve its raw name:", raw_field))
+    expect_true(all(rows$clinical_variable == raw_field), paste("LYFO prognostic index should use the raw visible label:", raw_field))
+  }
+}
 expect_true(any(search_semantic("NPU02319")$clinical_variable == "Haemoglobin"), "Search for NPU02319 should return haemoglobin.")
 expect_true(any(search_semantic("DNK35302")$clinical_variable == "eGFR"), "Search for DNK35302 should return eGFR.")
 expect_true(any(search_semantic("NPU19748")$clinical_variable == "Leukocytes"), "Search for NPU19748 should return leukocytes.")

@@ -112,8 +112,10 @@ expect_true(grepl("renderDomainPanel", html, fixed = TRUE), "HTML should include
 expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML should include the dedicated Vitals renderer.")
 expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "HTML should include the dedicated Social History renderer.")
 expect_true(grepl("function renderDaMyDaPanel()", html, fixed = TRUE), "HTML should include the dedicated DaMyDa renderer.")
+expect_true(grepl("function renderLYFOPanel()", html, fixed = TRUE), "HTML should include the dedicated LYFO renderer.")
 expect_false(grepl("renderRegistryDetail(\"registry-damyda\", \"reg_damyda\")", html, fixed = TRUE), "DaMyDa should not be rendered through the generic registry detail renderer.")
-expect_true(grepl("renderRegistryDetail(\"registry-lyfo\", \"reg_lyfo\")", html, fixed = TRUE), "LYFO rendering should remain on the current generic registry detail path.")
+expect_false(grepl("renderRegistryDetail(\"registry-lyfo\", \"reg_lyfo\")", html, fixed = TRUE), "LYFO should not be rendered through the generic registry detail renderer.")
+expect_true(grepl("setHtml(\"registry-lyfo\", renderLYFOPanel())", html, fixed = TRUE), "LYFO should be wired to its dedicated renderer.")
 expect_true(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, fixed = TRUE), "CLL rendering should remain on the current generic registry detail path.")
 expect_false(grepl("setHtml(\"clinical-vitals-cards\", renderDomainPanel(\"clinical_vitals\"))", html, fixed = TRUE), "Vitals should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("setHtml(\"clinical-social-cards\", renderDomainPanel(\"clinical_social_history\"))", html, fixed = TRUE), "Social History should not be rendered through the generic domain panel renderer.")
@@ -125,10 +127,24 @@ expect_false(grepl("Social History Sources", html, fixed = TRUE), "Social Histor
 expect_true(grepl("Vital signs and anthropometrics", html, fixed = TRUE), "Vitals heading should use the clinician-facing title.")
 expect_true(grepl("Social history: smoking and alcohol", html, fixed = TRUE), "Social History heading should use the clinician-facing title.")
 expect_true(grepl("DaMyDa: myeloma registry review", html, fixed = TRUE), "DaMyDa heading should use the clinician-facing registry title.")
+expect_true(grepl("LYFO: lymphoma registry review", html, fixed = TRUE), "LYFO heading should use the clinician-facing registry title.")
+expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-registry-lyfo\"", html, fixed = TRUE), "LYFO should not show a second open generic raw-field block.")
 expect_true(grepl("date span not reliable in current aggregate output", html, fixed = TRUE), "DaMyDa renderer should include the date-quality fallback.")
 for (needle in c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Cytogenetics/FISH availability", "Raw names / data lineage", "Use cases and caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should contain section:", needle))
 }
+for (needle in c("Source / coverage", "Subtype mix", "Staging and risk", "B symptoms and bulk disease", "Performance status", "Baseline disease markers", "Treatment and regimen fields", "Response / follow-up / relapse fields", "Disease localization", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should contain section:", needle))
+}
+for (needle in c("RKKP_LYFO", "Reg_Stadium", "IPI", "aaIPI", "Reg_BSymptomer", "Reg_BulkSygdom", "Reg_PerformanceStatusWHO", "Reg_Haemoglobin", "Reg_Lactatdehydrogenase", "Reg_LDHVaerdi", "Reg_Creatinin_mikmoll", "Reg_CalciumAlbuminkorrigeret", "Beh_Kemoterapiregime1", "Beh_Immunoterapi", "ind_relaps", "Reg_Lokal_Pancreas", "Reg_WHOHistologikode1")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should be able to surface evidenced field/value:", needle))
+}
+for (needle in c("Lymphoma subtype cohort discovery", "Ann Arbor stage and IPI/aaIPI risk adjustment", "Candidate raw fields are shown for discovery")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should include use case or caveat:", needle))
+}
+expect_false(grepl("Reg_WHOHistologikode1 -> Performance status", html, fixed = TRUE), "LYFO renderer must not show histology as performance status.")
+expect_false(grepl("Reg_CalciumAlbuminkorrigeret -> Albumin", html, fixed = TRUE), "LYFO renderer must not show albumin-corrected calcium as albumin.")
+expect_false(grepl("Reg_Lokal_Pancreas -> Creatinine", html, fixed = TRUE), "LYFO renderer must not show pancreas localization as creatinine.")
 for (needle in c("CRP / C-reactive protein", "Albumin-corrected calcium", "FISH probe fields", "FISH result fields", "Interpreted cytogenetic/FISH summary fields")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should contain corrected semantic section:", needle))
 }
@@ -354,6 +370,28 @@ run_fish_probe <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_D
 run_fish_result <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_DaMyDa" & grepl("^Cyto_FishResultat_", semantic_dictionary$raw_column), , drop = FALSE]
 expect_true(nrow(run_fish_probe) > 0 && all(run_fish_probe$clinical_concept_id == "fish_probe"), "Run semantic output should preserve FISH probe context.")
 expect_true(nrow(run_fish_result) > 0 && all(run_fish_result$clinical_concept_id == "fish_result"), "Run semantic output should preserve FISH result context.")
+run_lyfo <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_LYFO", , drop = FALSE]
+run_lyfo_histology <- run_lyfo[run_lyfo$raw_column %in% c("Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode"), , drop = FALSE]
+expect_true(nrow(run_lyfo_histology) > 0 && any(run_lyfo_histology$clinical_concept_id == "lymphoma_subtype_code"), "Run semantic output should map LYFO histology fields to subtype-code context.")
+expect_false(any(run_lyfo_histology$clinical_concept_id == "performance_status" | run_lyfo_histology$clinical_variable == "Performance status"), "Run semantic output must not map LYFO histology fields to performance status.")
+run_lyfo_corrected_calcium <- run_lyfo[run_lyfo$raw_column == "Reg_CalciumAlbuminkorrigeret", , drop = FALSE]
+expect_true(nrow(run_lyfo_corrected_calcium) > 0 && all(run_lyfo_corrected_calcium$clinical_concept_id == "albumin_corrected_calcium"), "Run semantic output should map LYFO albumin-corrected calcium to its own concept.")
+expect_false(any(run_lyfo_corrected_calcium$clinical_concept_id == "albumin" | run_lyfo_corrected_calcium$clinical_variable == "Albumin"), "Run semantic output must not map LYFO albumin-corrected calcium to albumin.")
+run_lyfo_pancreas <- run_lyfo[run_lyfo$raw_column == "Reg_Lokal_Pancreas", , drop = FALSE]
+expect_true(nrow(run_lyfo_pancreas) > 0 && all(run_lyfo_pancreas$clinical_concept_id == "disease_localization"), "Run semantic output should map LYFO pancreas localization to disease localization.")
+expect_false(any(run_lyfo_pancreas$clinical_concept_id == "creatinine" | run_lyfo_pancreas$clinical_variable == "Creatinine"), "Run semantic output must not map LYFO pancreas localization to creatinine.")
+run_lyfo_ldh <- run_lyfo[run_lyfo$raw_column %in% c("Reg_Lactatdehydrogenase", "Reg_LDHVaerdi"), , drop = FALSE]
+if (nrow(run_lyfo_ldh)) {
+  expect_true(all(run_lyfo_ldh$clinical_concept_id == "ldh"), "Run semantic output should map LYFO LDH fields to LDH.")
+}
+lyfo_index_expectations <- c(IPI = "ipi", aaIPI = "aaipi", FLIPI = "flipi", FLIPI2 = "flipi2", IPS = "ips")
+for (raw_field in names(lyfo_index_expectations)) {
+  concept <- unname(lyfo_index_expectations[[raw_field]])
+  rows <- run_lyfo[run_lyfo$raw_column == raw_field, , drop = FALSE]
+  if (nrow(rows)) {
+    expect_true(all(rows$clinical_concept_id == concept & rows$clinical_variable == raw_field), paste("Run semantic output should preserve LYFO prognostic index:", raw_field))
+  }
+}
 expect_true(any(semantic_dictionary$raw_code == "NPU02319" & semantic_dictionary$clinical_variable == "Haemoglobin"), "Semantic output should map NPU02319 to haemoglobin.")
 expect_true(any(semantic_dictionary$raw_code == "DNK35302" & semantic_dictionary$clinical_variable == "eGFR"), "Semantic output should map DNK35302 to eGFR.")
 expect_true(any(semantic_dictionary$raw_code == "NPU19748" & semantic_dictionary$clinical_variable == "Leukocytes"), "Semantic output should map NPU19748 to leukocytes.")
@@ -389,6 +427,12 @@ expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX
 expect_true(any(panel_raw_fields$raw_column == "numericvalue" & panel_raw_fields$clinical_variable == "Vital numeric measurement value"), "Panel raw fields should include numericvalue as the vital measurement value.")
 expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX") & panel_raw_fields$raw_column == "drikker"), "Panel raw fields should include SP_Social_Hx.drikker.")
 expect_true(any(panel_raw_fields$raw_code == "NPU02319" & panel_raw_fields$clinical_variable == "Haemoglobin"), "Panel raw fields should include NPU02319 to Haemoglobin.")
+lyfo_panel_raw <- panel_raw_fields[panel_raw_fields$source_name == "RKKP_LYFO", , drop = FALSE]
+expect_true(any(lyfo_panel_raw$raw_column == "Reg_WHOHistologikode1" & lyfo_panel_raw$clinical_concept_id == "lymphoma_subtype_code"), "Panel raw fields should keep LYFO WHO histology in subtype-code context.")
+expect_false(any(lyfo_panel_raw$raw_column %in% c("Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode") & lyfo_panel_raw$clinical_concept_id == "performance_status"), "Panel raw fields must not map LYFO histology to performance status.")
+expect_true(any(lyfo_panel_raw$raw_column == "Reg_CalciumAlbuminkorrigeret" & lyfo_panel_raw$clinical_concept_id == "albumin_corrected_calcium"), "Panel raw fields should keep LYFO albumin-corrected calcium separate from albumin.")
+expect_true(any(lyfo_panel_raw$raw_column == "Reg_Lokal_Pancreas" & lyfo_panel_raw$clinical_concept_id == "disease_localization"), "Panel raw fields should keep LYFO pancreas localization as localization.")
+expect_false(any(lyfo_panel_raw$raw_column == "Reg_Lokal_Pancreas" & lyfo_panel_raw$clinical_concept_id == "creatinine"), "Panel raw fields must not map LYFO pancreas localization to creatinine.")
 expect_true(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "ryger" & panel_distributions$display_value == "Former smoker"), "Social History panel distributions should include smoking value maps.")
 expect_true(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "drikker" & panel_distributions$display_value == "Alcohol use yes"), "Social History panel distributions should include alcohol value maps.")
 expect_false(any(panel_distributions$panel_id == "clinical_social_history" & panel_distributions$raw_column == "ryger" & panel_distributions$raw_value == "Ja" & panel_distributions$display_value == "Alcohol use yes"), "Smoking Ja should not be grouped as alcohol use.")
