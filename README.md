@@ -119,6 +119,10 @@ Each run writes `atlas_runs/<run_id>/` with:
 - `outputs/atlas_column_top_values.csv`
 - `outputs/atlas_checks.csv`
 - `outputs/atlas_value_frequencies.csv`
+- `outputs/atlas_semantic_data_dictionary.csv`
+- `outputs/atlas_semantic_value_map.csv`
+- `outputs/atlas_semantic_code_map.csv`
+- `outputs/atlas_semantic_panel_links.csv`
 - `outputs/atlas_run_summary.csv`
 - `outputs/panels/*.csv`
 - `outputs/output_manifest.csv`
@@ -143,9 +147,9 @@ Registry-focused runs can include these clinical panels:
   cytogenetic, TP53, treatment, performance, ZAP70, CD38, and beta2m facets.
 
 The static atlas is a tabbed, V33-style review artifact with run-level metrics,
-domain cards, searchable source catalog, a safe per-column explorer, registry
-cards, QA triage, generated panel tables, and quick-start commands. The HTML
-remains data-light and loads its run payload from
+domain cards, searchable source catalog, a safe per-column explorer, a semantic
+Data Dictionary, registry cards, QA triage, generated panel tables, and
+quick-start commands. The HTML remains data-light and loads its run payload from
 `site/DALYCARE_atlas_payload.js`.
 
 Generated atlas pages include the visible credit `Built by Alexander Owen
@@ -159,6 +163,16 @@ coverage, missingness, distinct count, sensitivity/date/numeric flags, and safe
 numeric or date summaries where applicable. `atlas_column_top_values.csv`
 contains top categorical values only for eligible non-sensitive columns after
 minimum-cell suppression.
+
+`atlas_semantic_data_dictionary.csv` is the generated variable-lineage table
+used by the HTML Data Dictionary tab. It maps raw source/table/object names,
+raw columns, descriptors, codes, and values to clinical concepts, domain
+panels, confidence, caveats, and evidence files. The companion semantic value,
+code, and panel-link CSVs support value interpretation, NPU/ATC/SKS/SNOMED/code
+search, and the "Key raw fields" blocks shown throughout the atlas. These rows
+are generated from the committed cartography reference under
+`config/cartography-reference/`; no patient-level rows, CPRs, raw free text, or
+unsuppressed small cells are emitted.
 
 The atlas also ships a reference NPU consensus dictionary in
 `config/npu-consensus-dictionary.tsv`, generated from the unified consensus

@@ -22,6 +22,22 @@ expect_equal(coverage_date_column_from_profiles(profiles), "Reg_Diagnose_dt", "T
 expect_equal(coverage_clamped_year("9999-12-31", upper = 2027L), 2027L, "Display coverage years should clamp impossible future sentinels.")
 expect_equal(coverage_temporal_qc_flag("2005-01-01", "9999-12-31", upper = 2027L), "clamped_display_range", "Coverage rows should flag clamped display ranges.")
 
+temporal_quality <- panel_atlas_temporal_date_quality(data.frame(
+  table_name = c("future_source", "past_source", "no_date", "unparsed_text"),
+  domain = c("SP", "SDS", "Core", "RKKP"),
+  subdomain = "",
+  atlas_role = "",
+  date_column = c("event_date", "event_date", NA_character_, "Reg_Diagnose_dt"),
+  raw_min_date = c("2020-01-01", "1800-01-01", NA_character_, NA_character_),
+  raw_max_date = c("9999-12-31", "2024-01-01", NA_character_, NA_character_),
+  display_min_year = c(2020L, 2000L, NA_integer_, NA_integer_),
+  display_max_year = c(2027L, 2024L, NA_integer_, NA_integer_),
+  date_qc = c("clamped_display_range", "clamped_display_range", "missing_date_range", "missing_date_range"),
+  stringsAsFactors = FALSE
+))
+expect_true(all(c("future_sentinel", "past_sentinel", "missing_date_column", "text_date_unparsed") %in% temporal_quality$issue_type), "Temporal date quality should classify sentinel, missing, and unparsed date issues.")
+expect_true(any(temporal_quality$table_name == "future_source" & temporal_quality$severity == "warning"), "Future sentinel date-quality rows should be warnings.")
+
 example <- data.frame(
   patientid = sprintf("010101%04d", seq_len(8)),
   Reg_Diagnose_dt = as.Date("2020-01-01") + 0:7,

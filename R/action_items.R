@@ -245,44 +245,61 @@ atlas_run_action_items <- function(access_report = NULL,
     }
   }
 
-  temporal <- panels$atlas_temporal_coverage
-  if (is.data.frame(temporal) && nrow(temporal) > 0 && "date_qc" %in% names(temporal)) {
-    flagged <- temporal[temporal$date_qc %in% c("clamped_display_range", "missing_date_range"), , drop = FALSE]
-    for (i in seq_len(nrow(flagged))) {
-      row <- flagged[i, , drop = FALSE]
-      table_name <- if ("table_name" %in% names(row)) as.character(row$table_name[[1]]) else ""
-      qc <- as.character(row$date_qc[[1]])
-      if (identical(qc, "clamped_display_range")) {
-        add_item(action_item_row(
-          severity = "warning",
-          category = "Temporal coverage",
-          action_id = "clamped_date_range",
-          table_name = table_name,
-          sources = sources,
-          reason = "Raw date range extends outside the display-year guardrails.",
-          current_behavior = "The atlas preserved raw min/max dates for audit and clamped the displayed years.",
-          recommended_action = "Inspect the source date column for sentinel dates or invalid future/past values if this range looks unexpected.",
-          evidence = paste(
-            c(
-              if ("date_column" %in% names(row)) paste0("date_column=", row$date_column[[1]]) else "",
-              if ("raw_min_date" %in% names(row)) paste0("raw_min=", row$raw_min_date[[1]]) else "",
-              if ("raw_max_date" %in% names(row)) paste0("raw_max=", row$raw_max_date[[1]]) else ""
-            ),
-            collapse = "; "
-          )
-        ))
-      } else if (identical(qc, "missing_date_range")) {
-        add_item(action_item_row(
-          severity = "info",
-          category = "Temporal coverage",
-          action_id = "missing_date_range",
-          table_name = table_name,
-          sources = sources,
-          reason = "No coverage-ready date column was available for this source.",
-          current_behavior = "The atlas profiled the source but did not add source-year coverage rows.",
-          recommended_action = "Add a date-column alias if this source has a meaningful event, diagnosis, treatment, or contact date.",
-          evidence = if ("coverage_basis" %in% names(row)) paste0("coverage_basis=", row$coverage_basis[[1]]) else ""
-        ))
+  date_quality <- panels$atlas_temporal_date_quality
+  if (is.data.frame(date_quality) && nrow(date_quality) > 0 && "issue_type" %in% names(date_quality)) {
+    groups <- split(date_quality, paste(date_quality$severity, date_quality$issue_type, sep = "\r"))
+    for (group in groups) {
+      row <- group[1, , drop = FALSE]
+      sources_hit <- sort(unique_nonblank(group$table_name %||% character()))
+      columns_hit <- sort(unique_nonblank(group$date_column %||% character()))
+      issue_type <- row$issue_type[[1]] %||% "temporal_date_quality"
+      add_item(action_item_row(
+        severity = row$severity[[1]] %||% "warning",
+        category = "Temporal coverage",
+        action_id = issue_type,
+        table_name = "",
+        sources = sources,
+        reason = paste(issue_type, "observed in", length(sources_hit), "source(s)."),
+        current_behavior = "The atlas preserved source-level raw date evidence in atlas_temporal_date_quality.csv and used guarded display years.",
+        recommended_action = switch(
+          issue_type,
+          missing_date_column = "Add a date-column alias if these sources have meaningful event, diagnosis, treatment, or contact dates.",
+          text_date_unparsed = "Inspect the selected text date column format and add or adjust DB-side date parsing aliases if needed.",
+          past_sentinel = "Inspect raw minimum dates for sentinel or invalid historical values if the displayed range looks unexpected.",
+          future_sentinel = "Inspect raw maximum dates for sentinel or invalid future values if the displayed range looks unexpected.",
+          "Review atlas_temporal_date_quality.csv for source-level date-quality evidence."
+        ),
+        evidence = paste(
+          c(
+            paste0("n_sources=", length(sources_hit)),
+            paste0("example_sources=", paste(head(sources_hit, 6L), collapse = "|")),
+            paste0("n_date_columns=", length(columns_hit)),
+            paste0("example_date_columns=", paste(head(columns_hit, 6L), collapse = "|"))
+          ),
+          collapse = "; "
+        )
+      ))
+    }
+  } else {
+    temporal <- panels$atlas_temporal_coverage
+    if (is.data.frame(temporal) && nrow(temporal) > 0 && "date_qc" %in% names(temporal)) {
+      flagged <- temporal[temporal$date_qc %in% c("clamped_display_range", "missing_date_range"), , drop = FALSE]
+      if (nrow(flagged)) {
+        issue_type <- ifelse(flagged$date_qc == "clamped_display_range", "clamped_date_range", "missing_date_range")
+        flagged$issue_type <- issue_type
+        groups <- split(flagged, flagged$issue_type)
+        for (group in groups) {
+          issue <- group$issue_type[[1]]
+          add_item(action_item_row(
+            severity = if (identical(issue, "missing_date_range")) "info" else "warning",
+            category = "Temporal coverage",
+            action_id = issue,
+            reason = paste(issue, "observed in", length(unique_nonblank(group$table_name)), "source(s)."),
+            current_behavior = "The atlas profiled the sources but guarded displayed temporal coverage.",
+            recommended_action = "Inspect source-level temporal coverage panels for the affected date columns.",
+            evidence = paste0("example_sources=", paste(head(unique_nonblank(group$table_name), 6L), collapse = "|"))
+          ))
+        }
       }
     }
   }
@@ -300,7 +317,7 @@ atlas_run_action_items <- function(access_report = NULL,
 db_budget_actions_as_run_action_items <- function(db_budget_actions, sources = NULL) {
   if (!is.data.frame(db_budget_actions) || !nrow(db_budget_actions)) return(empty_run_action_items())
   group_cols <- intersect(
-    c("severity", "category", "action_id", "table_name", "query_category", "reason", "current_behavior", "recommended_action", "estimated_rows"),
+    c("severity", "category", "action_id", "query_category", "reason", "current_behavior", "recommended_action"),
     names(db_budget_actions)
   )
   if (!length(group_cols)) return(empty_run_action_items())
@@ -309,26 +326,27 @@ db_budget_actions_as_run_action_items <- function(db_budget_actions, sources = N
     row <- group[1, , drop = FALSE]
     columns <- trimws(as.character(if ("column_name" %in% names(group)) group$column_name else character()))
     columns <- sort(unique(columns[!(is.na(columns) | columns == "")]))
-    column_evidence <- if (length(columns)) {
-      paste0("columns=", paste(head(columns, 8L), collapse = "|"), if (length(columns) > 8L) paste0("|+", length(columns) - 8L, " more") else "")
-    } else {
-      ""
-    }
+    source_names <- trimws(as.character(if ("table_name" %in% names(group)) group$table_name else character()))
+    source_names <- sort(unique(source_names[!(is.na(source_names) | source_names == "")]))
+    max_estimated <- suppressWarnings(max(as.numeric(group$estimated_rows %||% NA_real_), na.rm = TRUE))
+    if (!is.finite(max_estimated)) max_estimated <- NA_real_
     action_item_row(
       severity = row$severity[[1]] %||% "warning",
       category = row$category[[1]] %||% "DB budget",
       action_id = row$action_id[[1]] %||% "db_budget_action",
-      table_name = row$table_name[[1]] %||% "",
+      table_name = "",
       sources = sources,
       reason = row$reason[[1]] %||% "",
       current_behavior = row$current_behavior[[1]] %||% "",
       recommended_action = row$recommended_action[[1]] %||% "",
       evidence = paste(
         c(
-          column_evidence,
+          paste0("n_sources=", length(source_names)),
+          paste0("example_sources=", paste(head(source_names, 6L), collapse = "|")),
           paste0("n_columns=", length(columns)),
+          paste0("example_columns=", paste(head(columns, 8L), collapse = "|")),
           if ("query_category" %in% names(row)) paste0("query_category=", row$query_category[[1]]) else "",
-          if ("estimated_rows" %in% names(row)) paste0("estimated_rows=", row$estimated_rows[[1]]) else ""
+          paste0("max_estimated_rows=", max_estimated)
         ),
         collapse = "; "
       )

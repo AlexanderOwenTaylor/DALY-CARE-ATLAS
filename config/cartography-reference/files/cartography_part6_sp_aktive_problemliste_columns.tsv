@@ -1,0 +1,6 @@
+﻿"column"	"position"	"table"	"label"
+"current_icd10_list"	"2"	"SP_AktiveProblemlisteDiagnoser"	"Active in-hospital diagnoses"
+"dx_name"	"3"	"SP_AktiveProblemlisteDiagnoser"	"Active in-hospital diagnoses"
+"noted_date"	"4"	"SP_AktiveProblemlisteDiagnoser"	"Active in-hospital diagnoses"
+"date_received"	"5"	"SP_AktiveProblemlisteDiagnoser"	"Active in-hospital diagnoses"
+"datetime_created"	"6"	"SP_AktiveProblemlisteDiagnoser"	"Active in-hospital diagnoses"

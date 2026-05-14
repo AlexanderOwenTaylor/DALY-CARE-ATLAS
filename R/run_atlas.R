@@ -119,12 +119,14 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     sp_operational_sources = data.frame(stringsAsFactors = FALSE),
     atlas_temporal_coverage = empty_temporal_coverage(),
     atlas_temporal_coverage_years = empty_temporal_coverage_years(),
+    atlas_temporal_date_quality = empty_temporal_date_quality(),
     atlas_spatial_region_counts = empty_spatial_region_counts(),
     atlas_spatial_region_coverage = empty_spatial_region_coverage(),
     atlas_dk_choropleth_regions = empty_dk_choropleth_regions(),
     situation_report_summary = empty_situation_report_summary(),
     situation_report_breakdowns = empty_situation_report_breakdowns(),
     situation_report_freshness = empty_situation_report_freshness(),
+    atlas_streaming_progress_summary = empty_streaming_progress_summary(),
     source_availability_drift = data.frame(stringsAsFactors = FALSE)
   )
   stream_paths <- list(
@@ -265,6 +267,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels = panels,
     min_cell_count = atlas_min_cell_count()
   )
+  panels$atlas_streaming_progress_summary <- atlas_streaming_progress_summary(db_query_log, sources)
   panels$source_availability_drift <- source_availability_panel(sources)
   situation_panels <- build_situation_report_panels(
     source_resolution = source_resolution,
@@ -277,6 +280,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels[[panel_name]] <- situation_panels[[panel_name]]
   }
   panels$atlas_module_readiness <- atlas_module_readiness(sources, panels)
+  semantic_outputs <- build_semantic_outputs(
+    project_root = project_root,
+    sources = sources,
+    column_profiles = column_profiles,
+    panels = panels,
+    min_cell_count = atlas_min_cell_count()
+  )
   empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
   if (isTRUE(empty_live_refused)) {
     message <- empty_live_run_message(source_map, source_resolution)
@@ -310,6 +320,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$column_top_values <- write_csv(column_top_values, file.path(output_dir, "atlas_column_top_values.csv"))
   output_paths$checks <- write_csv(checks, file.path(output_dir, "atlas_checks.csv"))
   output_paths$value_frequencies <- write_csv(frequencies, file.path(output_dir, "atlas_value_frequencies.csv"))
+  output_paths$semantic_dictionary <- write_csv(semantic_outputs$dictionary, file.path(output_dir, "atlas_semantic_data_dictionary.csv"))
+  output_paths$semantic_value_map <- write_csv(semantic_outputs$value_map, file.path(output_dir, "atlas_semantic_value_map.csv"))
+  output_paths$semantic_code_map <- write_csv(semantic_outputs$code_map, file.path(output_dir, "atlas_semantic_code_map.csv"))
+  output_paths$semantic_panel_links <- write_csv(semantic_outputs$panel_links, file.path(output_dir, "atlas_semantic_panel_links.csv"))
   run_summary <- atlas_run_summary(
     run_id, generated_at, source_map, sources, columns, checks, frequencies, panels,
     column_profiles = column_profiles,
@@ -341,6 +355,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_action_items <- safe_read_output_csv(output_paths$action_items, action_items)
   payload_db_query_log <- safe_read_output_csv(output_paths$db_query_log, db_query_log)
   payload_db_budget_actions <- safe_read_output_csv(output_paths$db_budget_actions, db_budget_actions)
+  payload_semantic_dictionary <- safe_read_output_csv(output_paths$semantic_dictionary, semantic_outputs$dictionary)
+  payload_semantic_value_map <- safe_read_output_csv(output_paths$semantic_value_map, semantic_outputs$value_map)
+  payload_semantic_code_map <- safe_read_output_csv(output_paths$semantic_code_map, semantic_outputs$code_map)
+  payload_semantic_panel_links <- safe_read_output_csv(output_paths$semantic_panel_links, semantic_outputs$panel_links)
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
   })
@@ -355,7 +373,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     source_resolution = source_resolution,
     memory_plan = memory_plan,
     db_query_log = payload_db_query_log,
-    db_budget_actions = payload_db_budget_actions
+    db_budget_actions = payload_db_budget_actions,
+    semantic_dictionary = payload_semantic_dictionary,
+    semantic_value_map = payload_semantic_value_map,
+    semantic_code_map = payload_semantic_code_map,
+    semantic_panel_links = payload_semantic_panel_links
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")

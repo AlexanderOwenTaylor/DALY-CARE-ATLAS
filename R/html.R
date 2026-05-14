@@ -19,14 +19,96 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
   list(html = html_path, payload = payload_path)
 }
 
+empty_streaming_progress_summary <- function() {
+  empty_df(
+    table_name = character(),
+    domain = character(),
+    subdomain = character(),
+    atlas_role = character(),
+    streamed_columns = integer(),
+    total_chunks = integer(),
+    total_elapsed_ms = numeric(),
+    total_elapsed_minutes = numeric(),
+    estimated_rows = numeric(),
+    slowest_column = character(),
+    slowest_column_elapsed_ms = numeric(),
+    status = character(),
+    message = character()
+  )
+}
+
+atlas_streaming_progress_summary <- function(db_query_log, sources = NULL) {
+  if (!is.data.frame(db_query_log) || !nrow(db_query_log)) return(empty_streaming_progress_summary())
+  required <- c("table_name", "column_name", "query_category", "strategy")
+  if (!all(required %in% names(db_query_log))) return(empty_streaming_progress_summary())
+  rows <- db_query_log[
+    db_query_log$strategy == "stream_column" |
+      db_query_log$query_category == "column_stream",
+    ,
+    drop = FALSE
+  ]
+  if (!nrow(rows)) return(empty_streaming_progress_summary())
+  rows$elapsed_ms_num <- suppressWarnings(as.numeric(rows$elapsed_ms %||% NA_real_))
+  rows$chunks_num <- suppressWarnings(as.integer(rows$chunks_fetched %||% NA_integer_))
+  rows$estimated_rows_num <- suppressWarnings(as.numeric(rows$estimated_rows %||% NA_real_))
+  by_table <- split(rows, rows$table_name)
+  out <- lapply(by_table, function(group) {
+    table_name <- group$table_name[[1]] %||% ""
+    ctx <- source_context_row(sources, table_name)
+    elapsed <- group$elapsed_ms_num
+    slow_i <- if (any(!is.na(elapsed))) which.max(replace(elapsed, is.na(elapsed), -Inf)) else 1L
+    statuses <- unique_nonblank(group$status %||% character())
+    status <- if (length(statuses) && all(statuses == "ok")) "ok" else if (length(statuses)) "warning" else "unknown"
+    streamed_columns <- length(unique_nonblank(group$column_name))
+    total_chunks <- sum(group$chunks_num, na.rm = TRUE)
+    total_elapsed_ms <- sum(group$elapsed_ms_num, na.rm = TRUE)
+    estimated <- if (any(!is.na(group$estimated_rows_num))) {
+      max(group$estimated_rows_num, na.rm = TRUE)
+    } else {
+      NA_real_
+    }
+    data.frame(
+      table_name = table_name,
+      domain = ctx$domain %||% "",
+      subdomain = ctx$subdomain %||% "",
+      atlas_role = ctx$atlas_role %||% "",
+      streamed_columns = streamed_columns,
+      total_chunks = total_chunks,
+      total_elapsed_ms = total_elapsed_ms,
+      total_elapsed_minutes = round(total_elapsed_ms / 60000, 2),
+      estimated_rows = estimated,
+      slowest_column = group$column_name[[slow_i]] %||% "",
+      slowest_column_elapsed_ms = group$elapsed_ms_num[[slow_i]] %||% NA_real_,
+      status = status,
+      message = paste(
+        streamed_columns,
+        "column(s) streamed in",
+        total_chunks,
+        "chunk(s); slowest column:",
+        group$column_name[[slow_i]] %||% ""
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- bind_rows_base(out)
+  if (!nrow(out)) return(empty_streaming_progress_summary())
+  out[order(-suppressWarnings(as.numeric(out$total_elapsed_ms)), out$table_name), , drop = FALSE]
+}
+
 atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels,
                           column_profiles = NULL, column_top_values = NULL,
                           run_summary = NULL, action_items = NULL, source_resolution = NULL,
                           memory_plan = NULL, db_query_log = NULL,
-                          db_budget_actions = NULL) {
+                          db_budget_actions = NULL,
+                          semantic_dictionary = NULL, semantic_value_map = NULL,
+                          semantic_code_map = NULL, semantic_panel_links = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
+  if (is.null(semantic_dictionary)) semantic_dictionary <- empty_semantic_data_dictionary()
+  if (is.null(semantic_value_map)) semantic_value_map <- empty_semantic_value_map()
+  if (is.null(semantic_code_map)) semantic_code_map <- empty_semantic_code_map()
+  if (is.null(semantic_panel_links)) semantic_panel_links <- empty_semantic_panel_links()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
   public_column_profiles <- public_column_profile_rows(column_profiles)
@@ -34,6 +116,10 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_action_items <- sanitize_public_frame(action_items)
   public_db_query_log <- public_db_diagnostics(db_query_log)
   public_db_budget_actions <- public_db_diagnostics(db_budget_actions)
+  public_semantic_dictionary <- sanitize_public_frame(semantic_dictionary)
+  public_semantic_value_map <- sanitize_public_frame(semantic_value_map)
+  public_semantic_code_map <- sanitize_public_frame(semantic_code_map)
+  public_semantic_panel_links <- sanitize_public_frame(semantic_panel_links)
   module_readiness <- panel_or_empty(panels, "atlas_module_readiness")
   list(
     run_id = run_id,
@@ -57,6 +143,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     review_scope_notes = public_rows(review_scope_notes(sources, columns, checks, run_summary), max_rows = 20),
     review_data_landscape = review_data_landscape(sources, panels),
     review_module_readiness = public_rows(module_readiness, max_rows = 100),
+    review_streaming_summary = public_rows(panel_or_empty(panels, "atlas_streaming_progress_summary"), max_rows = 500),
+    review_temporal_date_quality = public_rows(panel_or_empty(panels, "atlas_temporal_date_quality"), max_rows = 500),
+    review_semantic_summary = public_rows(semantic_summary(semantic_dictionary, semantic_value_map, semantic_code_map, semantic_panel_links), max_rows = 100),
     review_domain_jump_links = review_domain_jump_links(),
     review_nav = review_nav(),
     review_overview = review_overview(
@@ -93,6 +182,10 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     column_profile_rows = public_rows(public_column_profiles, max_rows = 3000),
     column_top_value_rows = public_rows(public_column_top_values, max_rows = 3000),
     column_profile_summary = public_rows(column_profile_summary(column_profiles), max_rows = 200),
+    semantic_dictionary_rows = public_rows(public_semantic_dictionary, max_rows = 5000),
+    semantic_value_map_rows = public_rows(public_semantic_value_map, max_rows = 5000),
+    semantic_code_map_rows = public_rows(public_semantic_code_map, max_rows = 5000),
+    semantic_panel_links = public_rows(public_semantic_panel_links, max_rows = 5000),
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
@@ -125,6 +218,11 @@ review_nav <- function() {
       id = "quickstart",
       label = "Quick Start",
       sub_tabs = c("RStudio", "Terminal", "Preflight")
+    ),
+    list(
+      id = "dictionary",
+      label = "Data Dictionary",
+      sub_tabs = c("Semantic lineage", "Value maps", "Code maps", "Panel links")
     ),
     list(
       id = "registries",
@@ -297,10 +395,12 @@ review_ehr_sections <- function(sources) {
 review_temporal_coverage <- function(panels) {
   coverage <- panel_or_empty(panels, "atlas_temporal_coverage")
   years <- panel_or_empty(panels, "atlas_temporal_coverage_years")
+  date_quality <- panel_or_empty(panels, "atlas_temporal_date_quality")
   list(
     sources = public_rows(coverage, max_rows = 500),
     years = public_rows(years, max_rows = 5000),
-    summary = public_rows(review_temporal_summary(coverage, years), max_rows = 100)
+    summary = public_rows(review_temporal_summary(coverage, years), max_rows = 100),
+    date_quality = public_rows(date_quality, max_rows = 500)
   )
 }
 
@@ -332,6 +432,8 @@ review_infrastructure_sections <- function(sources, checks, panels, column_profi
   list(
     action_items = public_rows(sanitize_public_frame(action_items), max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
+    streaming_summary = public_rows(panel_or_empty(panels, "atlas_streaming_progress_summary"), max_rows = 500),
+    temporal_date_quality = public_rows(panel_or_empty(panels, "atlas_temporal_date_quality"), max_rows = 500),
     db_budget_actions = public_rows(public_db_diagnostics(db_budget_actions), max_rows = 1000),
     db_query_log = public_rows(public_db_diagnostics(db_query_log), max_rows = 3000),
     catalog = public_rows(catalog_rows(sources), max_rows = 1000),
@@ -482,7 +584,7 @@ atlas_module_readiness <- function(sources, panels = list()) {
     list("EHR Modules", "SP modules", c("^sp_", "sp "), character()),
     list("EHR Modules", "SDS/LPR modules", c("^sds", "^lpr", "lpr3", "sksube", "procedure"), character()),
     list("EHR Modules", "DALY views", c("dalycare", "view_", "views", "survival"), character()),
-    list("Infrastructure", "Resolution and DB streaming", c(""), c("source_availability_drift", "atlas_module_readiness"))
+    list("Infrastructure", "Resolution and DB streaming", c(""), c("source_availability_drift", "atlas_streaming_progress_summary", "atlas_module_readiness"))
   )
   rows <- lapply(specs, function(spec) {
     atlas_module_readiness_row(
@@ -886,9 +988,11 @@ panel_title <- function(name) {
     sp_operational_sources = "SP Operational Sources",
     atlas_temporal_coverage = "Temporal Coverage",
     atlas_temporal_coverage_years = "Temporal Coverage By Year",
+    atlas_temporal_date_quality = "Temporal Date Quality",
     atlas_spatial_region_counts = "Spatial Region Counts",
     atlas_spatial_region_coverage = "Spatial Region Coverage",
     atlas_dk_choropleth_regions = "Denmark Choropleth Regions",
+    atlas_streaming_progress_summary = "DB Streaming Progress Summary",
     situation_report_summary = "Situation Report Summary",
     situation_report_breakdowns = "Situation Report Breakdowns",
     situation_report_freshness = "Situation Report Freshness",
@@ -922,9 +1026,11 @@ panel_group <- function(name) {
     sp_operational_sources = "SP Operations",
     atlas_temporal_coverage = "Coverage Figures",
     atlas_temporal_coverage_years = "Coverage Figures",
+    atlas_temporal_date_quality = "Coverage Figures",
     atlas_spatial_region_counts = "Coverage Figures",
     atlas_spatial_region_coverage = "Coverage Figures",
     atlas_dk_choropleth_regions = "Coverage Figures",
+    atlas_streaming_progress_summary = "Run QA",
     situation_report_summary = "Situation Report",
     situation_report_breakdowns = "Situation Report",
     situation_report_freshness = "Situation Report",

@@ -176,10 +176,10 @@ budget_items <- db_budget_actions_as_run_action_items(data.frame(
   severity = "warning",
   category = "DB budget",
   action_id = "db_budget_skipped",
-  table_name = "huge_table",
+  table_name = c("huge_table", "huge_table_2"),
   column_name = c("a", "b"),
   query_category = "numeric_quantiles",
-  estimated_rows = 10000000,
+  estimated_rows = c(10000000, 20000000),
   reason = "sampled quantiles",
   current_behavior = "approximate quantiles",
   recommended_action = "increase sample only if needed",
@@ -187,6 +187,24 @@ budget_items <- db_budget_actions_as_run_action_items(data.frame(
 ))
 expect_equal(nrow(budget_items), 1L, "Repeated DB budget warnings should be grouped into one operator action item.")
 expect_true(grepl("n_columns=2", budget_items$evidence[[1]], fixed = TRUE), "Grouped DB budget action items should preserve column-count evidence.")
+expect_true(grepl("n_sources=2", budget_items$evidence[[1]], fixed = TRUE), "Grouped DB budget action items should preserve source-count evidence.")
+
+stream_summary <- atlas_streaming_progress_summary(data.frame(
+  table_name = c("huge_table", "huge_table", "other_table"),
+  column_name = c("a", "b", "x"),
+  query_category = "column_stream",
+  strategy = "stream_column",
+  estimated_rows = c(1000000, 1000000, 500000),
+  chunks_fetched = c(10L, 12L, 5L),
+  status = "ok",
+  budget_decision = "streamed",
+  elapsed_ms = c(1000, 2500, 500),
+  message = "streamed one column in bounded chunks",
+  stringsAsFactors = FALSE
+))
+expect_true(any(stream_summary$table_name == "huge_table" & stream_summary$streamed_columns == 2L), "Streaming progress summaries should count streamed columns by source.")
+expect_true(any(stream_summary$table_name == "huge_table" & stream_summary$total_chunks == 22L), "Streaming progress summaries should sum chunk counts by source.")
+expect_true(any(stream_summary$table_name == "huge_table" & stream_summary$slowest_column == "b"), "Streaming progress summaries should identify the slowest streamed column.")
 
 Sys.setenv(DALYCARE_ATLAS_DB_STREAM_ROWS = "TRUE", DALYCARE_ATLAS_STREAM_THRESHOLD_ROWS = "100")
 expect_equal(dbi_profile_strategy(101, "full"), "stream_column", "Large DB tables should use cursor/chunk streaming by default.")

@@ -65,30 +65,52 @@ expect_equal(recent_admitted$n_patients[[1]], 3L, "Recent admission should filte
 expect_equal(recent_admitted$as_of_date[[1]], "2026-05-10", "Recent admission should use the source-specific as-of date.")
 
 diagnoses <- data.frame(
-  patientid = c("p1", "p2", "p2", "p3", "p4"),
-  date_diagnosis = as.Date(c("2026-04-01", "2026-04-15", "2026-05-10", "2026-05-11", "2026-05-12")),
+  patientid = c("p1", "p2", "p2", "p3", "p4", "p5", "p5"),
+  date_diagnosis = as.Date(c("2026-04-01", "2026-04-15", "2026-05-10", "2026-05-11", "2026-05-12", "2026-03-01", "2026-05-12")),
   stringsAsFactors = FALSE
 )
-recent_dx <- situation_recent_from_data(
+recent_dx_any_row <- situation_recent_from_data(
   diagnoses,
   metric_id = "diagnosed_30d",
   label = "Diagnosed in past 30 days",
   date_col = "date_diagnosis",
   min_cell_count = 1L
 )
-expect_equal(recent_dx$n_patients[[1]], 3L, "Recent metrics should count distinct patients inside the data-as-of window.")
-expect_equal(recent_dx$n_rows[[1]], 4L, "Recent metrics should retain aggregate row counts separately from distinct patients.")
-expect_equal(recent_dx$as_of_date[[1]], "2026-05-12", "Recent metrics should anchor to the source max date.")
-
-suppressed_dx <- situation_recent_from_data(
+expect_equal(recent_dx_any_row$n_patients[[1]], 4L, "The generic recent-date fixture helper counts patients with any row inside the data-as-of window.")
+recent_dx <- situation_recent_earliest_from_data(
   diagnoses,
-  metric_id = "diagnosed_30d",
-  label = "Diagnosed in past 30 days",
+  date_col = "date_diagnosis",
+  min_cell_count = 1L,
+  n_cohort = 1000L
+)
+expect_equal(recent_dx$n_patients[[1]], 3L, "Diagnosed-30d should count patients whose earliest diagnosis date is inside the data-as-of window.")
+expect_equal(recent_dx$n_rows[[1]], 3L, "Earliest-diagnosis metrics should not count later diagnosis rows for old patients.")
+expect_equal(recent_dx$as_of_date[[1]], "2026-05-12", "Earliest-diagnosis metrics should anchor to the source max date.")
+expect_true(grepl("earliest_patient_diagnosis_date_30d", recent_dx$definition_basis[[1]], fixed = TRUE), "Diagnosed-30d should record earliest-diagnosis definition basis.")
+
+suppressed_dx <- situation_recent_earliest_from_data(
+  diagnoses,
   date_col = "date_diagnosis",
   min_cell_count = 10L
 )
 expect_equal(suppressed_dx$definition_status[[1]], "suppressed", "Situation metrics should suppress small public counts.")
 expect_true(is.na(suppressed_dx$n_patients[[1]]), "Suppressed Situation metrics should not expose patient counts.")
+
+unavailable_dx <- situation_recent_earliest_from_data(
+  diagnoses[, "date_diagnosis", drop = FALSE],
+  date_col = "date_diagnosis",
+  min_cell_count = 1L,
+  n_cohort = 100L
+)
+expect_equal(unavailable_dx$definition_status[[1]], "unavailable", "Diagnosed-30d should be unavailable when patient/date evidence is incomplete.")
+
+implausible_dx <- situation_recent_earliest_from_data(
+  diagnoses,
+  date_col = "date_diagnosis",
+  min_cell_count = 1L,
+  n_cohort = 100L
+)
+expect_equal(implausible_dx$definition_status[[1]], "needs_review", "Implausibly high diagnosed-30d metrics should be flagged for review.")
 
 fallback <- build_situation_report_panels(
   sources = data.frame(table_name = "example", stringsAsFactors = FALSE),

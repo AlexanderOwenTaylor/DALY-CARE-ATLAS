@@ -35,6 +35,15 @@ read_csv_or_empty <- function(path) {
   )
 }
 
+read_tsv_or_empty <- function(path) {
+  if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
+  if (is.na(file.info(path)$size) || file.info(path)$size == 0) return(data.frame(stringsAsFactors = FALSE))
+  tryCatch(
+    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE),
+    error = function(e) data.frame(stringsAsFactors = FALSE)
+  )
+}
+
 write_text <- function(lines, path) {
   dir_create(dirname(path))
   writeLines(lines, path, useBytes = TRUE)
@@ -113,6 +122,8 @@ run_summary <- read_csv_or_empty(file.path(mock_output_dir, "atlas_run_summary.c
 source_resolution <- read_csv_or_empty(file.path(mock_output_dir, "atlas_source_resolution.csv"))
 memory_plan <- read_csv_or_empty(file.path(mock_output_dir, "atlas_memory_plan.csv"))
 action_items <- read_csv_or_empty(file.path(mock_output_dir, "atlas_run_action_items.csv"))
+db_query_log <- read_tsv_or_empty(file.path(mock_output_dir, "atlas_db_query_log.tsv"))
+db_budget_actions <- read_csv_or_empty(file.path(mock_output_dir, "atlas_db_budget_actions.csv"))
 access_report <- read_csv_or_empty(file.path(mock_output_dir, "atlas_dalycare_access.csv"))
 db_available_in_access_report <- is.data.frame(access_report) &&
   nrow(access_report) > 0 &&
@@ -152,6 +163,7 @@ panels <- build_coverage_panels(
   panels = panels,
   min_cell_count = atlas_min_cell_count()
 )
+panels$atlas_streaming_progress_summary <- atlas_streaming_progress_summary(db_query_log, sources)
 
 for (panel_name in names(panels)) {
   write_csv(panels[[panel_name]], file.path(mock_panel_dir, paste0(panel_name, ".csv")))
@@ -165,6 +177,10 @@ action_items <- atlas_run_action_items(
   panels = panels,
   checks = checks
 )
+budget_action_items <- db_budget_actions_as_run_action_items(db_budget_actions, sources = sources)
+if (nrow(budget_action_items)) {
+  action_items <- bind_rows_base(list(action_items, budget_action_items))
+}
 write_csv(action_items, file.path(mock_output_dir, "atlas_run_action_items.csv"))
 
 generated_at <- named_value(stats::setNames(run_summary$value, run_summary$metric), "generated_at", atlas_timestamp())
@@ -181,7 +197,9 @@ payload <- atlas_payload(
   run_summary = run_summary,
   action_items = action_items,
   source_resolution = source_resolution,
-  memory_plan = memory_plan
+  memory_plan = memory_plan,
+  db_query_log = db_query_log,
+  db_budget_actions = db_budget_actions
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 
@@ -191,7 +209,7 @@ readme <- c(
   paste("Input ZIP:", input_zip),
   paste("Generated:", atlas_timestamp()),
   "",
-  "This is a static preview generated from the aggregate CSV outputs of the 2026-05-12 run.",
+  "This is a static preview generated from the aggregate CSV outputs of the input atlas run.",
   "It is not a fresh live DALY run and it does not contain patient-level data.",
   "",
   "New preview coverage panels:",
@@ -200,6 +218,8 @@ readme <- c(
   "  - outputs/panels/atlas_spatial_region_counts.csv",
   "  - outputs/panels/atlas_spatial_region_coverage.csv",
   "  - outputs/panels/atlas_dk_choropleth_regions.csv",
+  "  - outputs/panels/atlas_temporal_date_quality.csv",
+  "  - outputs/panels/atlas_streaming_progress_summary.csv",
   "",
   "Open site/DALYCARE_atlas.html to review the mock-up."
 )

@@ -11,6 +11,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/db_profile.R",
     "R/situation_report.R",
     "R/action_items.R",
+    "R/semantic_dictionary.R",
     "R/html.R",
     "R/run_atlas.R"
   )

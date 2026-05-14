@@ -108,11 +108,12 @@ situation_report_metric_defs <- function() {
     list(
       metric_id = "diagnosed_30d",
       label = "Diagnosed in past 30 days",
-      kind = "recent_date",
+      kind = "recent_earliest_date",
       source_candidates = c("t_dalycare_diagnoses", "view_dalycare_diagnoses", "view_diagnoses_all_hosp_region", "view_diagnosses_all", "RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL"),
       date_candidates = c("date_diagnosis", "Reg_Diagnose_dt", "diagnosis_date", "Reg_DiagnostiskBiopsi_dt", "Diagnosedato", "d_diagnosedato"),
       window_days = 30L,
-      definition_basis = "diagnosis_date_30d"
+      definition_basis = "earliest_patient_diagnosis_date_30d",
+      max_pct_cohort = 2
     )
   )
 }
@@ -267,6 +268,7 @@ dbi_situation_report_panels <- function(source_resolution, db_adapter, sources =
       current_event = situation_dbi_current_event_or_interval(def, ctx, n_cohort = n_cohort, min_cell_count = min_cell_count),
       recent_event = situation_dbi_recent_event_or_date(def, ctx, n_cohort = n_cohort, min_cell_count = min_cell_count),
       recent_date = situation_dbi_recent_date(def, ctx, n_cohort = n_cohort, min_cell_count = min_cell_count),
+      recent_earliest_date = situation_dbi_recent_earliest_date(def, ctx, n_cohort = n_cohort, min_cell_count = min_cell_count),
       list(summary = situation_unavailable_row(def, n_cohort = n_cohort), breakdowns = empty_situation_report_breakdowns(), freshness = empty_situation_report_freshness())
     )
   })
@@ -445,6 +447,45 @@ situation_dbi_recent_date <- function(def, ctx, n_cohort = NA_real_, min_cell_co
   summary <- situation_metric_row(def, counts, as_of, ctx$row$table_name[[1]], date_col, min_cell_count = min_cell_count, n_cohort = n_cohort)
   breakdowns <- situation_breakdowns_for_condition(def, ctx, condition, summary, patient_col, min_cell_count = min_cell_count)
   list(summary = summary, breakdowns = breakdowns, freshness = situation_freshness_row(def, ctx$row$table_name[[1]], date_col, as_of))
+}
+
+situation_dbi_recent_earliest_date <- function(def, ctx, n_cohort = NA_real_, min_cell_count = atlas_min_cell_count()) {
+  patient_col <- situation_patient_column(ctx$columns)
+  date_col <- situation_find_column(ctx$columns, def$date_candidates)
+  if (is.na(patient_col) || is.na(date_col)) {
+    return(situation_metric_unavailable_result(def, ctx, "Required patient/date columns for earliest-diagnosis logic were not found.", n_cohort = n_cohort))
+  }
+  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col)
+  as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, date_expr)
+  if (is.na(as_of)) {
+    return(situation_metric_unavailable_result(def, ctx, "No valid as-of diagnosis date was available.", n_cohort = n_cohort))
+  }
+  start <- as_of - as.integer(def$window_days %||% 30L)
+  qpatient <- DBI::dbQuoteIdentifier(ctx$conn, patient_col)
+  as_of_sql <- paste0(DBI::dbQuoteString(ctx$conn, as.character(as_of)), "::date")
+  start_sql <- paste0(DBI::dbQuoteString(ctx$conn, as.character(start)), "::date")
+  sql <- paste0(
+    "with diagnosis_dates as (",
+    "select ", qpatient, " as patient_key, ", date_expr, " as diagnosis_date ",
+    "from ", ctx$table_ref, " where ", qpatient, " is not null and ", date_expr, " is not null and ", date_expr, " <= ", as_of_sql,
+    "), first_diagnosis as (",
+    "select patient_key, min(diagnosis_date) as first_diagnosis_date from diagnosis_dates group by patient_key",
+    ") select count(*) as n_rows, count(distinct patient_key) as n_patients ",
+    "from first_diagnosis where first_diagnosis_date between ", start_sql, " and ", as_of_sql
+  )
+  counts <- situation_count_result(ctx$conn, sql)
+  basis <- paste(c(def$definition_basis %||% "earliest_patient_diagnosis_date_30d", paste0("date:", date_col), paste0("patient:", patient_col)), collapse = "; ")
+  summary <- situation_metric_row(
+    def, counts, as_of, ctx$row$table_name[[1]], date_col,
+    min_cell_count = min_cell_count,
+    definition_basis = basis,
+    n_cohort = n_cohort
+  )
+  list(
+    summary = summary,
+    breakdowns = situation_source_breakdown(summary),
+    freshness = situation_freshness_row(def, ctx$row$table_name[[1]], date_col, as_of)
+  )
 }
 
 situation_dbi_recent_event_or_date <- function(def, ctx, n_cohort = NA_real_, min_cell_count = atlas_min_cell_count()) {
@@ -717,6 +758,55 @@ situation_recent_from_data <- function(data, metric_id, label, date_col, patient
     freshness_status = "current",
     message = if (suppressed) "Suppressed below minimum cell count." else "",
     stringsAsFactors = FALSE
+  )
+}
+
+situation_recent_earliest_from_data <- function(data, metric_id = "diagnosed_30d",
+                                                label = "Diagnosed in past 30 days",
+                                                date_col = "date_diagnosis",
+                                                patient_col = "patientid",
+                                                window_days = 30L,
+                                                min_cell_count = atlas_min_cell_count(),
+                                                n_cohort = NA_real_,
+                                                max_pct_cohort = 2) {
+  def <- list(
+    metric_id = metric_id,
+    label = label,
+    window_days = window_days,
+    definition_basis = "earliest_patient_diagnosis_date_30d",
+    max_pct_cohort = max_pct_cohort
+  )
+  if (!date_col %in% names(data) || !patient_col %in% names(data)) {
+    return(situation_unavailable_row(def, "Required patient/date columns for earliest-diagnosis logic were not found.", n_cohort = n_cohort))
+  }
+  dates <- safe_as_date(data[[date_col]])
+  if (all(is.na(dates))) {
+    return(situation_unavailable_row(def, "No valid as-of diagnosis date was available.", n_cohort = n_cohort))
+  }
+  as_of <- max(dates, na.rm = TRUE)
+  patients <- trimws(as.character(data[[patient_col]]))
+  valid <- !is.na(dates) & nzchar(patients) & !is.na(patients) & dates <= as_of
+  if (!any(valid)) {
+    counts <- list(n_patients = 0L, n_rows = 0L)
+  } else {
+    first_dates <- stats::aggregate(
+      list(first_diagnosis_date = dates[valid]),
+      by = list(patient = patients[valid]),
+      FUN = min
+    )
+    ok <- first_dates$first_diagnosis_date >= as_of - window_days &
+      first_dates$first_diagnosis_date <= as_of
+    counts <- list(n_patients = sum(ok, na.rm = TRUE), n_rows = sum(ok, na.rm = TRUE))
+  }
+  situation_metric_row(
+    def,
+    counts = counts,
+    as_of_date = as_of,
+    source_table = "fixture",
+    date_column = date_col,
+    min_cell_count = min_cell_count,
+    definition_basis = paste(c(def$definition_basis, paste0("date:", date_col), paste0("patient:", patient_col)), collapse = "; "),
+    n_cohort = n_cohort
   )
 }
 

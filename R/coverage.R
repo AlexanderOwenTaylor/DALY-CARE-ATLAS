@@ -139,6 +139,15 @@ empty_temporal_coverage_years <- function() {
   )
 }
 
+empty_temporal_date_quality <- function() {
+  empty_df(
+    table_name = character(), domain = character(), subdomain = character(), atlas_role = character(),
+    date_column = character(), raw_min_date = character(), raw_max_date = character(),
+    display_min_year = integer(), display_max_year = integer(), issue_type = character(),
+    severity = character(), message = character()
+  )
+}
+
 empty_spatial_region_counts <- function() {
   empty_df(
     table_name = character(), domain = character(), subdomain = character(), atlas_role = character(),
@@ -208,6 +217,76 @@ panel_atlas_temporal_coverage <- function(sources, column_profiles) {
   })
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(empty_temporal_coverage())
+  out
+}
+
+temporal_date_quality_rows_for_source <- function(row, lower = coverage_display_year_min(),
+                                                  upper = coverage_display_year_max()) {
+  table_name <- row$table_name[[1]] %||% ""
+  date_column <- as.character(row$date_column[[1]] %||% "")
+  raw_min <- as.character(row$raw_min_date[[1]] %||% "")
+  raw_max <- as.character(row$raw_max_date[[1]] %||% "")
+  min_date <- coverage_parse_date(raw_min)
+  max_date <- coverage_parse_date(raw_max)
+  min_year <- suppressWarnings(as.integer(format(min_date, "%Y")))
+  max_year <- suppressWarnings(as.integer(format(max_date, "%Y")))
+  base <- function(issue_type, severity, message) {
+    data.frame(
+      table_name = table_name,
+      domain = row$domain[[1]] %||% "",
+      subdomain = row$subdomain[[1]] %||% "",
+      atlas_role = row$atlas_role[[1]] %||% "",
+      date_column = date_column,
+      raw_min_date = raw_min,
+      raw_max_date = raw_max,
+      display_min_year = suppressWarnings(as.integer(row$display_min_year[[1]] %||% NA_integer_)),
+      display_max_year = suppressWarnings(as.integer(row$display_max_year[[1]] %||% NA_integer_)),
+      issue_type = issue_type,
+      severity = severity,
+      message = message,
+      stringsAsFactors = FALSE
+    )
+  }
+  rows <- list()
+  if (!nzchar(date_column) || is.na(date_column)) {
+    rows[[length(rows) + 1L]] <- base(
+      "missing_date_column",
+      "info",
+      "No coverage-ready date column was selected for this source."
+    )
+  } else if (all(is.na(c(min_date, max_date)))) {
+    rows[[length(rows) + 1L]] <- base(
+      "text_date_unparsed",
+      "warning",
+      "A date-like column was selected, but no valid aggregate date range was parsed."
+    )
+  }
+  if (!is.na(min_year) && min_year < lower) {
+    rows[[length(rows) + 1L]] <- base(
+      "past_sentinel",
+      "warning",
+      paste("Raw minimum date is before the display lower bound", lower, "and was clamped in figures.")
+    )
+  }
+  if (!is.na(max_year) && max_year > upper) {
+    rows[[length(rows) + 1L]] <- base(
+      "future_sentinel",
+      "warning",
+      paste("Raw maximum date is after the display upper bound", upper, "and was clamped in figures.")
+    )
+  }
+  if (!length(rows)) return(empty_temporal_date_quality())
+  bind_rows_base(rows)
+}
+
+panel_atlas_temporal_date_quality <- function(temporal_coverage) {
+  if (!is.data.frame(temporal_coverage) || !nrow(temporal_coverage)) {
+    return(empty_temporal_date_quality())
+  }
+  out <- bind_rows_base(lapply(seq_len(nrow(temporal_coverage)), function(i) {
+    temporal_date_quality_rows_for_source(temporal_coverage[i, , drop = FALSE])
+  }))
+  if (!nrow(out)) return(empty_temporal_date_quality())
   out
 }
 
@@ -546,6 +625,7 @@ panel_atlas_dk_choropleth_regions <- function(sources, panels, region_counts = e
 build_coverage_panels <- function(sources, column_profiles, panels, min_cell_count = atlas_min_cell_count()) {
   panels <- panels %||% list()
   panels$atlas_temporal_coverage <- panel_atlas_temporal_coverage(sources, column_profiles)
+  panels$atlas_temporal_date_quality <- panel_atlas_temporal_date_quality(panels$atlas_temporal_coverage)
   if (!"atlas_temporal_coverage_years" %in% names(panels) ||
       !is.data.frame(panels$atlas_temporal_coverage_years) ||
       !nrow(panels$atlas_temporal_coverage_years)) {

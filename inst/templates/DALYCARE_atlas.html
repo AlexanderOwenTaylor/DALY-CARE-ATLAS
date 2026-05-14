@@ -258,7 +258,7 @@
     }
     input[type="search"] { min-width: min(420px, 100%); }
     .catalog-list { display: grid; gap: 8px; }
-    .catalog-row, .column-row {
+    .catalog-row, .column-row, .semantic-row {
       display: grid;
       grid-template-columns: 150px 1fr 96px 86px 120px;
       gap: 10px;
@@ -272,8 +272,29 @@
     .column-row {
       grid-template-columns: 160px 1fr 110px 120px 190px;
     }
+    .semantic-row {
+      grid-template-columns: 180px 1.15fr 1fr 1fr 125px;
+      cursor: pointer;
+    }
     .catalog-row strong { display: block; font-size: 14px; }
     .column-row strong { display: block; font-size: 14px; }
+    .semantic-row strong { display: block; font-size: 14px; }
+    .lineage-block {
+      margin-top: 14px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+    .lineage-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 9px;
+      margin: 3px;
+      font-size: 12px;
+      background: #fff;
+    }
     .mini { color: var(--muted); font-size: 12px; }
     .qa-list { display: grid; gap: 8px; }
     .qa-item {
@@ -448,7 +469,7 @@
     @media (max-width: 820px) {
       .hero { padding: 24px 18px 20px; }
       main { padding: 16px 14px 34px; }
-      .catalog-row, .column-row { grid-template-columns: 1fr; }
+      .catalog-row, .column-row, .semantic-row { grid-template-columns: 1fr; }
       .bar-row { grid-template-columns: 1fr; }
       .review-lead { grid-template-columns: 1fr; }
       .dk-shell { grid-template-columns: 1fr; }
@@ -478,6 +499,7 @@
       <button class="tab-button active" data-tab="overview">Overview</button>
       <button class="tab-button" data-tab="situation">Situation Report</button>
       <button class="tab-button" data-tab="quickstart">Quick Start</button>
+      <button class="tab-button" data-tab="dictionary">Data Dictionary</button>
       <button class="tab-button" data-tab="registries">Disease Registries</button>
       <button class="tab-button" data-tab="clinical">Clinical Data</button>
       <button class="tab-button" data-tab="treatment">Treatment</button>
@@ -689,6 +711,50 @@
       </div>
     </section>
 
+    <section class="tab-page" id="tab-dictionary">
+      <div class="sub-nav" aria-label="Data Dictionary sections">
+        <button class="sub-tab active" data-sub="dictionary-lineage">Semantic Lineage</button>
+        <button class="sub-tab" data-sub="dictionary-values">Value Maps</button>
+        <button class="sub-tab" data-sub="dictionary-codes">Code Maps</button>
+        <button class="sub-tab" data-sub="dictionary-panels">Panel Links</button>
+      </div>
+      <div class="sub-pane active" id="dictionary-lineage">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Where is this stored?</p>
+            <h2 class="panel-title">Semantic Data Dictionary</h2>
+            <p class="panel-sub">Search clinical concepts, raw column names, descriptors, codes, values, panels, caveats, and evidence files from the cartography reference.</p>
+          </div>
+          <div class="panel-body">
+            <div id="semantic-summary" class="grid" style="margin-bottom:14px"></div>
+            <div class="toolbar">
+              <label>Search <input id="semantic-search" type="search" placeholder="smoking, ryger, height, Vægt, LDH, NPU02319, PET, blood culture, IGHV"></label>
+              <label>Group <select id="semantic-group-filter"><option value="">All groups</option></select></label>
+              <label>Source <select id="semantic-source-filter"><option value="">All sources</option></select></label>
+              <label>Status <select id="semantic-status-filter"><option value="">All statuses</option></select></label>
+              <label>Type <select id="semantic-type-filter"><option value="">All types</option></select></label>
+              <label>Code system <select id="semantic-code-filter"><option value="">All systems</option></select></label>
+              <label>Panel <select id="semantic-panel-filter"><option value="">All panels</option></select></label>
+            </div>
+            <div id="semantic-count" class="mini"></div>
+            <div class="review-lead">
+              <div><div id="semantic-list" class="catalog-list"></div></div>
+              <div><div id="semantic-detail" class="card"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="dictionary-values">
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Value Map</h2><p class="panel-sub">Raw categorical values mapped to display values and clinical interpretation, with small cells suppressed.</p></div><div class="panel-body"><div id="semantic-value-map"></div></div></div>
+      </div>
+      <div class="sub-pane" id="dictionary-codes">
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div id="semantic-code-map"></div></div></div>
+      </div>
+      <div class="sub-pane" id="dictionary-panels">
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Panel Links</h2><p class="panel-sub">Many-to-many links between raw variables, clinical concepts, and user-facing atlas panels.</p></div><div class="panel-body"><div id="semantic-panel-links"></div></div></div>
+      </div>
+    </section>
+
     <section class="tab-page" id="tab-registries">
       <div class="sub-nav" aria-label="Disease Registry sections">
         <button class="sub-tab active" data-sub="reg-overview">Overview</button>
@@ -707,9 +773,9 @@
           <div class="panel-body"><div id="registry-cards" class="grid"></div></div>
         </div>
       </div>
-      <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa Detail</h2><p class="panel-sub">Facets and numeric registry panels from protected CSV outputs.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
-      <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO Detail</h2><p class="panel-sub">LYFO registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-lyfo"></div></div></div></div>
-      <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL Detail</h2><p class="panel-sub">CLL registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-cll"></div></div></div></div>
+      <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa Detail</h2><p class="panel-sub">Facets and numeric registry panels from protected CSV outputs.</p></div><div class="panel-body"><div id="registry-damyda"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-damyda"></div></div></div></div></div>
+      <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO Detail</h2><p class="panel-sub">LYFO registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-lyfo"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-lyfo"></div></div></div></div></div>
+      <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL Detail</h2><p class="panel-sub">CLL registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-cll"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-cll"></div></div></div></div></div>
       <div class="sub-pane" id="reg-inventory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Registry Inventory</h2><p class="panel-sub">Clinical registry summary rows and related panels.</p></div><div class="panel-body"><div id="registry-summary-table"></div></div></div></div>
     </section>
 
@@ -724,10 +790,10 @@
       </div>
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging Sources</h2><p class="panel-sub">SP billed imaging and radiology-like sources.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vitals Sources</h2><p class="panel-sub">Vitals-like sources and columns when mapped.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging Sources</h2><p class="panel-sub">SP billed imaging and radiology-like sources.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-imaging"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vitals Sources</h2><p class="panel-sub">Vitals-like sources and columns when mapped.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-vitals"></div></div></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social History Sources</h2><p class="panel-sub">Social-history and lifestyle-like sources when available.</p></div><div class="panel-body"><div id="clinical-social-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social History Sources</h2><p class="panel-sub">Social-history and lifestyle-like sources when available.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-social"></div></div></div></div></div>
     </section>
 
     <section class="tab-page" id="tab-treatment">
@@ -737,7 +803,7 @@
         <button class="sub-tab" data-sub="tx-medicine">Medicine</button>
         <button class="sub-tab" data-sub="tx-procedures">Procedures</button>
       </div>
-      <div class="sub-pane active" id="tx-codes"><div class="panel"><div class="panel-head"><h2 class="panel-title">MM Treatment Code Families</h2><p class="panel-sub">Exact and prefix treatment-code matches from protected aggregate panels.</p></div><div class="panel-body"><div id="treatment-cards" class="grid"></div></div></div></div>
+      <div class="sub-pane active" id="tx-codes"><div class="panel"><div class="panel-head"><h2 class="panel-title">MM Treatment Code Families</h2><p class="panel-sub">Exact and prefix treatment-code matches from protected aggregate panels.</p></div><div class="panel-body"><div id="treatment-cards" class="grid"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-treatment"></div></div></div></div></div>
       <div class="sub-pane" id="tx-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Treatment Source Summary</h2><p class="panel-sub">Treatment-like sources detected from the catalog and treatment panels.</p></div><div class="panel-body"><div id="treatment-source-cards"></div></div></div></div>
       <div class="sub-pane" id="tx-medicine"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medicine And ATC Sources</h2><p class="panel-sub">Administered/ordered medicine and ATC-like sources.</p></div><div class="panel-body"><div id="treatment-medicine-cards"></div></div></div></div>
       <div class="sub-pane" id="tx-procedures"><div class="panel"><div class="panel-head"><h2 class="panel-title">Procedure And SKS Sources</h2><p class="panel-sub">Procedure, SKS, and treatment-plan sources.</p></div><div class="panel-body"><div id="treatment-procedure-cards"></div></div></div></div>
@@ -750,7 +816,7 @@
         <button class="sub-tab" data-sub="lab-isotype">Isotype Finder</button>
         <button class="sub-tab" data-sub="lab-sources">Lab Sources</button>
       </div>
-      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Consensus NPU Dictionary</h2><p class="panel-sub">Dictionary coverage and observed usage by consensus vector.</p></div><div class="panel-body"><div id="npu-cards" class="grid"></div></div></div></div>
+      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Consensus NPU Dictionary</h2><p class="panel-sub">Dictionary coverage and observed usage by consensus vector.</p></div><div class="panel-body"><div id="npu-cards" class="grid"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-laboratory"></div></div></div></div></div>
       <div class="sub-pane" id="lab-detective"><div class="panel"><div class="panel-head"><h2 class="panel-title">NPU Detective</h2><p class="panel-sub">Observed NPU inventory and candidate codes from aggregate code panels.</p></div><div class="panel-body"><div id="detective-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-isotype"><div class="panel"><div class="panel-head"><h2 class="panel-title">Isotype Finder</h2><p class="panel-sub">M-spike and isotype code families at aggregate level.</p></div><div class="panel-body"><div id="isotype-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory Sources</h2><p class="panel-sub">Lab-like source metadata and relevant NPU/isotype panels.</p></div><div class="panel-body"><div id="laboratory-source-cards"></div></div></div></div>
@@ -785,6 +851,12 @@
           </div>
           <div class="panel-body">
             <div id="action-summary-cards" class="grid"></div>
+            <div style="height:14px"></div>
+            <h3>Temporal Date Quality</h3>
+            <div id="temporal-date-quality-cards" class="grid"></div>
+            <div style="height:14px"></div>
+            <h3>DB Streaming Progress</h3>
+            <div id="streaming-progress-cards" class="grid"></div>
             <div style="height:14px"></div>
             <div id="run-action-items"></div>
           </div>
@@ -832,7 +904,7 @@
         </div>
       </div>
       <div class="sub-pane" id="infra-resolution"><div class="panel"><div class="panel-head"><h2 class="panel-title">Source Resolution</h2><p class="panel-sub">DB/source resolution diagnostics and skipped or missing sources.</p></div><div class="panel-body"><div id="infrastructure-resolution"></div><div style="height:14px"></div><div id="infrastructure-skipped"></div></div></div></div>
-      <div class="sub-pane" id="infra-memory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Memory Plan</h2><p class="panel-sub">Per-source load strategy, streamed DB query logs, and memory guardrail metadata when available.</p></div><div class="panel-body"><h3>Source Strategy</h3><div id="infrastructure-memory-plan"></div><div style="height:14px"></div><h3>DB Budget Actions</h3><div id="infrastructure-db-budget-actions"></div><div style="height:14px"></div><h3>DB Query Log</h3><div id="infrastructure-db-query-log"></div></div></div></div>
+      <div class="sub-pane" id="infra-memory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Memory Plan</h2><p class="panel-sub">Per-source load strategy, streamed DB query logs, and memory guardrail metadata when available.</p></div><div class="panel-body"><h3>Source Strategy</h3><div id="infrastructure-memory-plan"></div><div style="height:14px"></div><h3>DB Streaming Progress</h3><div id="infrastructure-streaming-progress"></div><div style="height:14px"></div><h3>DB Budget Actions</h3><div id="infrastructure-db-budget-actions"></div><div style="height:14px"></div><h3>Temporal Date Quality</h3><div id="infrastructure-temporal-date-quality"></div><div style="height:14px"></div><h3>DB Query Log</h3><div id="infrastructure-db-query-log"></div></div></div></div>
       <div class="sub-pane" id="infra-panels">
         <div class="panel">
           <div class="panel-head">
@@ -907,6 +979,13 @@
       const reviewSpatial = payload.review_spatial_coverage || {};
       const reviewDk = payload.review_dk_choropleth || {};
       const reviewInfrastructure = payload.review_infrastructure_sections || {};
+      const reviewStreamingSummary = payload.review_streaming_summary || [];
+      const reviewTemporalDateQuality = payload.review_temporal_date_quality || [];
+      const semanticRows = payload.semantic_dictionary_rows || [];
+      const semanticValueRows = payload.semantic_value_map_rows || [];
+      const semanticCodeRows = payload.semantic_code_map_rows || [];
+      const semanticPanelLinks = payload.semantic_panel_links || [];
+      const semanticSummary = payload.review_semantic_summary || [];
       const regionState = { code: null };
 
       function text(value) {
@@ -1331,6 +1410,8 @@
 
         const actionRows = reviewInfrastructure.action_items || actionItems;
         const actionSummaryRows = reviewInfrastructure.action_summary || actionSummary;
+        const streamingRows = reviewInfrastructure.streaming_summary || reviewStreamingSummary || [];
+        const temporalQualityRows = reviewInfrastructure.temporal_date_quality || reviewTemporalDateQuality || [];
         setHtml("action-summary-cards", actionSummaryRows.map(row => `
           <article class="card">
             <div class="mini">${escapeHtml(row.severity || "")}</div>
@@ -1338,11 +1419,35 @@
             <div class="big">${formatNumber(row.n_items || 0)}</div>
           </article>
         `).join("") || `<div class="empty">No blocking or actionable run items were generated.</div>`);
+        const qualityGroups = {};
+        temporalQualityRows.forEach(row => {
+          const key = row.issue_type || "date_quality";
+          qualityGroups[key] = (qualityGroups[key] || 0) + 1;
+        });
+        setHtml("temporal-date-quality-cards", Object.keys(qualityGroups).map(key => `
+          <article class="card">
+            <div class="mini">date-quality issue</div>
+            <h3>${escapeHtml(key)}</h3>
+            <div class="big">${formatNumber(qualityGroups[key])}</div>
+            <p class="mini">source-level rows preserved in atlas_temporal_date_quality.csv</p>
+          </article>
+        `).join("") || `<div class="empty">No temporal date-quality issues were generated.</div>`);
+        const totalChunks = streamingRows.reduce((sum, row) => sum + numberValue(row.total_chunks), 0);
+        const totalMinutes = streamingRows.reduce((sum, row) => sum + numberValue(row.total_elapsed_minutes), 0);
+        const streamedColumns = streamingRows.reduce((sum, row) => sum + numberValue(row.streamed_columns), 0);
+        setHtml("streaming-progress-cards", streamingRows.length ? `
+          <article class="card"><div class="mini">streamed sources</div><h3>DB Streaming Progress</h3><div class="big">${formatNumber(streamingRows.length)}</div></article>
+          <article class="card"><div class="mini">streamed columns</div><h3>Column Scans</h3><div class="big">${formatNumber(streamedColumns)}</div></article>
+          <article class="card"><div class="mini">fetched chunks</div><h3>Chunked Reads</h3><div class="big">${formatNumber(totalChunks)}</div></article>
+          <article class="card"><div class="mini">elapsed minutes</div><h3>Streaming Time</h3><div class="big">${formatNumber(totalMinutes)}</div></article>
+        ` : `<div class="empty">No DB streaming progress rows were generated.</div>`);
         setHtml("run-action-items", rowsForTable(actionRows, 300));
         setHtml("infrastructure-resolution", rowsForTable(reviewInfrastructure.resolution || [], 200));
         setHtml("infrastructure-skipped", rowsForTable(reviewInfrastructure.skipped_sources || [], 200));
         setHtml("infrastructure-memory-plan", rowsForTable(reviewInfrastructure.memory_plan || [], 200));
+        setHtml("infrastructure-streaming-progress", rowsForTable(streamingRows, 200));
         setHtml("infrastructure-db-budget-actions", rowsForTable(reviewInfrastructure.db_budget_actions || [], 200));
+        setHtml("infrastructure-temporal-date-quality", rowsForTable(temporalQualityRows, 200));
         setHtml("infrastructure-db-query-log", rowsForTable(reviewInfrastructure.db_query_log || [], 300));
       }
 
@@ -1431,6 +1536,130 @@
       });
       renderColumnExplorer();
 
+      function semanticPanelFor(row) {
+        const link = semanticPanelLinks.find(item => item.semantic_id === row.semantic_id);
+        return link ? link.panel_id : "";
+      }
+      function semanticHay(row) {
+        return [
+          row.clinical_variable, row.clinical_group, row.clinical_subgroup, row.semantic_meaning,
+          row.source_name, row.object_name, row.schema_name, row.table_name, row.raw_column,
+          row.raw_descriptor, row.raw_code, row.raw_value, row.code_system, row.value_type,
+          row.mapping_status, row.evidence_file, row.evidence_filter, row.clinical_caveat,
+          row.search_terms, semanticPanelFor(row)
+        ].join(" ").toLowerCase();
+      }
+      function semanticRawName(row) {
+        const bits = [];
+        if (row.raw_column) bits.push(row.raw_column);
+        if (row.raw_descriptor) bits.push(`descriptor: ${row.raw_descriptor}`);
+        if (row.raw_code) bits.push(`code: ${row.raw_code}`);
+        if (row.raw_value) bits.push(`value: ${row.raw_value}`);
+        return bits.join(" / ") || "source-level evidence";
+      }
+      function renderSemanticDetail(row) {
+        if (!row) {
+          setHtml("semantic-detail", `<h3>Raw names / data lineage</h3><p class="mini">Select a semantic row to inspect full lineage, value maps, code maps, related panels, caveats, and evidence filters.</p>`);
+          return;
+        }
+        const values = semanticValueRows.filter(item => item.semantic_id === row.semantic_id);
+        const codes = semanticCodeRows.filter(item => item.semantic_id === row.semantic_id || item.clinical_concept_id === row.clinical_concept_id);
+        const links = semanticPanelLinks.filter(item => item.semantic_id === row.semantic_id || item.clinical_concept_id === row.clinical_concept_id);
+        setHtml("semantic-detail", `
+          <h3>${escapeHtml(row.clinical_variable || "Clinical variable")}</h3>
+          <p>${escapeHtml(row.semantic_meaning || "")}</p>
+          <div class="kpi-row">
+            <div class="kpi"><b>${escapeHtml(row.mapping_status || "")}</b><span class="mini">status</span></div>
+            <div class="kpi"><b>${escapeHtml(row.mapping_confidence || "")}</b><span class="mini">confidence</span></div>
+            <div class="kpi"><b>${formatNumber(row.n_rows)}</b><span class="mini">rows</span></div>
+            <div class="kpi"><b>${formatNumber(row.n_patients)}</b><span class="mini">patients</span></div>
+          </div>
+          <div class="lineage-block">
+            <h3>Full lineage</h3>
+            ${rowsForTable([row], 1)}
+          </div>
+          <div class="lineage-block">
+            <h3>Value map</h3>
+            ${values.length ? rowsForTable(values, 80) : `<div class="empty">No value-level mapping for this semantic row.</div>`}
+          </div>
+          <div class="lineage-block">
+            <h3>Code map</h3>
+            ${codes.length ? rowsForTable(codes, 80) : `<div class="empty">No code-level mapping for this semantic row.</div>`}
+          </div>
+          <div class="lineage-block">
+            <h3>Related panels and caveats</h3>
+            ${links.length ? rowsForTable(links, 40) : `<div class="empty">No linked panel rows.</div>`}
+            <p class="mini">${escapeHtml(row.clinical_caveat || "")}</p>
+            <p class="mini">Evidence: ${escapeHtml(row.evidence_file || "")} ${row.evidence_filter ? "- " + escapeHtml(row.evidence_filter) : ""}</p>
+          </div>
+        `);
+      }
+      function renderSemanticExplorer() {
+        const q = document.getElementById("semantic-search").value.trim().toLowerCase();
+        const group = document.getElementById("semantic-group-filter").value;
+        const source = document.getElementById("semantic-source-filter").value;
+        const status = document.getElementById("semantic-status-filter").value;
+        const type = document.getElementById("semantic-type-filter").value;
+        const system = document.getElementById("semantic-code-filter").value;
+        const panel = document.getElementById("semantic-panel-filter").value;
+        const filtered = semanticRows.filter(row => {
+          const linkedPanel = semanticPanelFor(row);
+          return (!q || semanticHay(row).includes(q)) &&
+            (!group || row.clinical_group === group) &&
+            (!source || row.source_name === source) &&
+            (!status || row.mapping_status === status) &&
+            (!type || row.value_type === type) &&
+            (!system || row.code_system === system) &&
+            (!panel || linkedPanel === panel);
+        });
+        document.getElementById("semantic-count").textContent = `${filtered.length} of ${semanticRows.length} semantic rows shown`;
+        setHtml("semantic-list", filtered.slice(0, 500).map((row, index) => `
+          <article class="semantic-row" data-semantic-index="${index}">
+            <div><span class="badge">${escapeHtml(row.clinical_group || "Unassigned")}</span><div class="mini">${escapeHtml(row.clinical_subgroup || "")}</div></div>
+            <div><strong>${escapeHtml(row.clinical_variable || "")}</strong><div class="mini">${escapeHtml(row.semantic_meaning || "")}</div></div>
+            <div><strong>${escapeHtml(row.source_name || "")}</strong><div class="mini">${escapeHtml(row.object_name || row.table_name || "")}</div></div>
+            <div>${escapeHtml(semanticRawName(row))}<div class="mini">${escapeHtml(row.code_system || row.value_type || "")}</div></div>
+            <div><span class="badge">${escapeHtml(row.mapping_status || "")}</span><div class="mini">${escapeHtml(row.mapping_confidence || "")}</div></div>
+          </article>
+        `).join("") || `<div class="empty">No semantic rows match the current filters.</div>`);
+        document.querySelectorAll("#semantic-list .semantic-row").forEach(node => {
+          node.addEventListener("click", () => renderSemanticDetail(filtered[Number(node.dataset.semanticIndex)]));
+        });
+        renderSemanticDetail(filtered[0]);
+      }
+      function renderSemanticLineageBlocks() {
+        const block = (id, predicate, limit) => {
+          const rows = semanticRows.filter(predicate).slice(0, limit || 18);
+          const html = rows.map(row => `<span class="lineage-chip" title="${escapeHtml(row.evidence_file || "")}">${escapeHtml(semanticRawName(row))} -> ${escapeHtml(row.clinical_variable || "")}</span>`).join("");
+          setHtml(id, html || `<div class="empty">No semantic lineage rows available for this panel yet.</div>`);
+        };
+        block("semantic-registry-damyda", row => /DaMyDa/i.test(row.source_name || ""), 24);
+        block("semantic-registry-lyfo", row => /LYFO/i.test(row.source_name || ""), 24);
+        block("semantic-registry-cll", row => /CLL/i.test(row.source_name || ""), 24);
+        block("semantic-clinical-vitals", row => row.clinical_group === "Vitals", 24);
+        block("semantic-clinical-social", row => row.clinical_group === "Lifestyle", 24);
+        block("semantic-clinical-imaging", row => row.clinical_group === "Imaging", 24);
+        block("semantic-treatment", row => row.clinical_group === "Treatment", 24);
+        block("semantic-laboratory", row => row.clinical_group === "Laboratory", 24);
+      }
+      fillSelect("semantic-group-filter", uniqueValues(semanticRows, "clinical_group"));
+      fillSelect("semantic-source-filter", uniqueValues(semanticRows, "source_name"));
+      fillSelect("semantic-status-filter", uniqueValues(semanticRows, "mapping_status"));
+      fillSelect("semantic-type-filter", uniqueValues(semanticRows, "value_type"));
+      fillSelect("semantic-code-filter", uniqueValues(semanticRows, "code_system"));
+      fillSelect("semantic-panel-filter", uniqueValues(semanticPanelLinks, "panel_id"));
+      setHtml("semantic-summary", semanticSummary.map(row => `
+        <article class="card"><div class="mini">${escapeHtml(row.metric || "")}</div><h3>${escapeHtml(row.label || "")}</h3><div class="big">${formatNumber(row.value)}</div></article>
+      `).join("") || `<div class="empty">No semantic summary rows were generated.</div>`);
+      ["semantic-search", "semantic-group-filter", "semantic-source-filter", "semantic-status-filter", "semantic-type-filter", "semantic-code-filter", "semantic-panel-filter"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderSemanticExplorer);
+        document.getElementById(id).addEventListener("change", renderSemanticExplorer);
+      });
+      renderSemanticExplorer();
+      setHtml("semantic-value-map", rowsForTable(semanticValueRows, 500));
+      setHtml("semantic-code-map", rowsForTable(semanticCodeRows, 500));
+      setHtml("semantic-panel-links", rowsForTable(semanticPanelLinks, 500));
+
       function bars(rows, valueKey, labelKey) {
         if (!rows || !rows.length) return `<div class="empty">No aggregate rows available.</div>`;
         const max = Math.max(...rows.map(row => numberValue(row[valueKey])), 1);
@@ -1443,6 +1672,7 @@
       renderNpuCards();
       renderCodeDiscoveryCards();
       renderReviewSections();
+      renderSemanticLineageBlocks();
       setHtml("registry-cards", Object.keys(registryCards).map(name => {
         const card = registryCards[name];
         const facets = card.facets || [];

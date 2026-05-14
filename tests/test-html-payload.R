@@ -203,6 +203,37 @@ panels <- list(
     coverage_basis = "event_date_counts",
     stringsAsFactors = FALSE
   ),
+  atlas_temporal_date_quality = data.frame(
+    table_name = "example_labs",
+    domain = "SP",
+    subdomain = "Laboratory",
+    atlas_role = "fixture",
+    date_column = "samplingdate",
+    raw_min_date = "1800-01-01",
+    raw_max_date = "2020-01-03",
+    display_min_year = 2000,
+    display_max_year = 2020,
+    issue_type = "past_sentinel",
+    severity = "warning",
+    message = "Raw minimum date is before the display lower bound.",
+    stringsAsFactors = FALSE
+  ),
+  atlas_streaming_progress_summary = data.frame(
+    table_name = "example_labs",
+    domain = "SP",
+    subdomain = "Laboratory",
+    atlas_role = "fixture",
+    streamed_columns = 1,
+    total_chunks = 1,
+    total_elapsed_ms = 1,
+    total_elapsed_minutes = 0,
+    estimated_rows = 10,
+    slowest_column = "value",
+    slowest_column_elapsed_ms = 1,
+    status = "ok",
+    message = "1 column streamed in 1 chunk.",
+    stringsAsFactors = FALSE
+  ),
   atlas_spatial_region_counts = data.frame(
     table_name = "RKKP_DaMyDa",
     domain = "RKKP",
@@ -373,11 +404,12 @@ payload <- atlas_payload(
 expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "situation_report_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the review-grade view model sections.")
 expect_true(all(c("review_nav", "review_overview", "review_registry_sections", "review_clinical_sections", "review_treatment_sections", "review_laboratory_sections", "review_situation_sections", "review_ehr_sections", "review_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style review view-model sections.")
 expect_true(all(c("review_temporal_coverage", "review_spatial_coverage", "review_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
-expect_true(all(c("builder_credit", "review_scope_notes", "review_data_landscape", "review_module_readiness", "review_domain_jump_links") %in% names(payload)), "Payload should include transparent credit and neutral review metadata.")
+expect_true(all(c("builder_credit", "review_scope_notes", "review_data_landscape", "review_module_readiness", "review_streaming_summary", "review_temporal_date_quality", "review_domain_jump_links") %in% names(payload)), "Payload should include transparent credit and neutral review metadata.")
 expect_equal(payload$builder_credit, "Built by Alexander Owen Taylor", "Payload should carry transparent generated-atlas credit.")
 expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.")
-expect_true(length(payload$review_nav) == 9L, "review navigation should expose the V33-style top-level domains.")
+expect_true(length(payload$review_nav) == 10L, "review navigation should expose the V33-style top-level domains plus Data Dictionary.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Situation Report"), logical(1))), "review navigation should include Situation Report.")
+expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Data Dictionary"), logical(1))), "review navigation should include Data Dictionary.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "review navigation should include Disease Registries.")
 expect_true(length(payload$review_overview$source_availability) > 0, "review overview should derive source availability summaries from source rows.")
 expect_true(length(payload$review_scope_notes) > 0, "Review scope notes should be populated.")
@@ -392,8 +424,11 @@ expect_true(length(payload$review_infrastructure_sections$action_items) > 0, "re
 expect_true(length(payload$review_infrastructure_sections$action_summary) > 0, "review infrastructure sections should include action item summaries.")
 expect_true(length(payload$review_infrastructure_sections$db_budget_actions) > 0, "review infrastructure sections should include DB budget action rows.")
 expect_true(length(payload$review_infrastructure_sections$db_query_log) > 0, "review infrastructure sections should include DB query log rows.")
+expect_true(length(payload$review_infrastructure_sections$streaming_summary) > 0, "review infrastructure sections should include DB streaming progress summaries.")
+expect_true(length(payload$review_infrastructure_sections$temporal_date_quality) > 0, "review infrastructure sections should include temporal date-quality rows.")
 expect_true(length(payload$review_temporal_coverage$sources) > 0, "review temporal coverage should include source coverage rows.")
 expect_true(length(payload$review_temporal_coverage$years) > 0, "review temporal coverage should include year rows.")
+expect_true(length(payload$review_temporal_coverage$date_quality) > 0, "review temporal coverage should include date-quality rows.")
 expect_true(length(payload$review_spatial_coverage$region_coverage) > 0, "review spatial coverage should include region coverage rows.")
 expect_true(length(payload$review_dk_choropleth$map_regions) > 0, "review Denmark choropleth should include map regions.")
 expect_true(length(payload$domain_cards) == 2L, "Domain cards should be derived from source domains.")
@@ -419,6 +454,8 @@ view_json <- atlas_to_json(list(
   review_scope_notes = payload$review_scope_notes,
   review_data_landscape = payload$review_data_landscape,
   review_module_readiness = payload$review_module_readiness,
+  review_streaming_summary = payload$review_streaming_summary,
+  review_temporal_date_quality = payload$review_temporal_date_quality,
   review_domain_jump_links = payload$review_domain_jump_links,
   hero_metrics = payload$hero_metrics,
   domain_cards = payload$domain_cards,

@@ -1,0 +1,5 @@
+﻿"source_name"	"object_name"	"column_name"	"value"	"n_rows"	"pct_non_missing"
+"patient"	"patient"	"sex"	"M"	"42406"	"56.113"
+"patient"	"patient"	"sex"	"F"	"33166"	"43.887"
+"patient"	"patient"	"status"	"0"	"40855"	"54.061"
+"patient"	"patient"	"status"	"1"	"34717"	"45.939"

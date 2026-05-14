@@ -1,0 +1,5 @@
+﻿"source_name"	"object_name"	"column_name"	"value"	"n_rows"	"pct_non_missing"
+"SP_PatientInfo"	"SP_PatientInfo"	"name"	"Mand"	"32603"	"56.004"
+"SP_PatientInfo"	"SP_PatientInfo"	"name"	"Kvinde"	"25613"	"43.996"
+"SP_PatientInfo"	"SP_PatientInfo"	"sex_c"	"2"	"32603"	"56.004"
+"SP_PatientInfo"	"SP_PatientInfo"	"sex_c"	"1"	"25613"	"43.996"
