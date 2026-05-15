@@ -1763,6 +1763,44 @@
           ${scopeLabel(concept)}
         </article>`;
       }
+      const clinicalConceptPriorityRules = [
+        { label: "Height and weight / BMI", ids: ["height_weight_bmi", "height", "weight", "bmi"], variables: ["height", "weight", "bmi"], terms: ["anthropometric", "anthropometrics", "hoejde", "højde", "vaegt", "vægt"] },
+        { label: "Smoking status", ids: ["smoking_status"], variables: ["smoking status"], terms: ["ryger", "tobacco"] },
+        { label: "Alcohol use", ids: ["alcohol_use"], variables: ["alcohol use"], terms: ["drikker"] },
+        { label: "Diagnosis date/source", ids: ["diagnosis_date", "diagnosis_source", "diagnosis_or_disease_label"], variables: ["diagnosis date", "diagnosis / disease label"], terms: ["diagnosis date", "diagnosis source", "diagnosed"] },
+        { label: "Stage/risk", variables: ["stage", "staging", "risk"], terms: ["staging", "prognostic index", "ann arbor", "stadie", "binet", "ipi", "aaipi", "flipi", "flipi2", "iss"] },
+        { label: "LDH", ids: ["ldh"], variables: ["ldh"], terms: ["lactatdehydrogenase", "lactate dehydrogenase"] },
+        { label: "Haemoglobin", ids: ["haemoglobin"], variables: ["haemoglobin", "hemoglobin"], terms: ["npu02319"] },
+        { label: "Creatinine/eGFR", ids: ["creatinine", "egfr"], variables: ["creatinine", "egfr"], terms: ["npu02593", "dnk35302"] },
+        { label: "Treatment exposure", ids: ["treatment_exposure"], variables: ["treatment exposure"], terms: ["treatment", "therapy", "medication", "atc", "sks"] },
+        { label: "Imaging availability", ids: ["imaging_availability"], variables: ["imaging availability"], terms: ["pet", "pet ct", "ct", "mri", "x-ray", "xray"] },
+        { label: "Microbiology/infection", ids: ["microbiology_infection_data"], variables: ["microbiology/infection data"], terms: ["blood culture", "organism"] },
+        { label: "Pathology", variables: ["pathology"], terms: ["snomed", "pato"] },
+        { label: "Biobank samples", variables: ["biobank sample availability", "biobank samples"], terms: ["biobank"] }
+      ];
+      function clinicalConceptDisplayPriority(concept) {
+        const conceptId = normalizeClinicalKey(concept.clinical_concept_id || "");
+        const variableKey = normalizeClinicalKey(concept.clinical_variable || "");
+        const hay = normalizeClinicalKey([
+          concept.clinical_concept_id, concept.clinical_variable, concept.clinical_group,
+          concept.clinical_subgroup, concept.purpose, concept.best_source,
+          concept.primary_sources, concept.use_cases, concept.caveats,
+          concept.evidence_files, concept.search_terms
+        ].filter(Boolean).join(" "));
+        const hit = clinicalConceptPriorityRules.findIndex(rule => {
+          if ((rule.ids || []).some(id => conceptId === normalizeClinicalKey(id))) return true;
+          if ((rule.variables || []).some(label => variableKey === normalizeClinicalKey(label))) return true;
+          return (rule.terms || []).some(term => hay.includes(normalizeClinicalKey(term)));
+        });
+        return hit < 0 ? clinicalConceptPriorityRules.length : hit;
+      }
+      function stableClinicalConceptSort(rows) {
+        return (rows || []).map((row, index) => ({
+          row,
+          index,
+          priority: clinicalConceptDisplayPriority(row)
+        })).sort((a, b) => (a.priority - b.priority) || (a.index - b.index)).map(item => item.row);
+      }
       function renderClinicalVariables() {
         const q = document.getElementById("clinical-variable-search").value.trim().toLowerCase();
         const group = document.getElementById("clinical-variable-group-filter").value;
@@ -1772,8 +1810,9 @@
             (!group || row.clinical_group === group) &&
             (!status || row.concept_status === status);
         });
-        document.getElementById("clinical-variable-count").textContent = `${filtered.length} of ${clinicalConceptRows.length} clinical concepts shown`;
-        const visible = filtered.slice(0, 36);
+        const ordered = stableClinicalConceptSort(filtered);
+        const visible = ordered.slice(0, 36);
+        document.getElementById("clinical-variable-count").textContent = `Showing ${visible.length} of ${filtered.length} matching clinical concepts. Total concepts: ${clinicalConceptRows.length}.`;
         setHtml("clinical-variable-cards", visible.map(renderConceptCard).join("") + (filtered.length > visible.length ? `<div class="empty">Showing ${visible.length} priority concept cards. Refine search or filters to narrow ${filtered.length - visible.length} additional matches.</div>` : "") || `<div class="empty">No clinical concept cards match the current filters.</div>`);
         const ids = new Set(filtered.map(row => row.clinical_concept_id));
         setHtml("clinical-variable-raw-fields", rowsForTable(panelRawFieldRows.filter(row => ids.has(row.clinical_concept_id)).slice(0, 500), 500));
@@ -2791,7 +2830,7 @@
         });
         const semanticVisibleLimit = 80;
         const visible = filtered.slice(0, semanticVisibleLimit);
-        document.getElementById("semantic-count").textContent = `${filtered.length} of ${semanticRows.length} semantic rows shown`;
+        document.getElementById("semantic-count").textContent = `Showing ${visible.length} of ${filtered.length} matching semantic rows. Total rows: ${semanticRows.length}.`;
         setHtml("semantic-list", visible.map((row, index) => `
           <article class="semantic-row" data-semantic-index="${index}">
             <div>${renderBadge(row.clinical_group || "Unassigned", row.clinical_group === "Laboratory" ? "cyan" : row.clinical_group === "Treatment" ? "green" : row.clinical_group === "Registry" ? "plum" : "blue")}<div class="mini">${escapeHtml(row.clinical_subgroup || "")}</div></div>

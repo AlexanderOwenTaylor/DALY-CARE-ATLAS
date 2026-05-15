@@ -152,6 +152,10 @@ Data Dictionary, registry cards, QA triage, generated panel tables, and
 quick-start commands. The HTML remains data-light and loads its run payload from
 `site/DALYCARE_atlas_payload.js`.
 
+Visual QA mock-ups generated from repository fixtures validate the atlas
+template against fixture outputs. A separate full-output visual QA run is
+required before final visual acceptance of production-scale data.
+
 Generated atlas pages include the visible credit `Built by Alexander Owen
 Taylor` in the header/footer and standard author metadata. Internal filenames,
 payload keys, and generated CSV names stay neutral so the runtime remains

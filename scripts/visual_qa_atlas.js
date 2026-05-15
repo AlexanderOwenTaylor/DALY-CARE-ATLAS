@@ -133,6 +133,16 @@ for (const viewport of viewports) {
 
 const reportPath = path.join(outDir, "overflow_report.json");
 fs.writeFileSync(reportPath, `${JSON.stringify(reports, null, 2)}\n`);
+const desktopReportPath = path.join(outDir, "overflow_desktop.json");
+const mobileReportPath = path.join(outDir, "overflow_mobile.json");
+fs.writeFileSync(
+  desktopReportPath,
+  `${JSON.stringify(reports.filter(report => report.viewportName === "desktop"), null, 2)}\n`
+);
+fs.writeFileSync(
+  mobileReportPath,
+  `${JSON.stringify(reports.filter(report => report.viewportName === "mobile"), null, 2)}\n`
+);
 
 const failures = reports.filter(report => report.bodyOverflow || (report.overflowing || []).length);
 if (failures.length) {
@@ -141,4 +151,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Visual QA passed. Screenshots and overflow report written to ${outDir}`);
+console.log(`Visual QA passed. Screenshots and split overflow reports written to ${outDir}`);
