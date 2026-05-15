@@ -81,6 +81,50 @@ for (raw_field in names(index_expectations)) {
     expect_true(all(rows$clinical_variable == raw_field), paste("LYFO prognostic index should use the raw visible label:", raw_field))
   }
 }
+
+cll_rows <- dictionary[dictionary$source_name == "RKKP_CLL", , drop = FALSE]
+expect_cll_mapping <- function(raw_column, concept_id, variable_pattern) {
+  rows <- cll_rows[cll_rows$raw_column == raw_column, , drop = FALSE]
+  if (nrow(rows)) {
+    expect_true(
+      any(rows$clinical_concept_id == concept_id & grepl(variable_pattern, rows$clinical_variable, ignore.case = TRUE)),
+      paste("CLL field should map to", concept_id, "with expected label:", raw_column)
+    )
+  }
+}
+expect_cll_mapping("Reg_BinetStadium", "binet_stage", "Binet stage")
+expect_cll_mapping("Reg_Umuteret", "ighv_mutation_status", "IGHV mutation status")
+expect_cll_mapping("Reg_FISH", "fish_availability", "FISH")
+expect_cll_mapping("Reg_Del17p", "del17p", "del\\(17p\\)")
+expect_cll_mapping("Reg_Del11q", "del11q", "del\\(11q\\)")
+expect_cll_mapping("Reg_Del13q14", "del13q14", "del\\(13q14\\)")
+expect_cll_mapping("Reg_Trisomi12", "trisomy12", "Trisomy 12")
+expect_cll_mapping("Reg_TP53", "tp53_status", "TP53 status")
+expect_cll_mapping("Beh_TP53Mutation", "tp53_status", "TP53 mutation")
+expect_cll_mapping("Reg_KnoglemarvsUndersoegelse", "bone_marrow_examination", "bone marrow")
+expect_cll_mapping("Reg_CTSCANNING", "cll_diagnostic_ct_workup", "CT workup")
+expect_cll_mapping("Reg_ULSCANNING", "cll_diagnostic_ultrasound_workup", "ultrasound workup")
+expect_cll_mapping("Beh_Vaegttab", "weight_loss", "Weight loss")
+expect_cll_mapping("Beh_Feber", "fever", "Fever")
+expect_cll_mapping("Beh_Nattesved", "night_sweats", "Night sweats")
+expect_cll_mapping("Beh_UdtaltTraethed", "marked_fatigue", "Marked fatigue")
+expect_cll_mapping("Beh_Lymfadenopati", "lymphadenopathy", "Lymphadenopathy")
+expect_cll_mapping("Beh_TargeteretBeh_Ibrutinib", "cll_targeted_therapy", "Ibrutinib")
+expect_cll_mapping("Beh_TargeteretBeh_venetoclax", "cll_targeted_therapy", "Venetoclax")
+expect_cll_mapping("Beh_TargeteretBeh_acalabrutinib", "cll_targeted_therapy", "Acalabrutinib")
+expect_cll_mapping("Beh_MRD", "mrd", "MRD")
+expect_cll_mapping("Beh_Responsevaluering", "response_evaluation", "Response evaluation")
+
+cll_wrong_weight <- cll_rows[cll_rows$raw_column == "Beh_Vaegttab", , drop = FALSE]
+expect_false(any(cll_wrong_weight$clinical_concept_id == "weight" | cll_wrong_weight$clinical_variable == "Weight"), "CLL weight-loss field must not map to weight measurement.")
+cll_bone_marrow <- cll_rows[cll_rows$raw_column == "Reg_KnoglemarvsUndersoegelse", , drop = FALSE]
+expect_false(any(cll_bone_marrow$clinical_concept_id == "bone_involvement" | grepl("bone involvement", cll_bone_marrow$clinical_variable, ignore.case = TRUE)), "CLL bone marrow examination must not map to bone involvement.")
+cll_fish_like <- cll_rows[cll_rows$raw_column %in% c("Reg_FISH", "Reg_Del17p", "Beh_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Beh_FISH_TP53", "Rec_FISH_TP53"), , drop = FALSE]
+expect_false(any(cll_fish_like$clinical_concept_id == "cytogenetic_risk"), "CLL FISH/del/TP53 fields must not collapse into generic cytogenetic risk.")
+cll_symptoms <- cll_rows[cll_rows$raw_column %in% c("Beh_Vaegttab", "Beh_Feber", "Beh_Nattesved", "Beh_UdtaltTraethed", "Beh_Lymfadenopati", "Beh_StigendeLymfocytose"), , drop = FALSE]
+expect_false(any(cll_symptoms$clinical_concept_id == "treatment" | cll_symptoms$clinical_variable == "Treatment signal"), "CLL symptom/treatment-indication fields must not map only to generic treatment.")
+cll_workup <- cll_rows[cll_rows$raw_column %in% c("Reg_CTSCANNING", "Reg_ULSCANNING"), , drop = FALSE]
+expect_false(any(cll_workup$clinical_concept_id == "imaging_availability"), "CLL registry workup fields must not be routed to general imaging availability.")
 expect_true(any(search_semantic("NPU02319")$clinical_variable == "Haemoglobin"), "Search for NPU02319 should return haemoglobin.")
 expect_true(any(search_semantic("DNK35302")$clinical_variable == "eGFR"), "Search for DNK35302 should return eGFR.")
 expect_true(any(search_semantic("NPU19748")$clinical_variable == "Leukocytes"), "Search for NPU19748 should return leukocytes.")

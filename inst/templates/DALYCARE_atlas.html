@@ -1141,7 +1141,7 @@
       </div>
       <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa: myeloma registry review</h2><p class="panel-sub">Clinician-facing review of aggregate DaMyDa source shape, baseline markers, staging, treatment, response, bone disease, and cytogenetics/FISH fields.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
       <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO: lymphoma registry review</h2><p class="panel-sub">Clinician-facing review of aggregate LYFO source shape, subtype, stage/risk, B symptoms, performance status, treatment fields, follow-up, and localization fields.</p></div><div class="panel-body"><div id="registry-lyfo"></div></div></div></div>
-      <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL Detail</h2><p class="panel-sub">CLL registry facets and aggregate profile panels.</p></div><div class="panel-body"><div id="registry-cll"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-registry-cll"></div></div></div></div></div>
+      <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL: chronic lymphocytic leukemia registry review</h2><p class="panel-sub">CLL registry risk, workup, symptom, treatment, response, and follow-up field availability.</p></div><div class="panel-body"><div id="registry-cll"></div></div></div></div>
       <div class="sub-pane" id="reg-inventory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Registry Inventory</h2><p class="panel-sub">Clinical registry summary rows and related panels.</p></div><div class="panel-body"><div id="registry-summary-table"></div></div></div></div>
     </section>
 
@@ -2445,6 +2445,173 @@
           </div>
         </div>`;
       }
+      function cllSummaryRow() {
+        return panelRows("registry_clinical_summary").find(row =>
+          /cll/i.test([row.registry, row.table_name].join(" "))
+        ) || {};
+      }
+      function cllDateSpan(row) {
+        const minDate = row.min_date;
+        const maxDate = row.max_date;
+        if (!plausibleDamydaDate(minDate) || !plausibleDamydaDate(maxDate)) {
+          return "not available / not reliable in current aggregate output";
+        }
+        return `${escapeHtml(minDate)} to ${escapeHtml(maxDate)}`;
+      }
+      function cllClinicalRows() {
+        return panelRows("cll_clinical_profile").filter(row => /cll/i.test([row.registry, row.table_name].join(" ")));
+      }
+      function cllRawRows() {
+        return panelRawFieldRows.filter(row =>
+          row.panel_id === "reg_cll" || rowSourceMatches(row, ["RKKP_CLL", "DCLLR", "CLL"])
+        );
+      }
+      function cllColumnKey(row) {
+        return normalizeClinicalKey(row.source_column || row.raw_column || row.field || row.raw_field_label || "");
+      }
+      function cllColumnEquals(row, columns) {
+        const key = cllColumnKey(row);
+        return (columns || []).some(column => key === normalizeClinicalKey(column));
+      }
+      const cllExactFieldGroups = {
+        binetStage: ["Reg_BinetStadium", "Binet"],
+        ighvRisk: ["Reg_Umuteret", "IGHV", "Reg_ZAP70", "Reg_CD38Positiv", "Reg_Beta2Microglobulin", "Reg_Hypogammaglobulinami"],
+        fishTp53: [
+          "Reg_FISH", "Reg_Del17p", "Beh_Del17p", "Reg_Del11q", "Reg_Del13q14",
+          "Reg_Del13q", "Reg_Trisomi12", "Reg_Tri12", "Reg_TP53", "Beh_TP53Mutation",
+          "Beh_FISH_TP53", "Rec_FISH_TP53"
+        ],
+        baselineMarkers: ["Reg_Leukocyttal", "Beh_Leukocyttal", "Reg_LYMFOCYTFORDOBLIN", "Beh_LymfocytFordoblingstid"],
+        symptomsIndication: [
+          "Beh_Anaemi", "Beh_Thrombocytopeni", "Beh_Lymfadenopati", "Beh_Splenomegali",
+          "Beh_StigendeLymfocytose", "Beh_LymfocytFordoblingstid", "Beh_Vaegttab",
+          "Beh_Feber", "Beh_UdtaltTraethed", "Beh_Nattesved", "Beh_AndreFundSymptomer",
+          "Beh_IndikationKemoterapi"
+        ],
+        treatmentTherapy: [
+          "Beh_Kemo_Fludarabin", "Beh_Kemo_Chlorambucil", "Beh_Kemo_Bendamustin",
+          "Beh_Kemo_other", "Beh_Kemo_none", "Rec_Kemo_Fludarabin",
+          "Rec_Kemo_Chlorambucil", "Rec_Kemo_Bendamustin", "Rec_Kemo_other",
+          "Rec_Kemo_none", "Beh_Immunterapi", "Rec_Immunterapi",
+          "Beh_TargeteretBeh_Ibrutinib", "Beh_TargeteretBeh_idelalisib",
+          "Beh_TargeteretBeh_venetoclax", "Beh_TargeteretBeh_acalabrutinib",
+          "Beh_TargeteretBeh_Other", "Beh_TargeteretBeh_None", "Beh_TRANSPLANT",
+          "Beh_TRANSPDATO"
+        ],
+        responseFollowup: [
+          "Beh_Responsevaluering", "Beh_Responsevaluering_dt", "Beh_MRD",
+          "Rec_NyBehandling_dt", "FU_Doedsdato", "Beh_Doedsdato", "FU_Doedsaarsag"
+        ],
+        diagnosticWorkup: ["Reg_KnoglemarvsUndersoegelse", "Reg_CTSCANNING", "Reg_ULSCANNING"]
+      };
+      function cllFacetRows(facets) {
+        const wanted = (facets || []).map(normalizeClinicalKey);
+        return cllClinicalRows().filter(row => wanted.includes(normalizeClinicalKey(row.facet)));
+      }
+      function cllRawRowsFor(columns) {
+        return cllRawRows().filter(row => cllColumnEquals(row, columns || []));
+      }
+      function cllSectionTone(title) {
+        if (/fish|tp53|ighv|risk/i.test(title)) return "violet";
+        if (/symptom|indication|response|mrd/i.test(title)) return "amber";
+        if (/treatment|therapy/i.test(title)) return "green";
+        if (/workup|blood|immune/i.test(title)) return "cyan";
+        return "blue";
+      }
+      function renderCLLSection(title, facets, columns, note, limit) {
+        const tone = cllSectionTone(title);
+        const facetRows = cllFacetRows(facets || []);
+        const rawRows = cllRawRowsFor(columns || []);
+        const parts = [];
+        if (facetRows.length) {
+          parts.push(renderHBarRows(facetRows.map(row => ({
+            label: row.label || row.source_column || row.facet || "",
+            n: row.n,
+            pct: row.pct_rows,
+            tone
+          })), { tone, limit: 10 }));
+          parts.push(`<p class="mini">scope: cartography_scan aggregate profile</p>`);
+        }
+        if (rawRows.length) {
+          parts.push(`<h4>Registry raw fields</h4>${renderRawFieldList(rawRows, limit || 16)}`);
+          if (rawRows.length > (limit || 16)) {
+            parts.push(`<details><summary>Show ${rawRows.length - (limit || 16)} additional fields</summary>${renderRawFieldList(rawRows.slice(limit || 16), rawRows.length)}</details>`);
+          }
+        }
+        return `<article class="value-map-card ${escapeHtml(tone)} section-${escapeHtml(cssClass(title))}">
+          <h3>${escapeHtml(title)}</h3>
+          ${note ? `<p class="mini">${escapeHtml(note)}</p>` : ""}
+          ${parts.length ? parts.join("") : `<div class="empty">not available in current aggregate output</div>`}
+        </article>`;
+      }
+      function cllRawPriority(row) {
+        const priorityGroups = [
+          cllExactFieldGroups.binetStage,
+          cllExactFieldGroups.ighvRisk,
+          cllExactFieldGroups.fishTp53,
+          cllExactFieldGroups.baselineMarkers,
+          cllExactFieldGroups.symptomsIndication,
+          cllExactFieldGroups.treatmentTherapy,
+          cllExactFieldGroups.responseFollowup,
+          cllExactFieldGroups.diagnosticWorkup
+        ];
+        const idx = priorityGroups.findIndex(columns => cllColumnEquals(row, columns));
+        return idx < 0 ? 999 : idx;
+      }
+      function renderCLLRawLineage() {
+        const rows = cllRawRows();
+        const confirmed = rows.filter(row => !/not_present|unresolved|expected|candidate/i.test(text(row.mapping_status)));
+        confirmed.sort((a, b) => cllRawPriority(a) - cllRawPriority(b));
+        const candidates = rows.filter(row => /candidate|low|not_present|unresolved|expected/i.test([row.mapping_status, row.mapping_confidence].join(" ")));
+        return `<div class="lineage-block">
+          <h3>Raw names / data lineage</h3>
+          ${confirmed.length ? renderRawFieldList(confirmed, 36) : `<div class="empty">not available in current aggregate output</div>`}
+          <details class="lineage-block">
+            <summary>Candidate / low-confidence CLL fields</summary>
+            ${candidates.length ? renderRawFieldList(candidates, 48) : `<div class="empty">No candidate CLL rows were generated.</div>`}
+          </details>
+        </div>`;
+      }
+      function renderCLLPanel() {
+        const summary = cllSummaryRow();
+        return `<div class="focused-panel cll-panel">
+          ${renderSectionCard("Source / coverage", renderKpiStrip([
+            { label: "registry source", value: "RKKP_CLL", tone: "violet" },
+            { label: "registry entries", value: metricOrUnavailable(summary.n_rows, "registry entries"), tone: "violet" },
+            { label: "variables", value: metricOrUnavailable(summary.n_cols, "variables"), tone: "cyan" },
+            { label: "patients", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not available", tone: "green" },
+            { label: "date span", value: cllDateSpan(summary), tone: "amber" }
+          ], { tone: "violet" }), "violet")}
+          <div class="value-map-grid">
+            ${renderCLLSection("Binet stage", ["binet"], cllExactFieldGroups.binetStage, "Binet stage is preserved as a CLL-specific staging field, not generic disease stage.", 8)}
+            ${renderCLLSection("IGHV and baseline risk markers", ["ighv", "zap70", "cd38", "beta2m"], cllExactFieldGroups.ighvRisk, "IGHV/unmutated IGHV, ZAP70, CD38, beta-2 microglobulin, and hypogammaglobulinaemia require registry data-dictionary validation.", 12)}
+            ${renderCLLSection("FISH / cytogenetics / TP53", ["fish_overall", "del13q", "del11q", "del17p", "trisomy12", "tp53"], cllExactFieldGroups.fishTp53, "FISH, deletion, trisomy 12, and TP53 fields keep exact raw context rather than a single generic cytogenetic-risk label.", 18)}
+            ${renderCLLSection("Baseline blood and immune markers", [], cllExactFieldGroups.baselineMarkers, "Baseline and treatment-time blood marker context is kept distinct where the raw field name provides it.", 10)}
+            ${renderCLLSection("Symptoms and treatment indication", [], cllExactFieldGroups.symptomsIndication, "Weight loss, fever, night sweats, fatigue, lymphadenopathy, cytopenias, and chemotherapy indication are symptoms/indications, not treatment exposure.", 18)}
+            ${renderCLLSection("Treatment and targeted therapy", ["treatment_flag"], cllExactFieldGroups.treatmentTherapy, "Chemotherapy, immunotherapy, transplant, and named targeted therapy fields are registry treatment fields; specific exposure algorithms need source validation.", 18)}
+            ${renderCLLSection("Response / MRD / follow-up", [], cllExactFieldGroups.responseFollowup, "Response, MRD, new treatment, death date, and cause-of-death fields are shown as raw-field availability; dates are not rendered as categorical distributions.", 12)}
+            ${renderCLLSection("Diagnostic workup", [], cllExactFieldGroups.diagnosticWorkup, "Bone marrow examination, CT, and ultrasound are CLL registry workup fields and do not imply nationwide imaging coverage.", 10)}
+          </div>
+          ${renderCLLRawLineage()}
+          <div class="caveat-box blue">
+            <h3>Use cases</h3>
+            <ul>
+              <li>CLL cohort review and registry-field discovery.</li>
+              <li>Binet stage stratification.</li>
+              <li>IGHV/FISH/TP53 risk feature discovery.</li>
+              <li>Treatment-indication and symptom-field review.</li>
+              <li>Targeted-therapy registry-field discovery.</li>
+              <li>Response/MRD/follow-up variable discovery.</li>
+              <li>Diagnostic workup availability review.</li>
+            </ul>
+          </div>
+          <div class="caveat-box warn">
+            <h3>Caveats</h3>
+            <p>DCLLR/RKKP_CLL is a registry layer, not the complete medication administration record. Treatment fields represent registry-coded therapy information and require source-specific interpretation.</p>
+            <p class="mini">IGHV, FISH, TP53, and cytogenetic fields require registry data-dictionary validation before analytic use. Some aggregate rows are cartography/profile scans and should not be treated as full cohort denominators unless explicitly labeled. Date fields are not displayed as meaningful coverage or outcome distributions unless validated. Candidate raw fields are included for discovery and require analyst validation.</p>
+          </div>
+        </div>`;
+      }
 
       document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
@@ -2642,7 +2809,7 @@
       function renderReviewSections() {
         setHtml("registry-damyda", renderDaMyDaPanel());
         setHtml("registry-lyfo", renderLYFOPanel());
-        renderRegistryDetail("registry-cll", "reg_cll");
+        setHtml("registry-cll", renderCLLPanel());
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
 
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));

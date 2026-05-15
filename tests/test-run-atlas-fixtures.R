@@ -118,6 +118,7 @@ expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML sho
 expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "HTML should include the dedicated Social History renderer.")
 expect_true(grepl("function renderDaMyDaPanel()", html, fixed = TRUE), "HTML should include the dedicated DaMyDa renderer.")
 expect_true(grepl("function renderLYFOPanel()", html, fixed = TRUE), "HTML should include the dedicated LYFO renderer.")
+expect_true(grepl("function renderCLLPanel()", html, fixed = TRUE), "HTML should include the dedicated CLL renderer.")
 for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
 }
@@ -146,7 +147,8 @@ expect_true(grepl("A separate full-output visual QA run is required before final
 expect_false(grepl("renderRegistryDetail(\"registry-damyda\", \"reg_damyda\")", html, fixed = TRUE), "DaMyDa should not be rendered through the generic registry detail renderer.")
 expect_false(grepl("renderRegistryDetail(\"registry-lyfo\", \"reg_lyfo\")", html, fixed = TRUE), "LYFO should not be rendered through the generic registry detail renderer.")
 expect_true(grepl("setHtml(\"registry-lyfo\", renderLYFOPanel())", html, fixed = TRUE), "LYFO should be wired to its dedicated renderer.")
-expect_true(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, fixed = TRUE), "CLL rendering should remain on the current generic registry detail path.")
+expect_false(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, fixed = TRUE), "CLL should not be rendered through the generic registry detail renderer.")
+expect_true(grepl("setHtml(\"registry-cll\", renderCLLPanel())", html, fixed = TRUE), "CLL should be wired to its dedicated renderer.")
 expect_false(grepl("setHtml(\"clinical-vitals-cards\", renderDomainPanel(\"clinical_vitals\"))", html, fixed = TRUE), "Vitals should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("setHtml(\"clinical-social-cards\", renderDomainPanel(\"clinical_social_history\"))", html, fixed = TRUE), "Social History should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-clinical-vitals\"", html, fixed = TRUE), "Vitals should not show a second open generic raw-field block.")
@@ -158,7 +160,9 @@ expect_true(grepl("Vital signs and anthropometrics", html, fixed = TRUE), "Vital
 expect_true(grepl("Social history: smoking and alcohol", html, fixed = TRUE), "Social History heading should use the clinician-facing title.")
 expect_true(grepl("DaMyDa: myeloma registry review", html, fixed = TRUE), "DaMyDa heading should use the clinician-facing registry title.")
 expect_true(grepl("LYFO: lymphoma registry review", html, fixed = TRUE), "LYFO heading should use the clinician-facing registry title.")
+expect_true(grepl("CLL: chronic lymphocytic leukemia registry review", html, fixed = TRUE), "CLL heading should use the clinician-facing registry title.")
 expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-registry-lyfo\"", html, fixed = TRUE), "LYFO should not show a second open generic raw-field block.")
+expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-registry-cll\"", html, fixed = TRUE), "CLL should not show a second open generic raw-field block.")
 expect_true(grepl("date span not reliable in current aggregate output", html, fixed = TRUE), "DaMyDa renderer should include the date-quality fallback.")
 for (needle in c("Baseline disease markers", "Staging/risk", "Treatment", "Response/relapse", "Bone disease / imaging", "Cytogenetics/FISH availability", "Raw names / data lineage", "Use cases and caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should contain section:", needle))
@@ -166,12 +170,23 @@ for (needle in c("Baseline disease markers", "Staging/risk", "Treatment", "Respo
 for (needle in c("Source / coverage", "Subtype mix", "Staging and risk", "B symptoms and bulk disease", "Performance status", "Baseline disease markers", "Treatment and regimen fields", "Response / follow-up / relapse fields", "Disease localization", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should contain section:", needle))
 }
+for (needle in c("Source / coverage", "Binet stage", "IGHV and baseline risk markers", "FISH / cytogenetics / TP53", "Baseline blood and immune markers", "Symptoms and treatment indication", "Treatment and targeted therapy", "Response / MRD / follow-up", "Diagnostic workup", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should contain section:", needle))
+}
 for (needle in c("RKKP_LYFO", "Reg_Stadium", "IPI", "aaIPI", "Reg_BSymptomer", "Reg_BulkSygdom", "Reg_PerformanceStatusWHO", "Reg_Haemoglobin", "Reg_Lactatdehydrogenase", "Reg_LDHVaerdi", "Reg_Creatinin_mikmoll", "Reg_CalciumAlbuminkorrigeret", "Beh_Kemoterapiregime1", "Beh_Immunoterapi", "ind_relaps", "Reg_Lokal_Pancreas", "Reg_WHOHistologikode1")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should be able to surface evidenced field/value:", needle))
 }
 for (needle in c("Lymphoma subtype cohort discovery", "Ann Arbor stage and IPI/aaIPI risk adjustment", "Candidate raw fields are shown for discovery")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should include use case or caveat:", needle))
 }
+for (needle in c("RKKP_CLL", "Reg_BinetStadium", "Reg_Umuteret", "Reg_FISH", "Reg_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Reg_KnoglemarvsUndersoegelse", "Reg_CTSCANNING", "Reg_ULSCANNING", "Beh_Vaegttab", "Beh_Feber", "Beh_Nattesved", "Beh_UdtaltTraethed", "Beh_Lymfadenopati", "Beh_TargeteretBeh_Ibrutinib", "Beh_TargeteretBeh_venetoclax", "Beh_TargeteretBeh_acalabrutinib", "Beh_MRD", "Beh_Responsevaluering")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should be able to surface evidenced field/value:", needle))
+}
+for (needle in c("CLL cohort review and registry-field discovery", "Binet stage stratification", "Targeted-therapy registry-field discovery", "Date fields are not displayed as meaningful coverage or outcome distributions")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should include use case or caveat:", needle))
+}
+expect_false(grepl("Beh_Vaegttab -> Weight", html, fixed = TRUE), "CLL renderer must not show weight-loss as weight measurement.")
+expect_false(grepl("Reg_KnoglemarvsUndersoegelse -> Bone involvement", html, fixed = TRUE), "CLL renderer must not show bone marrow examination as bone involvement.")
 expect_false(grepl("Reg_WHOHistologikode1 -> Performance status", html, fixed = TRUE), "LYFO renderer must not show histology as performance status.")
 expect_false(grepl("Reg_CalciumAlbuminkorrigeret -> Albumin", html, fixed = TRUE), "LYFO renderer must not show albumin-corrected calcium as albumin.")
 expect_false(grepl("Reg_Lokal_Pancreas -> Creatinine", html, fixed = TRUE), "LYFO renderer must not show pancreas localization as creatinine.")
@@ -438,6 +453,41 @@ for (raw_field in names(lyfo_index_expectations)) {
     expect_true(all(rows$clinical_concept_id == concept & rows$clinical_variable == raw_field), paste("Run semantic output should preserve LYFO prognostic index:", raw_field))
   }
 }
+run_cll <- semantic_dictionary[semantic_dictionary$source_name == "RKKP_CLL", , drop = FALSE]
+expect_run_cll_mapping <- function(raw_column, concept_id, variable_pattern) {
+  rows <- run_cll[run_cll$raw_column == raw_column, , drop = FALSE]
+  if (nrow(rows)) {
+    expect_true(
+      any(rows$clinical_concept_id == concept_id & grepl(variable_pattern, rows$clinical_variable, ignore.case = TRUE)),
+      paste("Run semantic output should map CLL field to", concept_id, ":", raw_column)
+    )
+  }
+}
+expect_run_cll_mapping("Reg_BinetStadium", "binet_stage", "Binet stage")
+expect_run_cll_mapping("Reg_Umuteret", "ighv_mutation_status", "IGHV mutation status")
+expect_run_cll_mapping("Reg_FISH", "fish_availability", "FISH")
+expect_run_cll_mapping("Reg_Del17p", "del17p", "del\\(17p\\)")
+expect_run_cll_mapping("Reg_Del11q", "del11q", "del\\(11q\\)")
+expect_run_cll_mapping("Reg_Del13q14", "del13q14", "del\\(13q14\\)")
+expect_run_cll_mapping("Reg_Trisomi12", "trisomy12", "Trisomy 12")
+expect_run_cll_mapping("Reg_TP53", "tp53_status", "TP53 status")
+expect_run_cll_mapping("Beh_TP53Mutation", "tp53_status", "TP53 mutation")
+expect_run_cll_mapping("Reg_KnoglemarvsUndersoegelse", "bone_marrow_examination", "bone marrow")
+expect_run_cll_mapping("Reg_CTSCANNING", "cll_diagnostic_ct_workup", "CT workup")
+expect_run_cll_mapping("Reg_ULSCANNING", "cll_diagnostic_ultrasound_workup", "ultrasound workup")
+expect_run_cll_mapping("Beh_Vaegttab", "weight_loss", "Weight loss")
+expect_run_cll_mapping("Beh_Feber", "fever", "Fever")
+expect_run_cll_mapping("Beh_Nattesved", "night_sweats", "Night sweats")
+expect_run_cll_mapping("Beh_UdtaltTraethed", "marked_fatigue", "Marked fatigue")
+expect_run_cll_mapping("Beh_Lymfadenopati", "lymphadenopathy", "Lymphadenopathy")
+expect_run_cll_mapping("Beh_TargeteretBeh_Ibrutinib", "cll_targeted_therapy", "Ibrutinib")
+expect_run_cll_mapping("Beh_TargeteretBeh_venetoclax", "cll_targeted_therapy", "Venetoclax")
+expect_run_cll_mapping("Beh_TargeteretBeh_acalabrutinib", "cll_targeted_therapy", "Acalabrutinib")
+expect_run_cll_mapping("Beh_MRD", "mrd", "MRD")
+expect_run_cll_mapping("Beh_Responsevaluering", "response_evaluation", "Response evaluation")
+expect_false(any(run_cll$raw_column == "Beh_Vaegttab" & run_cll$clinical_concept_id == "weight"), "Run semantic output must not map CLL weight loss to weight measurement.")
+expect_false(any(run_cll$raw_column == "Reg_KnoglemarvsUndersoegelse" & run_cll$clinical_concept_id == "bone_involvement"), "Run semantic output must not map CLL bone marrow examination to bone involvement.")
+expect_false(any(run_cll$raw_column %in% c("Reg_FISH", "Reg_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Beh_FISH_TP53", "Rec_FISH_TP53") & run_cll$clinical_concept_id == "cytogenetic_risk"), "Run semantic output must not flatten CLL FISH/del/TP53 fields to generic cytogenetic risk.")
 expect_true(any(semantic_dictionary$raw_code == "NPU02319" & semantic_dictionary$clinical_variable == "Haemoglobin"), "Semantic output should map NPU02319 to haemoglobin.")
 expect_true(any(semantic_dictionary$raw_code == "DNK35302" & semantic_dictionary$clinical_variable == "eGFR"), "Semantic output should map DNK35302 to eGFR.")
 expect_true(any(semantic_dictionary$raw_code == "NPU19748" & semantic_dictionary$clinical_variable == "Leukocytes"), "Semantic output should map NPU19748 to leukocytes.")

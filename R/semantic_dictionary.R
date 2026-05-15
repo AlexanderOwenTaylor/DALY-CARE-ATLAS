@@ -584,29 +584,51 @@ semantic_candidate_discovery <- function(project_root, min_cell_count) {
   rows <- lapply(seq_len(nrow(hits)), function(i) {
     column <- hits$matched_column[[i]]
     if (is_sensitive_column(column)) return(NULL)
-    def <- semantic_concept_definition(hits$concept[[i]], column, hits$source_name[[i]])
+    source_name <- hits$source_name[[i]]
+    if (grepl("CLL", source_name, ignore.case = TRUE) && !grepl("LAB", source_name, ignore.case = TRUE)) {
+      cll_def <- registry_column_definition(column, "RKKP_CLL")
+      def <- list(
+        concept_id = cll_def$concept_id,
+        variable = cll_def$variable,
+        group = "Registry",
+        subgroup = cll_def$subgroup,
+        value_type = cll_def$value_type,
+        code_system = "RKKP_field",
+        terms = cll_def$terms,
+        confidence = cll_def$confidence,
+        status = cll_def$status,
+        caveat = cll_def$caveat,
+        meaning = cll_def$meaning
+      )
+    } else {
+      def <- semantic_concept_definition(hits$concept[[i]], column, source_name)
+      def$confidence <- "medium"
+      def$status <- "inferred"
+      def$caveat <- hits$notes[[i]] %||% "Column-name hit needs clinical validation before analytic use."
+      def$meaning <- paste("Column-name cartography hit for", def$variable, "in", source_name)
+    }
     semantic_row(
-      semantic_id = semantic_id_from(c(hits$source_name[[i]], column, hits$concept[[i]])),
+      semantic_id = semantic_id_from(c(source_name, column, hits$concept[[i]])),
       clinical_concept_id = def$concept_id,
       clinical_variable = def$variable,
       clinical_group = def$group,
       clinical_subgroup = def$subgroup,
-      semantic_meaning = paste("Column-name cartography hit for", def$variable, "in", hits$source_name[[i]]),
-      source_name = hits$source_name[[i]],
-      object_name = hits$object_name[[i]] %||% hits$source_name[[i]],
+      semantic_meaning = def$meaning,
+      source_name = source_name,
+      object_name = hits$object_name[[i]] %||% source_name,
       raw_column = column,
       code_system = def$code_system,
       value_type = def$value_type,
       data_shape = "wide_table",
-      source_level = source_level_for_source(hits$source_name[[i]]),
-      geography = geography_for_source(hits$source_name[[i]]),
+      source_level = source_level_for_source(source_name),
+      geography = geography_for_source(source_name),
       evidence_file = "cartography_column_name_hits.tsv",
       evidence_filter = paste0("concept=", hits$concept[[i]], "; matched_column=", column),
-      mapping_confidence = "medium",
-      mapping_status = "inferred",
+      mapping_confidence = def$confidence,
+      mapping_status = def$status,
       privacy_note = "aggregate_only",
-      clinical_caveat = hits$notes[[i]] %||% "Column-name hit needs clinical validation before analytic use.",
-      search_terms = semantic_terms(c(hits$concept[[i]], column, hits$source_name[[i]], def$terms))
+      clinical_caveat = def$caveat,
+      search_terms = semantic_terms(c(hits$concept[[i]], column, source_name, def$terms))
     )
   })
   dictionary <- bind_rows_base(rows)
@@ -1271,6 +1293,267 @@ lyfo_registry_column_definition <- function(column, key, mk) {
   NULL
 }
 
+cll_registry_column_definition <- function(column, key, mk) {
+  exact <- function(values) {
+    key %in% vapply(values, semantic_id_from, character(1))
+  }
+
+  if (exact(c("Reg_BinetStadium", "Binet"))) {
+    return(mk(
+      "binet_stage",
+      "Binet stage",
+      "CLL staging",
+      "Binet stage field in the CLL registry.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("Binet", "CLL stage", column),
+      "Binet stage categories require CLL registry data-dictionary validation before analytic use."
+    ))
+  }
+
+  if (exact(c("Reg_Umuteret", "IGHV"))) {
+    return(mk(
+      "ighv_mutation_status",
+      "IGHV mutation status / unmutated IGHV",
+      "IGHV and baseline risk markers",
+      "IGHV mutation-status or unmutated-IGHV field in the CLL registry.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("IGHV", "unmutated IGHV", "mutation status", column),
+      "Coding direction must be checked against the CLL registry data dictionary before analytic use."
+    ))
+  }
+
+  fish_fields <- list(
+    Reg_FISH = c("fish_availability", "FISH performed / FISH availability", "FISH availability field in the CLL registry."),
+    Reg_Del17p = c("del17p", "del(17p)", "CLL del(17p) field at registration."),
+    Beh_Del17p = c("del17p", "del(17p)", "CLL del(17p) field at treatment assessment."),
+    Reg_Del11q = c("del11q", "del(11q)", "CLL del(11q) field at registration."),
+    Reg_Del13q14 = c("del13q14", "del(13q14)", "CLL del(13q14) field at registration."),
+    Reg_Del13q = c("del13q14", "del(13q14)", "CLL del(13q) field at registration."),
+    Reg_Trisomi12 = c("trisomy12", "Trisomy 12", "CLL trisomy 12 field at registration."),
+    Reg_Tri12 = c("trisomy12", "Trisomy 12", "CLL trisomy 12 field at registration."),
+    Reg_TP53 = c("tp53_status", "TP53 status", "CLL TP53 status field at registration."),
+    Beh_TP53Mutation = c("tp53_status", "TP53 mutation", "CLL TP53 mutation field at treatment assessment."),
+    Beh_FISH_TP53 = c("fish_tp53", "FISH TP53 result/availability", "CLL treatment-assessment FISH TP53 field."),
+    Rec_FISH_TP53 = c("fish_tp53", "FISH TP53 result/availability", "CLL recurrence/follow-up FISH TP53 field.")
+  )
+  for (field in names(fish_fields)) {
+    if (exact(field)) {
+      def <- fish_fields[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "FISH / cytogenetics / TP53",
+        def[[3]],
+        "categorical",
+        "high",
+        "confirmed",
+        c("FISH", "cytogenetics", "TP53", "CLL", column),
+        "FISH, TP53, and deletion fields preserve their raw CLL registry meaning and should not be collapsed into a generic cytogenetic-risk marker."
+      ))
+    }
+  }
+
+  baseline_markers <- list(
+    Reg_Leukocyttal = c("leukocytes", "Leukocyte count", "Baseline leukocyte-count field in the CLL registry.", "numeric"),
+    Beh_Leukocyttal = c("leukocytes", "Leukocyte count", "Treatment-assessment leukocyte-count field in the CLL registry.", "numeric"),
+    Reg_Beta2Microglobulin = c("beta2_microglobulin", "Beta-2 microglobulin", "Baseline beta-2 microglobulin field in the CLL registry.", "numeric"),
+    Reg_Hypogammaglobulinami = c("hypogammaglobulinaemia", "Hypogammaglobulinaemia", "Baseline hypogammaglobulinaemia field in the CLL registry.", "categorical"),
+    Reg_LYMFOCYTFORDOBLIN = c("lymphocyte_doubling_time", "Lymphocyte doubling / lymphocyte doubling time", "Registration lymphocyte-doubling field in the CLL registry.", "categorical"),
+    Reg_ZAP70 = c("zap70_status", "ZAP70 status", "ZAP70 field in the CLL registry.", "categorical"),
+    Reg_CD38Positiv = c("cd38_status", "CD38 positivity", "CD38 positivity field in the CLL registry.", "categorical"),
+    Reg_Performancestatus = c("performance_status", "Performance status", "CLL registration performance-status field.", "categorical"),
+    Reg_PerformanceStatusWHO = c("performance_status", "WHO performance status", "CLL WHO performance-status field.", "categorical")
+  )
+  for (field in names(baseline_markers)) {
+    if (exact(field)) {
+      def <- baseline_markers[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "Baseline blood and immune markers",
+        def[[3]],
+        def[[4]],
+        "high",
+        "confirmed",
+        c(def[[2]], "CLL", column),
+        "Baseline and treatment-time marker context should be preserved from the raw CLL field name."
+      ))
+    }
+  }
+
+  workup_fields <- list(
+    Reg_KnoglemarvsUndersoegelse = c("bone_marrow_examination", "Bone marrow examination / CLL diagnostic workup", "Bone marrow examination or diagnostic-workup field in the CLL registry."),
+    Reg_CTSCANNING = c("cll_diagnostic_ct_workup", "CLL diagnostic CT workup", "CLL registry CT workup field."),
+    Reg_ULSCANNING = c("cll_diagnostic_ultrasound_workup", "CLL diagnostic ultrasound workup", "CLL registry ultrasound workup field.")
+  )
+  for (field in names(workup_fields)) {
+    if (exact(field)) {
+      def <- workup_fields[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "Diagnostic workup",
+        def[[3]],
+        "categorical",
+        "high",
+        "confirmed",
+        c("diagnostic workup", "CLL registry workup", column),
+        "CLL registry workup fields describe registry-coded examination availability, not general imaging coverage."
+      ))
+    }
+  }
+
+  symptom_fields <- list(
+    Beh_Anaemi = c("cll_treatment_indication_anaemia", "Anaemia treatment indication", "Anaemia treatment-indication field."),
+    Beh_Thrombocytopeni = c("cll_treatment_indication_thrombocytopenia", "Thrombocytopenia treatment indication", "Thrombocytopenia treatment-indication field."),
+    Beh_Lymfadenopati = c("lymphadenopathy", "Lymphadenopathy", "Lymphadenopathy symptom/treatment-indication field."),
+    Beh_Splenomegali = c("splenomegaly", "Splenomegaly", "Splenomegaly symptom/treatment-indication field."),
+    Beh_StigendeLymfocytose = c("increasing_lymphocytosis", "Increasing lymphocytosis", "Increasing lymphocytosis treatment-indication field."),
+    Beh_LymfocytFordoblingstid = c("lymphocyte_doubling_time", "Lymphocyte doubling time", "Lymphocyte doubling-time treatment-indication field."),
+    Beh_Vaegttab = c("weight_loss", "Weight loss", "Weight-loss symptom/treatment-indication field."),
+    Beh_Feber = c("fever", "Fever", "Fever symptom/treatment-indication field."),
+    Beh_UdtaltTraethed = c("marked_fatigue", "Marked fatigue", "Marked fatigue symptom/treatment-indication field."),
+    Beh_Nattesved = c("night_sweats", "Night sweats", "Night-sweats symptom/treatment-indication field."),
+    Beh_AndreFundSymptomer = c("other_symptoms_findings", "Other symptoms/findings", "Other symptoms or findings field."),
+    Beh_IndikationKemoterapi = c("cll_treatment_indication", "Treatment indication / chemotherapy indication", "Treatment or chemotherapy indication field.")
+  )
+  for (field in names(symptom_fields)) {
+    if (exact(field)) {
+      def <- symptom_fields[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "Symptoms and treatment indication",
+        def[[3]],
+        "categorical",
+        "high",
+        "confirmed",
+        c("CLL symptoms", "treatment indication", def[[2]], column),
+        "Symptoms and treatment-indication fields should not be treated as treatment exposure."
+      ))
+    }
+  }
+
+  chemotherapy_fields <- c(
+    "Beh_Kemo_Fludarabin", "Beh_Kemo_Chlorambucil", "Beh_Kemo_Bendamustin",
+    "Beh_Kemo_other", "Beh_Kemo_none", "Rec_Kemo_Fludarabin",
+    "Rec_Kemo_Chlorambucil", "Rec_Kemo_Bendamustin", "Rec_Kemo_other",
+    "Rec_Kemo_none"
+  )
+  if (exact(chemotherapy_fields)) {
+    label <- gsub("^.*Kemo_", "", column)
+    label <- if (identical(tolower(label), "none")) "No chemotherapy" else paste("CLL chemotherapy:", label)
+    return(mk(
+      "cll_chemotherapy",
+      label,
+      "Treatment and targeted therapy",
+      "CLL registry chemotherapy exposure or regimen field.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("CLL chemotherapy", "registry treatment", column),
+      "Chemotherapy fields are registry-coded treatment signals, not a complete medication administration record."
+    ))
+  }
+
+  if (exact(c("Beh_Immunterapi", "Rec_Immunterapi"))) {
+    return(mk(
+      "cll_immunotherapy",
+      "Immunotherapy",
+      "Treatment and targeted therapy",
+      "CLL registry immunotherapy field.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("immunotherapy", "CLL treatment", column),
+      "Immunotherapy fields are registry-coded treatment signals."
+    ))
+  }
+
+  targeted_fields <- list(
+    Beh_TargeteretBeh_Ibrutinib = "Ibrutinib",
+    Beh_TargeteretBeh_idelalisib = "Idelalisib",
+    Beh_TargeteretBeh_venetoclax = "Venetoclax",
+    Beh_TargeteretBeh_acalabrutinib = "Acalabrutinib",
+    Beh_TargeteretBeh_Other = "Other targeted therapy",
+    Beh_TargeteretBeh_None = "No targeted therapy"
+  )
+  for (field in names(targeted_fields)) {
+    if (exact(field)) {
+      return(mk(
+        "cll_targeted_therapy",
+        paste("Targeted therapy /", targeted_fields[[field]]),
+        "Treatment and targeted therapy",
+        paste("CLL registry targeted therapy field for", targeted_fields[[field]], "."),
+        "categorical",
+        "high",
+        "confirmed",
+        c("targeted therapy", targeted_fields[[field]], column),
+        "Targeted therapy fields indicate registry-coded treatment availability/exposure fields and should not be overinterpreted as administered medication records."
+      ))
+    }
+  }
+
+  if (exact("Beh_TRANSPLANT")) {
+    return(mk(
+      "transplant",
+      "Transplant",
+      "Treatment and targeted therapy",
+      "CLL registry transplant field.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("transplant", "CLL treatment", column),
+      "Registry transplant fields require source-specific interpretation."
+    ))
+  }
+  if (exact("Beh_TRANSPDATO")) {
+    return(mk(
+      "transplant",
+      "Transplant date",
+      "Treatment and targeted therapy",
+      "CLL registry transplant date field.",
+      "date",
+      "high",
+      "confirmed",
+      c("transplant date", "CLL treatment", column),
+      "Date fields are shown as raw-field availability unless a safe aggregate date summary is generated."
+    ))
+  }
+
+  response_fields <- list(
+    Beh_Responsevaluering = c("response_evaluation", "Response evaluation", "CLL registry response-evaluation field.", "categorical"),
+    Beh_Responsevaluering_dt = c("response_evaluation", "Response evaluation date", "CLL registry response-evaluation date field.", "date"),
+    Beh_MRD = c("mrd", "MRD", "CLL registry minimal residual disease field.", "categorical"),
+    Rec_NyBehandling_dt = c("new_treatment_date", "New treatment / recurrence treatment date", "CLL recurrence or new-treatment date field.", "date"),
+    FU_Doedsdato = c("death_date", "Death date", "CLL follow-up death-date field.", "date"),
+    Beh_Doedsdato = c("death_date", "Death date", "CLL treatment-form death-date field.", "date"),
+    FU_Doedsaarsag = c("cause_of_death", "Cause of death", "CLL follow-up cause-of-death field.", "categorical")
+  )
+  for (field in names(response_fields)) {
+    if (exact(field)) {
+      def <- response_fields[[field]]
+      return(mk(
+        def[[1]],
+        def[[2]],
+        "Response / MRD / follow-up",
+        def[[3]],
+        def[[4]],
+        "high",
+        "confirmed",
+        c("response", "MRD", "follow-up", "outcomes", column),
+        "Date and outcome fields are represented as aggregate-safe field availability unless validated summaries are generated."
+      ))
+    }
+  }
+
+  NULL
+}
+
 registry_column_definition <- function(column, registry) {
   key <- semantic_id_from(column)
   mk <- function(concept_id, variable, subgroup, meaning, value_type = "categorical", confidence = "medium", status = "inferred", terms = character(), caveat = "Registry field mapping is based on cartography evidence and should be checked against the registry data dictionary.") {
@@ -1291,6 +1574,22 @@ registry_column_definition <- function(column, registry) {
       semantic_id_from(c(registry, column)),
       column,
       "LYFO registry field",
+      paste("Registry field", column),
+      "categorical",
+      "low",
+      "candidate",
+      c(column, registry)
+    ))
+  }
+  if (grepl("cll", registry, ignore.case = TRUE)) {
+    cll_definition <- cll_registry_column_definition(column, key, mk)
+    if (!is.null(cll_definition)) {
+      return(cll_definition)
+    }
+    return(mk(
+      semantic_id_from(c(registry, column)),
+      column,
+      "CLL registry field",
       paste("Registry field", column),
       "categorical",
       "low",
