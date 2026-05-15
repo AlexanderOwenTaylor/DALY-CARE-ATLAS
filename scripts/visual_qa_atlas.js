@@ -127,6 +127,11 @@ for (const viewport of viewports) {
     const report = JSON.parse(htmlDecode(match[1]));
     report.target = target.name;
     report.viewportName = viewport.name;
+    if (target.name === "data_dictionary") {
+      report.dataDictionaryDetailStackPresent = /class=["'][^"']*semantic-detail-stack/.test(dom);
+      const fullLineage = dom.match(/<div[^>]*class=["'][^"']*semantic-full-lineage[^"']*["'][^>]*>([\s\S]*?)<div[^>]*class=["'][^"']*lineage-block["'][^>]*>\s*<h3>Value map<\/h3>/i);
+      report.dataDictionaryFullLineageTablePresent = fullLineage ? /<table/i.test(fullLineage[1]) : true;
+    }
     reports.push(report);
   }
 }
@@ -144,7 +149,11 @@ fs.writeFileSync(
   `${JSON.stringify(reports.filter(report => report.viewportName === "mobile"), null, 2)}\n`
 );
 
-const failures = reports.filter(report => report.bodyOverflow || (report.overflowing || []).length);
+const failures = reports.filter(report =>
+  report.bodyOverflow ||
+  (report.overflowing || []).length ||
+  (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent))
+);
 if (failures.length) {
   console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);
   console.error(JSON.stringify(failures.slice(0, 3), null, 2));

@@ -314,6 +314,50 @@
       border-top: 1px solid var(--line);
       padding-top: 12px;
     }
+    .semantic-detail-stack {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+    .semantic-detail-section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface3);
+      padding: 12px;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .semantic-detail-section h4 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .semantic-kv-list { display: grid; gap: 7px; }
+    .semantic-kv-row {
+      display: grid;
+      grid-template-columns: minmax(110px, .42fr) minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .semantic-kv-label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .semantic-kv-value {
+      min-width: 0;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .semantic-kv-value.mono {
+      font-family: var(--mono);
+      font-size: 12px;
+    }
     .lineage-block details, details.lineage-block { min-width: 0; }
     details summary { cursor: pointer; color: var(--blue); font-weight: 750; overflow-wrap: anywhere; }
     .lineage-chip {
@@ -746,6 +790,7 @@
       .hero { padding: 24px 18px 20px; }
       main { padding: 16px 14px 34px; }
       .catalog-row, .column-row, .semantic-row { grid-template-columns: 1fr; }
+      .semantic-kv-row { grid-template-columns: 1fr; gap: 3px; }
       .bar-row { grid-template-columns: 1fr; }
       .review-lead { grid-template-columns: 1fr; }
       .dk-shell { grid-template-columns: 1fr; }
@@ -2773,6 +2818,65 @@
         if (row.raw_value) bits.push(`value: ${row.raw_value}`);
         return bits.join(" / ") || "source-level evidence";
       }
+      function semanticFieldValue(row, keys, joiner) {
+        const values = (keys || [])
+          .map(key => text(row[key] || "").trim())
+          .filter(Boolean);
+        return values.join(joiner || " / ");
+      }
+      function semanticKvRow(label, value, options) {
+        const clean = text(value || "").trim();
+        if (!clean) return "";
+        const mono = options && options.mono ? " mono" : "";
+        return `<div class="semantic-kv-row"><div class="semantic-kv-label">${escapeHtml(label)}</div><div class="semantic-kv-value${mono}">${escapeHtml(clean)}</div></div>`;
+      }
+      function renderSemanticLineageSection(title, rows) {
+        const body = (rows || []).join("");
+        if (!body) return "";
+        return `<section class="semantic-detail-section"><h4>${escapeHtml(title)}</h4><div class="semantic-kv-list">${body}</div></section>`;
+      }
+      function renderSemanticLineageKeyValues(row) {
+        const schemaTable = semanticFieldValue(row, ["schema_name", "table_name"], ".");
+        return `<div class="semantic-detail-stack" data-full-lineage-stack="true">
+          ${renderSemanticLineageSection("Clinical meaning", [
+            semanticKvRow("Semantic ID", row.semantic_id, { mono: true }),
+            semanticKvRow("Clinical concept", row.clinical_concept_id, { mono: true }),
+            semanticKvRow("Clinical variable", row.clinical_variable),
+            semanticKvRow("Clinical group/subgroup", semanticFieldValue(row, ["clinical_group", "clinical_subgroup"])),
+            semanticKvRow("Semantic meaning", row.semantic_meaning)
+          ])}
+          ${renderSemanticLineageSection("Raw data location", [
+            semanticKvRow("Source name", row.source_name, { mono: true }),
+            semanticKvRow("Object name", row.object_name, { mono: true }),
+            semanticKvRow("Schema/table name", schemaTable, { mono: true }),
+            semanticKvRow("Raw column", row.raw_column, { mono: true }),
+            semanticKvRow("Raw descriptor", row.raw_descriptor, { mono: true })
+          ])}
+          ${renderSemanticLineageSection("Value/code details", [
+            semanticKvRow("Raw code", row.raw_code, { mono: true }),
+            semanticKvRow("Raw value", row.raw_value, { mono: true }),
+            semanticKvRow("Code system", row.code_system),
+            semanticKvRow("Unit", row.unit),
+            semanticKvRow("Value type", row.value_type),
+            semanticKvRow("Data shape", row.data_shape)
+          ])}
+          ${renderSemanticLineageSection("Structural columns", [
+            semanticKvRow("Patient ID column", row.patient_id_column, { mono: true }),
+            semanticKvRow("Date column", row.date_column, { mono: true }),
+            semanticKvRow("Value column", row.value_column, { mono: true })
+          ])}
+          ${renderSemanticLineageSection("Evidence and confidence", [
+            semanticKvRow("Evidence file", row.evidence_file, { mono: true }),
+            semanticKvRow("Evidence filter", row.evidence_filter, { mono: true }),
+            semanticKvRow("Mapping status", row.mapping_status),
+            semanticKvRow("Mapping confidence", row.mapping_confidence)
+          ])}
+          ${renderSemanticLineageSection("Caveats", [
+            semanticKvRow("Clinical caveat", row.clinical_caveat),
+            semanticKvRow("Privacy note", row.privacy_note)
+          ])}
+        </div>`;
+      }
       function renderSemanticDetail(row) {
         if (!row) {
           setHtml("semantic-detail", `<h3>Raw names / data lineage</h3><p class="mini">Select a semantic row to inspect full lineage, value maps, code maps, related panels, caveats, and evidence filters.</p>`);
@@ -2790,9 +2894,9 @@
             <div class="kpi"><b>${formatNumber(row.n_rows)}</b><span class="mini">rows</span></div>
             <div class="kpi"><b>${formatNumber(row.n_patients)}</b><span class="mini">patients</span></div>
           </div>
-          <div class="lineage-block">
+          <div class="lineage-block semantic-full-lineage">
             <h3>Full lineage</h3>
-            ${rowsForTable([row], 1)}
+            ${renderSemanticLineageKeyValues(row)}
           </div>
           <div class="lineage-block">
             <h3>Value map</h3>

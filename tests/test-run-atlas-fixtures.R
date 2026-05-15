@@ -135,6 +135,8 @@ expect_file(file.path(root, "scripts", "visual_qa_atlas.js"))
 visual_qa_script <- paste(readLines(file.path(root, "scripts", "visual_qa_atlas.js"), warn = FALSE), collapse = "\n")
 expect_true(grepl("overflow_desktop.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a desktop overflow report.")
 expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a mobile overflow report.")
+expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
+expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
 readme_flat <- gsub("\\s+", " ", readme_text)
 expect_true(grepl("A separate full-output visual QA run is required before final visual acceptance of production-scale data.", readme_flat, fixed = TRUE), "README should clarify fixture visual QA is not production-scale visual acceptance.")
@@ -217,6 +219,16 @@ expect_true(grepl("semantic-search", html, fixed = TRUE), "HTML should include s
 expect_true(grepl("semantic-group-filter", html, fixed = TRUE), "HTML should include semantic dictionary group filtering.")
 expect_true(grepl("semantic-panel-filter", html, fixed = TRUE), "HTML should include semantic dictionary panel filtering.")
 expect_true(grepl("semantic-detail", html, fixed = TRUE), "HTML should include semantic lineage detail drawer.")
+expect_true(grepl("function renderSemanticLineageKeyValues", html, fixed = TRUE), "Data Dictionary detail pane should use a stacked lineage renderer.")
+expect_true(grepl("semantic-detail-stack", html, fixed = TRUE), "Data Dictionary detail pane should include the stacked lineage class.")
+expect_true(grepl("semantic-full-lineage", html, fixed = TRUE), "Data Dictionary Full lineage block should be explicitly identifiable for rendered QA.")
+expect_false(grepl("${rowsForTable([row], 1)}", html, fixed = TRUE), "Data Dictionary Full lineage should not render as a wide one-row table.")
+for (needle in c("Clinical meaning", "Raw data location", "Value/code details", "Structural columns", "Evidence and confidence", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Data Dictionary stacked lineage should include section:", needle))
+}
+for (needle in c("Semantic ID", "Clinical concept", "Clinical variable", "Clinical group/subgroup", "Source name", "Object name", "Schema/table name", "Raw column", "Raw descriptor", "Raw code", "Raw value", "Code system", "Unit", "Value type", "Data shape", "Patient ID column", "Date column", "Value column", "Evidence file", "Evidence filter", "Mapping status", "Mapping confidence", "Clinical caveat")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Data Dictionary stacked lineage should include field label:", needle))
+}
 expect_true(grepl("Key raw fields", html, fixed = TRUE), "HTML domain panels should include key raw fields blocks.")
 expect_true(grepl("qa-severity-filter", html, fixed = TRUE), "HTML should include QA filtering controls.")
 expect_true(grepl("run-action-items", html, fixed = TRUE), "HTML should include action item containers.")
