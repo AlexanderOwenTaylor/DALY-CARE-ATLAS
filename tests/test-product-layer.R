@@ -121,6 +121,12 @@ expect_false(any(cll_raw$raw_column == "Beh_Vaegttab" & cll_raw$clinical_concept
 expect_false(any(cll_raw$raw_column == "Reg_KnoglemarvsUndersoegelse" & cll_raw$clinical_concept_id == "bone_involvement"), "CLL bone marrow examination must not flow into product rows as bone involvement.")
 expect_false(any(cll_raw$raw_column %in% c("Reg_FISH", "Reg_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Beh_FISH_TP53", "Rec_FISH_TP53") & cll_raw$clinical_concept_id == "cytogenetic_risk"), "CLL FISH/del/TP53 rows must not flow into product rows as generic cytogenetic risk.")
 expect_false(any(cll_raw$raw_column %in% c("Beh_Vaegttab", "Beh_Feber", "Beh_Nattesved", "Beh_UdtaltTraethed", "Beh_Lymfadenopati", "Beh_StigendeLymfocytose") & cll_raw$clinical_concept_id == "treatment"), "CLL symptom/treatment-indication rows must not flow into product rows as generic treatment.")
+cll_distributions <- distributions[distributions$panel_id == "reg_cll", , drop = FALSE]
+for (column in c("Reg_BinetStadium", "Reg_Umuteret", "Reg_FISH", "Reg_Del17p", "Beh_Vaegttab", "Beh_TargeteretBeh_Ibrutinib", "Beh_MRD")) {
+  if (any(semantic$dictionary$source_name == "RKKP_CLL" & semantic$dictionary$raw_column == column)) {
+    expect_true(any(cll_distributions$raw_column == column), paste("CLL panel distributions should include evidenced value-map field:", column))
+  }
+}
 expect_true(has_raw("LABKA", code = "NPU02319", variable = "Haemoglobin") || has_raw("SDS_lab_forsker", code = "NPU02319", variable = "Haemoglobin"), "Raw fields should map NPU02319 to Haemoglobin.")
 expect_true(has_raw("LABKA", code = "DNK35302", variable = "eGFR") || has_raw("PERSIMUNE", code = "DNK35302", variable = "eGFR"), "Raw fields should map DNK35302 to eGFR.")
 expect_true(has_raw("LABKA", code = "NPU19748", variable = "Leukocytes") || has_raw("SDS_lab_forsker", code = "NPU19748", variable = "Leukocytes"), "Raw fields should map NPU19748 to Leukocytes.")

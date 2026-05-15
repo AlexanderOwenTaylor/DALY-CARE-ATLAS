@@ -80,6 +80,7 @@ const targets = [
   { name: "social_history", tab: "clinical", sub: "clinical-social" },
   { name: "damyda", tab: "registries", sub: "reg-damyda" },
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
+  { name: "cll", tab: "registries", sub: "reg-cll" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 

@@ -2473,6 +2473,51 @@
         const key = cllColumnKey(row);
         return (columns || []).some(column => key === normalizeClinicalKey(column));
       }
+      function cllIsDateLikeColumn(column) {
+        const key = normalizeClinicalKey(column || "");
+        const explicitDateFields = [
+          "Beh_Behandling_Start_dt", "Beh_Behandling_slut_dt", "FU_Doedsdato",
+          "Beh_Doedsdato", "Rec_NyBehandling_dt", "Beh_TRANSPDATO",
+          "Beh_Responsevaluering_dt"
+        ].map(normalizeClinicalKey);
+        return !key || explicitDateFields.includes(key) || key.endsWith("dt") || key.includes("dato") || key.includes("doedsdato");
+      }
+      function cllDistributionRowsFor(columns) {
+        const wanted = new Set((columns || []).filter(Boolean).map(normalizeClinicalKey));
+        if (!wanted.size) return [];
+        return panelDistributionRows.filter(row => {
+          const rawColumn = text(row.raw_column).trim();
+          if (row.panel_id !== "reg_cll" || !rawColumn) return false;
+          if (cllIsDateLikeColumn(rawColumn)) return false;
+          return wanted.has(normalizeClinicalKey(rawColumn));
+        });
+      }
+      function renderCLLDistributionGroups(columns, tone) {
+        const rows = cllDistributionRowsFor(columns);
+        if (!rows.length) return "";
+        const groups = [];
+        rows.forEach(row => {
+          const rawColumn = text(row.raw_column).trim();
+          let group = groups.find(item => item.rawColumn === rawColumn);
+          if (!group) {
+            group = { rawColumn, rows: [] };
+            groups.push(group);
+          }
+          group.rows.push(row);
+        });
+        return `<div class="value-map-grid cll-distribution-grid">${groups.map(group => `
+          <article class="value-map-card ${escapeHtml(toneColor(tone || "violet"))}">
+            <h4><code>${escapeHtml(group.rawColumn)}</code></h4>
+            ${renderHBarRows(group.rows.map(row => ({
+              label: row.display_value || row.raw_value || "",
+              n: row.n,
+              pct: row.pct,
+              tone
+            })), { tone, limit: 8 })}
+            <p class="mini">${renderScopeChip(group.rows[0])}</p>
+          </article>
+        `).join("")}</div>`;
+      }
       const cllExactFieldGroups = {
         binetStage: ["Reg_BinetStadium", "Binet"],
         ighvRisk: ["Reg_Umuteret", "IGHV", "Reg_ZAP70", "Reg_CD38Positiv", "Reg_Beta2Microglobulin", "Reg_Hypogammaglobulinami"],
@@ -2496,7 +2541,7 @@
           "Beh_TargeteretBeh_Ibrutinib", "Beh_TargeteretBeh_idelalisib",
           "Beh_TargeteretBeh_venetoclax", "Beh_TargeteretBeh_acalabrutinib",
           "Beh_TargeteretBeh_Other", "Beh_TargeteretBeh_None", "Beh_TRANSPLANT",
-          "Beh_TRANSPDATO"
+          "Beh_TRANSPDATO", "Beh_Behandling_Start_dt", "Beh_Behandling_slut_dt"
         ],
         responseFollowup: [
           "Beh_Responsevaluering", "Beh_Responsevaluering_dt", "Beh_MRD",
@@ -2521,8 +2566,12 @@
       function renderCLLSection(title, facets, columns, note, limit) {
         const tone = cllSectionTone(title);
         const facetRows = cllFacetRows(facets || []);
+        const distributionHtml = renderCLLDistributionGroups(columns || [], tone);
         const rawRows = cllRawRowsFor(columns || []);
         const parts = [];
+        if (distributionHtml) {
+          parts.push(distributionHtml);
+        }
         if (facetRows.length) {
           parts.push(renderHBarRows(facetRows.map(row => ({
             label: row.label || row.source_column || row.facet || "",

@@ -136,6 +136,7 @@ expect_file(file.path(root, "scripts", "visual_qa_atlas.js"))
 visual_qa_script <- paste(readLines(file.path(root, "scripts", "visual_qa_atlas.js"), warn = FALSE), collapse = "\n")
 expect_true(grepl("overflow_desktop.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a desktop overflow report.")
 expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a mobile overflow report.")
+expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -173,6 +174,9 @@ for (needle in c("Source / coverage", "Subtype mix", "Staging and risk", "B symp
 for (needle in c("Source / coverage", "Binet stage", "IGHV and baseline risk markers", "FISH / cytogenetics / TP53", "Baseline blood and immune markers", "Symptoms and treatment indication", "Treatment and targeted therapy", "Response / MRD / follow-up", "Diagnostic workup", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should contain section:", needle))
 }
+for (needle in c("function cllDistributionRowsFor", "panelDistributionRows.filter", "row.panel_id !== \"reg_cll\"", "raw_column", "wanted.has(normalizeClinicalKey(rawColumn))", "cllIsDateLikeColumn(rawColumn)", "renderCLLDistributionGroups(columns || [], tone)", "cll-distribution-grid")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should use guarded product-layer distributions:", needle))
+}
 for (needle in c("RKKP_LYFO", "Reg_Stadium", "IPI", "aaIPI", "Reg_BSymptomer", "Reg_BulkSygdom", "Reg_PerformanceStatusWHO", "Reg_Haemoglobin", "Reg_Lactatdehydrogenase", "Reg_LDHVaerdi", "Reg_Creatinin_mikmoll", "Reg_CalciumAlbuminkorrigeret", "Beh_Kemoterapiregime1", "Beh_Immunoterapi", "ind_relaps", "Reg_Lokal_Pancreas", "Reg_WHOHistologikode1")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO renderer should be able to surface evidenced field/value:", needle))
 }
@@ -181,6 +185,9 @@ for (needle in c("Lymphoma subtype cohort discovery", "Ann Arbor stage and IPI/a
 }
 for (needle in c("RKKP_CLL", "Reg_BinetStadium", "Reg_Umuteret", "Reg_FISH", "Reg_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Reg_KnoglemarvsUndersoegelse", "Reg_CTSCANNING", "Reg_ULSCANNING", "Beh_Vaegttab", "Beh_Feber", "Beh_Nattesved", "Beh_UdtaltTraethed", "Beh_Lymfadenopati", "Beh_TargeteretBeh_Ibrutinib", "Beh_TargeteretBeh_venetoclax", "Beh_TargeteretBeh_acalabrutinib", "Beh_MRD", "Beh_Responsevaluering")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should be able to surface evidenced field/value:", needle))
+}
+for (needle in c("Beh_Behandling_Start_dt", "Beh_Behandling_slut_dt", "FU_Doedsdato", "Beh_Doedsdato", "Rec_NyBehandling_dt", "Beh_TRANSPDATO")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should explicitly recognize date-like field:", needle))
 }
 for (needle in c("CLL cohort review and registry-field discovery", "Binet stage stratification", "Targeted-therapy registry-field discovery", "Date fields are not displayed as meaningful coverage or outcome distributions")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should include use case or caveat:", needle))
