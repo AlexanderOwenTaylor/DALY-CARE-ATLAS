@@ -113,6 +113,18 @@ expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML sho
 expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "HTML should include the dedicated Social History renderer.")
 expect_true(grepl("function renderDaMyDaPanel()", html, fixed = TRUE), "HTML should include the dedicated DaMyDa renderer.")
 expect_true(grepl("function renderLYFOPanel()", html, fixed = TRUE), "HTML should include the dedicated LYFO renderer.")
+for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
+}
+for (needle in c(".badge.green", ".badge.blue", ".badge.amber", ".badge.plum", ".badge.violet", ".badge.red", ".badge.cyan", ".h-bar", ".kpi-strip", ".clinical-card", ".raw-lineage-card", ".scope-chip", ".caveat-box")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("HTML should include V33-style component class:", needle))
+}
+for (needle in c("overflow-wrap: anywhere", "word-break: break-word", ".table-wrap", "overflow-x: auto", "renderHBarRows", "renderKpiStrip", "renderBadge", "renderScopeChip", "renderClinicalMetricCard", "renderValueMapCard", "renderSectionCard", "renderCollapsedRawLineage")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("HTML should include overflow-safe visual helper:", needle))
+}
+expect_true(grepl("semanticVisibleLimit = 80", html, fixed = TRUE), "Data Dictionary should default to compact, limited visible rows.")
+expect_true(grepl("qa-overflow-report", html, fixed = TRUE) && grepl("overflowReport", html, fixed = TRUE), "HTML should include rendered-DOM overflow QA hooks.")
+expect_file(file.path(root, "scripts", "visual_qa_atlas.js"))
 expect_false(grepl("renderRegistryDetail(\"registry-damyda\", \"reg_damyda\")", html, fixed = TRUE), "DaMyDa should not be rendered through the generic registry detail renderer.")
 expect_false(grepl("renderRegistryDetail(\"registry-lyfo\", \"reg_lyfo\")", html, fixed = TRUE), "LYFO should not be rendered through the generic registry detail renderer.")
 expect_true(grepl("setHtml(\"registry-lyfo\", renderLYFOPanel())", html, fixed = TRUE), "LYFO should be wired to its dedicated renderer.")
@@ -153,6 +165,12 @@ expect_false(grepl("Reg_CReaktivtProtein_nMoll -> Creatinine", html, fixed = TRU
 expect_false(grepl("Reg_CalciumAlbuminkorrigeret -> Albumin", html, fixed = TRUE), "DaMyDa renderer must not show albumin-corrected calcium as albumin.")
 expect_false(grepl("key.includes(normalizeClinicalKey(pattern))", html, fixed = TRUE), "DaMyDa raw-lineage priority should not rely on broad substring pattern matching.")
 expect_true(grepl("damydaColumnEquals", html, fixed = TRUE) && grepl("damydaColumnStartsWith", html, fixed = TRUE), "DaMyDa raw-lineage priority should use exact and anchored field matching.")
+for (needle in c("section-baseline-markers", "renderDaMyDaFacetGroup(\"Staging/risk\"", "renderDaMyDaFacetGroup(\"Treatment\"", "renderDaMyDaFacetGroup(\"Response/relapse\"", "renderDaMyDaFacetGroup(\"Bone disease / imaging\"", "renderDaMyDaFacetGroup(\"Cytogenetics/FISH availability\"")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa dashboard should include section-card hook:", needle))
+}
+for (needle in c("renderLYFOFacetGroup(\"Subtype mix\"", "renderLYFOFacetGroup(\"Staging and risk\"", "renderLYFOFacetGroup(\"B symptoms and bulk disease\"", "renderLYFOFacetGroup(\"Performance status\"", "renderLYFORawGroup(\"Treatment and regimen fields\"", "renderLYFORawGroup(\"Response / follow-up / relapse fields\"", "renderLYFORawGroup(\"Disease localization\"")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("LYFO dashboard should include section-card hook:", needle))
+}
 for (needle in c("RKKP_DaMyDa", "registry entries", "variables", "not available in current aggregate output", "Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl", "Reg_ProcentKlonalePlasmaceller", "Stadie", "Reg_PerformanceStatus", "Reg_Knogleforandringer", "IND_Relaps", "Cyto_FishUdfoert")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("DaMyDa renderer should visibly contain:", needle))
 }
@@ -171,8 +189,8 @@ expect_true(grepl("jumpToClinicalConcept", html, fixed = TRUE), "Concept-link bu
 expect_true(grepl("Repeated measures", html, fixed = TRUE) && grepl("baseline window", html, fixed = TRUE) && grepl("outlier filtering", html, fixed = TRUE), "Vitals renderer should include the required caveat.")
 expect_true(grepl("Unknown and true missing were not separately quantified in this output", html, fixed = TRUE), "Social History renderer should include the unknown/missing evidence note.")
 expect_true(grepl("Row-level social-history observations do not necessarily equal current patient-level status", html, fixed = TRUE), "Social History renderer should include the row-level caveat.")
-expect_true(grepl("Patients", html, fixed = TRUE), "Vitals stat cards should render patient-count fields.")
-expect_true(grepl("<span class=\"mini\">Unit</span><b>${escapeHtml(unit || \"not available\")}</b>", html, fixed = TRUE), "Vitals stat cards should render units with a not-available fallback.")
+expect_true(grepl("{ label: \"patients\", value: patientCountForConcept", html, fixed = TRUE), "Vitals stat cards should render patient-count fields.")
+expect_true(grepl("clinical-metric-card", html, fixed = TRUE) && grepl("{ label: \"unit\", value: unit || \"not available\"", html, fixed = TRUE), "Vitals stat cards should render units with a not-available fallback.")
 expect_true(grepl("renderVitalsStatCard(\"Weight\", [\"Vægt\", \"Vaegt\", \"VÃ¦gt\"], \"weight\", \"kg\")", html, fixed = TRUE), "Vitals stat cards should render kg for weight.")
 expect_true(grepl("renderVitalsStatCard(\"Height\", [\"Højde\", \"Hoejde\", \"HÃ¸jde\"], \"height\", \"cm\")", html, fixed = TRUE), "Vitals stat cards should render cm for height.")
 expect_true(grepl("scope: mixed; displayed distributions are cartography_scan", html, fixed = TRUE) || grepl("scope: displayed distributions are cartography_scan", html, fixed = TRUE), "Vitals/Social renderer should expose cartography-scan scope.")
