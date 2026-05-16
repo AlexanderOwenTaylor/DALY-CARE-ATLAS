@@ -93,7 +93,7 @@ expect_true(grepl("data-sub=\"situation-headlines\"", html, fixed = TRUE), "HTML
 expect_true(grepl("data-sub=\"dictionary-lineage\"", html, fixed = TRUE), "HTML should include semantic dictionary sub-tabs.")
 expect_true(grepl("data-sub=\"reg-damyda\"", html, fixed = TRUE), "HTML should include DaMyDa registry sub-tabs.")
 expect_true(grepl("data-sub=\"clinical-diagnoses\"", html, fixed = TRUE), "HTML should include clinical module sub-tabs.")
-expect_true(grepl("data-sub=\"tx-codes\"", html, fixed = TRUE), "HTML should include treatment-code sub-tabs.")
+expect_true(grepl("treatment-dashboard", html, fixed = TRUE), "HTML should include the Treatment dashboard container.")
 expect_true(grepl("data-sub=\"lab-npu\"", html, fixed = TRUE), "HTML should include laboratory/NPU sub-tabs.")
 expect_true(grepl("data-sub=\"ehr-sp\"", html, fixed = TRUE), "HTML should include EHR module sub-tabs.")
 expect_true(grepl("data-sub=\"infra-actions\"", html, fixed = TRUE), "HTML should include run action item sub-tabs.")
@@ -119,6 +119,7 @@ expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "H
 expect_true(grepl("function renderDaMyDaPanel()", html, fixed = TRUE), "HTML should include the dedicated DaMyDa renderer.")
 expect_true(grepl("function renderLYFOPanel()", html, fixed = TRUE), "HTML should include the dedicated LYFO renderer.")
 expect_true(grepl("function renderCLLPanel()", html, fixed = TRUE), "HTML should include the dedicated CLL renderer.")
+expect_true(grepl("function renderTreatmentPanel()", html, fixed = TRUE), "HTML should include the dedicated Treatment renderer.")
 for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
 }
@@ -137,6 +138,7 @@ visual_qa_script <- paste(readLines(file.path(root, "scripts", "visual_qa_atlas.
 expect_true(grepl("overflow_desktop.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a desktop overflow report.")
 expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a mobile overflow report.")
 expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
+expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -150,6 +152,10 @@ expect_false(grepl("renderRegistryDetail(\"registry-lyfo\", \"reg_lyfo\")", html
 expect_true(grepl("setHtml(\"registry-lyfo\", renderLYFOPanel())", html, fixed = TRUE), "LYFO should be wired to its dedicated renderer.")
 expect_false(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, fixed = TRUE), "CLL should not be rendered through the generic registry detail renderer.")
 expect_true(grepl("setHtml(\"registry-cll\", renderCLLPanel())", html, fixed = TRUE), "CLL should be wired to its dedicated renderer.")
+expect_true(grepl("setHtml(\"treatment-dashboard\", renderTreatmentPanel())", html, fixed = TRUE), "Treatment should be wired to its dedicated renderer.")
+expect_false(grepl("setHtml(\"treatment-source-cards\", sourceTiles", html, fixed = TRUE), "Treatment should not render source summary through generic source tiles.")
+expect_false(grepl("setHtml(\"treatment-medicine-cards\", sourceTiles", html, fixed = TRUE), "Treatment medicine evidence should not render through generic source tiles.")
+expect_false(grepl("setHtml(\"treatment-procedure-cards\", sourceTiles", html, fixed = TRUE), "Treatment procedure evidence should not render through generic source tiles.")
 expect_false(grepl("setHtml(\"clinical-vitals-cards\", renderDomainPanel(\"clinical_vitals\"))", html, fixed = TRUE), "Vitals should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("setHtml(\"clinical-social-cards\", renderDomainPanel(\"clinical_social_history\"))", html, fixed = TRUE), "Social History should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("<h3>Key raw fields</h3><div id=\"semantic-clinical-vitals\"", html, fixed = TRUE), "Vitals should not show a second open generic raw-field block.")
@@ -174,6 +180,16 @@ for (needle in c("Source / coverage", "Subtype mix", "Staging and risk", "B symp
 for (needle in c("Source / coverage", "Binet stage", "IGHV and baseline risk markers", "FISH / cytogenetics / TP53", "Baseline blood and immune markers", "Symptoms and treatment indication", "Treatment and targeted therapy", "Response / MRD / follow-up", "Diagnostic workup", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should contain section:", needle))
 }
+for (needle in c("Source / coverage", "Treatment evidence layers", "ATC medication signals", "SKS/procedure signals", "SP treatment plans", "Administered/ordered medicine", "Registry treatment context", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Treatment renderer should contain section:", needle))
+}
+for (needle in c("function treatmentDistributionRows", "panelDistributionRows || []", "row.panel_id === \"treatment\"", "treatmentIsDateLike", "treatmentIsLabSupport", "Supporting labs surfaced by treatment matrix")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Treatment renderer should use guarded product-layer grouping:", needle))
+}
+for (needle in c("SP_AdministreretMedicin", "SP_OrdineretMedicin", "SMR_medicine", "SDS_t_sksube", "SDS_epikur", "ATC", "SKS", "L01/L04", "antineoplastic chemotherapy", "immunotherapy", "radiotherapy", "lenalidomide", "bortezomib", "daratumumab", "rituximab", "venetoclax", "ibrutinib")) {
+  expect_true(grepl(needle, html, ignore.case = TRUE), paste("Treatment renderer should be able to surface evidenced term:", needle))
+}
+expect_false(grepl("treatmentDashboardPrimaryLabRows", html, fixed = TRUE), "Treatment primary dashboard should not need a primary lab-row bucket.")
 for (needle in c("function cllDistributionRowsFor", "panelDistributionRows.filter", "row.panel_id !== \"reg_cll\"", "raw_column", "wanted.has(normalizeClinicalKey(rawColumn))", "cllIsDateLikeColumn(rawColumn)", "renderCLLDistributionGroups(columns || [], tone)", "cll-distribution-grid")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CLL renderer should use guarded product-layer distributions:", needle))
 }

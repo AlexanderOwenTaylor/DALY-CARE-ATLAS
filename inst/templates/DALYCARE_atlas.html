@@ -1163,16 +1163,7 @@
     </section>
 
     <section class="tab-page" id="tab-treatment">
-      <div class="sub-nav" aria-label="Treatment sections">
-        <button class="sub-tab active" data-sub="tx-codes">Code Families</button>
-        <button class="sub-tab" data-sub="tx-sources">Source Summary</button>
-        <button class="sub-tab" data-sub="tx-medicine">Medicine</button>
-        <button class="sub-tab" data-sub="tx-procedures">Procedures</button>
-      </div>
-      <div class="sub-pane active" id="tx-codes"><div class="panel"><div class="panel-head"><h2 class="panel-title">MM Treatment Code Families</h2><p class="panel-sub">Exact and prefix treatment-code matches from protected aggregate panels.</p></div><div class="panel-body"><div id="treatment-cards" class="grid"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-treatment"></div></div></div></div></div>
-      <div class="sub-pane" id="tx-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Treatment Source Summary</h2><p class="panel-sub">Treatment-like sources detected from the catalog and treatment panels.</p></div><div class="panel-body"><div id="treatment-source-cards"></div></div></div></div>
-      <div class="sub-pane" id="tx-medicine"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medicine And ATC Sources</h2><p class="panel-sub">Administered/ordered medicine and ATC-like sources.</p></div><div class="panel-body"><div id="treatment-medicine-cards"></div></div></div></div>
-      <div class="sub-pane" id="tx-procedures"><div class="panel"><div class="panel-head"><h2 class="panel-title">Procedure And SKS Sources</h2><p class="panel-sub">Procedure, SKS, and treatment-plan sources.</p></div><div class="panel-body"><div id="treatment-procedure-cards"></div></div></div></div>
+      <div class="panel"><div class="panel-head"><h2 class="panel-title">Treatment evidence review</h2><p class="panel-sub">Clinician-facing review of registry treatment fields, treatment plans, administered/ordered medicine, ATC medicines, SKS procedure signals, SMR medicine, and Epikur treatment metadata.</p></div><div class="panel-body"><div id="treatment-dashboard"></div></div></div>
     </section>
 
     <section class="tab-page" id="tab-laboratory">
@@ -2813,13 +2804,179 @@
         `);
       }
 
+      function treatmentContains(row, terms) {
+        const hay = [
+          row.source_name, row.object_name, row.table_name, row.raw_column, row.raw_descriptor,
+          row.raw_code, row.code, row.code_name, row.clinical_variable, row.clinical_concept_id,
+          row.panel, row.subdomain, row.atlas_role, row.evidence_file
+        ].map(text).join(" ").toLowerCase();
+        return (terms || []).some(term => hay.includes(text(term).toLowerCase()));
+      }
+      function treatmentIsDateLike(value) {
+        const key = normalizeClinicalKey(value);
+        return !key ? false : /dt$|dato|date|time/.test(key);
+      }
+      function treatmentIsLabSupport(row) {
+        const codeSystem = text(row.code_system || "").toUpperCase();
+        const hay = [row.source_name, row.object_name, row.clinical_variable, row.clinical_concept_id, row.panel, row.evidence_file].map(text).join(" ").toLowerCase();
+        return codeSystem === "NPU" || /lab|biochem|alleproevesvar|persimune_biochemistry|haematology|immunoglobulin/.test(hay);
+      }
+      function treatmentCodeRows(predicate) {
+        return (semanticCodeRows || [])
+          .filter(row => row.clinical_group === "Treatment")
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => numberValue(b.n_rows) - numberValue(a.n_rows));
+      }
+      function treatmentDistributionRows(predicate) {
+        return (panelDistributionRows || [])
+          .filter(row => row.panel_id === "treatment")
+          .filter(row => !treatmentIsDateLike(row.raw_column || row.raw_value || row.display_value))
+          .filter(row => !treatmentIsLabSupport(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => numberValue(b.n) - numberValue(a.n));
+      }
+      function treatmentRawRows(predicate) {
+        return (panelRawFieldRows || [])
+          .filter(row => row.panel_id === "treatment")
+          .filter(row => !treatmentIsLabSupport(row))
+          .filter(row => !treatmentIsDateLike(row.raw_column))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => {
+            const aRank = (a.mapping_status === "confirmed" ? 0 : 1) + (a.mapping_confidence === "high" ? 0 : 1);
+            const bRank = (b.mapping_status === "confirmed" ? 0 : 1) + (b.mapping_confidence === "high" ? 0 : 1);
+            return aRank - bRank || numberValue(a.sort_order) - numberValue(b.sort_order);
+          });
+      }
+      function treatmentRegistryRows() {
+        const terms = ["treatment", "therapy", "regimen", "kemo", "immun", "target", "transplant", "response", "mrd", "relapse"];
+        return (panelRawFieldRows || [])
+          .filter(row => ["reg_damyda", "reg_lyfo", "reg_cll"].includes(row.panel_id))
+          .filter(row => treatmentContains(row, terms))
+          .filter(row => !treatmentIsDateLike(row.raw_column))
+          .sort((a, b) => numberValue(a.sort_order) - numberValue(b.sort_order));
+      }
+      function treatmentSourceRows(terms) {
+        return (reviewTreatment.treatment_sources || [])
+          .filter(row => !terms || treatmentContains(row, terms))
+          .sort((a, b) => numberValue(b.n_rows) - numberValue(a.n_rows));
+      }
+      function treatmentBarRows(rows) {
+        return (rows || []).map(row => ({
+          label: row.label || [row.code || row.raw_code, row.code_name || row.clinical_variable || row.display_value || row.raw_value].filter(Boolean).join(" - "),
+          n: row.n_rows || row.n || row.matched_rows || "",
+          pct: row.pct,
+          tone: row.code_system === "ATC" ? "green" : row.code_system === "SKS" ? "plum" : "blue"
+        }));
+      }
+      function renderTreatmentSourceCards(rows, title) {
+        const shown = (rows || []).slice(0, 8);
+        if (!shown.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return `<div class="grid grid-4">${shown.map(row => `
+          <article class="clinical-card">
+            ${renderBadge(row.domain || "Treatment", row.domain === "Medication" ? "green" : row.domain === "SDS" ? "plum" : "blue")}
+            <h3>${escapeHtml(row.table_name || row.source_name || title || "Treatment source")}</h3>
+            ${renderKpiStrip([
+              { label: "rows", value: row.n_rows, tone: "blue" },
+              { label: "columns", value: row.n_cols, tone: "cyan" }
+            ], { tone: "blue" })}
+            <p class="mini">${escapeHtml([row.subdomain, row.atlas_role].filter(Boolean).join(" - "))}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderTreatmentCodeSection(title, codeRows, tone, empty) {
+        const rows = treatmentBarRows(codeRows).slice(0, 12);
+        return `<div class="value-map-grid">
+          ${renderValueMapCard(title, rows, { tone, limit: 12, empty: empty || "not available in current aggregate output" })}
+        </div>`;
+      }
+      function renderTreatmentPanel() {
+        const treatmentPanel = (domainPanelRows || []).find(row => row.panel_id === "treatment") || {};
+        const primaryCodeRows = treatmentCodeRows(row => !treatmentIsLabSupport(row));
+        const atcRows = treatmentCodeRows(row => !treatmentIsLabSupport(row) && row.code_system === "ATC");
+        const sksRows = treatmentCodeRows(row => !treatmentIsLabSupport(row) && row.code_system === "SKS");
+        const treatmentDistributions = treatmentDistributionRows();
+        const rawRows = treatmentRawRows();
+        const registryRows = treatmentRegistryRows();
+        const labSupportRows = treatmentCodeRows(row => treatmentIsLabSupport(row));
+        const sources = treatmentSourceRows();
+        const medicineSources = treatmentSourceRows(["medicin", "medicine", "atc", "administered", "ordered", "smr", "indberetning"]);
+        const procedureSources = treatmentSourceRows(["procedure", "sks", "behandling", "treatment", "plan", "epikur"]);
+        const codeFamilyRows = treatmentCards.code_families || [];
+        const layerItems = [
+          ["Registry treatment fields", "Disease registries hold curated treatment indicators, response, relapse, targeted therapy, and regimen fields; they are not complete administration records."],
+          ["SP treatment plans/protocols", "SP_Behandlingsplaner rows describe protocol names and cycle details when available."],
+          ["Administered medicine", "SP administered-medicine rows reflect in-hospital administration evidence."],
+          ["Prescriptions / ATC", "ATC medication rows support drug exposure proxies across ordered medicine, price/medicine feeds, SMR, and related sources."],
+          ["SMR medicine", "SMR medicine is a separate medication evidence surface and should be triangulated with ATC/SP evidence."],
+          ["SKS procedures", "SKS codes support chemotherapy, immunotherapy, radiotherapy, SCT, and procedure-family signals."],
+          ["Epikur metadata", "Epikur rows are text/clinical-note metadata, not a complete structured treatment record."]
+        ];
+        const requiredTreatmentSignals = ["SP_AdministreretMedicin", "SP_OrdineretMedicin", "SMR_medicine", "SDS_t_sksube", "SDS_epikur", "ATC", "SKS", "L01/L04", "antineoplastic chemotherapy", "immunotherapy", "radiotherapy", "lenalidomide", "bortezomib", "daratumumab", "rituximab", "venetoclax", "ibrutinib"];
+        const namedDrugs = ["venetoclax", "ibrutinib", "idelalisib", "rituximab", "lenalidomide", "bortezomib", "daratumumab", "dexamethasone", "aciclovir", "trimethoprim", "sulfamethoxazole", "fluconazole", "filgrastim"];
+        const namedDrugRows = atcRows.filter(row => treatmentContains(row, namedDrugs));
+        const sksPriorityRows = sksRows.filter(row => treatmentContains(row, ["antineoplastic", "chemotherapy", "immunotherapy", "radiotherapy", "sct", "stem", "lenalidomide", "bortezomib", "daratumumab", "venetoclax", "ibrutinib"]));
+        return `
+          <div class="dashboard-grid treatment-dashboard">
+            ${renderKpiStrip([
+              { label: "treatment sources", value: sources.length, tone: "blue" },
+              { label: "code signals", value: primaryCodeRows.length, tone: "green" },
+              { label: "aggregate rows", value: treatmentDistributions.length, tone: "amber" },
+              { label: "raw lineage rows", value: rawRows.length, tone: "plum" }
+            ], { tone: "blue" })}
+            ${renderSectionCard("Source / coverage", `
+              <p>${escapeHtml(treatmentPanel.clinical_purpose || "Treatment evidence across SKS procedure codes, ATC medication codes, administered medicine, prescriptions, SMR, Epikur, and treatment plans.")}</p>
+              ${renderTreatmentSourceCards(sources, "Treatment source")}
+            `, "blue")}
+            ${renderSectionCard("Treatment evidence layers", `
+              <div class="grid grid-3">${layerItems.map(item => `<article class="raw-lineage-card">${renderBadge(item[0], "cyan")}<p>${escapeHtml(item[1])}</p></article>`).join("")}</div>
+            `, "cyan")}
+            ${renderSectionCard("ATC medication signals", `
+              ${renderTreatmentCodeSection("Named treatment/supportive medicines", namedDrugRows.length ? namedDrugRows : atcRows, "green", "No ATC medication rows available.")}
+              <p class="mini">ATC rows, including L01/L04 antineoplastic or immunomodulating signals when present, are code-level treatment signals and require exposure-window definitions before patient-level analysis.</p>
+              <p class="mini">Expected signal labels: ${requiredTreatmentSignals.map(escapeHtml).join("; ")}</p>
+            `, "green")}
+            ${renderSectionCard("SKS/procedure signals", `
+              ${renderTreatmentCodeSection("Procedure and SKS treatment codes", sksPriorityRows.length ? sksPriorityRows : sksRows, "plum", "No SKS/procedure treatment rows available.")}
+              ${codeFamilyRows.length ? `<details><summary>MM treatment code-family scan</summary>${renderHBarRows(codeFamilyRows.map(row => Object.assign({}, row, { label: `${row.family}: ${row.code}`, n: row.n_rows })), { tone: "violet", limit: 12 })}</details>` : `<div class="empty">No MM treatment code-family rows available.</div>`}
+            `, "plum")}
+            ${renderSectionCard("Aggregate treatment signal rows", `
+              ${renderValueMapCard("Product-layer treatment distributions", treatmentBarRows(treatmentDistributions), { tone: "amber", limit: 12, scope: treatmentDistributions[0], empty: "No treatment panel distributions available." })}
+              <p class="mini">Date-like fields are excluded from categorical bars and retained only as source/raw-field availability.</p>
+            `, "amber")}
+            ${renderSectionCard("SP treatment plans", `
+              ${renderTreatmentSourceCards(procedureSources.filter(row => treatmentContains(row, ["behandlingsplan", "plan", "protocol"])), "SP treatment plans")}
+              <p class="mini">Protocol or regimen names are shown only when aggregate evidence explicitly contains them.</p>
+            `, "violet")}
+            ${renderSectionCard("Administered/ordered medicine", `
+              ${renderTreatmentSourceCards(medicineSources, "Medicine source")}
+            `, "green")}
+            ${renderSectionCard("Registry treatment context", `
+              ${registryRows.length ? renderCollapsedRawLineage(registryRows, { limit: 10 }) : `<div class="empty">not available in current aggregate output</div>`}
+            `, "amber")}
+            ${renderSectionCard("Raw names / data lineage", `
+              ${rawRows.length ? renderCollapsedRawLineage(rawRows, { limit: 12 }) : `<div class="empty">not available in current aggregate output</div>`}
+              ${labSupportRows.length ? `<details><summary>Supporting labs surfaced by treatment matrix</summary>${renderTreatmentCodeSection("Supporting laboratory/code rows", labSupportRows, "cyan", "No supporting lab rows were surfaced.")}</details>` : ""}
+            `, "blue")}
+            ${renderSectionCard("Use cases", `
+              <ul>
+                <li>Treatment exposure algorithm development.</li>
+                <li>Cross-source therapy triangulation across ATC, SKS, SP, SMR, Epikur, and registry fields.</li>
+                <li>Regimen-proxy validation before disease-specific cohort studies.</li>
+                <li>Medication/procedure source selection for feasibility review.</li>
+              </ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <p>Code-level treatment signals are proxies unless a registry or treatment-plan source confirms regimen semantics. Counts may be cartography scan or top-N evidence and must not be treated as full cohort denominators unless explicitly labeled.</p>
+              <p>Dates, note text, and free-text treatment context are not rendered as categorical bars. Treatment exposure needs source-specific timing, dose, route, and line-of-therapy definitions.</p>
+            `, "amber")}
+          </div>`;
+      }
+
       function renderCodeDiscoveryCards() {
         const detectiveObserved = detectiveCards.observed_codes || [];
         const detectiveCandidates = detectiveCards.candidate_codes || [];
         const isotypeBuckets = isotypeCards.bucket_summary || [];
         const isotypeUsage = isotypeCards.code_usage || [];
-        const treatmentCounts = treatmentCards.code_families || [];
-        const treatmentSources = treatmentCards.source_summary || [];
         setHtml("detective-cards", `
           <article class="card">
             <h3>NPU Detective Inventory</h3>
@@ -2840,16 +2997,6 @@
             ${isotypeUsage.length ? rowsForTable(isotypeUsage, 12) : `<div class="empty">No observed isotype codes met the cell threshold.</div>`}
           </article>
         `);
-        setHtml("treatment-cards", `
-          <article class="card">
-            <h3>MM Treatment Code Families</h3>
-            ${treatmentCounts.length ? bars(treatmentCounts.map(row => Object.assign({}, row, { display_label: `${row.family}: ${row.code}` })), "n_rows", "display_label") : `<div class="empty">No MM treatment code family rows available.</div>`}
-          </article>
-          <article class="card">
-            <h3>Treatment Evidence Sources</h3>
-            ${treatmentSources.length ? rowsForTable(treatmentSources, 12) : `<div class="empty">No treatment source summaries met the cell threshold.</div>`}
-          </article>
-        `);
       }
 
       function renderRegistryDetail(targetId, section) {
@@ -2868,9 +3015,7 @@
         setHtml("clinical-notes-cards", renderDomainPanel("clinical_notes"));
         setHtml("clinical-social-cards", renderSocialHistoryPanel());
 
-        setHtml("treatment-source-cards", sourceTiles(reviewTreatment.treatment_sources, "No treatment-like sources were mapped in this run."));
-        setHtml("treatment-medicine-cards", sourceTiles((reviewTreatment.treatment_sources || []).filter(row => /medicin|medicine|atc|administered|ordered/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No medicine/ATC-like sources were mapped in this run."));
-        setHtml("treatment-procedure-cards", sourceTiles((reviewTreatment.treatment_sources || []).filter(row => /procedure|sks|behandling|treatment|plan/i.test([row.table_name, row.subdomain, row.atlas_role].join(" "))), "No procedure/SKS-like sources were mapped in this run."));
+        setHtml("treatment-dashboard", renderTreatmentPanel());
 
         setHtml("laboratory-source-cards", sourceTiles(reviewLaboratory.lab_sources, "No lab-like sources were mapped in this run."));
         setHtml("ehr-sp-cards", sourceTiles(reviewEhr.sp, "No SP sources were mapped in this run."));

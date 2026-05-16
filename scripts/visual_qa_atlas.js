@@ -81,6 +81,7 @@ const targets = [
   { name: "damyda", tab: "registries", sub: "reg-damyda" },
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
   { name: "cll", tab: "registries", sub: "reg-cll" },
+  { name: "treatment", tab: "treatment", sub: "treatment-dashboard" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 
