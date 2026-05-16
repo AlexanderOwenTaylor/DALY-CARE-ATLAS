@@ -1150,6 +1150,7 @@
         <button class="sub-tab active" data-sub="clinical-diagnoses">Diagnoses</button>
         <button class="sub-tab" data-sub="clinical-admissions">Admissions</button>
         <button class="sub-tab" data-sub="clinical-imaging">Imaging</button>
+        <button class="sub-tab" data-sub="clinical-microbiology">Microbiology</button>
         <button class="sub-tab" data-sub="clinical-vitals">Vitals</button>
         <button class="sub-tab" data-sub="clinical-notes">Notes</button>
         <button class="sub-tab" data-sub="clinical-social">Social History</button>
@@ -1157,6 +1158,7 @@
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging Sources</h2><p class="panel-sub">SP billed imaging and radiology-like sources.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-imaging"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
@@ -3048,6 +3050,193 @@
           </div>`;
       }
 
+      const microbiologyLayerSpecs = [
+        { id: "persimune_analysis", label: "PERSIMUNE analysis", tone: "blue", terms: ["persimune_microbiology_analysis"], captures: "PERSIMUNE_microbiology_analysis: analysis/test layer, including sample material, domain, analysis group, and result interpretation where available.", best: "Analysis and infection-evidence availability review.", caveat: "PERSIMUNE coverage may be regional/research-specific and not nationwide.", fields: ["samplematerial", "c_domain", "c_analysisgroup", "Virus", "Bacteria", "Fungus"] },
+        { id: "persimune_culture", label: "PERSIMUNE culture", tone: "green", terms: ["persimune_microbiology_culture"], captures: "PERSIMUNE_microbiology_culture: culture investigation layer with culture group, sample material, organism/domain, and interpretation.", best: "Culture/result-class cohort definition.", caveat: "Culture rows require study-specific infection-event definitions.", fields: ["c_analysisgroup", "samplematerial", "c_domain", "BLOODCULTURE", "URINECULTURE", "BAL"] },
+        { id: "persimune_resistance", label: "PERSIMUNE resistance/susceptibility", tone: "plum", terms: ["culture_resistance", "resistance"], captures: "PERSIMUNE_microbiology_culture_resistance: antibiotic susceptibility/resistance result layer.", best: "Susceptibility availability and antibiotic-field discovery.", caveat: "Susceptibility rows do not by themselves define resistant infection episodes.", fields: ["antibioticnamecoderesponsible", "susceptibilityvaluevalue", "Negative", "Positive", "Not interpreted"] },
+        { id: "persimune_microscopy", label: "PERSIMUNE microscopy", tone: "cyan", terms: ["persimune_microbiology_microscopy"], captures: "PERSIMUNE_microbiology_microscopy: microscopy/visual microbiology examination layer.", best: "Microscopy source and field availability review.", caveat: "Free-text microscopy result examples are not emitted.", fields: ["c_analysisgroup", "investigationinterpretation", "c_samplematerial", "Blood", "Swab", "Stool"] },
+        { id: "sp_blood_culture", label: "SP blood-culture workflow", tone: "red", terms: ["sp_bloddyrkning", "bloddyrkning"], captures: "SP_Bloddyrkning_del1 / SP_Bloddyrkning_del2 / SP_Bloddyrkning_del3 / SP_Bloddyrkning_del4 workflow from order/specimen through organism and susceptibility fields.", best: "Blood-culture availability and workflow linkage review.", caveat: "The four workflow parts must be interpreted together before defining events.", fields: ["type", "komponentnavn", "organisme", "antibiotika", "sensitivitet_resultat"] }
+      ];
+      function microbiologyIsDateLike(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.raw_value, row.raw_descriptor, row.display_value].map(text).join(" "));
+        return /date|dato|datetime|tidspunkt|_dt|time/.test(key);
+      }
+      function microbiologyIsFreeText(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.value_type, row.privacy_note].map(text).join(" "));
+        return /free_text|clinicalinformation|requisitioninformationtext|commentsgrouping|resultsummary|tekst|text|comment|oplysninger/.test(key);
+      }
+      function microbiologyLayer(row) {
+        const key = normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file, row.raw_column].map(text).join(" "));
+        if (/culture_resistance|resistance/.test(key)) return microbiologyLayerSpecs[2];
+        if (/microbiology_culture|micro_culture/.test(key)) return microbiologyLayerSpecs[1];
+        if (/microbiology_microscopy|microscopy/.test(key)) return microbiologyLayerSpecs[3];
+        if (/microbiology_analysis|micro_analysis/.test(key)) return microbiologyLayerSpecs[0];
+        if (/bloddyrkning/.test(key)) return microbiologyLayerSpecs[4];
+        return { id: "candidate", label: "Candidate / needs-validation", tone: "amber", captures: "Candidate microbiology evidence.", best: "Discovery only.", caveat: "Validate source-specific meaning before analytic use.", fields: [] };
+      }
+      function microbiologyRawRows(predicate) {
+        return (panelRawFieldRows || [])
+          .filter(row => row.panel_id === "clinical_microbiology" || row.clinical_group === "Microbiology")
+          .filter(row => !microbiologyIsDateLike(row))
+          .filter(row => !microbiologyIsFreeText(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => {
+            const aRank = (a.mapping_status === "confirmed" ? 0 : 1) + (a.mapping_confidence === "high" ? 0 : 1);
+            const bRank = (b.mapping_status === "confirmed" ? 0 : 1) + (b.mapping_confidence === "high" ? 0 : 1);
+            return aRank - bRank || numberValue(b.n_rows) - numberValue(a.n_rows) || numberValue(a.sort_order) - numberValue(b.sort_order);
+          });
+      }
+      function microbiologyDistributionRows(predicate) {
+        return microbiologyRawRows(row => {
+          const value = text(row.raw_value || row.raw_descriptor || "");
+          if (!value || value === "suppressed / not shown") return false;
+          return predicate ? predicate(row) : true;
+        });
+      }
+      function microbiologyConceptRows(ids) {
+        const wanted = new Set(Array.isArray(ids) ? ids : [ids]);
+        return microbiologyDistributionRows(row => wanted.has(row.clinical_concept_id));
+      }
+      function microbiologyRowsForLayer(layerId) {
+        return microbiologyRawRows(row => microbiologyLayer(row).id === layerId);
+      }
+      function microbiologyBarRows(rows) {
+        return (rows || []).map(row => ({
+          label: row.raw_value || row.raw_descriptor || row.raw_column || row.clinical_variable,
+          n: row.n_rows || row.n || "",
+          pct: row.pct,
+          tone: microbiologyLayer(row).tone
+        }));
+      }
+      function renderMicrobiologySourceCoverage(rows) {
+        const bySource = {};
+        (rows || []).forEach(row => {
+          const source = row.source_name || "Microbiology source";
+          if (!bySource[source]) bySource[source] = { source, n: 0, fields: new Set(), layer: microbiologyLayer(row) };
+          bySource[source].n += numberValue(row.n_rows);
+          if (row.raw_column) bySource[source].fields.add(row.raw_column);
+        });
+        const cards = Object.values(bySource).slice(0, 8).map(item => `
+          <article class="clinical-card">
+            ${renderBadge(item.layer.label, item.layer.tone)}
+            <h3>${escapeHtml(item.source)}</h3>
+            ${renderKpiStrip([
+              { label: "aggregate rows", value: item.n || "not available", tone: item.layer.tone },
+              { label: "fields", value: item.fields.size || "not available", tone: "cyan" }
+            ], { tone: item.layer.tone })}
+            <p class="mini">${escapeHtml(item.layer.captures)}</p>
+          </article>
+        `).join("");
+        return cards ? `<div class="grid grid-4">${cards}</div>` : `<div class="empty">not available in current aggregate output</div>`;
+      }
+      function renderMicrobiologyLayerCards() {
+        return `<div class="grid grid-3">${microbiologyLayerSpecs.map(layer => `
+          <article class="raw-lineage-card">
+            ${renderBadge(layer.label, layer.tone)}
+            <p><strong>Captures:</strong> ${escapeHtml(layer.captures)}</p>
+            <p><strong>Best use:</strong> ${escapeHtml(layer.best)}</p>
+            <p class="mini"><strong>Caveat:</strong> ${escapeHtml(layer.caveat)}</p>
+            <p class="mono mini">${escapeHtml(layer.fields.join("; "))}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderMicrobiologyValueSection(title, ids, tone, empty) {
+        const rows = microbiologyConceptRows(ids).slice(0, 12);
+        return renderValueMapCard(title, microbiologyBarRows(rows), { tone, limit: 12, empty: empty || "not available in current aggregate output" });
+      }
+      function renderMicrobiologyLayerSection(title, layerId, conceptIds, tone) {
+        const layerRows = microbiologyRowsForLayer(layerId);
+        const distRows = conceptIds ? layerRows.filter(row => conceptIds.includes(row.clinical_concept_id) && text(row.raw_value || row.raw_descriptor) !== "suppressed / not shown") : layerRows.filter(row => text(row.raw_value || row.raw_descriptor) !== "suppressed / not shown");
+        return `
+          ${distRows.length ? renderHBarRows(microbiologyBarRows(distRows), { tone, limit: 10 }) : `<div class="empty">not available in current aggregate output</div>`}
+          ${layerRows.length ? renderCollapsedRawLineage(layerRows, { limit: 6 }) : ""}
+        `;
+      }
+      function renderSpBloodCultureWorkflow() {
+        const parts = ["del1", "del2", "del3", "del4"];
+        return `<div class="grid grid-4">${parts.map(part => {
+          const rows = microbiologyRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(`bloddyrkning_${part}`));
+          return `<article class="clinical-card">
+            ${renderBadge(`SP blood culture ${part}`, "red")}
+            <h3>${escapeHtml(part)}</h3>
+            ${rows.length ? renderCollapsedRawLineage(rows, { limit: 5 }) : `<div class="empty">not available in current aggregate output</div>`}
+          </article>`;
+        }).join("")}</div>`;
+      }
+      function renderMicrobiologyRawLineageByLayer(rows) {
+        const groups = [
+          { label: "PERSIMUNE analysis", layer: "persimune_analysis" },
+          { label: "PERSIMUNE culture", layer: "persimune_culture" },
+          { label: "PERSIMUNE resistance/susceptibility", layer: "persimune_resistance" },
+          { label: "PERSIMUNE microscopy", layer: "persimune_microscopy" },
+          { label: "SP blood culture del1", layer: "sp_blood_culture", sourceNeedle: "bloddyrkning_del1" },
+          { label: "SP blood culture del2", layer: "sp_blood_culture", sourceNeedle: "bloddyrkning_del2" },
+          { label: "SP blood culture del3", layer: "sp_blood_culture", sourceNeedle: "bloddyrkning_del3" },
+          { label: "SP blood culture del4", layer: "sp_blood_culture", sourceNeedle: "bloddyrkning_del4" },
+          { label: "Candidate / needs-validation", layer: "candidate" }
+        ];
+        return groups.map(group => {
+          const groupRows = (rows || []).filter(row => {
+            const layerMatch = microbiologyLayer(row).id === group.layer;
+            if (!layerMatch) return false;
+            if (!group.sourceNeedle) return true;
+            return normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(group.sourceNeedle);
+          });
+          if (!groupRows.length) return "";
+          return `<details class="lineage-block"><summary>${escapeHtml(group.label)}</summary>${renderCollapsedRawLineage(groupRows, { limit: 8 })}</details>`;
+        }).join("") || `<div class="empty">not available in current aggregate output</div>`;
+      }
+      function renderMicrobiologyPanel() {
+        const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_microbiology") || {};
+        const rows = microbiologyRawRows();
+        const distributions = (panelDistributionRows || []).filter(row => row.panel_id === "clinical_microbiology");
+        const kpis = (panelKpiRows || []).filter(row => row.panel_id === "clinical_microbiology");
+        return `
+          <div class="dashboard-grid microbiology-dashboard">
+            ${renderKpiStrip([
+              { label: "sources", value: new Set(rows.map(row => row.source_name).filter(Boolean)).size || "not available", tone: "blue" },
+              { label: "raw fields", value: rows.length || "not available", tone: "green" },
+              { label: "distribution rows", value: distributions.length || "not available", tone: "amber" },
+              { label: "panel KPIs", value: kpis.length || "not available", tone: "plum" }
+            ], { tone: "blue" })}
+            ${renderSectionCard("Source / coverage", renderMicrobiologySourceCoverage(rows), "blue")}
+            ${renderSectionCard("Microbiology evidence layers", renderMicrobiologyLayerCards(), "cyan")}
+            ${renderSectionCard("PERSIMUNE analysis", renderMicrobiologyLayerSection("PERSIMUNE analysis", "persimune_analysis", ["microbiology_sample_material", "microbiology_organism_domain", "microbiology_culture_group", "microbiology_result_class", "microbiology_lab_source"], "blue"), "blue")}
+            ${renderSectionCard("PERSIMUNE culture", renderMicrobiologyLayerSection("PERSIMUNE culture", "persimune_culture", ["microbiology_culture_group", "microbiology_sample_material", "microbiology_organism_domain", "microbiology_result_class"], "green"), "green")}
+            ${renderSectionCard("Resistance / susceptibility", renderMicrobiologyLayerSection("Resistance / susceptibility", "persimune_resistance", ["microbiology_antibiotic", "microbiology_susceptibility", "microbiology_susceptibility_result"], "plum"), "plum")}
+            ${renderSectionCard("Microscopy", renderMicrobiologyLayerSection("Microscopy", "persimune_microscopy", ["microbiology_culture_group", "microbiology_sample_material", "microbiology_result_class", "microbiology_organism_domain"], "cyan"), "cyan")}
+            ${renderSectionCard("SP blood-culture workflow", renderSpBloodCultureWorkflow(), "red")}
+            ${renderSectionCard("Sample material", renderMicrobiologyValueSection("Microbiology sample material", "microbiology_sample_material", "blue"), "blue")}
+            ${renderSectionCard("Organism/domain", `
+              ${renderMicrobiologyValueSection("Organism/domain group", "microbiology_organism_domain", "green")}
+              <p class="mini">Detailed organism/species values are suppressed or grouped unless they are broad domain categories such as Virus, Bacteria, Fungus, Other, or Unclassified.</p>
+            `, "green")}
+            ${renderSectionCard("Result class", renderMicrobiologyValueSection("Microbiology result class / interpretation", "microbiology_result_class", "amber"), "amber")}
+            ${renderSectionCard("Antibiotic/susceptibility", `
+              ${renderMicrobiologyValueSection("Antibiotic fields", "microbiology_antibiotic", "plum")}
+              ${renderMicrobiologyValueSection("Susceptibility result", "microbiology_susceptibility_result", "red")}
+            `, "plum")}
+            ${renderSectionCard("Hospital/lab source", renderMicrobiologyValueSection("Microbiology laboratory / hospital source", "microbiology_lab_source", "cyan"), "cyan")}
+            ${renderSectionCard("Raw names / data lineage", renderMicrobiologyRawLineageByLayer(rows), "blue")}
+            ${renderSectionCard("Use cases", `
+              <ul>
+                <li>Infection-event evidence discovery.</li>
+                <li>Blood-culture availability review.</li>
+                <li>Culture/result-class cohort definition.</li>
+                <li>Antibiotic susceptibility availability review.</li>
+                <li>Microbiology sample-material stratification.</li>
+                <li>Hospital/lab source coverage review.</li>
+                <li>Linkage planning with admissions, treatment, and outcomes.</li>
+              </ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <p>Microbiology sources are aggregate/profiled evidence layers, not patient-level infection phenotypes. Positive/negative result classes require study-specific definitions and timing windows.</p>
+              <p>Resistance/susceptibility rows do not by themselves define resistant infection episodes. Detailed organism/species outputs may require suppression or grouping. Free text, notes, report examples, and raw date values are not emitted as categorical bars.</p>
+              <p>${escapeHtml(panel.caveats || "SP blood-culture workflow parts must be interpreted together before defining events. PERSIMUNE coverage may be regional/research-specific and not nationwide.")}</p>
+            `, "amber")}
+          </div>`;
+      }
+
       const labConceptSpecs = [
         { id: "haemoglobin", title: "Haemoglobin", subgroup: "Haematology", codes: ["NPU02319"], fields: ["Reg_Haemoglobin", "Reg_Haemoglobin_mmolL"], tone: "red" },
         { id: "creatinine", title: "Creatinine", subgroup: "Renal function", codes: ["NPU02593"], fields: ["Reg_Creatinin_mikmoll", "Reg_Creatinin_mmoll", "Reg_Creatinin_millimoll", "CREA"], tone: "blue" },
@@ -3330,6 +3519,7 @@
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
         setHtml("clinical-imaging-cards", renderDomainPanel("clinical_imaging"));
+        setHtml("clinical-microbiology-cards", renderMicrobiologyPanel());
         setHtml("clinical-vitals-cards", renderVitalsPanel());
         setHtml("clinical-notes-cards", renderDomainPanel("clinical_notes"));
         setHtml("clinical-social-cards", renderSocialHistoryPanel());

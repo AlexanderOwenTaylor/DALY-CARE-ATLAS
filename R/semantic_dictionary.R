@@ -2407,24 +2407,33 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
       code <- x[[val_col]][[i]]
       column <- if (!is.na(col_col)) x[[col_col]][[i]] else ""
       if (semantic_identifier_like_column(column)) next
+      if (clinical_group == "Microbiology" && (microbiology_date_like_column(column) || microbiology_free_text_column(column))) next
       n <- semantic_suppress_count(x[[count_col]][[i]], min_cell_count)
-      variable <- semantic_domain_variable(clinical_group, code, column)
       row_source <- semantic_vector_value(source_name, i)
       row_object <- semantic_vector_value(object_name, i, row_source)
-      semantic_id <- semantic_id_from(c(clinical_group, row_source, column, code))
+      micro_def <- if (clinical_group == "Microbiology") microbiology_column_definition(row_source, column) else NULL
+      micro_ctx <- if (clinical_group == "Microbiology") microbiology_source_context(row_source, row_object, file) else NULL
+      variable <- if (clinical_group == "Microbiology") micro_def$variable else semantic_domain_variable(clinical_group, code, column)
+      concept_id <- if (clinical_group == "Microbiology") micro_def$concept_id else semantic_id_from(c(clinical_group, variable))
+      subgroup_value <- if (clinical_group == "Microbiology") paste(micro_ctx$layer, micro_def$subgroup, sep = " - ") else subgroup
+      safe_value <- if (clinical_group == "Microbiology") microbiology_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count) else code
+      semantic_id <- semantic_id_from(c(clinical_group, row_source, column, safe_value))
+      micro_meaning <- if (clinical_group == "Microbiology") paste(micro_ctx$meaning, micro_def$meaning) else semantic_domain_meaning(clinical_group, code, column)
+      micro_caveat <- if (clinical_group == "Microbiology") paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.", micro_def$meaning) else semantic_domain_caveat(clinical_group)
+      micro_terms <- if (clinical_group == "Microbiology") c(terms, micro_ctx$terms, micro_def$terms, safe_value, column, row_source, micro_ctx$layer) else c(terms, code, column, row_source)
       dict_rows[[length(dict_rows) + 1L]] <- semantic_row(
         semantic_id = semantic_id,
-        clinical_concept_id = semantic_id_from(c(clinical_group, variable)),
+        clinical_concept_id = concept_id,
         clinical_variable = variable,
         clinical_group = clinical_group,
-        clinical_subgroup = subgroup,
-        semantic_meaning = semantic_domain_meaning(clinical_group, code, column),
+        clinical_subgroup = subgroup_value,
+        semantic_meaning = micro_meaning,
         source_name = row_source,
         object_name = row_object,
         raw_column = column,
-        raw_descriptor = if (clinical_group %in% c("Imaging", "Microbiology", "Biobank")) code else "",
-        raw_code = if (clinical_group %in% c("Treatment", "Pathology", "Imaging") || grepl("^[A-Z0-9]{3,}", code)) code else "",
-        raw_value = if (clinical_group %in% c("Microbiology", "Biobank", "Outcomes")) code else "",
+        raw_descriptor = if (clinical_group == "Microbiology") safe_value else if (clinical_group %in% c("Imaging", "Biobank")) code else "",
+        raw_code = if (clinical_group == "Microbiology") "" else if (clinical_group %in% c("Treatment", "Pathology", "Imaging") || grepl("^[A-Z0-9]{3,}", code)) code else "",
+        raw_value = if (clinical_group == "Microbiology") safe_value else if (clinical_group %in% c("Biobank", "Outcomes")) code else "",
         code_system = semantic_domain_code_system(clinical_group, code, column),
         value_type = if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text" else "code",
         data_shape = "code_table",
@@ -2432,29 +2441,29 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         geography = geography_for_source(row_source),
         n_rows = n,
         evidence_file = file,
-        evidence_filter = paste0(column, "=", code),
-        mapping_confidence = if (clinical_group %in% c("Microbiology", "Biobank")) "medium" else "high",
-        mapping_status = if (clinical_group %in% c("Microbiology", "Biobank")) "candidate" else "inferred",
-        privacy_note = if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text_not_exposed" else "aggregate_only",
-        clinical_caveat = semantic_domain_caveat(clinical_group),
-        search_terms = semantic_terms(c(terms, code, column, row_source))
+        evidence_filter = paste0(column, "=", safe_value),
+        mapping_confidence = if (clinical_group == "Microbiology") micro_def$confidence else if (clinical_group == "Biobank") "medium" else "high",
+        mapping_status = if (clinical_group == "Microbiology") micro_def$status else if (clinical_group == "Biobank") "candidate" else "inferred",
+        privacy_note = if (clinical_group == "Microbiology" && identical(safe_value, "suppressed / not shown")) "aggregate_only_suppressed_value" else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text_not_exposed" else "aggregate_only",
+        clinical_caveat = micro_caveat,
+        search_terms = semantic_terms(micro_terms)
       )
-      if (nzchar(code)) {
+      if (nzchar(safe_value)) {
         code_rows[[length(code_rows) + 1L]] <- semantic_code_row(
           semantic_id = semantic_id,
-          clinical_concept_id = semantic_id_from(c(clinical_group, variable)),
+          clinical_concept_id = concept_id,
           clinical_variable = variable,
           clinical_group = clinical_group,
           source_name = row_source,
           object_name = row_object,
           code_system = semantic_domain_code_system(clinical_group, code, column),
-          code = code,
+          code = safe_value,
           code_name = variable,
-          panel = subgroup,
+          panel = subgroup_value,
           n_rows = n,
           evidence_file = file,
-          mapping_confidence = "medium",
-          notes = semantic_domain_caveat(clinical_group)
+          mapping_confidence = if (clinical_group == "Microbiology") micro_def$confidence else "medium",
+          notes = if (clinical_group == "Microbiology") paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.") else semantic_domain_caveat(clinical_group)
         )
       }
     }
@@ -2558,6 +2567,85 @@ semantic_domain_keep_rows <- function(values, clinical_group) {
     return(grepl("PET|FDG|\\bCT\\b|MR|MRI|R[Oo]nt|RU |UX|BWGC|radioter", values, ignore.case = TRUE))
   }
   rep(TRUE, length(values))
+}
+
+microbiology_source_context <- function(source_name = "", object_name = "", evidence_file = "") {
+  key <- semantic_id_from(paste(source_name %||% "", object_name %||% "", evidence_file %||% "", sep = " "))
+  mk <- function(layer, subgroup, meaning, caveat, terms) {
+    list(layer = layer, subgroup = subgroup, meaning = meaning, caveat = caveat, terms = terms)
+  }
+  if (grepl("culture_resistance|resistance", key)) {
+    return(mk("PERSIMUNE resistance/susceptibility", "Resistance/susceptibility", "Antibiotic susceptibility/resistance result layer from PERSIMUNE microbiology culture evidence.", "Resistance/susceptibility rows do not by themselves define resistant infection episodes.", c("PERSIMUNE microbiology resistance", "susceptibility", "antibiotic")))
+  }
+  if (grepl("microbiology_culture|micro_culture", key)) {
+    return(mk("PERSIMUNE culture", "Culture", "PERSIMUNE culture investigation layer with culture group, organism/domain, sample material, and interpretation where available.", "Culture rows are aggregate evidence layers and require study-specific infection definitions.", c("PERSIMUNE microbiology culture", "culture", "organism", "sample material")))
+  }
+  if (grepl("microbiology_microscopy|microscopy", key)) {
+    return(mk("PERSIMUNE microscopy", "Microscopy", "PERSIMUNE microscopy/visual microbiology examination layer.", "Microscopy rows are aggregate evidence only and free-text result examples are not emitted.", c("PERSIMUNE microbiology microscopy", "microscopy")))
+  }
+  if (grepl("microbiology_analysis|micro_analysis", key)) {
+    return(mk("PERSIMUNE analysis", "PERSIMUNE analysis", "PERSIMUNE microbiology analysis/test layer with sample material, domain, analysis group, and result interpretation where available.", "PERSIMUNE coverage may be regional or research-specific and not nationwide.", c("PERSIMUNE microbiology analysis", "analysis", "sample material", "domain")))
+  }
+  if (grepl("bloddyrkning_del1|bloddyrkning_del_1", key)) return(mk("SP blood culture del1", "SP blood-culture workflow", "SP blood-culture workflow part del1.", "SP blood-culture workflow parts must be interpreted together before defining events.", c("SP blood culture del1", "blood culture")))
+  if (grepl("bloddyrkning_del2|bloddyrkning_del_2", key)) return(mk("SP blood culture del2", "SP blood-culture workflow", "SP blood-culture workflow part del2.", "SP blood-culture workflow parts must be interpreted together before defining events.", c("SP blood culture del2", "blood culture")))
+  if (grepl("bloddyrkning_del3|bloddyrkning_del_3", key)) return(mk("SP blood culture del3", "SP blood-culture workflow", "SP blood-culture workflow part del3 with organism, antibiotic, and sensitivity fields where aggregate-safe.", "SP blood-culture workflow parts must be interpreted together before defining events.", c("SP blood culture del3", "organism", "antibiotic", "sensitivity")))
+  if (grepl("bloddyrkning_del4|bloddyrkning_del_4", key)) return(mk("SP blood culture del4", "SP blood-culture workflow", "SP blood-culture workflow part del4.", "SP blood-culture workflow parts must be interpreted together before defining events.", c("SP blood culture del4", "blood culture")))
+  mk("Candidate microbiology evidence", "Candidate microbiology evidence", "Candidate microbiology aggregate evidence layer.", "Candidate microbiology rows require source-specific validation before analytic use.", c("microbiology", "infection"))
+}
+
+microbiology_column_definition <- function(source_name = "", column = "") {
+  source_key <- semantic_id_from(source_name)
+  col_key <- semantic_id_from(column)
+  mk <- function(id, variable, subgroup, meaning, terms, confidence = "high", status = "confirmed") {
+    list(concept_id = id, variable = variable, subgroup = subgroup, meaning = meaning, terms = terms, confidence = confidence, status = status)
+  }
+  if (col_key %in% c("samplematerial", "c_samplematerial", "c_pm_samplematerial", "material", "provemateriale", "proevemateriale", "c_samplematerialold")) {
+    return(mk("microbiology_sample_material", "Microbiology sample material", "Sample material", "Microbiology sample-material field.", c("sample material", "prøvemateriale", "proevemateriale")))
+  }
+  if (col_key %in% c("c_domain", "domain", "organisme", "organism", "refmicroorganism", "microorganism", "microorganismidentificationtext")) {
+    return(mk("microbiology_organism_domain", "Organism/domain group", "Organism/domain", "Microbiology organism/domain group field.", c("organism", "domain", "microorganism")))
+  }
+  if (col_key %in% c("investigationinterpretation", "c_categoricalresult_old", "c_categoricalresult", "result_class", "result", "proveresultat", "proeveresultat", "pr_veresultat", "sensitivitet_resultat")) {
+    if (col_key == "sensitivitet_resultat") {
+      return(mk("microbiology_susceptibility_result", "Susceptibility result", "Resistance/susceptibility", "Blood-culture susceptibility result field.", c("susceptibility result", "sensitivity result", "resistant", "susceptible")))
+    }
+    return(mk("microbiology_result_class", "Microbiology result class / interpretation", "Result interpretation", "Microbiology result class or interpretation field.", c("result class", "interpretation", "positive", "negative")))
+  }
+  if (col_key %in% c("investigationexamination", "investigationexaminationtype", "c_analysisgroup", "c_new_analysisgroup", "analysisgroup", "analysisgroup_mads", "culture_group", "analysisname", "analysisshortname", "komponentnavn", "type")) {
+    return(mk("microbiology_culture_group", if (grepl("bloddyrkning", source_key)) "Blood-culture component / workflow type" else "Culture / analysis group", "Culture group", "Microbiology culture, analysis-group, component, or workflow-type field.", c("culture group", "analysis group", "BLOODCULTURE", "URINECULTURE")))
+  }
+  if (col_key %in% c("antibiotika", "antibiotic", "antibioticnamecoderesponsible", "antibioticnametext", "antibioticnamecodetype")) {
+    return(mk("microbiology_antibiotic", "Microbiology antibiotic", "Resistance/susceptibility", "Antibiotic field in microbiology resistance/susceptibility evidence.", c("antibiotic", "antibiotika")))
+  }
+  if (grepl("susceptibility", col_key)) return(mk("microbiology_susceptibility_result", "Susceptibility result", "Resistance/susceptibility", "Antibiotic susceptibility/resistance result or method field.", c("susceptibility", "resistance", "sensitive")))
+  if (col_key %in% c("hospital", "c_hospital", "hospital_area_name", "lab", "laboratory", "institution", "c_hospitalcode", "referringhospital", "hospital_name", "region_name")) {
+    return(mk("microbiology_lab_source", "Microbiology laboratory / hospital source", "Source/lab", "Microbiology laboratory, hospital, region, or source field.", c("hospital", "lab", "source")))
+  }
+  if (grepl("bloddyrkning", source_key)) {
+    return(mk(paste0("microbiology_", semantic_id_from(gsub("^sp_", "", source_key))), paste("Blood-culture workflow", gsub("^.*bloddyrkning_", "", source_key), "field"), "SP blood-culture workflow", "SP blood-culture workflow field with part context preserved.", c("SP blood culture", source_name, column), "medium", "candidate"))
+  }
+  mk("microbiology_workflow_signal", "Microbiology workflow signal", "Microbiology workflow", "Microbiology aggregate workflow field.", c("microbiology", column), "medium", "candidate")
+}
+
+microbiology_date_like_column <- function(column) {
+  grepl("(^|_)(date|dato|datetime|time|tidspunkt)($|_)|_dt$|dato|tidspunkt", column, ignore.case = TRUE)
+}
+
+microbiology_free_text_column <- function(column) {
+  grepl("clinicalinformation|requisitioninformationtext|commentsgrouping|resultsummary|investigationexaminationsummary|resultat_tekst|kliniske_oplysninger|microscopicresult|tekst|text|comment|summary|oplysninger", column, ignore.case = TRUE)
+}
+
+microbiology_broad_domain_value <- function(value) {
+  key <- tolower(trimws(as.character(value %||% "")))
+  key %in% c("virus", "bacteria", "bacterium", "fungus", "fungi", "parasites", "protozoa", "helminths", "parasites/protozoa/helminths", "other", "unclassified", "unknown", "null", "negative", "positive", "not interpreted", "not analyzed", "not analysed", "inconclusive", "sent to external lab")
+}
+
+microbiology_safe_display_value <- function(column, value, concept_id, n, min_cell_count) {
+  value <- as.character(value %||% "")
+  if (!nzchar(value)) return("")
+  if (is.na(suppressWarnings(as.numeric(n))) || suppressWarnings(as.numeric(n)) < min_cell_count) return("suppressed / not shown")
+  if (identical(concept_id, "microbiology_organism_domain") && !microbiology_broad_domain_value(value)) return("suppressed / not shown")
+  value
 }
 
 semantic_domain_variable <- function(clinical_group, code, column) {

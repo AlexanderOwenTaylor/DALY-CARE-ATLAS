@@ -83,6 +83,7 @@ const targets = [
   { name: "cll", tab: "registries", sub: "reg-cll" },
   { name: "treatment", tab: "treatment", sub: "treatment-dashboard" },
   { name: "laboratory", tab: "laboratory", sub: "lab-npu" },
+  { name: "microbiology", tab: "clinical", sub: "clinical-microbiology" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 

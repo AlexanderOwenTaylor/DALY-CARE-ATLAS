@@ -93,6 +93,7 @@ expect_true(grepl("data-sub=\"situation-headlines\"", html, fixed = TRUE), "HTML
 expect_true(grepl("data-sub=\"dictionary-lineage\"", html, fixed = TRUE), "HTML should include semantic dictionary sub-tabs.")
 expect_true(grepl("data-sub=\"reg-damyda\"", html, fixed = TRUE), "HTML should include DaMyDa registry sub-tabs.")
 expect_true(grepl("data-sub=\"clinical-diagnoses\"", html, fixed = TRUE), "HTML should include clinical module sub-tabs.")
+expect_true(grepl("data-sub=\"clinical-microbiology\"", html, fixed = TRUE), "HTML should include Microbiology/Infection clinical sub-tab.")
 expect_true(grepl("treatment-dashboard", html, fixed = TRUE), "HTML should include the Treatment dashboard container.")
 expect_true(grepl("data-sub=\"lab-npu\"", html, fixed = TRUE), "HTML should include laboratory/NPU sub-tabs.")
 expect_true(grepl("data-sub=\"ehr-sp\"", html, fixed = TRUE), "HTML should include EHR module sub-tabs.")
@@ -121,6 +122,7 @@ expect_true(grepl("function renderLYFOPanel()", html, fixed = TRUE), "HTML shoul
 expect_true(grepl("function renderCLLPanel()", html, fixed = TRUE), "HTML should include the dedicated CLL renderer.")
 expect_true(grepl("function renderTreatmentPanel()", html, fixed = TRUE), "HTML should include the dedicated Treatment renderer.")
 expect_true(grepl("function renderLaboratoryNPUPanel()", html, fixed = TRUE), "HTML should include the dedicated Laboratory/NPU renderer.")
+expect_true(grepl("function renderMicrobiologyPanel()", html, fixed = TRUE), "HTML should include the dedicated Microbiology/Infection renderer.")
 for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
 }
@@ -141,6 +143,7 @@ expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visu
 expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
+expect_true(grepl("{ name: \"microbiology\", tab: \"clinical\", sub: \"clinical-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Microbiology/Infection target.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -156,6 +159,7 @@ expect_false(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, 
 expect_true(grepl("setHtml(\"registry-cll\", renderCLLPanel())", html, fixed = TRUE), "CLL should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"treatment-dashboard\", renderTreatmentPanel())", html, fixed = TRUE), "Treatment should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"laboratory-npu-dashboard\", renderLaboratoryNPUPanel())", html, fixed = TRUE), "Laboratory/NPU should be wired to its dedicated renderer.")
+expect_true(grepl("setHtml(\"clinical-microbiology-cards\", renderMicrobiologyPanel())", html, fixed = TRUE), "Microbiology/Infection should be wired to its dedicated renderer.")
 expect_false(grepl("setHtml(\"treatment-source-cards\", sourceTiles", html, fixed = TRUE), "Treatment should not render source summary through generic source tiles.")
 expect_false(grepl("setHtml(\"treatment-medicine-cards\", sourceTiles", html, fixed = TRUE), "Treatment medicine evidence should not render through generic source tiles.")
 expect_false(grepl("setHtml(\"treatment-procedure-cards\", sourceTiles", html, fixed = TRUE), "Treatment procedure evidence should not render through generic source tiles.")
@@ -188,6 +192,15 @@ for (needle in c("Source / coverage", "Treatment evidence layers", "ATC medicati
 }
 for (needle in c("Laboratory / NPU atlas", "Lab evidence layers", "Core lab concepts", "Cross-source NPU concordance", "Haematology", "Renal function", "Inflammation and biochemistry", "Immunoglobulins and M-protein", "Myeloma / lymphoma / CLL registry lab fields", "NPU code dictionary", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Laboratory/NPU renderer should contain section:", needle))
+}
+for (needle in c("Microbiology / infection atlas", "Microbiology evidence layers", "PERSIMUNE analysis", "PERSIMUNE culture", "Resistance / susceptibility", "Microscopy", "SP blood-culture workflow", "Sample material", "Organism/domain", "Result class", "Antibiotic/susceptibility", "Hospital/lab source", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should contain section:", needle))
+}
+for (needle in c("function microbiologyLayer", "function renderMicrobiologyLayerCards", "function renderSpBloodCultureWorkflow", "function renderMicrobiologyRawLineageByLayer", "Detailed organism/species values are suppressed or grouped", "Free text, notes, report examples, and raw date values are not emitted as categorical bars")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should include guarded source-aware logic:", needle))
+}
+for (needle in c("PERSIMUNE_microbiology_analysis", "PERSIMUNE_microbiology_culture", "PERSIMUNE_microbiology_culture_resistance", "PERSIMUNE_microbiology_microscopy", "SP_Bloddyrkning_del1", "SP_Bloddyrkning_del2", "SP_Bloddyrkning_del3", "SP_Bloddyrkning_del4", "Virus", "Bacteria", "Fungus", "Negative", "Positive", "Not interpreted", "Blood", "Swab", "Stool", "BAL", "BLOODCULTURE", "URINECULTURE", "antibiotika", "sensitivitet_resultat")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should be able to surface evidenced term:", needle))
 }
 for (needle in c("function labSourceLayer", "function labConceptCard", "function renderLabConcordance", "function renderLabRawLineageByLayer", "labConceptSpecs", "NPU code coverage is not the same as harmonized result-value availability", "Registry lab fields are baseline/registry-specific fields, not full longitudinal lab streams")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Laboratory/NPU renderer should include guarded lab atlas logic:", needle))
@@ -600,6 +613,77 @@ registry_treatment_context <- semantic_dictionary[
 if (nrow(registry_treatment_context)) {
   expect_true(any(grepl("not a complete medication administration record", registry_treatment_context$clinical_caveat, fixed = TRUE)), "Registry treatment fields should warn that they are not complete medication administration records.")
 }
+microbiology_rows <- semantic_dictionary[semantic_dictionary$clinical_group == "Microbiology", , drop = FALSE]
+expect_true(nrow(microbiology_rows) > 0, "Semantic output should include microbiology/infection rows.")
+microbiology_expect_if_present <- function(rows, present, mapped, message) {
+  if (any(present)) {
+    expect_true(any(mapped), message)
+  }
+}
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_analysis" & grepl("samplematerial|material|proeve|prøve", microbiology_rows$raw_column, ignore.case = TRUE),
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_analysis" & microbiology_rows$clinical_concept_id == "microbiology_sample_material" & grepl("PERSIMUNE analysis", microbiology_rows$clinical_subgroup, fixed = TRUE),
+  "PERSIMUNE analysis sample-material rows should keep analysis-layer context."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_culture" & microbiology_rows$raw_column %in% c("investigationexamination", "investigationexaminationtype", "c_analysisgroup", "c_new_analysisgroup", "analysisgroup", "culture_group"),
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_culture" & microbiology_rows$clinical_concept_id == "microbiology_culture_group",
+  "PERSIMUNE culture rows should include culture/analysis-group mappings."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_culture_resistance" & grepl("antibiotic|antibiotika|susceptibility|sensitivitet", microbiology_rows$raw_column, ignore.case = TRUE),
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_culture_resistance" & microbiology_rows$clinical_concept_id %in% c("microbiology_antibiotic", "microbiology_susceptibility_result"),
+  "PERSIMUNE resistance rows should include antibiotic/susceptibility mappings."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_microscopy",
+  microbiology_rows$source_name == "PERSIMUNE_microbiology_microscopy" & grepl("microscopy", microbiology_rows$clinical_subgroup, ignore.case = TRUE),
+  "PERSIMUNE microscopy rows should keep microscopy-layer context."
+)
+expect_true(all(c("SP_Bloddyrkning_del1", "SP_Bloddyrkning_del2", "SP_Bloddyrkning_del3", "SP_Bloddyrkning_del4") %in% microbiology_rows$source_name), "SP blood-culture rows should preserve del1-del4 source context.")
+microbiology_expect_if_present(
+  microbiology_rows,
+  grepl("samplematerial|material|proeve|prøve", microbiology_rows$raw_column, ignore.case = TRUE),
+  grepl("samplematerial|material|proeve|prøve", microbiology_rows$raw_column, ignore.case = TRUE) & microbiology_rows$clinical_concept_id == "microbiology_sample_material",
+  "Sample-material fields should map to microbiology sample material."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$raw_column %in% c("c_domain", "domain", "organisme", "organism", "refmicroorganism", "microorganism"),
+  microbiology_rows$raw_column %in% c("c_domain", "domain", "organisme", "organism", "refmicroorganism", "microorganism") & microbiology_rows$clinical_concept_id == "microbiology_organism_domain",
+  "Domain/organism fields should map to organism/domain group."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$raw_column %in% c("investigationinterpretation", "c_categoricalresult_old", "c_categoricalresult", "result_class", "result", "proveresultat", "proeveresultat", "prøveresultat"),
+  microbiology_rows$raw_column %in% c("investigationinterpretation", "c_categoricalresult_old", "c_categoricalresult", "result_class", "result", "proveresultat", "proeveresultat", "prøveresultat") & microbiology_rows$clinical_concept_id == "microbiology_result_class",
+  "Result interpretation fields should map to microbiology result class."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$raw_column == "antibiotika",
+  microbiology_rows$raw_column == "antibiotika" & microbiology_rows$clinical_concept_id == "microbiology_antibiotic",
+  "Blood-culture antibiotic fields should map to microbiology antibiotic context."
+)
+microbiology_expect_if_present(
+  microbiology_rows,
+  microbiology_rows$raw_column == "sensitivitet_resultat",
+  microbiology_rows$raw_column == "sensitivitet_resultat" & microbiology_rows$clinical_concept_id == "microbiology_susceptibility_result",
+  "Blood-culture sensitivity fields should map to susceptibility result."
+)
+expect_false(any(microbiology_rows$clinical_concept_id %in% c("diagnosis_or_disease_label", "pathology_signal")), "Organism/domain microbiology rows must not map to diagnosis or pathology concepts.")
+expect_false(any(microbiology_rows$clinical_group == "Treatment"), "Microbiology rows must not be classified as treatment exposure.")
+expect_false(any(grepl("ATC", microbiology_rows$code_system, fixed = TRUE)), "Microbiology antibiotic rows must not become ATC treatment signals.")
+expect_false(any(microbiology_rows$clinical_concept_id == "microbiology_lab_source" & grepl("infection phenotype", microbiology_rows$semantic_meaning, ignore.case = TRUE)), "Hospital/lab source rows must not be infection phenotypes.")
+expect_false(any(grepl("date|dato|tidspunkt|datetime", microbiology_rows$raw_column, ignore.case = TRUE)), "Microbiology semantic rows should not render raw date-like values as categorical rows.")
+expect_false(any(grepl("clinicalinformation|requisitioninformationtext|commentsgrouping|resultsummary|tekst|text|oplysninger", microbiology_rows$raw_column, ignore.case = TRUE)), "Microbiology semantic rows should not expose free-text example columns.")
+broad_micro_values <- c("Virus", "Bacteria", "Bacterium", "Fungus", "Fungi", "Parasites/Protozoa/Helminths", "Other", "Unclassified", "Unknown", "NULL", "Negative", "Positive", "Not interpreted", "Not analyzed", "Not analysed", "Inconclusive", "Sent to external lab", "suppressed / not shown")
+organism_rows <- microbiology_rows[microbiology_rows$clinical_concept_id == "microbiology_organism_domain" & nzchar(microbiology_rows$raw_value), , drop = FALSE]
+expect_true(all(organism_rows$raw_value %in% broad_micro_values), "Detailed organism/species values should be suppressed/grouped before public semantic output.")
 expect_true(any(semantic_code_map$code_system == "SNOMED"), "Semantic code map should include SNOMED pathology signals.")
 expect_true(nrow(semantic_panel_links) > 0, "Semantic panel links should be generated.")
 expect_true(all(nzchar(semantic_dictionary$evidence_file)), "Every semantic row should include an evidence file.")
