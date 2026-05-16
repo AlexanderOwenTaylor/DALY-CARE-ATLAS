@@ -803,8 +803,11 @@ semantic_treatment_sources <- function(project_root, min_cell_count) {
     semantic_named_code_rows(read_cartography_table("cartography_smr_atc_top_named.tsv", project_root), "atc", "name", "n", "SMR_medicine", "cartography_smr_atc_top_named.tsv", min_cell_count, clinical_group = "Treatment")
   )
   code_map <- semantic_dedupe_code_map(bind_rows_base(rows))
+  code_map <- semantic_reclassify_supporting_lab_codes(code_map)
+  code_map <- semantic_apply_lab_source_context_code_map(code_map)
   code_map <- semantic_apply_treatment_source_context_code_map(code_map)
   dictionary <- semantic_dictionary_from_code_map(code_map, "Treatment", "Medication and procedure codes", "code_table")
+  dictionary <- semantic_apply_lab_source_context_dictionary(dictionary)
   dictionary <- semantic_apply_treatment_source_context_dictionary(dictionary)
   list(
     dictionary = dictionary,
@@ -812,6 +815,55 @@ semantic_treatment_sources <- function(project_root, min_cell_count) {
     code_map = code_map,
     panel_links = semantic_panel_links_for_dictionary(dictionary)
   )
+}
+
+semantic_npu_dnk_code_system <- function(code_system = "", code = "") {
+  code_system <- toupper(trimws(as.character(code_system %||% "")))
+  code <- toupper(trimws(as.character(code %||% "")))
+  if (code_system %in% c("NPU", "DNK")) return(code_system)
+  if (grepl("^NPU[0-9]", code)) return("NPU")
+  if (grepl("^DNK[0-9]", code)) return("DNK")
+  ""
+}
+
+semantic_lab_like_code_context <- function(source_name = "", object_name = "", evidence_file = "", panel = "") {
+  key <- semantic_id_from(paste(source_name %||% "", object_name %||% "", evidence_file %||% "", panel %||% "", sep = " "))
+  grepl(
+    "sds_lab|sdslab|laboratorie|laboratory|labka|sp_alleprovesvar|sp_alleproevesvar|alleprovesvar|alleproevesvar|persimune_biochemistry|biochemistry|haematology|hematology|immunoglobulin|npu_dictionary|npu_disease|npu_lab",
+    key
+  )
+}
+
+semantic_known_lab_concept <- function(code = "", name = "") {
+  def <- lab_concept_definition(code, name)
+  !grepl("^lab_", def$concept_id)
+}
+
+semantic_reclassify_supporting_lab_codes <- function(code_map) {
+  if (!is.data.frame(code_map) || !nrow(code_map)) return(code_map)
+  supporting_note <- "Surfaced by treatment-matrix scan as supporting laboratory evidence; not treatment exposure."
+  for (i in seq_len(nrow(code_map))) {
+    lab_system <- semantic_npu_dnk_code_system(code_map$code_system[[i]], code_map$code[[i]])
+    if (!nzchar(lab_system)) next
+    if (!(
+      semantic_lab_like_code_context(code_map$source_name[[i]], code_map$object_name[[i]], code_map$evidence_file[[i]], code_map$panel[[i]]) ||
+        semantic_known_lab_concept(code_map$code[[i]], code_map$code_name[[i]])
+    )) next
+
+    def <- lab_concept_definition(code_map$code[[i]], code_map$code_name[[i]])
+    ctx <- semantic_lab_source_context(code_map$source_name[[i]], code_map$object_name[[i]], lab_system)
+    code_map$semantic_id[[i]] <- semantic_id_from(c("supporting_lab", code_map$source_name[[i]], code_map$code[[i]], code_map$code_name[[i]]))
+    code_map$clinical_concept_id[[i]] <- def$concept_id
+    code_map$clinical_variable[[i]] <- def$variable
+    code_map$clinical_group[[i]] <- "Laboratory"
+    code_map$code_system[[i]] <- lab_system
+    code_map$panel[[i]] <- paste(ctx$panel, def$subgroup, sep = " - ")
+    code_map$notes[[i]] <- semantic_append_text(code_map$notes[[i]], paste(ctx$meaning, def$caveat, ctx$caveat))
+    if (grepl("cartography_disease_treatment_matrix", code_map$evidence_file[[i]] %||% "", fixed = TRUE)) {
+      code_map$notes[[i]] <- semantic_append_text(code_map$notes[[i]], supporting_note)
+    }
+  }
+  code_map
 }
 
 semantic_treatment_source_context <- function(source_name = "", object_name = "", code_system = "",

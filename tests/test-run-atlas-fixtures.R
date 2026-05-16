@@ -540,6 +540,22 @@ expect_false(any(grepl("CReaktivtProtein", lab_semantic_rows$raw_column, fixed =
 expect_false(any(lab_semantic_rows$raw_column == "Reg_CalciumAlbuminkorrigeret" & lab_semantic_rows$clinical_concept_id == "albumin"), "Laboratory semantic output must not map albumin-corrected calcium to albumin.")
 expect_false(any(lab_semantic_rows$raw_column == "Reg_LYMFOCYTFORDOBLIN" & lab_semantic_rows$clinical_concept_id == "lymphocytes"), "Laboratory semantic output must not map lymphocyte doubling to lymphocyte count.")
 expect_false(any(semantic_code_map$clinical_group == "Laboratory" & semantic_code_map$code_system %in% c("ATC", "SKS")), "ATC/SKS treatment rows must not appear in the primary Laboratory/NPU code map.")
+npu_dnk_code_rows <- semantic_code_map[semantic_code_map$code_system %in% c("NPU", "DNK"), , drop = FALSE]
+expect_false(any(npu_dnk_code_rows$clinical_group == "Treatment"), "NPU/DNK laboratory code rows must not remain classified as Treatment.")
+expect_false(any(grepl("^treatment_", npu_dnk_code_rows$clinical_concept_id)), "NPU/DNK laboratory code rows must not use treatment-prefixed concept IDs.")
+expect_lab_code_map <- function(code, concept_id, variable_pattern) {
+  rows <- semantic_code_map[semantic_code_map$code == code, , drop = FALSE]
+  if (!nrow(rows)) return(invisible(TRUE))
+  expect_true(any(rows$clinical_group == "Laboratory" & rows$clinical_concept_id == concept_id & grepl(variable_pattern, rows$clinical_variable, ignore.case = TRUE)), paste("Semantic code map should keep", code, "as", concept_id, "/ Laboratory."))
+}
+expect_lab_code_map("NPU02319", "haemoglobin", "Haemoglobin")
+expect_lab_code_map("NPU02593", "creatinine", "Creatinine")
+expect_lab_code_map("DNK35302", "egfr", "eGFR")
+expect_lab_code_map("NPU04998", "crp", "CRP")
+treatment_matrix_lab_rows <- npu_dnk_code_rows[grepl("cartography_disease_treatment_matrix", npu_dnk_code_rows$evidence_file, fixed = TRUE), , drop = FALSE]
+if (nrow(treatment_matrix_lab_rows)) {
+  expect_true(all(grepl("supporting laboratory evidence; not treatment exposure", treatment_matrix_lab_rows$notes, fixed = TRUE)), "Treatment-matrix NPU/DNK rows should carry supporting-lab provenance caveat.")
+}
 expect_true(any(semantic_value_map$raw_column == "ryger" & semantic_value_map$display_value == "Former smoker"), "Semantic value map should include smoking value meanings.")
 expect_true(any(semantic_code_map$code_system == "ATC"), "Semantic code map should include ATC treatment signals.")
 expect_true(any(semantic_code_map$code_system == "SKS"), "Semantic code map should include SKS signals.")
@@ -615,6 +631,7 @@ expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX
 expect_true(any(panel_raw_fields$raw_code == "NPU02319" & panel_raw_fields$clinical_variable == "Haemoglobin"), "Panel raw fields should include NPU02319 to Haemoglobin.")
 expect_true(any(panel_raw_fields$panel_id == "laboratory_npu" & panel_raw_fields$raw_code == "NPU02319" & panel_raw_fields$clinical_variable == "Haemoglobin"), "Laboratory/NPU panel raw fields should include NPU02319 to Haemoglobin.")
 expect_true(any(panel_raw_fields$panel_id == "laboratory_npu" & panel_raw_fields$raw_code == "DNK35302" & grepl("eGFR", panel_raw_fields$clinical_variable, fixed = TRUE)), "Laboratory/NPU panel raw fields should include DNK35302 to eGFR / CKD-EPI.")
+expect_false(any(panel_raw_fields$panel_id == "treatment" & grepl("^(NPU|DNK)", panel_raw_fields$raw_code, ignore.case = TRUE)), "Treatment panel raw fields must not include NPU/DNK laboratory rows as treatment lineage.")
 expect_false(any(panel_raw_fields$panel_id == "laboratory_npu" & grepl("^L0|^BW", panel_raw_fields$raw_code, ignore.case = TRUE)), "Laboratory/NPU panel raw fields should not include treatment ATC/SKS-style codes as primary lab lineage.")
 lyfo_panel_raw <- panel_raw_fields[panel_raw_fields$source_name == "RKKP_LYFO", , drop = FALSE]
 expect_true(any(lyfo_panel_raw$raw_column == "Reg_WHOHistologikode1" & lyfo_panel_raw$clinical_concept_id == "lymphoma_subtype_code"), "Panel raw fields should keep LYFO WHO histology in subtype-code context.")

@@ -139,6 +139,19 @@ expect_false(any(grepl("CReaktivtProtein", lab_rows$raw_column, fixed = TRUE) & 
 expect_false(any(lab_rows$raw_column == "Reg_CalciumAlbuminkorrigeret" & lab_rows$clinical_concept_id == "albumin"), "Laboratory albumin-corrected calcium must not map to albumin.")
 expect_false(any(lab_rows$raw_column == "Reg_LYMFOCYTFORDOBLIN" & lab_rows$clinical_concept_id == "lymphocytes"), "Lymphocyte doubling must not map to lymphocyte count.")
 expect_false(any(code_map$clinical_group == "Laboratory" & code_map$code_system %in% c("ATC", "SKS")), "ATC/SKS treatment rows must not appear as Laboratory code-map rows.")
+npu_dnk_code_rows <- code_map[code_map$code_system %in% c("NPU", "DNK"), , drop = FALSE]
+expect_false(any(npu_dnk_code_rows$clinical_group == "Treatment"), "NPU/DNK laboratory code rows must not be classified as Treatment.")
+expect_false(any(grepl("^treatment_", npu_dnk_code_rows$clinical_concept_id)), "NPU/DNK laboratory code rows must not use treatment-prefixed concept IDs.")
+expect_true(any(code_map$code == "NPU02319" & code_map$clinical_group == "Laboratory" & code_map$clinical_variable == "Haemoglobin"), "NPU02319 should remain Haemoglobin / Laboratory in the code map.")
+expect_true(any(code_map$code == "NPU02593" & code_map$clinical_group == "Laboratory" & code_map$clinical_concept_id == "creatinine"), "NPU02593 should remain Creatinine / Laboratory in the code map.")
+expect_true(any(code_map$code == "DNK35302" & code_map$clinical_group == "Laboratory" & code_map$clinical_concept_id == "egfr"), "DNK35302 should remain eGFR / Laboratory in the code map.")
+if (any(code_map$code == "NPU04998")) {
+  expect_true(any(code_map$code == "NPU04998" & code_map$clinical_group == "Laboratory" & code_map$clinical_concept_id == "crp"), "NPU04998 should remain CRP / Laboratory in the code map.")
+}
+treatment_matrix_lab_rows <- npu_dnk_code_rows[grepl("cartography_disease_treatment_matrix", npu_dnk_code_rows$evidence_file, fixed = TRUE), , drop = FALSE]
+if (nrow(treatment_matrix_lab_rows)) {
+  expect_true(all(grepl("supporting laboratory evidence; not treatment exposure", treatment_matrix_lab_rows$notes, fixed = TRUE)), "Treatment-matrix NPU/DNK rows should carry supporting-lab provenance caveat.")
+}
 expect_true(nrow(search_semantic("ATC")) > 0, "Search for ATC should return treatment/medication signals.")
 expect_true(nrow(search_semantic("SKS")) > 0, "Search for SKS should return diagnosis/procedure/treatment/imaging signals.")
 expect_true(nrow(search_semantic("SNOMED")) > 0, "Search for SNOMED should return pathology signals.")
