@@ -3086,47 +3086,138 @@
             return aRank - bRank || numberValue(b.n_rows) - numberValue(a.n_rows) || numberValue(a.sort_order) - numberValue(b.sort_order);
           });
       }
+      function microbiologySafeLabel(row) {
+        const label = [row.raw_value, row.raw_descriptor, row.raw_code, row.display_value]
+          .map(text)
+          .find(value => {
+            const key = normalizeClinicalKey(value);
+            return key && key !== "null" && key !== "suppressednotshown" && key !== normalizeClinicalKey(row.clinical_variable || "");
+          });
+        return label || "";
+      }
+      function microbiologyPanelDistributionRows(predicate) {
+        return (panelDistributionRows || [])
+          .filter(row => row.panel_id === "clinical_microbiology")
+          .filter(row => !microbiologyIsDateLike(row))
+          .filter(row => !microbiologyIsFreeText(row))
+          .filter(row => microbiologySafeLabel(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => numberValue(b.n || b.statistic_value) - numberValue(a.n || a.statistic_value) || numberValue(a.sort_order) - numberValue(b.sort_order));
+      }
       function microbiologyDistributionRows(predicate) {
         return microbiologyRawRows(row => {
-          const value = text(row.raw_value || row.raw_descriptor || "");
-          if (!value || value === "suppressed / not shown") return false;
+          const value = microbiologySafeLabel(row);
+          if (!value) return false;
           return predicate ? predicate(row) : true;
         });
       }
+      const microbiologyAtGlanceSpecs = [
+        { title: "Sample material", ids: ["microbiology_sample_material"], values: ["Blood", "Swab", "Stool", "Airway secretions", "BAL", "Urine", "Tracheal secretions", "Bronchial secretions"], tone: "blue" },
+        { title: "Organism/domain", ids: ["microbiology_organism_domain"], values: ["Virus", "Bacteria", "Bacterium", "Fungus", "Fungi", "Other", "Unclassified"], tone: "green", broadOnly: true },
+        { title: "Result class / interpretation", ids: ["microbiology_result_class"], values: ["Negative", "Positive", "Not interpreted", "Not analyzed", "Not analysed", "Inconclusive", "Sent to external lab"], tone: "amber" },
+        { title: "Culture group", ids: ["microbiology_culture_group"], values: ["BLOODCULTURE", "URINECULTURE", "EKSPEKTORAT", "TRACHEALSEKRET", "BAL"], tone: "cyan" },
+        { title: "Antibiotic / susceptibility", ids: ["microbiology_antibiotic", "microbiology_susceptibility", "microbiology_susceptibility_result"], values: ["antibiotika", "sensitivitet_resultat", "Susceptible", "Sensitive", "Følsom", "Resistant", "Resistent", "Intermediate", "Intermediær"], tone: "plum" },
+        { title: "SP blood-culture workflow", layer: "sp_blood_culture", values: ["type", "komponentnavn", "organisme", "antibiotika", "sensitivitet_resultat"], tone: "red" }
+      ];
+      function microbiologyValueMatches(row, values) {
+        if (!values || !values.length) return true;
+        const labelKey = normalizeClinicalKey(microbiologySafeLabel(row));
+        const columnKey = normalizeClinicalKey(row.raw_column || "");
+        return values.some(value => {
+          const key = normalizeClinicalKey(value);
+          return labelKey === key || labelKey.includes(key) || key.includes(labelKey) || columnKey === key || columnKey.includes(key);
+        });
+      }
+      function microbiologyMatchesAtGlanceSpec(row, spec) {
+        const conceptMatch = !spec.ids || spec.ids.includes(row.clinical_concept_id);
+        const layerMatch = !spec.layer || microbiologyLayer(row).id === spec.layer;
+        if (!conceptMatch || !layerMatch) return false;
+        if (spec.broadOnly && !["virus", "bacteria", "bacterium", "fungus", "fungi", "other", "unclassified"].includes(normalizeClinicalKey(microbiologySafeLabel(row)))) return false;
+        return microbiologyValueMatches(row, spec.values);
+      }
+      function microbiologyRowsForAtGlance(spec) {
+        const distributionRows = microbiologyPanelDistributionRows(row => microbiologyMatchesAtGlanceSpec(row, spec));
+        if (distributionRows.length) return distributionRows;
+        return microbiologyDistributionRows(row => microbiologyMatchesAtGlanceSpec(row, spec));
+      }
       function microbiologyConceptRows(ids) {
         const wanted = new Set(Array.isArray(ids) ? ids : [ids]);
-        return microbiologyDistributionRows(row => wanted.has(row.clinical_concept_id));
+        const distRows = microbiologyPanelDistributionRows(row => wanted.has(row.clinical_concept_id));
+        return distRows.length ? distRows : microbiologyDistributionRows(row => wanted.has(row.clinical_concept_id));
       }
       function microbiologyRowsForLayer(layerId) {
         return microbiologyRawRows(row => microbiologyLayer(row).id === layerId);
       }
       function microbiologyBarRows(rows) {
         return (rows || []).map(row => ({
-          label: row.raw_value || row.raw_descriptor || row.raw_column || row.clinical_variable,
-          n: row.n_rows || row.n || "",
+          label: microbiologySafeLabel(row) || row.raw_column || row.clinical_variable,
+          n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
+          count_scope: row.count_scope,
+          denominator_scope: row.denominator_scope,
+          profile_scope: row.profile_scope,
           tone: microbiologyLayer(row).tone
         }));
+      }
+      function renderMicrobiologyAtGlance() {
+        return `<div class="grid grid-3 microbiology-at-a-glance">${microbiologyAtGlanceSpecs.map(spec => {
+          const rows = microbiologyRowsForAtGlance(spec);
+          const scope = rows.find(row => row.count_scope || row.denominator_scope || row.profile_scope);
+          return renderValueMapCard(spec.title, microbiologyBarRows(rows), {
+            tone: spec.tone,
+            limit: 8,
+            scope,
+            empty: "not available in current aggregate output"
+          });
+        }).join("")}</div>`;
+      }
+      function microbiologySourceSourceKey(value) {
+        return normalizeClinicalKey(value || "");
+      }
+      function microbiologyCatalogCount(source) {
+        const sourceKey = microbiologySourceSourceKey(source);
+        const hit = (catalogRows || []).find(row => {
+          const hay = microbiologySourceSourceKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" "));
+          return hay && sourceKey && (hay.includes(sourceKey) || sourceKey.includes(hay));
+        });
+        return hit ? numberValue(hit.n_rows) : 0;
+      }
+      function microbiologyPanelKpiCount(source) {
+        const sourceKey = microbiologySourceSourceKey(source);
+        const hit = (panelKpiRows || []).find(row =>
+          row.panel_id === "clinical_microbiology" &&
+          microbiologySourceSourceKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey)
+        );
+        return hit ? numberValue(hit.value) : 0;
+      }
+      function microbiologyDistributionCount(source) {
+        const sourceKey = microbiologySourceSourceKey(source);
+        return microbiologyPanelDistributionRows(row => microbiologySourceSourceKey(row.source_name).includes(sourceKey))
+          .reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0);
       }
       function renderMicrobiologySourceCoverage(rows) {
         const bySource = {};
         (rows || []).forEach(row => {
           const source = row.source_name || "Microbiology source";
-          if (!bySource[source]) bySource[source] = { source, n: 0, fields: new Set(), layer: microbiologyLayer(row) };
-          bySource[source].n += numberValue(row.n_rows);
+          if (!bySource[source]) bySource[source] = { source, rawCount: 0, fields: new Set(), layer: microbiologyLayer(row) };
+          bySource[source].rawCount += numberValue(row.n_rows);
           if (row.raw_column) bySource[source].fields.add(row.raw_column);
         });
-        const cards = Object.values(bySource).slice(0, 8).map(item => `
+        const cards = Object.values(bySource).slice(0, 8).map(item => {
+          const sourceCount = microbiologyCatalogCount(item.source) || microbiologyPanelKpiCount(item.source) || microbiologyDistributionCount(item.source) || item.rawCount;
+          const countValue = sourceCount || "Aggregate rows not available in current output";
+          return `
           <article class="clinical-card">
             ${renderBadge(item.layer.label, item.layer.tone)}
             <h3>${escapeHtml(item.source)}</h3>
             ${renderKpiStrip([
-              { label: "aggregate rows", value: item.n || "not available", tone: item.layer.tone },
+              { label: "aggregate rows", value: countValue, tone: item.layer.tone },
               { label: "fields", value: item.fields.size || "not available", tone: "cyan" }
             ], { tone: item.layer.tone })}
             <p class="mini">${escapeHtml(item.layer.captures)}</p>
           </article>
-        `).join("");
+        `;
+        }).join("");
         return cards ? `<div class="grid grid-4">${cards}</div>` : `<div class="empty">not available in current aggregate output</div>`;
       }
       function renderMicrobiologyLayerCards() {
@@ -3153,13 +3244,23 @@
         `;
       }
       function renderSpBloodCultureWorkflow() {
-        const parts = ["del1", "del2", "del3", "del4"];
+        const parts = [
+          { id: "del1", label: "workflow/order/specimen fields", fields: ["type", "samplematerial", "material", "proeve", "prøve", "specimen", "order"] },
+          { id: "del2", label: "component/result fields", fields: ["komponentnavn", "result", "proeveresultat", "prøveresultat", "component"] },
+          { id: "del3", label: "organism/antibiotic/sensitivity fields", fields: ["organisme", "antibiotika", "sensitivitet_resultat"] },
+          { id: "del4", label: "available workflow fields", fields: [] }
+        ];
         return `<div class="grid grid-4">${parts.map(part => {
-          const rows = microbiologyRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(`bloddyrkning_${part}`));
+          const rows = microbiologyRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(`bloddyrkning_${part.id}`));
+          const priorityRows = part.fields.length
+            ? rows.filter(row => part.fields.some(field => normalizeClinicalKey(row.raw_column || "").includes(normalizeClinicalKey(field))))
+            : rows;
+          const displayRows = priorityRows.length ? priorityRows : rows;
           return `<article class="clinical-card">
-            ${renderBadge(`SP blood culture ${part}`, "red")}
-            <h3>${escapeHtml(part)}</h3>
-            ${rows.length ? renderCollapsedRawLineage(rows, { limit: 5 }) : `<div class="empty">not available in current aggregate output</div>`}
+            ${renderBadge(`SP blood culture ${part.id}`, "red")}
+            <h3>${escapeHtml(part.id)}</h3>
+            <p class="mini">${escapeHtml(part.label)}</p>
+            ${displayRows.length ? renderCollapsedRawLineage(displayRows, { limit: 5 }) : `<div class="empty">not available in current aggregate output</div>`}
           </article>`;
         }).join("")}</div>`;
       }
@@ -3199,8 +3300,9 @@
               { label: "distribution rows", value: distributions.length || "not available", tone: "amber" },
               { label: "panel KPIs", value: kpis.length || "not available", tone: "plum" }
             ], { tone: "blue" })}
-            ${renderSectionCard("Source / coverage", renderMicrobiologySourceCoverage(rows), "blue")}
             ${renderSectionCard("Microbiology evidence layers", renderMicrobiologyLayerCards(), "cyan")}
+            ${renderSectionCard("At a glance", renderMicrobiologyAtGlance(), "green")}
+            ${renderSectionCard("Source / coverage", renderMicrobiologySourceCoverage(rows), "blue")}
             ${renderSectionCard("PERSIMUNE analysis", renderMicrobiologyLayerSection("PERSIMUNE analysis", "persimune_analysis", ["microbiology_sample_material", "microbiology_organism_domain", "microbiology_culture_group", "microbiology_result_class", "microbiology_lab_source"], "blue"), "blue")}
             ${renderSectionCard("PERSIMUNE culture", renderMicrobiologyLayerSection("PERSIMUNE culture", "persimune_culture", ["microbiology_culture_group", "microbiology_sample_material", "microbiology_organism_domain", "microbiology_result_class"], "green"), "green")}
             ${renderSectionCard("Resistance / susceptibility", renderMicrobiologyLayerSection("Resistance / susceptibility", "persimune_resistance", ["microbiology_antibiotic", "microbiology_susceptibility", "microbiology_susceptibility_result"], "plum"), "plum")}

@@ -144,6 +144,7 @@ expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", vi
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
 expect_true(grepl("{ name: \"microbiology\", tab: \"clinical\", sub: \"clinical-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Microbiology/Infection target.")
+expect_true(grepl("microbiologyAtGlancePresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Microbiology At a glance section.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -193,10 +194,10 @@ for (needle in c("Source / coverage", "Treatment evidence layers", "ATC medicati
 for (needle in c("Laboratory / NPU atlas", "Lab evidence layers", "Core lab concepts", "Cross-source NPU concordance", "Haematology", "Renal function", "Inflammation and biochemistry", "Immunoglobulins and M-protein", "Myeloma / lymphoma / CLL registry lab fields", "NPU code dictionary", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Laboratory/NPU renderer should contain section:", needle))
 }
-for (needle in c("Microbiology / infection atlas", "Microbiology evidence layers", "PERSIMUNE analysis", "PERSIMUNE culture", "Resistance / susceptibility", "Microscopy", "SP blood-culture workflow", "Sample material", "Organism/domain", "Result class", "Antibiotic/susceptibility", "Hospital/lab source", "Raw names / data lineage", "Use cases", "Caveats")) {
+for (needle in c("Microbiology / infection atlas", "Microbiology evidence layers", "At a glance", "PERSIMUNE analysis", "PERSIMUNE culture", "Resistance / susceptibility", "Microscopy", "SP blood-culture workflow", "Sample material", "Organism/domain", "Result class", "Antibiotic/susceptibility", "Hospital/lab source", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should contain section:", needle))
 }
-for (needle in c("function microbiologyLayer", "function renderMicrobiologyLayerCards", "function renderSpBloodCultureWorkflow", "function renderMicrobiologyRawLineageByLayer", "Detailed organism/species values are suppressed or grouped", "Free text, notes, report examples, and raw date values are not emitted as categorical bars")) {
+for (needle in c("function microbiologyLayer", "function microbiologyPanelDistributionRows", "function microbiologyRowsForAtGlance", "function renderMicrobiologyAtGlance", "microbiology-at-a-glance", "panelDistributionRows || []", "function renderMicrobiologyLayerCards", "function renderSpBloodCultureWorkflow", "function renderMicrobiologyRawLineageByLayer", "Aggregate rows not available in current output", "Detailed organism/species values are suppressed or grouped", "Free text, notes, report examples, and raw date values are not emitted as categorical bars")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should include guarded source-aware logic:", needle))
 }
 for (needle in c("PERSIMUNE_microbiology_analysis", "PERSIMUNE_microbiology_culture", "PERSIMUNE_microbiology_culture_resistance", "PERSIMUNE_microbiology_microscopy", "SP_Bloddyrkning_del1", "SP_Bloddyrkning_del2", "SP_Bloddyrkning_del3", "SP_Bloddyrkning_del4", "Virus", "Bacteria", "Fungus", "Negative", "Positive", "Not interpreted", "Blood", "Swab", "Stool", "BAL", "BLOODCULTURE", "URINECULTURE", "antibiotika", "sensitivitet_resultat")) {
@@ -615,6 +616,22 @@ if (nrow(registry_treatment_context)) {
 }
 microbiology_rows <- semantic_dictionary[semantic_dictionary$clinical_group == "Microbiology", , drop = FALSE]
 expect_true(nrow(microbiology_rows) > 0, "Semantic output should include microbiology/infection rows.")
+microbiology_distribution_rows <- panel_distributions[panel_distributions$panel_id == "clinical_microbiology", , drop = FALSE]
+expect_true(nrow(microbiology_distribution_rows) > 0, "Microbiology panel should expose product-layer distribution rows.")
+microbiology_distribution_has_value <- function(rows, values) {
+  hay <- apply(rows[, intersect(c("raw_value", "raw_descriptor", "raw_code", "display_value"), names(rows)), drop = FALSE], 1, paste, collapse = " ")
+  any(vapply(values, function(value) any(grepl(value, hay, fixed = TRUE)), logical(1)))
+}
+microbiology_expect_visible_if_distributed <- function(values, message) {
+  if (microbiology_distribution_has_value(microbiology_distribution_rows, values)) {
+    expect_true(any(vapply(values, function(value) grepl(value, html, fixed = TRUE), logical(1))), message)
+  }
+}
+microbiology_expect_visible_if_distributed(c("Bacteria", "Fungus", "Virus"), "Distributed organism/domain broad values should be renderable in the Microbiology panel.")
+microbiology_expect_visible_if_distributed(c("Negative", "Positive", "Not interpreted"), "Distributed result-class values should be renderable in the Microbiology panel.")
+microbiology_expect_visible_if_distributed(c("BLOODCULTURE", "URINECULTURE"), "Distributed culture-group values should be renderable in the Microbiology panel.")
+microbiology_expect_visible_if_distributed(c("antibiotika", "sensitivitet_resultat", "Følsom", "Resistent", "Intermediær"), "Distributed antibiotic/susceptibility values should be renderable in the Microbiology panel.")
+expect_false(any(grepl("date|dato|tidspunkt|datetime|free_text|clinicalinformation|requisitioninformationtext|commentsgrouping|resultsummary|oplysninger", microbiology_distribution_rows$raw_column, ignore.case = TRUE)), "Microbiology distribution bars should not expose date-like or free-text columns.")
 microbiology_expect_if_present <- function(rows, present, mapped, message) {
   if (any(present)) {
     expect_true(any(mapped), message)

@@ -136,6 +136,9 @@ for (const viewport of viewports) {
       const fullLineage = dom.match(/<div[^>]*class=["'][^"']*semantic-full-lineage[^"']*["'][^>]*>([\s\S]*?)<div[^>]*class=["'][^"']*lineage-block["'][^>]*>\s*<h3>Value map<\/h3>/i);
       report.dataDictionaryFullLineageTablePresent = fullLineage ? /<table/i.test(fullLineage[1]) : true;
     }
+    if (target.name === "microbiology") {
+      report.microbiologyAtGlancePresent = /class=["'][^"']*microbiology-at-a-glance/.test(dom) && /At a glance/.test(dom);
+    }
     reports.push(report);
   }
 }
@@ -156,7 +159,8 @@ fs.writeFileSync(
 const failures = reports.filter(report =>
   report.bodyOverflow ||
   (report.overflowing || []).length ||
-  (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent))
+  (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
+  (report.target === "microbiology" && !report.microbiologyAtGlancePresent)
 );
 if (failures.length) {
   console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);
