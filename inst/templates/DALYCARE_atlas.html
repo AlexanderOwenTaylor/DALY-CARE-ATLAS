@@ -1173,7 +1173,7 @@
         <button class="sub-tab" data-sub="lab-isotype">Isotype Finder</button>
         <button class="sub-tab" data-sub="lab-sources">Lab Sources</button>
       </div>
-      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Consensus NPU Dictionary</h2><p class="panel-sub">Dictionary coverage and observed usage by consensus vector.</p></div><div class="panel-body"><div id="npu-cards" class="grid"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-laboratory"></div></div></div></div></div>
+      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory / NPU atlas</h2><p class="panel-sub">Clinician-facing laboratory concept discovery across NPU/DNK codes, national LABKA/SDS, SP AlleProvesvar, PERSIMUNE biochemistry, and registry lab fields.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
       <div class="sub-pane" id="lab-detective"><div class="panel"><div class="panel-head"><h2 class="panel-title">NPU Detective</h2><p class="panel-sub">Observed NPU inventory and candidate codes from aggregate code panels.</p></div><div class="panel-body"><div id="detective-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-isotype"><div class="panel"><div class="panel-head"><h2 class="panel-title">Isotype Finder</h2><p class="panel-sub">M-spike and isotype code families at aggregate level.</p></div><div class="panel-body"><div id="isotype-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory Sources</h2><p class="panel-sub">Lab-like source metadata and relevant NPU/isotype panels.</p></div><div class="panel-body"><div id="laboratory-source-cards"></div></div></div></div>
@@ -2821,6 +2821,40 @@
         const hay = [row.source_name, row.object_name, row.clinical_variable, row.clinical_concept_id, row.panel, row.evidence_file].map(text).join(" ").toLowerCase();
         return codeSystem === "NPU" || /lab|biochem|alleproevesvar|persimune_biochemistry|haematology|immunoglobulin/.test(hay);
       }
+      function treatmentSourceContext(row) {
+        const sourceKey = normalizeClinicalKey([row.source_name, row.object_name, row.table_name].map(text).join(" "));
+        const evidenceKey = normalizeClinicalKey(row.evidence_file || "");
+        const combined = `${sourceKey} ${evidenceKey}`;
+        const codeSystem = text(row.code_system || "").toUpperCase();
+        const code = text(row.code || row.raw_code || "").toUpperCase();
+        const ctx = (id, label, tone, description) => ({ id, label, tone, description });
+        if (/rkkp_damyda|rkkp_lyfo|rkkp_cll/.test(combined)) {
+          return ctx("registry", "Registry treatment fields", "amber", "Registry-coded treatment, response, relapse, or follow-up fields; not complete medication administration records.");
+        }
+        if (/sp_behandlingsplaner/.test(combined)) {
+          return ctx("sp_plan", "SP treatment plans", "violet", "Treatment plan, protocol, cycle, goal, or planned-treatment metadata; not confirmed administration.");
+        }
+        if (/sp_administreretmedicin/.test(combined)) {
+          return ctx("sp_administered", "SP administered medication", "blue", "EHR medication-administration evidence, including administered ATC/name/route/time when present.");
+        }
+        if (/sp_ordineretmedicin/.test(combined)) {
+          return ctx("sp_ordered", "SP ordered medication", "green", "EHR ordered-medication or prescription-like order evidence; not confirmed administration.");
+        }
+        if (/sds_epikur|sds_ekokur/.test(combined)) {
+          return ctx("national_prescription", "National prescription data", "cyan", "Prescription/outpatient prescription or ATC prescription signal; not inpatient administration.");
+        }
+        if (/sds_indberetningmedpris|smr_medicine|smr/.test(combined)) {
+          return ctx("smr", "SMR / in-hospital medication", "plum", "National in-hospital medication-register signal; separate from SP administered medication.");
+        }
+        if (/sds_t_sks|sksopr|sksube|sds_procedurer|sds_sks/.test(combined) || codeSystem === "SKS") {
+          return ctx("sks", "SKS procedure/treatment signals", "plum", "Procedure or treatment-code signal; not an ATC drug exposure or medication administration row.");
+        }
+        if (codeSystem === "ATC" || /^[A-Z][0-9]{2}/.test(code)) {
+          const family = code.startsWith("L01") ? "Antineoplastic ATC signal" : code.startsWith("L04") ? "Immunomodulating/immunosuppressive ATC signal" : "ATC medication signal";
+          return ctx("atc", "ATC medication signals", "green", `${family}; code-level medication evidence, not a confirmed delivered therapy unless the source layer says so.`);
+        }
+        return ctx("candidate", "Candidate / needs-validation treatment rows", "amber", "Treatment-related row needing source-specific validation before primary exposure use.");
+      }
       function treatmentCodeRows(predicate) {
         return (semanticCodeRows || [])
           .filter(row => row.clinical_group === "Treatment")
@@ -2860,25 +2894,37 @@
           .filter(row => !terms || treatmentContains(row, terms))
           .sort((a, b) => numberValue(b.n_rows) - numberValue(a.n_rows));
       }
+      function treatmentRowsForContext(rows, contextIds) {
+        const wanted = new Set(Array.isArray(contextIds) ? contextIds : [contextIds]);
+        return (rows || []).filter(row => wanted.has(treatmentSourceContext(row).id));
+      }
+      function treatmentCandidateRows(rows) {
+        return (rows || []).filter(row => treatmentSourceContext(row).id === "candidate" || row.mapping_status === "candidate" || row.mapping_confidence === "low");
+      }
       function treatmentBarRows(rows) {
         return (rows || []).map(row => ({
-          label: row.label || [row.code || row.raw_code, row.code_name || row.clinical_variable || row.display_value || row.raw_value].filter(Boolean).join(" - "),
+          label: row.label || [renderlessTreatmentContext(row), row.code || row.raw_code, row.code_name || row.clinical_variable || row.display_value || row.raw_value].filter(Boolean).join(" - "),
           n: row.n_rows || row.n || row.matched_rows || "",
           pct: row.pct,
-          tone: row.code_system === "ATC" ? "green" : row.code_system === "SKS" ? "plum" : "blue"
+          tone: treatmentSourceContext(row).tone || (row.code_system === "ATC" ? "green" : row.code_system === "SKS" ? "plum" : "blue")
         }));
+      }
+      function renderlessTreatmentContext(row) {
+        const label = treatmentSourceContext(row).label;
+        return label && label !== "Candidate / needs-validation treatment rows" ? label : "";
       }
       function renderTreatmentSourceCards(rows, title) {
         const shown = (rows || []).slice(0, 8);
         if (!shown.length) return `<div class="empty">not available in current aggregate output</div>`;
         return `<div class="grid grid-4">${shown.map(row => `
           <article class="clinical-card">
-            ${renderBadge(row.domain || "Treatment", row.domain === "Medication" ? "green" : row.domain === "SDS" ? "plum" : "blue")}
+            ${renderBadge(treatmentSourceContext(row).label, treatmentSourceContext(row).tone)}
             <h3>${escapeHtml(row.table_name || row.source_name || title || "Treatment source")}</h3>
             ${renderKpiStrip([
               { label: "rows", value: row.n_rows, tone: "blue" },
               { label: "columns", value: row.n_cols, tone: "cyan" }
             ], { tone: "blue" })}
+            <p class="mini">${escapeHtml(treatmentSourceContext(row).description)}</p>
             <p class="mini">${escapeHtml([row.subdomain, row.atlas_role].filter(Boolean).join(" - "))}</p>
           </article>
         `).join("")}</div>`;
@@ -2899,8 +2945,18 @@
         const registryRows = treatmentRegistryRows();
         const labSupportRows = treatmentCodeRows(row => treatmentIsLabSupport(row));
         const sources = treatmentSourceRows();
-        const medicineSources = treatmentSourceRows(["medicin", "medicine", "atc", "administered", "ordered", "smr", "indberetning"]);
-        const procedureSources = treatmentSourceRows(["procedure", "sks", "behandling", "treatment", "plan", "epikur"]);
+        const spPlanSources = treatmentRowsForContext(sources, "sp_plan");
+        const spPlanRows = treatmentRowsForContext(rawRows, "sp_plan");
+        const spAdminSources = treatmentRowsForContext(sources, "sp_administered");
+        const spAdminRows = treatmentRowsForContext(rawRows, "sp_administered");
+        const spOrderedSources = treatmentRowsForContext(sources, "sp_ordered");
+        const spOrderedRows = treatmentRowsForContext(rawRows, "sp_ordered");
+        const nationalPrescriptionSources = treatmentRowsForContext(sources, "national_prescription");
+        const nationalPrescriptionRows = treatmentRowsForContext(rawRows.concat(primaryCodeRows), "national_prescription");
+        const smrSources = treatmentRowsForContext(sources, "smr");
+        const smrRows = treatmentRowsForContext(rawRows.concat(primaryCodeRows), "smr");
+        const registryTreatmentRows = treatmentRowsForContext(registryRows, "registry");
+        const candidateRows = treatmentCandidateRows(rawRows.concat(primaryCodeRows, treatmentDistributions));
         const codeFamilyRows = treatmentCards.code_families || [];
         const layerItems = [
           ["Registry treatment fields", "Disease registries hold curated treatment indicators, response, relapse, targeted therapy, and regimen fields; they are not complete administration records."],
@@ -2936,27 +2992,47 @@
               <p class="mini">Expected signal labels: ${requiredTreatmentSignals.map(escapeHtml).join("; ")}</p>
             `, "green")}
             ${renderSectionCard("SKS/procedure signals", `
+              <h3>SKS procedure/treatment signals</h3>
               ${renderTreatmentCodeSection("Procedure and SKS treatment codes", sksPriorityRows.length ? sksPriorityRows : sksRows, "plum", "No SKS/procedure treatment rows available.")}
               ${codeFamilyRows.length ? `<details><summary>MM treatment code-family scan</summary>${renderHBarRows(codeFamilyRows.map(row => Object.assign({}, row, { label: `${row.family}: ${row.code}`, n: row.n_rows })), { tone: "violet", limit: 12 })}</details>` : `<div class="empty">No MM treatment code-family rows available.</div>`}
             `, "plum")}
-            ${renderSectionCard("Aggregate treatment signal rows", `
+            ${renderSectionCard("Cross-source treatment matrix and aggregate rows", `
+              <h3>Cross-source treatment matrix</h3>
               ${renderValueMapCard("Product-layer treatment distributions", treatmentBarRows(treatmentDistributions), { tone: "amber", limit: 12, scope: treatmentDistributions[0], empty: "No treatment panel distributions available." })}
               <p class="mini">Date-like fields are excluded from categorical bars and retained only as source/raw-field availability.</p>
             `, "amber")}
             ${renderSectionCard("SP treatment plans", `
-              ${renderTreatmentSourceCards(procedureSources.filter(row => treatmentContains(row, ["behandlingsplan", "plan", "protocol"])), "SP treatment plans")}
+              ${renderTreatmentSourceCards(spPlanSources, "SP treatment plans")}
+              ${spPlanRows.length ? renderCollapsedRawLineage(spPlanRows, { limit: 8 }) : ""}
               <p class="mini">Protocol or regimen names are shown only when aggregate evidence explicitly contains them.</p>
             `, "violet")}
             ${renderSectionCard("Administered/ordered medicine", `
-              ${renderTreatmentSourceCards(medicineSources, "Medicine source")}
+              <h3>SP administered medication</h3>
+              ${renderTreatmentSourceCards(spAdminSources, "SP administered medication")}
+              ${spAdminRows.length ? renderCollapsedRawLineage(spAdminRows, { limit: 6 }) : ""}
+              <h3>SP ordered medication</h3>
+              ${renderTreatmentSourceCards(spOrderedSources, "SP ordered medication")}
+              ${spOrderedRows.length ? renderCollapsedRawLineage(spOrderedRows, { limit: 6 }) : ""}
             `, "green")}
-            ${renderSectionCard("Registry treatment context", `
-              ${registryRows.length ? renderCollapsedRawLineage(registryRows, { limit: 10 }) : `<div class="empty">not available in current aggregate output</div>`}
+            ${renderSectionCard("National prescription data", `
+              ${renderTreatmentSourceCards(nationalPrescriptionSources, "National prescription data")}
+              ${nationalPrescriptionRows.length ? renderTreatmentCodeSection("Prescription / outpatient ATC signals", nationalPrescriptionRows, "cyan", "No national prescription rows available.") : ""}
+            `, "cyan")}
+            ${renderSectionCard("SMR / in-hospital medication", `
+              ${renderTreatmentSourceCards(smrSources, "SMR / in-hospital medication")}
+              ${smrRows.length ? renderTreatmentCodeSection("In-hospital medication-register signals", smrRows, "plum", "No SMR medication rows available.") : ""}
+            `, "plum")}
+            ${renderSectionCard("Registry treatment fields", `
+              <p class="mini">Registry treatment context: disease registries provide curated treatment, response, and follow-up fields, not complete medication administration records.</p>
+              ${registryTreatmentRows.length ? renderCollapsedRawLineage(registryTreatmentRows, { limit: 10 }) : `<div class="empty">not available in current aggregate output</div>`}
             `, "amber")}
             ${renderSectionCard("Raw names / data lineage", `
               ${rawRows.length ? renderCollapsedRawLineage(rawRows, { limit: 12 }) : `<div class="empty">not available in current aggregate output</div>`}
               ${labSupportRows.length ? `<details><summary>Supporting labs surfaced by treatment matrix</summary>${renderTreatmentCodeSection("Supporting laboratory/code rows", labSupportRows, "cyan", "No supporting lab rows were surfaced.")}</details>` : ""}
             `, "blue")}
+            ${renderSectionCard("Candidate / needs-validation treatment rows", `
+              ${candidateRows.length ? renderCollapsedRawLineage(candidateRows, { limit: 10 }) : `<div class="empty">No candidate or low-confidence treatment rows outside primary source-context groups.</div>`}
+            `, "amber")}
             ${renderSectionCard("Use cases", `
               <ul>
                 <li>Treatment exposure algorithm development.</li>
@@ -2968,6 +3044,249 @@
             ${renderSectionCard("Caveats", `
               <p>Code-level treatment signals are proxies unless a registry or treatment-plan source confirms regimen semantics. Counts may be cartography scan or top-N evidence and must not be treated as full cohort denominators unless explicitly labeled.</p>
               <p>Dates, note text, and free-text treatment context are not rendered as categorical bars. Treatment exposure needs source-specific timing, dose, route, and line-of-therapy definitions.</p>
+            `, "amber")}
+          </div>`;
+      }
+
+      const labConceptSpecs = [
+        { id: "haemoglobin", title: "Haemoglobin", subgroup: "Haematology", codes: ["NPU02319"], fields: ["Reg_Haemoglobin", "Reg_Haemoglobin_mmolL"], tone: "red" },
+        { id: "creatinine", title: "Creatinine", subgroup: "Renal function", codes: ["NPU02593"], fields: ["Reg_Creatinin_mikmoll", "Reg_Creatinin_mmoll", "Reg_Creatinin_millimoll", "CREA"], tone: "blue" },
+        { id: "egfr", title: "eGFR / CKD-EPI", subgroup: "Renal function", codes: ["DNK35302"], fields: ["eGFR", "CKD-EPI"], tone: "blue" },
+        { id: "ldh", title: "LDH", subgroup: "Inflammation and biochemistry", codes: ["NPU02636"], fields: ["Reg_LDH", "Reg_Lactatdehydrogenase", "Reg_LDHVaerdi", "LDH"], tone: "plum" },
+        { id: "albumin", title: "Albumin", subgroup: "Inflammation and biochemistry", codes: ["NPU01349"], fields: ["Reg_Albumin_gl", "Reg_Albumin_gL", "ALB"], tone: "cyan" },
+        { id: "albumin_corrected_calcium", title: "Albumin-corrected calcium", subgroup: "Inflammation and biochemistry", codes: [], fields: ["Reg_CalciumAlbuminkorrigeret"], tone: "cyan" },
+        { id: "calcium", title: "Calcium / ionised calcium", subgroup: "Inflammation and biochemistry", codes: [], fields: ["Reg_Calcium", "Reg_CalciumIoniseret"], tone: "cyan", aliases: ["ionised_calcium"] },
+        { id: "crp", title: "CRP", subgroup: "Inflammation and biochemistry", codes: ["NPU04998"], fields: ["Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll", "CRP"], tone: "amber" },
+        { id: "leukocytes", title: "Leukocytes", subgroup: "Haematology", codes: ["NPU19748"], fields: ["Reg_Leukocyttal", "Reg_Leukocytter"], tone: "red" },
+        { id: "neutrophils", title: "Neutrophils", subgroup: "Haematology", codes: [], fields: ["neutrophils", "neutrofil"], tone: "red" },
+        { id: "lymphocytes", title: "Lymphocytes", subgroup: "Haematology", codes: [], fields: ["Reg_Lymfocytter_mL"], tone: "red" },
+        { id: "platelets", title: "Platelets / thrombocytes", subgroup: "Haematology", codes: [], fields: ["Reg_Thrombocytter", "platelets", "thrombocytes"], tone: "red" },
+        { id: "immunoglobulin", title: "Immunoglobulins", subgroup: "Immunoglobulins and M-protein", codes: [], fields: ["IgG", "IgA", "IgM", "immunoglobulin"], tone: "violet" },
+        { id: "m_protein", title: "M-protein", subgroup: "Immunoglobulins and M-protein", codes: [], fields: ["Reg_MProtein", "Reg_PlasmaMKomponent", "M-komponent", "MComponent"], tone: "violet", aliases: ["m_component"] },
+        { id: "beta2_microglobulin", title: "Beta-2 microglobulin", subgroup: "Inflammation and biochemistry", codes: [], fields: ["Reg_Beta2Microglobulin_gl", "Reg_Beta2Microglobulin_mgL", "Reg_Beta2Microglobulin_nmL", "Reg_Beta2Microglobulin"], tone: "plum", aliases: ["beta_2_microglobulin"] }
+      ];
+      function labSpecConceptIds(spec) {
+        return [spec.id].concat(spec.aliases || []);
+      }
+      function labIsTreatmentRow(row) {
+        const codeSystem = text(row.code_system || "").toUpperCase();
+        return row.clinical_group === "Treatment" || codeSystem === "ATC" || codeSystem === "SKS" || /treatment|sks|atc/.test(normalizeClinicalKey([row.panel, row.evidence_file].join(" ")));
+      }
+      function labIsDateLike(value) {
+        const key = normalizeClinicalKey(value);
+        return !key ? false : /dt$|dato|date|time/.test(key);
+      }
+      function labSourceLayer(row) {
+        const key = normalizeClinicalKey([row.source_name, row.object_name, row.table_name, row.evidence_file, row.panel].map(text).join(" "));
+        if (/spalleprovesvar|spalleproevesvar|alleprovesvar|alleproevesvar/.test(key)) return { id: "sp", label: "SP AlleProvesvar / EHR lab results", tone: "blue" };
+        if (/persimune/.test(key)) return { id: "persimune", label: "PERSIMUNE biochemistry", tone: "cyan" };
+        if (/labka|sdslab|sdslaboratorie|laboratorieproevesvar/.test(key)) return { id: "national", label: "National/LABKA/SDS lab source", tone: "green" };
+        if (/rkkp|damyda|lyfo|cll/.test(key)) return { id: "registry", label: "Registry lab fields", tone: "amber" };
+        if (["NPU", "DNK"].includes(text(row.code_system || "").toUpperCase()) || /^NPU|^DNK/.test(text(row.raw_code || row.code || "").toUpperCase())) return { id: "dictionary", label: "NPU/DNK code dictionary", tone: "violet" };
+        return { id: "candidate", label: "Candidate / needs-validation lab rows", tone: "amber" };
+      }
+      function labRowMatchesSpec(row, spec) {
+        const conceptIds = new Set(labSpecConceptIds(spec).map(normalizeClinicalKey));
+        const concept = normalizeClinicalKey(row.clinical_concept_id || "");
+        if (conceptIds.has(concept)) return true;
+        const exactCodes = new Set((spec.codes || []).map(normalizeClinicalKey));
+        const rowCode = normalizeClinicalKey(row.raw_code || row.code || "");
+        if (rowCode && exactCodes.has(rowCode)) return true;
+        const fields = new Set((spec.fields || []).map(normalizeClinicalKey));
+        const raw = normalizeClinicalKey([row.raw_column, row.raw_descriptor, row.raw_field_label, row.code_name, row.clinical_variable].map(text).join(" "));
+        return Array.from(fields).some(field => field && raw.includes(field));
+      }
+      function labCodeRowsForSpec(spec) {
+        return (semanticCodeRows || [])
+          .filter(row => row.clinical_group === "Laboratory")
+          .filter(row => !labIsTreatmentRow(row))
+          .filter(row => labRowMatchesSpec(row, spec))
+          .sort((a, b) => numberValue(b.n_rows) - numberValue(a.n_rows));
+      }
+      function labRawRowsForSpec(spec) {
+        return (panelRawFieldRows || [])
+          .filter(row => !labIsTreatmentRow(row))
+          .filter(row => row.panel_id === "laboratory_npu" || /^RKKP_/.test(text(row.source_name || "")) || row.clinical_group === "Laboratory")
+          .filter(row => labRowMatchesSpec(row, spec))
+          .sort((a, b) => {
+            const aRank = (a.mapping_status === "confirmed" ? 0 : 1) + (a.mapping_confidence === "high" ? 0 : 1);
+            const bRank = (b.mapping_status === "confirmed" ? 0 : 1) + (b.mapping_confidence === "high" ? 0 : 1);
+            return aRank - bRank || numberValue(a.sort_order) - numberValue(b.sort_order);
+          });
+      }
+      function labAllRawRows() {
+        return (panelRawFieldRows || [])
+          .filter(row => !labIsTreatmentRow(row))
+          .filter(row => row.panel_id === "laboratory_npu" || row.clinical_group === "Laboratory" || /^RKKP_/.test(text(row.source_name || "")))
+          .filter(row => !labIsDateLike(row.raw_column))
+          .sort((a, b) => numberValue(a.sort_order) - numberValue(b.sort_order));
+      }
+      function labAllCodeRows() {
+        return (semanticCodeRows || [])
+          .filter(row => row.clinical_group === "Laboratory")
+          .filter(row => !labIsTreatmentRow(row))
+          .sort((a, b) => numberValue(b.n_rows) - numberValue(a.n_rows));
+      }
+      function labConceptCard(spec) {
+        const codeRows = labCodeRowsForSpec(spec);
+        const rawRows = labRawRowsForSpec(spec);
+        const rows = codeRows.concat(rawRows);
+        const sources = Array.from(new Set(rows.map(row => row.source_name).filter(Boolean))).slice(0, 5);
+        const codes = Array.from(new Set(codeRows.map(row => row.code || row.raw_code).filter(Boolean))).slice(0, 6);
+        const fields = Array.from(new Set(rawRows.map(row => row.raw_column || row.raw_code || row.raw_descriptor).filter(Boolean))).slice(0, 6);
+        const maxRows = Math.max(...codeRows.map(row => numberValue(row.n_rows)), ...rawRows.map(row => numberValue(row.n_rows)), 0);
+        const body = rows.length ? `
+          ${renderKpiStrip([
+            { label: "codes", value: codeRows.length || "not available", tone: spec.tone },
+            { label: "raw fields", value: rawRows.length || "not available", tone: "blue" },
+            { label: "max aggregate rows", value: maxRows || "not available", tone: "cyan" }
+          ], { tone: spec.tone })}
+          <p class="mini"><strong>Sources:</strong> ${escapeHtml(sources.join("; ") || "not available in current aggregate output")}</p>
+          <p class="mini"><strong>Codes:</strong> ${escapeHtml(codes.join("; ") || "not available in current aggregate output")}</p>
+          <p class="mini"><strong>Fields:</strong> ${escapeHtml(fields.join("; ") || "not available in current aggregate output")}</p>
+          ${renderScopeChip(rows[0])}
+        ` : `<div class="empty">not available in current aggregate output</div>`;
+        return `<article class="clinical-card lab-concept-card">
+          ${renderBadge(spec.subgroup, spec.tone)}
+          <h3>${escapeHtml(spec.title)}</h3>
+          ${body}
+          <p class="mini">Code coverage and registry field availability are discovery evidence; result-value harmonization requires source-specific validation.</p>
+        </article>`;
+      }
+      function renderLabConceptGrid(title, specIds, tone) {
+        const wanted = new Set(specIds);
+        const specs = labConceptSpecs.filter(spec => wanted.has(spec.id));
+        return renderSectionCard(title, `<div class="grid grid-3">${specs.map(labConceptCard).join("")}</div>`, tone);
+      }
+      function renderLabSourceLayerCards() {
+        const layerRows = [
+          ["National/LABKA/SDS lab source", "Nationwide or national-register lab result/code layer.", "Cross-source code coverage, national lab-code discovery.", "NPU code coverage does not automatically mean harmonized result-value availability.", ["SDS_lab_forsker", "SDS_laboratorieproevesvar", "LABKA"], "green"],
+          ["SP AlleProvesvar / EHR lab results", "EHR-native laboratory result layer.", "SP-native component/name/code review.", "SP component names/codes may need harmonization to NPU concepts and units.", ["SP_AlleProvesvar"], "blue"],
+          ["PERSIMUNE biochemistry", "Research/clinical biochemistry source in PERSIMUNE.", "Regional/research biochemistry signal discovery.", "Coverage may be regional or research-specific rather than nationwide.", ["PERSIMUNE_biochemistry"], "cyan"],
+          ["RKKP registry lab fields", "Disease-registry baseline or registry-specific laboratory fields.", "Registry baseline marker feasibility.", "Registry lab fields are not full longitudinal lab result streams.", ["RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL"], "amber"],
+          ["NPU/DNK code dictionary", "Code dictionary / analyte mapping layer.", "Analyte and code-family mapping.", "Code labels and source-specific units must be validated before harmonized analyses.", ["NPU02319", "DNK35302"], "violet"]
+        ];
+        return `<div class="grid grid-3">${layerRows.map(layer => {
+          const found = labAllCodeRows().concat(labAllRawRows()).filter(row => layer[4].some(term => labRowText(row).toLowerCase().includes(term.toLowerCase())));
+          return `<article class="raw-lineage-card">
+            ${renderBadge(layer[0], layer[5])}
+            <h3>${escapeHtml(layer[0])}</h3>
+            <p>${escapeHtml(layer[1])}</p>
+            <p class="mini"><strong>Best use:</strong> ${escapeHtml(layer[2])}</p>
+            <p class="mini"><strong>Caveat:</strong> ${escapeHtml(layer[3])}</p>
+            <p class="mini"><strong>Representative:</strong> ${escapeHtml(layer[4].join("; "))}</p>
+            <p class="mini">${found.length ? `${found.length} supporting aggregate rows in payload.` : "not available in current aggregate output"}</p>
+          </article>`;
+        }).join("")}</div>`;
+      }
+      function labRowText(row) {
+        return [row.source_name, row.object_name, row.table_name, row.raw_column, row.raw_descriptor, row.raw_code, row.code, row.code_name, row.clinical_variable, row.clinical_concept_id, row.evidence_file].map(text).join(" ");
+      }
+      function renderLabSourceCoverage() {
+        const sourceRows = reviewLaboratory.lab_sources || [];
+        const labSources = ["SDS_lab_forsker", "SDS_laboratorieproevesvar", "LABKA", "SP_AlleProvesvar", "PERSIMUNE_biochemistry", "RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL"];
+        const cards = labSources.map(source => {
+          const found = sourceRows.find(row => labRowText(row).toLowerCase().includes(source.toLowerCase())) ||
+            labAllCodeRows().concat(labAllRawRows()).find(row => labRowText(row).toLowerCase().includes(source.toLowerCase()));
+          return `<article class="clinical-card">
+            ${renderBadge(labSourceLayer(found || { source_name: source }).label, labSourceLayer(found || { source_name: source }).tone)}
+            <h3>${escapeHtml(source)}</h3>
+            ${renderKpiStrip([
+              { label: "rows", value: found && (found.n_rows || found.n), tone: "blue" },
+              { label: "columns/codes", value: found && (found.n_cols || found.code_count || found.raw_field_count), tone: "cyan" }
+            ], { tone: "blue" })}
+            <p class="mini">${found ? escapeHtml(found.clinical_caveat || found.notes || "Aggregate evidence present.") : "not available in current aggregate output"}</p>
+          </article>`;
+        }).join("");
+        return `<div class="grid grid-4">${cards}</div>`;
+      }
+      function renderLabConcordance() {
+        const coverage = panelRows("lab_npu_code_coverage");
+        const usage = panelRows("npu_lab_usage_by_vector");
+        const observed = npuCards.observed_vectors || [];
+        const rows = (coverage.length ? coverage : usage.length ? usage : observed).slice(0, 12);
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return renderHBarRows(rows.map(row => ({
+          label: row.npu_code || row.lab_code || row.consensus_vector || row.code || row.display_label || row.source || "lab code",
+          n: row.n_observed || row.n_rows || row.n_dictionary_codes || row.n || row.total_rows,
+          pct: row.pct_rows || row.pct,
+          tone: "cyan"
+        })), { tone: "cyan", limit: 12 });
+      }
+      function renderLabCodeDictionary() {
+        const rows = labAllCodeRows().filter(row => ["NPU", "DNK"].includes(text(row.code_system || "").toUpperCase())).slice(0, 18);
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return renderHBarRows(rows.map(row => ({
+          label: [row.code, row.clinical_variable || row.code_name, row.source_name].filter(Boolean).join(" - "),
+          n: row.n_rows,
+          pct: row.pct,
+          tone: row.code_system === "DNK" ? "violet" : "blue"
+        })), { tone: "blue", limit: 18 });
+      }
+      function renderRegistryLabFields() {
+        const registryRows = labAllRawRows().filter(row => /^RKKP_/.test(text(row.source_name || "")));
+        if (!registryRows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        const priority = ["Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl", "Reg_CalciumAlbuminkorrigeret", "Reg_Leukocyttal"];
+        const sorted = registryRows.slice().sort((a, b) => {
+          const ai = priority.indexOf(a.raw_column);
+          const bi = priority.indexOf(b.raw_column);
+          return (ai < 0 ? 999 : ai) - (bi < 0 ? 999 : bi) || numberValue(a.sort_order) - numberValue(b.sort_order);
+        });
+        return renderCollapsedRawLineage(sorted, { limit: 14 });
+      }
+      function renderLabRawLineageByLayer() {
+        const rows = labAllRawRows();
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        const layers = ["national", "sp", "persimune", "registry", "dictionary", "candidate"];
+        return layers.map(id => {
+          const layerRows = rows.filter(row => labSourceLayer(row).id === id);
+          if (!layerRows.length) return "";
+          const layer = labSourceLayer(layerRows[0]);
+          const content = renderCollapsedRawLineage(layerRows, { limit: id === "candidate" ? 6 : 10 });
+          return id === "candidate"
+            ? `<details><summary>${escapeHtml(layer.label)}</summary>${content}</details>`
+            : `<div class="lineage-block"><h3>${escapeHtml(layer.label)}</h3>${content}</div>`;
+        }).join("") || `<div class="empty">not available in current aggregate output</div>`;
+      }
+      function renderLaboratoryNPUPanel() {
+        const labPanel = (domainPanelRows || []).find(row => row.panel_id === "laboratory_npu") || {};
+        return `
+          <div class="dashboard-grid laboratory-dashboard">
+            ${renderKpiStrip([
+              { label: "lab code rows", value: labAllCodeRows().length, tone: "blue" },
+              { label: "raw lineage rows", value: labAllRawRows().length, tone: "green" },
+              { label: "NPU/DNK dictionary rows", value: labAllCodeRows().filter(row => ["NPU", "DNK"].includes(text(row.code_system || "").toUpperCase())).length, tone: "violet" },
+              { label: "core concepts", value: labConceptSpecs.length, tone: "amber" }
+            ], { tone: "blue" })}
+            ${renderSectionCard("Source / coverage", `
+              <p>${escapeHtml(labPanel.clinical_purpose || "Laboratory/NPU evidence across LABKA/SDS, SP AlleProvesvar, PERSIMUNE, NPU/DNK dictionary rows, and registry laboratory fields.")}</p>
+              ${renderLabSourceCoverage()}
+            `, "blue")}
+            ${renderSectionCard("Lab evidence layers", renderLabSourceLayerCards(), "cyan")}
+            ${renderSectionCard("Core lab concepts", `<div class="grid grid-3">${labConceptSpecs.map(labConceptCard).join("")}</div>`, "green")}
+            ${renderSectionCard("Cross-source NPU concordance", renderLabConcordance(), "cyan")}
+            ${renderLabConceptGrid("Haematology", ["haemoglobin", "leukocytes", "neutrophils", "lymphocytes", "platelets"], "red")}
+            ${renderLabConceptGrid("Renal function", ["creatinine", "egfr"], "blue")}
+            ${renderLabConceptGrid("Inflammation and biochemistry", ["crp", "ldh", "albumin", "calcium", "albumin_corrected_calcium", "beta2_microglobulin"], "amber")}
+            ${renderLabConceptGrid("Immunoglobulins and M-protein", ["immunoglobulin", "m_protein"], "violet")}
+            ${renderSectionCard("Myeloma / lymphoma / CLL registry lab fields", `
+              <p class="mini">Registry lab fields are baseline or registry-specific fields, not full longitudinal lab result streams.</p>
+              ${renderRegistryLabFields()}
+            `, "plum")}
+            ${renderSectionCard("NPU code dictionary", renderLabCodeDictionary(), "violet")}
+            ${renderSectionCard("Raw names / data lineage", renderLabRawLineageByLayer(), "blue")}
+            ${renderSectionCard("Use cases", `
+              <ul>
+                <li>Find which source and code/field supports a laboratory concept.</li>
+                <li>Compare NPU/DNK code coverage across national, EHR, PERSIMUNE, and registry layers.</li>
+                <li>Build renal, inflammation, haematology, immunoglobulin, and disease-marker phenotypes.</li>
+                <li>Separate code coverage from result-value availability before patient-level analyses.</li>
+              </ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <p>NPU code coverage is not the same as harmonized result-value availability. Registry lab fields are baseline/registry-specific fields, not full longitudinal lab streams.</p>
+              <p>SP AlleProvesvar and LABKA/SDS may differ in code systems, units, and coverage. PERSIMUNE biochemistry may be research/regional rather than nationwide.</p>
+              <p>Patient-level completeness requires patient-level aggregate outputs; row/code counts alone are not enough. Units and reference ranges require source-specific harmonization. Date fields should not be rendered as categorical bars.</p>
             `, "amber")}
           </div>`;
       }
@@ -3017,6 +3336,7 @@
 
         setHtml("treatment-dashboard", renderTreatmentPanel());
 
+        setHtml("laboratory-npu-dashboard", renderLaboratoryNPUPanel());
         setHtml("laboratory-source-cards", sourceTiles(reviewLaboratory.lab_sources, "No lab-like sources were mapped in this run."));
         setHtml("ehr-sp-cards", sourceTiles(reviewEhr.sp, "No SP sources were mapped in this run."));
         setHtml("ehr-sds-cards", sourceTiles(reviewEhr.sds_lpr, "No SDS/LPR sources were mapped in this run."));

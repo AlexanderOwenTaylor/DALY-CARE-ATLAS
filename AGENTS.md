@@ -1,6 +1,7 @@
 # Repository Guidance
 
 - Semantic mapping rule: prefer exact, source-aware field mappings for clinical concepts. Avoid broad substring matching when registry/source-specific rules exist; leave uncertain fields as candidates rather than forcing a misleading concept.
+- Laboratory/NPU mapping rule: distinguish NPU/DNK code dictionary rows, SP AlleProvesvar rows, LABKA/SDS rows, PERSIMUNE biochemistry rows, and registry lab fields. Code coverage is not the same as harmonized result-value availability.
 
 ## Visual QA Rule
 

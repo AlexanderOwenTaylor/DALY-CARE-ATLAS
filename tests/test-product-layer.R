@@ -128,7 +128,7 @@ for (column in c("Reg_BinetStadium", "Reg_Umuteret", "Reg_FISH", "Reg_Del17p", "
   }
 }
 expect_true(has_raw("LABKA", code = "NPU02319", variable = "Haemoglobin") || has_raw("SDS_lab_forsker", code = "NPU02319", variable = "Haemoglobin"), "Raw fields should map NPU02319 to Haemoglobin.")
-expect_true(has_raw("LABKA", code = "DNK35302", variable = "eGFR") || has_raw("PERSIMUNE", code = "DNK35302", variable = "eGFR"), "Raw fields should map DNK35302 to eGFR.")
+expect_true(has_raw("LABKA", code = "DNK35302", variable = "eGFR / CKD-EPI") || has_raw("PERSIMUNE", code = "DNK35302", variable = "eGFR / CKD-EPI"), "Raw fields should map DNK35302 to eGFR / CKD-EPI.")
 expect_true(has_raw("LABKA", code = "NPU19748", variable = "Leukocytes") || has_raw("SDS_lab_forsker", code = "NPU19748", variable = "Leukocytes"), "Raw fields should map NPU19748 to Leukocytes.")
 
 social_distributions <- distributions[distributions$panel_id == "clinical_social_history", , drop = FALSE]

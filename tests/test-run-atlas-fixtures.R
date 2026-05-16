@@ -120,6 +120,7 @@ expect_true(grepl("function renderDaMyDaPanel()", html, fixed = TRUE), "HTML sho
 expect_true(grepl("function renderLYFOPanel()", html, fixed = TRUE), "HTML should include the dedicated LYFO renderer.")
 expect_true(grepl("function renderCLLPanel()", html, fixed = TRUE), "HTML should include the dedicated CLL renderer.")
 expect_true(grepl("function renderTreatmentPanel()", html, fixed = TRUE), "HTML should include the dedicated Treatment renderer.")
+expect_true(grepl("function renderLaboratoryNPUPanel()", html, fixed = TRUE), "HTML should include the dedicated Laboratory/NPU renderer.")
 for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
 }
@@ -139,6 +140,7 @@ expect_true(grepl("overflow_desktop.json", visual_qa_script, fixed = TRUE), "Vis
 expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a mobile overflow report.")
 expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
+expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -153,6 +155,7 @@ expect_true(grepl("setHtml(\"registry-lyfo\", renderLYFOPanel())", html, fixed =
 expect_false(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, fixed = TRUE), "CLL should not be rendered through the generic registry detail renderer.")
 expect_true(grepl("setHtml(\"registry-cll\", renderCLLPanel())", html, fixed = TRUE), "CLL should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"treatment-dashboard\", renderTreatmentPanel())", html, fixed = TRUE), "Treatment should be wired to its dedicated renderer.")
+expect_true(grepl("setHtml(\"laboratory-npu-dashboard\", renderLaboratoryNPUPanel())", html, fixed = TRUE), "Laboratory/NPU should be wired to its dedicated renderer.")
 expect_false(grepl("setHtml(\"treatment-source-cards\", sourceTiles", html, fixed = TRUE), "Treatment should not render source summary through generic source tiles.")
 expect_false(grepl("setHtml(\"treatment-medicine-cards\", sourceTiles", html, fixed = TRUE), "Treatment medicine evidence should not render through generic source tiles.")
 expect_false(grepl("setHtml(\"treatment-procedure-cards\", sourceTiles", html, fixed = TRUE), "Treatment procedure evidence should not render through generic source tiles.")
@@ -183,8 +186,20 @@ for (needle in c("Source / coverage", "Binet stage", "IGHV and baseline risk mar
 for (needle in c("Source / coverage", "Treatment evidence layers", "ATC medication signals", "SKS/procedure signals", "SP treatment plans", "Administered/ordered medicine", "Registry treatment context", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Treatment renderer should contain section:", needle))
 }
+for (needle in c("Laboratory / NPU atlas", "Lab evidence layers", "Core lab concepts", "Cross-source NPU concordance", "Haematology", "Renal function", "Inflammation and biochemistry", "Immunoglobulins and M-protein", "Myeloma / lymphoma / CLL registry lab fields", "NPU code dictionary", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Laboratory/NPU renderer should contain section:", needle))
+}
+for (needle in c("function labSourceLayer", "function labConceptCard", "function renderLabConcordance", "function renderLabRawLineageByLayer", "labConceptSpecs", "NPU code coverage is not the same as harmonized result-value availability", "Registry lab fields are baseline/registry-specific fields, not full longitudinal lab streams")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Laboratory/NPU renderer should include guarded lab atlas logic:", needle))
+}
+for (needle in c("NPU02319", "NPU02593", "DNK35302", "NPU02636", "NPU01349", "NPU04998", "NPU19748", "Haemoglobin", "Creatinine", "eGFR / CKD-EPI", "LDH", "Albumin", "CRP", "Leukocytes", "SP_AlleProvesvar", "SDS_lab_forsker", "PERSIMUNE_biochemistry", "Reg_Haemoglobin", "Reg_Creatinin_mikmoll", "Reg_LDH", "Reg_Albumin_gl", "Reg_Beta2Microglobulin_gl")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Laboratory/NPU renderer should be able to surface evidenced lab term:", needle))
+}
 for (needle in c("function treatmentDistributionRows", "panelDistributionRows || []", "row.panel_id === \"treatment\"", "treatmentIsDateLike", "treatmentIsLabSupport", "Supporting labs surfaced by treatment matrix")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Treatment renderer should use guarded product-layer grouping:", needle))
+}
+for (needle in c("function treatmentSourceContext", "treatmentRowsForContext", "Registry treatment fields", "SP administered medication", "SP ordered medication", "National prescription data", "SMR / in-hospital medication", "SKS procedure/treatment signals", "Candidate / needs-validation treatment rows")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Treatment renderer should preserve source-context layer:", needle))
 }
 for (needle in c("SP_AdministreretMedicin", "SP_OrdineretMedicin", "SMR_medicine", "SDS_t_sksube", "SDS_epikur", "ATC", "SKS", "L01/L04", "antineoplastic chemotherapy", "immunotherapy", "radiotherapy", "lenalidomide", "bortezomib", "daratumumab", "rituximab", "venetoclax", "ibrutinib")) {
   expect_true(grepl(needle, html, ignore.case = TRUE), paste("Treatment renderer should be able to surface evidenced term:", needle))
@@ -512,11 +527,63 @@ expect_false(any(run_cll$raw_column == "Beh_Vaegttab" & run_cll$clinical_concept
 expect_false(any(run_cll$raw_column == "Reg_KnoglemarvsUndersoegelse" & run_cll$clinical_concept_id == "bone_involvement"), "Run semantic output must not map CLL bone marrow examination to bone involvement.")
 expect_false(any(run_cll$raw_column %in% c("Reg_FISH", "Reg_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Beh_FISH_TP53", "Rec_FISH_TP53") & run_cll$clinical_concept_id == "cytogenetic_risk"), "Run semantic output must not flatten CLL FISH/del/TP53 fields to generic cytogenetic risk.")
 expect_true(any(semantic_dictionary$raw_code == "NPU02319" & semantic_dictionary$clinical_variable == "Haemoglobin"), "Semantic output should map NPU02319 to haemoglobin.")
-expect_true(any(semantic_dictionary$raw_code == "DNK35302" & semantic_dictionary$clinical_variable == "eGFR"), "Semantic output should map DNK35302 to eGFR.")
+expect_true(any(semantic_dictionary$raw_code == "DNK35302" & grepl("eGFR", semantic_dictionary$clinical_variable, fixed = TRUE)), "Semantic output should map DNK35302 to eGFR / CKD-EPI.")
 expect_true(any(semantic_dictionary$raw_code == "NPU19748" & semantic_dictionary$clinical_variable == "Leukocytes"), "Semantic output should map NPU19748 to leukocytes.")
+expect_true(any(semantic_dictionary$raw_code == "NPU02593" & semantic_dictionary$clinical_concept_id == "creatinine"), "Semantic output should map NPU02593 to creatinine.")
+expect_true(any(semantic_dictionary$raw_code == "NPU02636" & semantic_dictionary$clinical_concept_id == "ldh"), "Semantic output should map NPU02636 to LDH when evidenced.")
+expect_true(any(semantic_dictionary$raw_code == "NPU01349" & semantic_dictionary$clinical_concept_id == "albumin"), "Semantic output should map NPU01349 to albumin when evidenced.")
+if (any(semantic_dictionary$raw_code == "NPU04998")) {
+  expect_true(any(semantic_dictionary$raw_code == "NPU04998" & semantic_dictionary$clinical_concept_id == "crp"), "Semantic output should map NPU04998 to CRP when evidenced.")
+}
+lab_semantic_rows <- semantic_dictionary[semantic_dictionary$clinical_group == "Laboratory", , drop = FALSE]
+expect_false(any(grepl("CReaktivtProtein", lab_semantic_rows$raw_column, fixed = TRUE) & lab_semantic_rows$clinical_concept_id == "creatinine"), "Laboratory semantic output must not map C-reactive protein to creatinine.")
+expect_false(any(lab_semantic_rows$raw_column == "Reg_CalciumAlbuminkorrigeret" & lab_semantic_rows$clinical_concept_id == "albumin"), "Laboratory semantic output must not map albumin-corrected calcium to albumin.")
+expect_false(any(lab_semantic_rows$raw_column == "Reg_LYMFOCYTFORDOBLIN" & lab_semantic_rows$clinical_concept_id == "lymphocytes"), "Laboratory semantic output must not map lymphocyte doubling to lymphocyte count.")
+expect_false(any(semantic_code_map$clinical_group == "Laboratory" & semantic_code_map$code_system %in% c("ATC", "SKS")), "ATC/SKS treatment rows must not appear in the primary Laboratory/NPU code map.")
 expect_true(any(semantic_value_map$raw_column == "ryger" & semantic_value_map$display_value == "Former smoker"), "Semantic value map should include smoking value meanings.")
 expect_true(any(semantic_code_map$code_system == "ATC"), "Semantic code map should include ATC treatment signals.")
 expect_true(any(semantic_code_map$code_system == "SKS"), "Semantic code map should include SKS signals.")
+semantic_treatment_text <- function(rows) {
+  if (!is.data.frame(rows) || !nrow(rows)) return(character())
+  cols <- intersect(c("clinical_variable", "clinical_subgroup", "semantic_meaning", "clinical_caveat", "search_terms", "notes", "panel"), names(rows))
+  apply(rows[, cols, drop = FALSE], 1, paste, collapse = " | ")
+}
+treatment_code_rows <- semantic_code_map[semantic_code_map$clinical_group == "Treatment", , drop = FALSE]
+atc_treatment_rows <- treatment_code_rows[treatment_code_rows$code_system == "ATC", , drop = FALSE]
+sks_treatment_rows <- treatment_code_rows[treatment_code_rows$code_system == "SKS", , drop = FALSE]
+expect_true(nrow(atc_treatment_rows) > 0 && all(grepl("ATC medication-code context is preserved", atc_treatment_rows$notes, fixed = TRUE)), "ATC treatment rows should explicitly preserve ATC medication-code context.")
+expect_false(any(atc_treatment_rows$panel == "SKS procedure/treatment signals"), "ATC treatment rows must not be grouped as SKS procedure rows.")
+expect_true(nrow(sks_treatment_rows) > 0 && all(grepl("SKS procedure-code context is preserved", sks_treatment_rows$notes, fixed = TRUE)), "SKS treatment rows should explicitly preserve SKS procedure-code context.")
+expect_false(any(sks_treatment_rows$panel %in% c("SP administered medication", "SP ordered medication", "ATC medication signals")), "SKS rows must not be grouped as administered, ordered, or ATC medication rows.")
+sp_ordered_context <- treatment_code_rows[treatment_code_rows$source_name == "SP_OrdineretMedicin", , drop = FALSE]
+if (nrow(sp_ordered_context)) {
+  expect_true(all(sp_ordered_context$panel == "SP ordered medication"), "SP ordered-medication code rows should preserve ordered-medication context.")
+  expect_true(all(grepl("do not by themselves prove administration", sp_ordered_context$notes, fixed = TRUE)), "SP ordered-medication rows must not imply confirmed administration.")
+}
+smr_context <- treatment_code_rows[treatment_code_rows$source_name == "SMR_medicine", , drop = FALSE]
+if (nrow(smr_context)) {
+  expect_true(all(smr_context$panel == "SMR / in-hospital medication"), "SMR code rows should preserve national in-hospital medication context.")
+  expect_false(any(smr_context$panel == "SP administered medication"), "SMR rows must not be grouped as SP administered medication.")
+}
+epikur_context <- semantic_dictionary[semantic_dictionary$source_name %in% c("SDS_epikur", "SDS_ekokur"), , drop = FALSE]
+if (nrow(epikur_context)) {
+  expect_true(any(grepl("prescription", semantic_treatment_text(epikur_context), ignore.case = TRUE)), "Epikur/Ekokur rows should preserve prescription context.")
+  expect_false(any(grepl("EHR medication-administration evidence", semantic_treatment_text(epikur_context), fixed = TRUE)), "Epikur/Ekokur rows must not be labeled as administered medication.")
+}
+sp_plan_context <- semantic_dictionary[grepl("^SP_Behandlingsplaner", semantic_dictionary$source_name), , drop = FALSE]
+if (nrow(sp_plan_context)) {
+  expect_true(all(grepl("treatment-plan|protocol", semantic_treatment_text(sp_plan_context), ignore.case = TRUE)), "SP treatment-plan rows should preserve plan/protocol context.")
+  expect_false(any(grepl("medication-administration evidence", semantic_treatment_text(sp_plan_context), fixed = TRUE)), "SP treatment-plan rows must not be labeled as administered medication.")
+}
+registry_treatment_context <- semantic_dictionary[
+  grepl("^RKKP_", semantic_dictionary$source_name) &
+    grepl("treatment|therapy|regimen|behandling|behandl|kemo|immun|target|targeteret|transplant|response|mrd|relaps|progress", semantic_treatment_text(semantic_dictionary), ignore.case = TRUE),
+  ,
+  drop = FALSE
+]
+if (nrow(registry_treatment_context)) {
+  expect_true(any(grepl("not a complete medication administration record", registry_treatment_context$clinical_caveat, fixed = TRUE)), "Registry treatment fields should warn that they are not complete medication administration records.")
+}
 expect_true(any(semantic_code_map$code_system == "SNOMED"), "Semantic code map should include SNOMED pathology signals.")
 expect_true(nrow(semantic_panel_links) > 0, "Semantic panel links should be generated.")
 expect_true(all(nzchar(semantic_dictionary$evidence_file)), "Every semantic row should include an evidence file.")
@@ -546,6 +613,9 @@ expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX
 expect_true(any(panel_raw_fields$raw_column == "numericvalue" & panel_raw_fields$clinical_variable == "Vital numeric measurement value"), "Panel raw fields should include numericvalue as the vital measurement value.")
 expect_true(any(panel_raw_fields$source_name %in% c("SP_Social_Hx", "SP_SocialHX") & panel_raw_fields$raw_column == "drikker"), "Panel raw fields should include SP_Social_Hx.drikker.")
 expect_true(any(panel_raw_fields$raw_code == "NPU02319" & panel_raw_fields$clinical_variable == "Haemoglobin"), "Panel raw fields should include NPU02319 to Haemoglobin.")
+expect_true(any(panel_raw_fields$panel_id == "laboratory_npu" & panel_raw_fields$raw_code == "NPU02319" & panel_raw_fields$clinical_variable == "Haemoglobin"), "Laboratory/NPU panel raw fields should include NPU02319 to Haemoglobin.")
+expect_true(any(panel_raw_fields$panel_id == "laboratory_npu" & panel_raw_fields$raw_code == "DNK35302" & grepl("eGFR", panel_raw_fields$clinical_variable, fixed = TRUE)), "Laboratory/NPU panel raw fields should include DNK35302 to eGFR / CKD-EPI.")
+expect_false(any(panel_raw_fields$panel_id == "laboratory_npu" & grepl("^L0|^BW", panel_raw_fields$raw_code, ignore.case = TRUE)), "Laboratory/NPU panel raw fields should not include treatment ATC/SKS-style codes as primary lab lineage.")
 lyfo_panel_raw <- panel_raw_fields[panel_raw_fields$source_name == "RKKP_LYFO", , drop = FALSE]
 expect_true(any(lyfo_panel_raw$raw_column == "Reg_WHOHistologikode1" & lyfo_panel_raw$clinical_concept_id == "lymphoma_subtype_code"), "Panel raw fields should keep LYFO WHO histology in subtype-code context.")
 expect_false(any(lyfo_panel_raw$raw_column %in% c("Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode") & lyfo_panel_raw$clinical_concept_id == "performance_status"), "Panel raw fields must not map LYFO histology to performance status.")

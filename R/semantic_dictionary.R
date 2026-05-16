@@ -187,6 +187,8 @@ build_semantic_outputs <- function(project_root = ".", sources = NULL, column_pr
   code_map <- bind_rows_base(lapply(pieces, `[[`, "code_map"))
   panel_links <- bind_rows_base(lapply(pieces, `[[`, "panel_links"))
 
+  dictionary <- semantic_apply_treatment_source_context_dictionary(dictionary)
+  code_map <- semantic_apply_treatment_source_context_code_map(code_map)
   dictionary <- semantic_dedupe_dictionary(dictionary)
   value_map <- semantic_dedupe_value_map(value_map)
   code_map <- semantic_dedupe_code_map(code_map)
@@ -483,13 +485,312 @@ semantic_laboratory_sources <- function(project_root, min_cell_count) {
     semantic_named_code_rows(persimune, "code", "name", "n", "PERSIMUNE_biochemistry", "cartography_persimune_biochem_top_named.tsv", min_cell_count)
   )
   code_map <- semantic_dedupe_code_map(bind_rows_base(rows))
+  code_map <- semantic_apply_lab_source_context_code_map(code_map)
   dictionary <- semantic_dictionary_from_code_map(code_map, "Laboratory", "NPU biochemistry", "code_table")
+  dictionary <- semantic_apply_lab_source_context_dictionary(dictionary)
   list(
     dictionary = dictionary,
     value_map = empty_semantic_value_map(),
     code_map = code_map,
     panel_links = semantic_panel_links_for_dictionary(dictionary)
   )
+}
+
+lab_code_key <- function(value) {
+  toupper(gsub("[^A-Za-z0-9]", "", as.character(value %||% "")))
+}
+
+lab_name_key <- function(value) {
+  tolower(gsub("[^a-z0-9]+", " ", as.character(value %||% "")))
+}
+
+lab_concept_definition <- function(code, name) {
+  code_key <- lab_code_key(code)
+  name_key <- lab_name_key(name)
+  exact <- function(values) code_key %in% lab_code_key(values)
+  has_word <- function(pattern) grepl(pattern, name_key, perl = TRUE)
+
+  if (exact(c("NPU02319", "REGHAEMOGLOBIN", "REGHAEMOGLOBINMMOLL", "HAEMOGLOBIN", "HEMOGLOBIN", "HB")) ||
+      has_word("\\b(haemoglobin|hemoglobin|hb)\\b")) {
+    return(list(
+      concept_id = "haemoglobin",
+      variable = "Haemoglobin",
+      subgroup = "Haematology",
+      meaning = "Haemoglobin laboratory concept from code dictionary, lab source, or registry field evidence.",
+      terms = c("haemoglobin", "hemoglobin", "NPU02319", "HB"),
+      caveat = "Haemoglobin units and reference ranges require source-specific harmonization."
+    ))
+  }
+
+  if (exact(c("NPU02593", "REGCREATININMIKMOLL", "REGCREATININMMOLL", "REGCREATININMILLIMOLL", "CREA")) ||
+      has_word("\\bcreatinine\\b|\\bcreatinin\\b")) {
+    return(list(
+      concept_id = "creatinine",
+      variable = "Creatinine",
+      subgroup = "Renal function",
+      meaning = "Creatinine laboratory concept from code dictionary, lab source, or registry field evidence.",
+      terms = c("creatinine", "creatinin", "NPU02593", "CREA"),
+      caveat = "Creatinine units and calibration require source-specific harmonization."
+    ))
+  }
+
+  if (exact(c("DNK35302", "EGFR", "CKDEPI")) || has_word("\\begfr\\b|\\bckd epi\\b|\\bckdepi\\b")) {
+    return(list(
+      concept_id = "egfr",
+      variable = "eGFR / CKD-EPI",
+      subgroup = "Renal function",
+      meaning = "Estimated glomerular filtration rate / CKD-EPI laboratory concept.",
+      terms = c("eGFR", "CKD-EPI", "DNK35302", "renal function"),
+      caveat = "eGFR equations and reporting thresholds must be validated by source and calendar period."
+    ))
+  }
+
+  if (exact(c("NPU02636", "REGLDH", "REGLACTATDEHYDROGENASE", "REGLDHVAERDI", "LDH")) ||
+      has_word("\\bldh\\b|lactate dehydrogenase|lactatdehydrogenase")) {
+    return(list(
+      concept_id = "ldh",
+      variable = "LDH",
+      subgroup = "Inflammation and biochemistry",
+      meaning = "Lactate dehydrogenase laboratory concept.",
+      terms = c("LDH", "lactate dehydrogenase", "NPU02636"),
+      caveat = "LDH interpretation requires unit and source-specific harmonization."
+    ))
+  }
+
+  if (exact(c("NPU01349", "REGALBUMINGL", "REGALBUMINGL", "ALB")) ||
+      (has_word("\\balbumin\\b") && !has_word("corrected calcium|albumin korrigeret|albuminkorrigeret"))) {
+    return(list(
+      concept_id = "albumin",
+      variable = "Albumin",
+      subgroup = "Inflammation and biochemistry",
+      meaning = "Albumin laboratory concept.",
+      terms = c("albumin", "NPU01349", "ALB"),
+      caveat = "Albumin units and serum/plasma context require source-specific harmonization."
+    ))
+  }
+
+  if (exact(c("REGCALCIUMALBUMINKORRIGERET", "ALBUMINCORRECTEDCALCIUM")) ||
+      has_word("albumin corrected calcium|albuminkorrigeret|corrected calcium")) {
+    return(list(
+      concept_id = "albumin_corrected_calcium",
+      variable = "Albumin-corrected calcium",
+      subgroup = "Inflammation and biochemistry",
+      meaning = "Albumin-corrected calcium registry/laboratory field.",
+      terms = c("albumin-corrected calcium", "corrected calcium", "Reg_CalciumAlbuminkorrigeret"),
+      caveat = "Albumin-corrected calcium is a calcium marker, not an albumin measurement."
+    ))
+  }
+
+  if (exact(c("REGCALCIUM", "REGCALCIUMIONISERET", "CALCIUM")) ||
+      (has_word("\\bcalcium\\b") && !has_word("albumin corrected|albuminkorrigeret"))) {
+    return(list(
+      concept_id = if (has_word("ionised|ioniseret") || exact("REGCALCIUMIONISERET")) "ionised_calcium" else "calcium",
+      variable = if (has_word("ionised|ioniseret") || exact("REGCALCIUMIONISERET")) "Ionised calcium" else "Calcium",
+      subgroup = "Inflammation and biochemistry",
+      meaning = "Calcium or ionised calcium laboratory concept.",
+      terms = c("calcium", "ionised calcium", "ioniseret calcium"),
+      caveat = "Calcium and ionised calcium require unit and specimen-context harmonization."
+    ))
+  }
+
+  if (exact(c("NPU04998", "REGCREAKTIVTPROTEINGL", "REGCREAKTIVTPROTEINNMOLL", "CRP")) ||
+      has_word("\\bcrp\\b|c reactive protein|c reaktivt protein|creaktivtprotein")) {
+    return(list(
+      concept_id = "crp",
+      variable = "CRP",
+      subgroup = "Inflammation and biochemistry",
+      meaning = "C-reactive protein laboratory concept.",
+      terms = c("CRP", "C-reactive protein", "NPU04998"),
+      caveat = "CRP must not be conflated with creatinine despite similar raw-field prefixes."
+    ))
+  }
+
+  if (exact(c("NPU19748", "REGLEUKOCYTTAL", "REGLEUKOCYTTER", "LEUKOCYTES", "LEU")) ||
+      has_word("\\bleukocytes?\\b|\\bleucocytes?\\b|leukocytter|leukocyttal")) {
+    return(list(
+      concept_id = "leukocytes",
+      variable = "Leukocytes",
+      subgroup = "Haematology",
+      meaning = "Leukocyte count laboratory concept.",
+      terms = c("leukocytes", "leukocyttal", "NPU19748"),
+      caveat = "Leukocyte counts should not be inferred from lymphocyte-doubling fields."
+    ))
+  }
+
+  if (has_word("neutrophil|neutrofil")) {
+    return(list(
+      concept_id = "neutrophils",
+      variable = "Neutrophils",
+      subgroup = "Haematology",
+      meaning = "Neutrophil count laboratory concept.",
+      terms = c("neutrophils", "neutrofil"),
+      caveat = "Neutrophil availability is only mapped when exact code/name evidence exists."
+    ))
+  }
+
+  if (exact(c("REG_LYMFOCYTFORDOBLIN", "REGLYMFOCYTFORDOBLIN", "BEHLYMFOCYTFORDOBLINGSTID")) ||
+      has_word("lymphocyte doubling|lymfocytfordobling")) {
+    return(list(
+      concept_id = "lymphocyte_doubling_time",
+      variable = "Lymphocyte doubling time",
+      subgroup = "Haematology",
+      meaning = "Lymphocyte doubling/doubling-time field, distinct from lymphocyte count.",
+      terms = c("lymphocyte doubling", "lymfocytfordobling"),
+      caveat = "Lymphocyte doubling is a kinetics/treatment-indication field, not a lymphocyte count."
+    ))
+  }
+
+  if (has_word("\\blymphocytes?\\b|lymfocytter")) {
+    return(list(
+      concept_id = "lymphocytes",
+      variable = "Lymphocytes",
+      subgroup = "Haematology",
+      meaning = "Lymphocyte count laboratory concept.",
+      terms = c("lymphocytes", "lymfocytter"),
+      caveat = "Lymphocyte count and lymphocyte doubling time must remain distinct."
+    ))
+  }
+
+  if (has_word("platelet|thrombocyte|thrombocyt|trombocyt")) {
+    return(list(
+      concept_id = "platelets",
+      variable = "Platelets / thrombocytes",
+      subgroup = "Haematology",
+      meaning = "Platelet/thrombocyte count laboratory concept.",
+      terms = c("platelets", "thrombocytes", "Reg_Thrombocytter"),
+      caveat = "Platelet counts require source-specific unit harmonization."
+    ))
+  }
+
+  if (exact(c("REGBETA2MICROGLOBULINGL", "REGBETA2MICROGLOBULINMGL", "REGBETA2MICROGLOBULINNML", "REGBETA2MICROGLOBULIN")) ||
+      has_word("beta ?2 microglobulin|beta2microglobulin|b2m")) {
+    return(list(
+      concept_id = "beta2_microglobulin",
+      variable = "Beta-2 microglobulin",
+      subgroup = "Inflammation and biochemistry",
+      meaning = "Beta-2 microglobulin laboratory/registry marker.",
+      terms = c("beta-2 microglobulin", "B2M"),
+      caveat = "Beta-2 microglobulin units differ across registry/lab sources."
+    ))
+  }
+
+  if (has_word("\\bigg\\b|\\biga\\b|\\bigm\\b|immunoglobulin")) {
+    return(list(
+      concept_id = "immunoglobulin",
+      variable = "Immunoglobulins",
+      subgroup = "Immunoglobulins and M-protein",
+      meaning = "Immunoglobulin quantitation or isotype-related laboratory concept.",
+      terms = c("IgG", "IgA", "IgM", "immunoglobulin", "isotype"),
+      caveat = "Immunoglobulin quantitation, isotype buckets, and M-protein evidence should remain distinct where source evidence supports it."
+    ))
+  }
+
+  if (has_word("m protein|m component|m komponent|m spike|mspike|paraprotein|mkomponent|mcomponent")) {
+    return(list(
+      concept_id = "m_protein",
+      variable = "M-protein / M-component",
+      subgroup = "Immunoglobulins and M-protein",
+      meaning = "M-protein, M-component, or paraprotein laboratory/registry marker.",
+      terms = c("M-protein", "M-component", "paraprotein", "M-komponent"),
+      caveat = "M-protein and immunoglobulin/isotype evidence require disease- and method-specific interpretation."
+    ))
+  }
+
+  list(
+    concept_id = semantic_id_from(c("lab", code, name)),
+    variable = first_nonblank(name, code),
+    subgroup = "Candidate laboratory concept",
+    meaning = "Candidate laboratory/code row requiring source-specific validation.",
+    terms = c(code, name),
+    caveat = "Candidate lab concept; validate code label, source, unit, and result-value availability before analytic use."
+  )
+}
+
+semantic_lab_source_context <- function(source_name = "", object_name = "", code_system = "") {
+  key <- semantic_id_from(paste(source_name %||% "", object_name %||% "", sep = " "))
+  code_system <- toupper(as.character(code_system %||% ""))
+  if (grepl("sp_alleprovesvar|sp_alleproevesvar|alleprovesvar|alleproevesvar", key)) {
+    return(list(
+      layer = "SP AlleProvesvar / EHR lab results",
+      meaning = "EHR-native laboratory result layer.",
+      caveat = "SP component names/codes may need harmonization to NPU concepts and units.",
+      terms = c("SP AlleProvesvar", "EHR lab results", "component"),
+      panel = "SP AlleProvesvar / EHR lab results"
+    ))
+  }
+  if (grepl("persimune", key)) {
+    return(list(
+      layer = "PERSIMUNE biochemistry",
+      meaning = "Research/clinical biochemistry source in PERSIMUNE.",
+      caveat = "PERSIMUNE biochemistry coverage may be regional or research-specific rather than nationwide.",
+      terms = c("PERSIMUNE", "biochemistry"),
+      panel = "PERSIMUNE biochemistry"
+    ))
+  }
+  if (grepl("labka|sdslab|sdslaboratorie|laboratorieproevesvar|sds_lab", key)) {
+    return(list(
+      layer = "National/LABKA/SDS lab source",
+      meaning = "Nationwide or national-register laboratory result/code layer.",
+      caveat = "NPU code coverage does not automatically mean harmonized result-value availability.",
+      terms = c("LABKA", "SDS_lab_forsker", "SDS_laboratorieproevesvar"),
+      panel = "National/LABKA/SDS lab source"
+    ))
+  }
+  if (grepl("rkkp|damyda|lyfo|cll", key)) {
+    return(list(
+      layer = "Registry lab fields",
+      meaning = "Disease-registry baseline or registry-specific laboratory field.",
+      caveat = "Registry lab fields are not full longitudinal laboratory result streams.",
+      terms = c("registry lab field", "RKKP"),
+      panel = "Registry lab fields"
+    ))
+  }
+  if (code_system %in% c("NPU", "DNK")) {
+    return(list(
+      layer = "NPU/DNK code dictionary",
+      meaning = "NPU/DNK code dictionary or analyte mapping layer.",
+      caveat = "Code labels and source-specific units must be validated before harmonized analyses.",
+      terms = c("NPU", "DNK", "code dictionary"),
+      panel = "NPU/DNK code dictionary"
+    ))
+  }
+  list(
+    layer = "Candidate laboratory evidence",
+    meaning = "Candidate laboratory evidence row.",
+    caveat = "Candidate lab rows require source-specific validation before use.",
+    terms = c("candidate lab"),
+    panel = "Candidate laboratory evidence"
+  )
+}
+
+semantic_apply_lab_source_context_code_map <- function(code_map) {
+  if (!is.data.frame(code_map) || !nrow(code_map)) return(code_map)
+  for (i in seq_len(nrow(code_map))) {
+    if (!identical(code_map$clinical_group[[i]] %||% "", "Laboratory")) next
+    def <- lab_concept_definition(code_map$code[[i]], code_map$code_name[[i]])
+    ctx <- semantic_lab_source_context(code_map$source_name[[i]], code_map$object_name[[i]], code_map$code_system[[i]])
+    code_map$clinical_concept_id[[i]] <- def$concept_id
+    code_map$clinical_variable[[i]] <- def$variable
+    code_map$panel[[i]] <- paste(ctx$panel, def$subgroup, sep = " - ")
+    code_map$notes[[i]] <- semantic_append_text(code_map$notes[[i]], paste(ctx$meaning, def$caveat, ctx$caveat))
+  }
+  code_map
+}
+
+semantic_apply_lab_source_context_dictionary <- function(dictionary) {
+  if (!is.data.frame(dictionary) || !nrow(dictionary)) return(dictionary)
+  for (i in seq_len(nrow(dictionary))) {
+    if (!identical(dictionary$clinical_group[[i]] %||% "", "Laboratory")) next
+    def <- lab_concept_definition(dictionary$raw_code[[i]], first_nonblank(dictionary$clinical_variable[[i]], dictionary$raw_descriptor[[i]]))
+    ctx <- semantic_lab_source_context(dictionary$source_name[[i]], dictionary$object_name[[i]], dictionary$code_system[[i]])
+    dictionary$clinical_concept_id[[i]] <- def$concept_id
+    dictionary$clinical_variable[[i]] <- def$variable
+    dictionary$clinical_subgroup[[i]] <- def$subgroup
+    dictionary$semantic_meaning[[i]] <- semantic_append_text(ctx$meaning, def$meaning)
+    dictionary$clinical_caveat[[i]] <- semantic_append_text(dictionary$clinical_caveat[[i]], paste(ctx$caveat, def$caveat))
+    dictionary$search_terms[[i]] <- semantic_terms(c(dictionary$search_terms[[i]], ctx$terms, def$terms, ctx$layer, def$subgroup))
+  }
+  dictionary
 }
 
 semantic_treatment_sources <- function(project_root, min_cell_count) {
@@ -502,13 +803,233 @@ semantic_treatment_sources <- function(project_root, min_cell_count) {
     semantic_named_code_rows(read_cartography_table("cartography_smr_atc_top_named.tsv", project_root), "atc", "name", "n", "SMR_medicine", "cartography_smr_atc_top_named.tsv", min_cell_count, clinical_group = "Treatment")
   )
   code_map <- semantic_dedupe_code_map(bind_rows_base(rows))
+  code_map <- semantic_apply_treatment_source_context_code_map(code_map)
   dictionary <- semantic_dictionary_from_code_map(code_map, "Treatment", "Medication and procedure codes", "code_table")
+  dictionary <- semantic_apply_treatment_source_context_dictionary(dictionary)
   list(
     dictionary = dictionary,
     value_map = empty_semantic_value_map(),
     code_map = code_map,
     panel_links = semantic_panel_links_for_dictionary(dictionary)
   )
+}
+
+semantic_treatment_source_context <- function(source_name = "", object_name = "", code_system = "",
+                                              code = "", raw_column = "", clinical_variable = "",
+                                              evidence_file = "") {
+  key <- semantic_id_from(paste(source_name %||% "", object_name %||% "", evidence_file %||% "", sep = " "))
+  code_key <- toupper(as.character(code %||% ""))
+  code_system <- toupper(as.character(code_system %||% ""))
+  atc_note <- if (identical(code_system, "ATC")) {
+    "ATC medication-code context is preserved; this row is not an SKS procedure."
+  } else ""
+  sks_note <- if (identical(code_system, "SKS")) {
+    "SKS procedure-code context is preserved; this row is not an administered medication or prescription."
+  } else ""
+  mk <- function(id, label, subgroup, variable, meaning, caveat, terms, panel = label) {
+    suffix <- paste(c(atc_note, sks_note), collapse = " ")
+    caveat <- semantic_append_text(caveat, suffix)
+    list(id = id, label = label, subgroup = subgroup, variable = variable, meaning = meaning, caveat = caveat, terms = terms, panel = panel)
+  }
+  if (grepl("rkkp_damyda", key)) {
+    return(mk(
+      "registry_treatment",
+      "Registry treatment fields",
+      "Myeloma registry treatment fields",
+      "Myeloma registry treatment field",
+      "DaMyDa registry treatment, response, relapse, or follow-up field; registry context must be preserved.",
+      "DaMyDa treatment fields are registry-coded signals, not a complete medication administration record.",
+      c("registry treatment", "DaMyDa", "myeloma registry treatment")
+    ))
+  }
+  if (grepl("rkkp_lyfo", key)) {
+    return(mk(
+      "registry_treatment",
+      "Registry treatment fields",
+      "Lymphoma registry treatment fields",
+      "Lymphoma registry treatment/regimen field",
+      "LYFO registry treatment, regimen, response, relapse, or follow-up field; registry context must be preserved.",
+      "LYFO treatment fields are registry-coded signals, not a complete medication administration record.",
+      c("registry treatment", "LYFO", "lymphoma registry treatment", "regimen")
+    ))
+  }
+  if (grepl("rkkp_cll", key)) {
+    return(mk(
+      "registry_treatment",
+      "Registry treatment fields",
+      "CLL registry treatment fields",
+      "CLL registry treatment/targeted therapy field",
+      "CLL registry treatment, targeted therapy, response, MRD, or follow-up field; registry context must be preserved.",
+      "CLL treatment fields are registry-coded signals, not a complete medication administration record.",
+      c("registry treatment", "CLL", "targeted therapy", "DCLLR")
+    ))
+  }
+  if (grepl("sp_behandlingsplaner", key)) {
+    return(mk(
+      "sp_treatment_plan",
+      "SP treatment plans",
+      "SP treatment plans and protocols",
+      "SP treatment plan/protocol field",
+      "Sundhedsplatformen treatment-plan or protocol field; planning context must be preserved.",
+      "SP treatment-plan rows describe planned treatment/protocol metadata and do not by themselves prove medication administration.",
+      c("SP treatment plan", "protocol", "cycle", "planned treatment")
+    ))
+  }
+  if (grepl("sp_administreretmedicin", key)) {
+    return(mk(
+      "sp_administered_medication",
+      "SP administered medication",
+      "SP administered medication",
+      "SP administered medication field",
+      "Sundhedsplatformen medication-administration field; administration context must be preserved.",
+      "SP administered-medication rows are EHR administration evidence and should not be labeled as prescription-only records.",
+      c("SP administered medication", "EHR medication administration", "administration time", "administration route")
+    ))
+  }
+  if (grepl("sp_ordineretmedicin", key)) {
+    return(mk(
+      "sp_ordered_medication",
+      "SP ordered medication",
+      "SP ordered medication",
+      "SP ordered medication field",
+      "Sundhedsplatformen ordered-medication field; order context must be preserved.",
+      "SP ordered-medication rows are EHR medication orders and do not by themselves prove administration.",
+      c("SP ordered medication", "EHR medication order", "prescription-like EHR medication")
+    ))
+  }
+  if (grepl("sds_epikur|sds_ekokur", key)) {
+    return(mk(
+      "national_prescription",
+      "National prescription data",
+      "National prescription metadata",
+      "National prescription / outpatient prescription signal",
+      "SDS Epikur/Ekokur prescription or outpatient prescription metadata; prescription context must be preserved.",
+      "Epikur/Ekokur rows are prescription or outpatient prescription signals and should not be labeled as inpatient administration.",
+      c("national prescription", "outpatient prescription", "ATC prescription signal", "Epikur", "Ekokur")
+    ))
+  }
+  if (grepl("sds_indberetningmedpris|smr_medicine|smr", key)) {
+    return(mk(
+      "smr_in_hospital_medication",
+      "SMR / in-hospital medication",
+      "National in-hospital medication register",
+      "SMR / national in-hospital medication signal",
+      "National in-hospital medication-register field; SMR context must be preserved.",
+      "SMR / SDS_indberetningmedpris rows are national in-hospital medication-register signals, not SP administered-medication rows.",
+      c("SMR", "in-hospital medication", "SDS_indberetningmedpris", "medicine register")
+    ))
+  }
+  if (grepl("sds_t_sks|sksopr|sksube|sds_procedurer|sds_sks", key) || identical(code_system, "SKS")) {
+    return(mk(
+      "sks_procedure",
+      "SKS procedure/treatment signals",
+      "SKS treatment/procedure signals",
+      "SKS treatment/procedure signal",
+      "SKS procedure or treatment-code signal; procedure-code context must be preserved.",
+      "SKS rows are procedure/treatment code signals and should not be labeled as ATC drug exposure, prescriptions, or administered medication.",
+      c("SKS", "procedure", "treatment procedure", "radiotherapy", "transplant")
+    ))
+  }
+  if (identical(code_system, "ATC") || grepl("^[A-Z][0-9]{2}", code_key)) {
+    atc_subgroup <- if (grepl("^L01", code_key)) {
+      "ATC antineoplastic medication signals"
+    } else if (grepl("^L04", code_key)) {
+      "ATC immunomodulating/immunosuppressive medication signals"
+    } else {
+      "ATC medication signals"
+    }
+    return(mk(
+      "atc_medication",
+      "ATC medication signals",
+      atc_subgroup,
+      first_nonblank(clinical_variable, "ATC medication signal"),
+      "ATC medication-code signal; ATC code context must be preserved.",
+      "ATC rows are medication-code signals and should not be labeled as SKS procedures, confirmed delivered therapy, or registry treatment without source-specific evidence.",
+      c("ATC", "medication code", "drug signal", "L01", "L04")
+    ))
+  }
+  mk(
+    "candidate_treatment",
+    "Candidate / needs-validation treatment rows",
+    "Candidate treatment rows",
+    first_nonblank(clinical_variable, "Candidate treatment row"),
+    "Treatment-related row that needs source-specific validation before primary exposure use.",
+    "Candidate treatment rows should be validated against source documentation before use as treatment exposure evidence.",
+    c("candidate treatment", "needs validation")
+  )
+}
+
+semantic_treatment_registry_related <- function(row) {
+  if (!is.data.frame(row) || !nrow(row)) return(FALSE)
+  source <- row$source_name[[1]] %||% ""
+  if (!grepl("RKKP_", source, ignore.case = TRUE)) return(FALSE)
+  hay <- paste(
+    row$clinical_concept_id[[1]] %||% "",
+    row$clinical_variable[[1]] %||% "",
+    row$raw_column[[1]] %||% "",
+    row$semantic_meaning[[1]] %||% "",
+    row$search_terms[[1]] %||% ""
+  )
+  grepl("treatment|therapy|regimen|behandling|behandl|kemo|immun|target|targeteret|transplant|response|mrd|relaps|progress", hay, ignore.case = TRUE)
+}
+
+semantic_treatment_context_relevant <- function(row) {
+  if (!is.data.frame(row) || !nrow(row)) return(FALSE)
+  group <- row$clinical_group[[1]] %||% ""
+  if (identical(group, "Treatment")) return(TRUE)
+  semantic_treatment_registry_related(row)
+}
+
+semantic_append_text <- function(base, addition) {
+  base <- as.character(base %||% "")
+  addition <- trimws(as.character(addition %||% ""))
+  if (!nzchar(addition)) return(base)
+  if (!nzchar(base)) return(addition)
+  if (grepl(addition, base, fixed = TRUE)) return(base)
+  paste(base, addition)
+}
+
+semantic_apply_treatment_source_context_dictionary <- function(dictionary) {
+  if (!is.data.frame(dictionary) || !nrow(dictionary)) return(dictionary)
+  for (i in seq_len(nrow(dictionary))) {
+    row <- dictionary[i, , drop = FALSE]
+    if (!semantic_treatment_context_relevant(row)) next
+    ctx <- semantic_treatment_source_context(
+      source_name = row$source_name[[1]],
+      object_name = row$object_name[[1]],
+      code_system = row$code_system[[1]],
+      code = row$raw_code[[1]],
+      raw_column = row$raw_column[[1]],
+      clinical_variable = row$clinical_variable[[1]],
+      evidence_file = row$evidence_file[[1]]
+    )
+    if (identical(dictionary$clinical_variable[[i]], "Treatment signal")) {
+      dictionary$clinical_variable[[i]] <- ctx$variable
+    }
+    dictionary$clinical_subgroup[[i]] <- ctx$subgroup
+    dictionary$semantic_meaning[[i]] <- semantic_append_text(dictionary$semantic_meaning[[i]], ctx$meaning)
+    dictionary$clinical_caveat[[i]] <- semantic_append_text(dictionary$clinical_caveat[[i]], ctx$caveat)
+    dictionary$search_terms[[i]] <- semantic_terms(c(dictionary$search_terms[[i]], ctx$terms, ctx$label, ctx$subgroup))
+  }
+  dictionary
+}
+
+semantic_apply_treatment_source_context_code_map <- function(code_map) {
+  if (!is.data.frame(code_map) || !nrow(code_map)) return(code_map)
+  for (i in seq_len(nrow(code_map))) {
+    if (!identical(code_map$clinical_group[[i]] %||% "", "Treatment")) next
+    ctx <- semantic_treatment_source_context(
+      source_name = code_map$source_name[[i]],
+      object_name = code_map$object_name[[i]],
+      code_system = code_map$code_system[[i]],
+      code = code_map$code[[i]],
+      clinical_variable = code_map$clinical_variable[[i]],
+      evidence_file = code_map$evidence_file[[i]]
+    )
+    code_map$panel[[i]] <- ctx$panel
+    code_map$notes[[i]] <- semantic_append_text(code_map$notes[[i]], ctx$caveat)
+  }
+  code_map
 }
 
 semantic_domain_sources <- function(project_root, min_cell_count) {
@@ -1932,34 +2453,11 @@ semantic_dictionary_from_code_map <- function(code_map, clinical_group, subgroup
 }
 
 lab_concept_id <- function(code, name) {
-  key <- semantic_id_from(c(code, name))
-  name_l <- tolower(name %||% "")
-  if (grepl("haemoglobin|hemoglobin", name_l) || code == "NPU02319") return("haemoglobin")
-  if (grepl("creatinine", name_l) || code == "NPU02593") return("creatinine")
-  if (grepl("egfr|ckd", name_l) || code == "DNK35302") return("egfr")
-  if (grepl("leukocyte|leucocyte", name_l) || code == "NPU19748") return("leukocytes")
-  if (grepl("\\bldh\\b|lactate dehydrogenase", name_l)) return("ldh")
-  if (grepl("albumin", name_l)) return("albumin")
-  if (grepl("c-reactive|crp", name_l)) return("crp")
-  if (grepl("immunoglobulin|\\bigg\\b|\\biga\\b|\\bigm\\b", name_l)) return("immunoglobulin")
-  if (grepl("m-component|m spike|paraprotein", name_l)) return("m_component")
-  semantic_id_from(c("lab", key))
+  lab_concept_definition(code, name)$concept_id
 }
 
 lab_variable_name <- function(code, name) {
-  concept <- lab_concept_id(code, name)
-  labels <- c(
-    haemoglobin = "Haemoglobin",
-    creatinine = "Creatinine",
-    egfr = "eGFR",
-    leukocytes = "Leukocytes",
-    ldh = "LDH",
-    albumin = "Albumin",
-    crp = "CRP",
-    immunoglobulin = "Immunoglobulin",
-    m_component = "M-component / paraprotein"
-  )
-  if (concept %in% names(labels)) labels[[concept]] else first_nonblank(name, code)
+  lab_concept_definition(code, name)$variable
 }
 
 semantic_concept_definition <- function(concept, column, source_name) {

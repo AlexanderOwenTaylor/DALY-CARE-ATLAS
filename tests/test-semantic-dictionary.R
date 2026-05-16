@@ -126,8 +126,19 @@ expect_false(any(cll_symptoms$clinical_concept_id == "treatment" | cll_symptoms$
 cll_workup <- cll_rows[cll_rows$raw_column %in% c("Reg_CTSCANNING", "Reg_ULSCANNING"), , drop = FALSE]
 expect_false(any(cll_workup$clinical_concept_id == "imaging_availability"), "CLL registry workup fields must not be routed to general imaging availability.")
 expect_true(any(search_semantic("NPU02319")$clinical_variable == "Haemoglobin"), "Search for NPU02319 should return haemoglobin.")
-expect_true(any(search_semantic("DNK35302")$clinical_variable == "eGFR"), "Search for DNK35302 should return eGFR.")
+expect_true(any(grepl("eGFR", search_semantic("DNK35302")$clinical_variable, fixed = TRUE)), "Search for DNK35302 should return eGFR / CKD-EPI.")
 expect_true(any(search_semantic("NPU19748")$clinical_variable == "Leukocytes"), "Search for NPU19748 should return leukocytes.")
+expect_true(any(search_semantic("NPU02593")$clinical_concept_id == "creatinine"), "Search for NPU02593 should return creatinine.")
+expect_true(any(search_semantic("NPU02636")$clinical_concept_id == "ldh"), "Search for NPU02636 should return LDH.")
+expect_true(any(search_semantic("NPU01349")$clinical_concept_id == "albumin"), "Search for NPU01349 should return albumin.")
+if (nrow(search_semantic("NPU04998"))) {
+  expect_true(any(search_semantic("NPU04998")$clinical_concept_id == "crp"), "Search for NPU04998 should return CRP when evidenced.")
+}
+lab_rows <- dictionary[dictionary$clinical_group == "Laboratory", , drop = FALSE]
+expect_false(any(grepl("CReaktivtProtein", lab_rows$raw_column, fixed = TRUE) & lab_rows$clinical_concept_id == "creatinine"), "Laboratory C-reactive protein rows must not map to creatinine.")
+expect_false(any(lab_rows$raw_column == "Reg_CalciumAlbuminkorrigeret" & lab_rows$clinical_concept_id == "albumin"), "Laboratory albumin-corrected calcium must not map to albumin.")
+expect_false(any(lab_rows$raw_column == "Reg_LYMFOCYTFORDOBLIN" & lab_rows$clinical_concept_id == "lymphocytes"), "Lymphocyte doubling must not map to lymphocyte count.")
+expect_false(any(code_map$clinical_group == "Laboratory" & code_map$code_system %in% c("ATC", "SKS")), "ATC/SKS treatment rows must not appear as Laboratory code-map rows.")
 expect_true(nrow(search_semantic("ATC")) > 0, "Search for ATC should return treatment/medication signals.")
 expect_true(nrow(search_semantic("SKS")) > 0, "Search for SKS should return diagnosis/procedure/treatment/imaging signals.")
 expect_true(nrow(search_semantic("SNOMED")) > 0, "Search for SNOMED should return pathology signals.")

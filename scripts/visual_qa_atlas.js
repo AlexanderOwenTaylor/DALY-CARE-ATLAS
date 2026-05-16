@@ -82,6 +82,7 @@ const targets = [
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
   { name: "cll", tab: "registries", sub: "reg-cll" },
   { name: "treatment", tab: "treatment", sub: "treatment-dashboard" },
+  { name: "laboratory", tab: "laboratory", sub: "lab-npu" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 
