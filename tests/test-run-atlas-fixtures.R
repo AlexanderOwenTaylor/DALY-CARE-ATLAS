@@ -205,10 +205,10 @@ for (needle in c("Microbiology / infection atlas", "Microbiology evidence layers
 for (needle in c("Medical imaging atlas", "Imaging evidence layers", "Nationwide procedure-code imaging", "DaMyDa registry imaging / bone disease", "SP imaging metadata/report layer", "CT", "MRI", "PET / PET-CT", "X-ray", "Radiotherapy", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Imaging renderer should contain section:", needle))
 }
-for (needle in c("function imagingLayer", "function imagingPanelDistributionRows", "function renderImagingLayerCards", "function renderImagingRawLineageByLayer", "SP imaging report-text table not available in current aggregate output", "Imaging signals are procedure/metadata/registry evidence, not image pixels", "Report text/free text must not be emitted into the static atlas", "Radiotherapy rows are procedure signals, not medication treatment exposure")) {
+for (needle in c("function imagingLayer", "function isDaMyDaImagingRegistryRow", "imagingDamydaRegistryColumns", "function imagingPanelDistributionRows", "function renderImagingLayerCards", "function renderImagingRawLineageByLayer", "SP imaging report-text table not available in current aggregate output", "Disease-specific registry summary, not full imaging-event stream", "Imaging signals are procedure/metadata/registry evidence, not image pixels", "Report text/free text must not be emitted into the static atlas", "Radiotherapy rows are procedure signals, not medication treatment exposure")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Imaging renderer should include guarded source-aware logic:", needle))
 }
-for (needle in c("SDS_t_sksube", "SDS_procedurer_andre", "SP_Billeddiagnostik", "RKKP_DaMyDa", "APAA4", "UXZ11", "UXZ10", "UXRC00", "UXCC00", "UXCD00", "BWGC1", "BWGC4A", "CT", "MRI", "PET", "PET/CT", "F-18-FDG", "RU THORAX", "Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_PETCT", "Reg_Knogleforandringer")) {
+for (needle in c("SDS_t_sksube", "SDS_procedurer_andre", "SP_Billeddiagnostik", "RKKP_DaMyDa", "APAA4", "UXZ11", "UXZ10", "UXRC00", "UXCC00", "UXCD00", "BWGC1", "BWGC4A", "CT", "MRI", "PET", "PET/CT", "F-18-FDG", "RU THORAX", "Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_ct", "Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_mri", "Reg_Knogleundersoegelser_PETCT", "Reg_Knogleundersoegelser_pet", "Reg_Knogleundersoegelser_DEXA", "Reg_Knogleundersoegelser_dexa", "Reg_Knogleundersoegelser_SCINTI", "Reg_Knogleundersoegelser_scinti", "Reg_Knogleforandringer", "Reg_Knogleforandringer_type")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Imaging renderer should be able to surface evidenced term:", needle))
 }
 for (needle in c("function microbiologyLayer", "function microbiologyPanelDistributionRows", "function microbiologyRowsForAtGlance", "function renderMicrobiologyAtGlance", "microbiology-at-a-glance", "panelDistributionRows || []", "function renderMicrobiologyLayerCards", "function renderSpBloodCultureWorkflow", "function renderMicrobiologyRawLineageByLayer", "Aggregate rows not available in current output", "Detailed organism/species values are suppressed or grouped", "Free text, notes, report examples, and raw date values are not emitted as categorical bars")) {
@@ -720,6 +720,21 @@ expect_true(nrow(imaging_rows) > 0, "Semantic output should include imaging rows
 imaging_code_rows <- semantic_code_map[semantic_code_map$clinical_group == "Imaging", , drop = FALSE]
 imaging_panel_raw <- panel_raw_fields[panel_raw_fields$panel_id == "clinical_imaging", , drop = FALSE]
 imaging_panel_distributions <- panel_distributions[panel_distributions$panel_id == "clinical_imaging", , drop = FALSE]
+damyda_imaging_fields <- c(
+  "Reg_Knogleundersoegelser_CT",
+  "Reg_Knogleundersoegelser_ct",
+  "Reg_Knogleundersoegelser_MR",
+  "Reg_Knogleundersoegelser_mri",
+  "Reg_Knogleundersoegelser_PETCT",
+  "Reg_Knogleundersoegelser_pet",
+  "Reg_Knogleundersoegelser_DEXA",
+  "Reg_Knogleundersoegelser_dexa",
+  "Reg_Knogleundersoegelser_SCINTI",
+  "Reg_Knogleundersoegelser_scinti",
+  "Reg_AndreKnogleundersoegelse",
+  "Reg_Knogleforandringer",
+  "Reg_Knogleforandringer_type"
+)
 imaging_expect_code_if_present <- function(codes, concept_id, message) {
   present <- imaging_rows$raw_code %in% codes | imaging_rows$raw_descriptor %in% codes | imaging_code_rows$code %in% codes
   if (any(present)) {
@@ -741,10 +756,29 @@ imaging_expect_code_if_present(c("BWGC1", "BWGC4A"), "radiotherapy", "BWGC radio
 imaging_expect_value_if_present(c("PET", "F-18-FDG", "FDG"), "imaging_pet_ct", "PET/FDG labels should map to PET/PET-CT imaging signal.")
 imaging_expect_value_if_present(c("RU THORAX"), "imaging_xray", "RU THORAX should map to X-ray imaging signal.")
 imaging_expect_value_if_present(c("CT THORAX", "CT ABDOMEN", "CT CEREBRUM", "CT HELKROP"), "imaging_ct", "CT labels should map to CT imaging signal.")
-damyda_imaging <- imaging_rows[imaging_rows$source_name == "RKKP_DaMyDa" | grepl("^Reg_Knogle", imaging_rows$raw_column), , drop = FALSE]
+damyda_imaging <- semantic_dictionary[
+  semantic_dictionary$source_name == "RKKP_DaMyDa" &
+    semantic_dictionary$raw_column %in% damyda_imaging_fields,
+  ,
+  drop = FALSE
+]
 if (nrow(damyda_imaging)) {
-  expect_true(any(grepl("DaMyDa registry imaging / bone disease|Myeloma registry imaging / bone disease", damyda_imaging$clinical_subgroup)), "DaMyDa imaging/bone rows should preserve myeloma registry context.")
+  damyda_exact_imaging <- damyda_imaging[damyda_imaging$clinical_concept_id %in% c(
+    "myeloma_ct_modality",
+    "myeloma_mri_modality",
+    "myeloma_pet_ct_modality",
+    "myeloma_dexa_modality",
+    "myeloma_scintigraphy_modality",
+    "myeloma_other_imaging",
+    "myeloma_bone_disease",
+    "myeloma_bone_lesion_type"
+  ), , drop = FALSE]
+  expect_true(nrow(damyda_exact_imaging) > 0, "DaMyDa imaging/bone evidence should include exact registry imaging concepts.")
+  expect_true(any(grepl("DaMyDa registry|myeloma bone|myeloma bone/imaging|Registry modality fields|Bone-disease fields", paste(damyda_exact_imaging$semantic_meaning, damyda_exact_imaging$clinical_caveat), ignore.case = TRUE)), "DaMyDa imaging/bone rows should preserve myeloma registry context.")
   expect_false(any(damyda_imaging$clinical_concept_id == "imaging_candidate_signal" & grepl("Reg_Knogle", damyda_imaging$raw_column)), "DaMyDa exact imaging/bone fields should not fall through to generic imaging candidates.")
+  expect_true(any(panel_raw_fields$source_name == "RKKP_DaMyDa" & panel_raw_fields$raw_column %in% damyda_imaging$raw_column), "DaMyDa registry imaging fields should flow into product-layer raw-field rows.")
+  expect_false(any(grepl("Nationwide procedure-code imaging", damyda_imaging$clinical_subgroup, fixed = TRUE)), "DaMyDa registry imaging rows must not render as national procedure-code imaging.")
+  expect_false(any(grepl("image pixels|image-pixel", paste(damyda_imaging$semantic_meaning, damyda_imaging$clinical_caveat), ignore.case = TRUE)), "DaMyDa registry imaging rows must not imply image-pixel availability.")
 }
 sp_imaging <- imaging_rows[grepl("^SP_Billeddiagnost", imaging_rows$source_name), , drop = FALSE]
 if (nrow(sp_imaging)) {

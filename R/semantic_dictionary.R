@@ -1516,7 +1516,7 @@ damyda_registry_column_definition <- function(column, key, mk) {
     any(startsWith(key, vapply(prefixes, semantic_id_from, character(1))))
   }
 
-  if (exact("Reg_Knogleundersoegelser_CT")) {
+  if (exact(c("Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_ct"))) {
     return(mk(
       "myeloma_ct_modality",
       "Myeloma CT modality field",
@@ -1530,7 +1530,7 @@ damyda_registry_column_definition <- function(column, key, mk) {
     ))
   }
 
-  if (exact("Reg_Knogleundersoegelser_MR")) {
+  if (exact(c("Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_mri"))) {
     return(mk(
       "myeloma_mri_modality",
       "Myeloma MRI modality field",
@@ -1544,7 +1544,7 @@ damyda_registry_column_definition <- function(column, key, mk) {
     ))
   }
 
-  if (exact("Reg_Knogleundersoegelser_PETCT")) {
+  if (exact(c("Reg_Knogleundersoegelser_PETCT", "Reg_Knogleundersoegelser_pet"))) {
     return(mk(
       "myeloma_pet_ct_modality",
       "Myeloma PET/CT modality field",
@@ -1554,6 +1554,34 @@ damyda_registry_column_definition <- function(column, key, mk) {
       "high",
       "confirmed",
       c("DaMyDa", "myeloma", "PET/CT", "FDG", "bone imaging", column),
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams."
+    ))
+  }
+
+  if (exact(c("Reg_Knogleundersoegelser_DEXA", "Reg_Knogleundersoegelser_dexa"))) {
+    return(mk(
+      "myeloma_dexa_modality",
+      "Myeloma DEXA modality field",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field indicating DEXA use in myeloma bone/imaging assessment.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "DEXA", "bone imaging", column),
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams."
+    ))
+  }
+
+  if (exact(c("Reg_Knogleundersoegelser_SCINTI", "Reg_Knogleundersoegelser_scinti"))) {
+    return(mk(
+      "myeloma_scintigraphy_modality",
+      "Myeloma scintigraphy modality field",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field indicating scintigraphy use in myeloma bone/imaging assessment.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "scintigraphy", "bone imaging", column),
       "Registry modality fields are disease-specific summaries, not full imaging-event streams."
     ))
   }

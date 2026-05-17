@@ -3052,7 +3052,7 @@
 
       const imagingLayerSpecs = [
         { id: "national_procedure", label: "Nationwide procedure-code imaging", tone: "blue", terms: ["SDS_t_sksube", "SDS_procedurer_andre", "procedurekode", "UX"], captures: "National SKS/UX/BWGC procedure-coded imaging or radiotherapy signal.", best: "CT/MRI/PET-CT/X-ray procedure-code cohort enrichment.", caveat: "Procedure-code signals are event/procedure evidence, not image pixels and not necessarily report text.", fields: ["procedurekode", "c_opr", "UXZ10", "UXZ11", "UXRC00", "UXCC00"] },
-        { id: "damyda_registry", label: "DaMyDa registry imaging / bone disease", tone: "plum", terms: ["RKKP_DaMyDa", "Reg_Knogleundersoegelser", "Reg_Knogleforandringer"], captures: "Disease-specific registry imaging/modality and myeloma bone-disease fields.", best: "Myeloma bone disease and modality-field review.", caveat: "Registry modality fields are disease-specific summaries, not full imaging-event streams.", fields: ["Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_PETCT", "Reg_Knogleforandringer"] },
+        { id: "damyda_registry", label: "DaMyDa registry imaging / bone disease", tone: "plum", terms: ["RKKP_DaMyDa", "Reg_Knogleundersoegelser", "Reg_Knogleforandringer"], captures: "Disease-specific registry imaging/modality and myeloma bone-disease fields.", best: "Myeloma bone disease and modality-field review.", caveat: "Registry modality fields are disease-specific summaries, not full imaging-event streams.", fields: ["Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_PETCT", "Reg_Knogleundersoegelser_DEXA", "Reg_Knogleundersoegelser_SCINTI", "Reg_Knogleforandringer"] },
         { id: "sp_metadata", label: "SP imaging metadata/report layer", tone: "cyan", terms: ["SP_Billeddiagnostik", "bestillingsnavn", "bld_kode"], captures: "EHR-native imaging order, code, metadata, and report-text availability layer.", best: "SP imaging metadata availability and report-text linkage planning where access allows.", caveat: "Report text/free text must not be emitted into the static atlas.", fields: ["bestillingsnavn", "bld_kode", "hospital_area_name", "bestillingstidspunkt", "beskrivelse"] },
         { id: "radiotherapy", label: "Radiotherapy procedure signals", tone: "red", terms: ["BWGC", "radiotherapy", "straalebehandling"], captures: "Radiotherapy procedure-coded evidence.", best: "Radiotherapy procedure-signal review.", caveat: "Radiotherapy procedure codes are treatment/procedure signals, not medication exposure or image pixels.", fields: ["BWGC1", "BWGC4A", "radiotherapy"] },
         { id: "candidate", label: "Candidate / needs-validation", tone: "amber", terms: [], captures: "Candidate imaging evidence.", best: "Discovery only.", caveat: "Validate source-specific meaning before analytic use.", fields: [] }
@@ -3076,6 +3076,28 @@
         { title: "X-ray", ids: ["imaging_xray"], terms: ["X-ray", "Rontgen", "RU THORAX", "UXRC00"], tone: "cyan" },
         { title: "Radiotherapy", ids: ["radiotherapy"], terms: ["BWGC1", "BWGC4A", "radiotherapy"], tone: "red" }
       ];
+      const imagingDamydaRegistryColumns = [
+        "Reg_Knogleundersoegelser_CT",
+        "Reg_Knogleundersoegelser_ct",
+        "Reg_Knogleundersoegelser_MR",
+        "Reg_Knogleundersoegelser_mri",
+        "Reg_Knogleundersoegelser_PETCT",
+        "Reg_Knogleundersoegelser_pet",
+        "Reg_Knogleundersoegelser_DEXA",
+        "Reg_Knogleundersoegelser_dexa",
+        "Reg_Knogleundersoegelser_SCINTI",
+        "Reg_Knogleundersoegelser_scinti",
+        "Reg_AndreKnogleundersoegelse",
+        "Reg_Knogleforandringer",
+        "Reg_Knogleforandringer_type"
+      ];
+      const imagingDamydaRegistryColumnKeys = new Set(imagingDamydaRegistryColumns.map(normalizeClinicalKey));
+      function isDaMyDaImagingRegistryRow(row) {
+        const rawColumnKey = normalizeClinicalKey(row.raw_column || row.column_name || row.column || "");
+        if (!rawColumnKey || !imagingDamydaRegistryColumnKeys.has(rawColumnKey)) return false;
+        const sourceKey = normalizeClinicalKey([row.source_name, row.object_name, row.panel_id, row.evidence_file].map(text).join(" "));
+        return /rkkpdamyda|regdamyda|damyda/.test(sourceKey);
+      }
       function imagingIsDateLike(row) {
         const key = normalizeClinicalKey([row.raw_column, row.raw_value, row.raw_descriptor, row.display_value].map(text).join(" "));
         return /date|dato|datetime|tidspunkt|bestillingstidspunkt|_dt|time/.test(key);
@@ -3086,6 +3108,15 @@
       }
       function imagingSafeLabel(row) {
         if (imagingIsDateLike(row) || imagingIsFreeText(row)) return "";
+        if (isDaMyDaImagingRegistryRow(row)) {
+          const registryValue = [row.raw_value, row.display_value, row.raw_descriptor, row.raw_code]
+            .map(text)
+            .find(value => {
+              const key = normalizeClinicalKey(value);
+              return key && key !== "null" && key !== "suppressednotshown" && key !== normalizeClinicalKey(row.clinical_variable || "");
+            });
+          return registryValue ? `${row.raw_column}: ${registryValue}` : row.raw_column || row.clinical_variable || "DaMyDa registry imaging field";
+        }
         return [row.raw_descriptor, row.raw_code, row.raw_value, row.display_value, row.code]
           .map(text)
           .find(value => {
@@ -3095,6 +3126,7 @@
       }
       function imagingLayer(row) {
         const key = normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file, row.raw_column, row.raw_code, row.raw_descriptor, row.clinical_concept_id].map(text).join(" "));
+        if (isDaMyDaImagingRegistryRow(row)) return imagingLayerSpecs[1];
         if (/radiotherapy|bwgc/.test(key)) return imagingLayerSpecs[3];
         if (/rkkpdamyda|damyda|myeloma/.test(key) && /knogle|bone|modality|imaging/.test(key)) return imagingLayerSpecs[1];
         if (/spbilleddiagnostik|spbilleddiagnostiske|billeddiagnostik|billeddiagnostiske|bestillingsnavn|bldkode|hospitalareaname/.test(key)) return imagingLayerSpecs[2];
@@ -3103,7 +3135,7 @@
       }
       function imagingAllRawRows() {
         return (panelRawFieldRows || [])
-          .filter(row => row.panel_id === "clinical_imaging" || row.clinical_group === "Imaging")
+          .filter(row => row.panel_id === "clinical_imaging" || row.clinical_group === "Imaging" || isDaMyDaImagingRegistryRow(row))
           .filter(row => !imagingIsDateLike(row))
           .filter(row => !imagingIsFreeText(row))
           .sort((a, b) => {
@@ -3114,7 +3146,7 @@
       }
       function imagingPanelDistributionRows(predicate) {
         return (panelDistributionRows || [])
-          .filter(row => row.panel_id === "clinical_imaging")
+          .filter(row => row.panel_id === "clinical_imaging" || isDaMyDaImagingRegistryRow(row))
           .filter(row => !imagingIsDateLike(row))
           .filter(row => !imagingIsFreeText(row))
           .filter(row => imagingSafeLabel(row))
@@ -3240,7 +3272,10 @@
             `, "blue")}
             ${renderSectionCard("Imaging evidence layers", renderImagingLayerCards(), "cyan")}
             ${renderSectionCard("Nationwide procedure-code imaging", renderImagingLayerSection("national_procedure", "blue"), "blue")}
-            ${renderSectionCard("DaMyDa registry imaging / bone disease", renderImagingLayerSection("damyda_registry", "plum"), "plum")}
+            ${renderSectionCard("DaMyDa registry imaging / bone disease", `
+              <p class="mini"><strong>Source:</strong> RKKP_DaMyDa. <strong>Layer:</strong> Disease-registry imaging / bone disease. Disease-specific registry summary, not full imaging-event stream.</p>
+              ${renderImagingLayerSection("damyda_registry", "plum")}
+            `, "plum")}
             ${renderSectionCard("SP imaging metadata/report layer", `
               <p class="mini">SP imaging metadata is order/code/report-availability evidence. SP imaging report text is not emitted.</p>
               ${renderImagingLayerSection("sp_metadata", "cyan")}
