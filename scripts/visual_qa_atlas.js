@@ -85,6 +85,7 @@ const targets = [
   { name: "treatment", tab: "treatment", sub: "treatment-dashboard" },
   { name: "laboratory", tab: "laboratory", sub: "lab-npu" },
   { name: "microbiology", tab: "clinical", sub: "clinical-microbiology" },
+  { name: "pathology", tab: "clinical", sub: "clinical-pathology" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 
@@ -143,6 +144,9 @@ for (const viewport of viewports) {
     if (target.name === "imaging") {
       report.imagingPanelPresent = /Medical imaging atlas/.test(dom) && /Imaging evidence layers/.test(dom) && /Raw names \/ data lineage/.test(dom);
     }
+    if (target.name === "pathology") {
+      report.pathologyPanelPresent = /Pathology \/ PATOBANK atlas/.test(dom) && /Pathology evidence layers/.test(dom) && /Raw names \/ data lineage/.test(dom);
+    }
     reports.push(report);
   }
 }
@@ -165,7 +169,8 @@ const failures = reports.filter(report =>
   (report.overflowing || []).length ||
   (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
   (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
-  (report.target === "imaging" && !report.imagingPanelPresent)
+  (report.target === "imaging" && !report.imagingPanelPresent) ||
+  (report.target === "pathology" && !report.pathologyPanelPresent)
 );
 if (failures.length) {
   console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);

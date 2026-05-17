@@ -176,12 +176,12 @@ product_panel_specs <- function() {
     panel_section = c(
       "Disease Registries", "Disease Registries", "Disease Registries", "Disease Registries",
       "Clinical Data", "Clinical Data", "Clinical Data", "Clinical Data", "Clinical Data",
-      "Clinical Data", "Treatment", "Laboratory", "Laboratory", "Laboratory"
+      "Clinical Data", "Treatment", "Laboratory", "Clinical Data", "Laboratory"
     ),
     panel_title = c(
       "DaMyDa", "LYFO: lymphoma registry review", "CLL", "Diagnosis Atlas", "Vitals", "Social History",
       "ADT", "Notes", "Imaging", "Microbiology", "Treatment", "Laboratory/NPU",
-      "Pathology", "Biobank"
+      "Pathology / PATOBANK", "Biobank"
     ),
     clinical_purpose = c(
       "Myeloma registry review for baseline markers, staging, treatment, response, relapse, bone disease, imaging, and cytogenetic availability.",
@@ -311,6 +311,26 @@ product_structural_raw_fields <- function(project_root, start_sort = 1L) {
       variables = c("Contact start", "Contact end", "ADT event time", "ADT event type", "Patient class"),
       caveat = "Admission/current-state metrics require paired interval or event-stream definitions.",
       privacy = "aggregate_only"
+    ),
+    list(
+      panel_id = "clinical_pathology",
+      panel_section = "Clinical Data",
+      source_name = "SDS_t_mikro",
+      evidence_file = "cartography_part4_sds_t_mikro_columns.tsv",
+      fields = c("k_inst", "v_fritekst", "date_received", "datetime_created"),
+      variables = c("Pathology institution / lab source", "Pathology microscopy/free-text availability", "Pathology received date field", "Pathology created datetime field"),
+      caveat = "Pathology microscopy/free-text values are described as available but never emitted into public outputs.",
+      privacy = "free_text_not_exposed"
+    ),
+    list(
+      panel_id = "clinical_pathology",
+      panel_section = "Clinical Data",
+      source_name = "SDS_t_konk",
+      evidence_file = "cartography_part4_sds_t_konk_columns.tsv",
+      fields = c("k_inst", "v_fritekst", "date_received", "datetime_created"),
+      variables = c("Pathology institution / lab source", "Pathology conclusion/free-text availability", "Pathology received date field", "Pathology created datetime field"),
+      caveat = "Pathology conclusion/free-text values are described as available but never emitted into public outputs.",
+      privacy = "free_text_not_exposed"
     )
   )
   sort_order <- start_sort

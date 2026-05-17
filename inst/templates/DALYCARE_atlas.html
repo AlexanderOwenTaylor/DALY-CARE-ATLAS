@@ -1151,6 +1151,7 @@
         <button class="sub-tab" data-sub="clinical-admissions">Admissions</button>
         <button class="sub-tab" data-sub="clinical-imaging">Imaging</button>
         <button class="sub-tab" data-sub="clinical-microbiology">Microbiology</button>
+        <button class="sub-tab" data-sub="clinical-pathology">Pathology</button>
         <button class="sub-tab" data-sub="clinical-vitals">Vitals</button>
         <button class="sub-tab" data-sub="clinical-notes">Notes</button>
         <button class="sub-tab" data-sub="clinical-social">Social History</button>
@@ -1159,6 +1160,7 @@
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Procedure-code imaging, DaMyDa registry imaging/bone disease, SP metadata/report availability, and radiotherapy signals.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Aggregate coded pathology, SNOMED, specimen/material, tumor-coded, and report-text availability evidence.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
@@ -3597,6 +3599,192 @@
           </div>`;
       }
 
+      const pathologyLayerSpecs = [
+        { id: "coded_pato", label: "SDS/PATOBANK coded pathology", tone: "blue", captures: "Coded pathology evidence from PATOBANK/SDS pathology records.", best: "Coded pathology and SNOMED evidence discovery.", caveat: "Coded pathology records are not raw pathology report text.", fields: ["SDS_pato", "PATOBANK", "SNOMED", "c_snomedkode"] },
+        { id: "snomed", label: "SNOMED-coded pathology", tone: "green", captures: "SNOMED pathology code rows and code-like pathology evidence.", best: "SNOMED-coded cohort refinement and code discovery.", caveat: "SNOMED labels may require a separate code dictionary for clinical interpretation.", fields: ["SNOMED", "c_snomedkode", "snomed"] },
+        { id: "specimen", label: "Specimen / material", tone: "cyan", captures: "Pathology specimen/material fields and material-type codes.", best: "Specimen/material availability review.", caveat: "Specimen/material codes require source-specific interpretation.", fields: ["c_mattype", "material", "specimen"] },
+        { id: "institution", label: "Pathology institution / lab source", tone: "violet", captures: "Pathology institution, department, laboratory, or source fields.", best: "Source coverage review.", caveat: "Institution/lab source is coverage context and not a disease phenotype.", fields: ["k_inst", "institution", "lab"] },
+        { id: "microscopy_text", label: "Microscopy / free-text availability", tone: "plum", captures: "SDS_t_mikro microscopy/report text availability layer.", best: "Planning text-mining access where governance allows.", caveat: "Raw microscopy text is never emitted into the static atlas.", fields: ["SDS_t_mikro", "v_fritekst", "microscopy"] },
+        { id: "conclusion_text", label: "Conclusion / report-text availability", tone: "amber", captures: "SDS_t_konk conclusion/report text availability layer.", best: "Conclusion text availability review.", caveat: "Raw conclusion text is never emitted into the static atlas.", fields: ["SDS_t_konk", "v_fritekst", "conclusion"] },
+        { id: "tumor", label: "Tumor-coded evidence", tone: "red", captures: "Tumor-registry or tumor-coded pathology-related evidence.", best: "Tumor-coded field discovery.", caveat: "Tumor-coded evidence must remain source-scoped and separate from PATOBANK SNOMED rows.", fields: ["SDS_t_tumor", "tumor", "TNM", "morphology", "topography"] },
+        { id: "candidate", label: "Candidate / needs-validation", tone: "amber", captures: "Candidate pathology evidence.", best: "Discovery only.", caveat: "Validate source-specific meaning before analytic use.", fields: [] }
+      ];
+      function pathologyIsDateLike(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.display_value, row.raw_value, row.raw_descriptor, row.value_type].map(text).join(" "));
+        return /date|dato|datetime|tidspunkt|svardato|dsvardato|time|dt$/.test(key);
+      }
+      function pathologyIsFreeText(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.value_type, row.privacy_note, row.clinical_variable].map(text).join(" "));
+        return /vfritekst|fritekst|freetext|mikrotext|konklusion|conclusion|description|beskrivelse|tekst|text/.test(key);
+      }
+      function pathologySafeLabel(row) {
+        if (pathologyIsDateLike(row)) return "";
+        if (pathologyIsFreeText(row)) return "free-text field present; values not emitted";
+        const label = [row.raw_value, row.raw_descriptor, row.raw_code, row.display_value, row.code, row.clinical_variable]
+          .map(text)
+          .find(value => {
+            const key = normalizeClinicalKey(value);
+            return key && key !== "null" && key !== "notavailable" && key !== normalizeClinicalKey(row.clinical_variable || "");
+          });
+        return label || "";
+      }
+      function pathologyLayer(row) {
+        const key = normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file, row.raw_column, row.raw_descriptor, row.raw_code, row.clinical_subgroup, row.clinical_concept_id].map(text).join(" "));
+        if (/tmikro|microscopy/.test(key)) return pathologyLayerSpecs[4];
+        if (/tkonk|konk|conclusion/.test(key)) return pathologyLayerSpecs[5];
+        if (/ttumor|tumor|tumour|tnm|topography|morphology|laterality|grade|extent/.test(key)) return pathologyLayerSpecs[6];
+        if (/pathologysnomedcode|snomed|csnomedkode/.test(key)) return pathologyLayerSpecs[1];
+        if (/pathologyspecimenmaterial|cmattype|materiale|material|specimen|proevemateriale|provemateriale/.test(key)) return pathologyLayerSpecs[2];
+        if (/pathologyinstitution|kinst|institution|laboratory|department|hospital/.test(key)) return pathologyLayerSpecs[3];
+        if (/sdspato|patobank|pato/.test(key)) return pathologyLayerSpecs[0];
+        return pathologyLayerSpecs[7];
+      }
+      function pathologyRawRows(predicate) {
+        return (panelRawFieldRows || [])
+          .filter(row => row.panel_id === "clinical_pathology" || row.clinical_group === "Pathology")
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => {
+            const aRank = (a.mapping_status === "confirmed" ? 0 : 1) + (a.mapping_confidence === "high" ? 0 : 1);
+            const bRank = (b.mapping_status === "confirmed" ? 0 : 1) + (b.mapping_confidence === "high" ? 0 : 1);
+            return aRank - bRank || numberValue(b.n_rows) - numberValue(a.n_rows) || numberValue(a.sort_order) - numberValue(b.sort_order);
+          });
+      }
+      function pathologyDistributionRows(predicate) {
+        return (panelDistributionRows || [])
+          .filter(row => row.panel_id === "clinical_pathology")
+          .filter(row => !pathologyIsDateLike(row))
+          .filter(row => !pathologyIsFreeText(row))
+          .filter(row => pathologySafeLabel(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => numberValue(b.n || b.statistic_value || b.n_rows) - numberValue(a.n || a.statistic_value || a.n_rows) || numberValue(a.sort_order) - numberValue(b.sort_order));
+      }
+      function pathologyRowsForLayer(layerId) {
+        const dist = pathologyDistributionRows(row => pathologyLayer(row).id === layerId);
+        if (dist.length) return dist;
+        return pathologyRawRows(row => pathologyLayer(row).id === layerId && !pathologyIsDateLike(row));
+      }
+      function pathologyBarRows(rows) {
+        return (rows || []).map(row => ({
+          label: pathologySafeLabel(row) || row.raw_column || row.clinical_variable,
+          n: row.n || row.n_rows || row.statistic_value || "",
+          pct: row.pct,
+          count_scope: row.count_scope,
+          denominator_scope: row.denominator_scope,
+          profile_scope: row.profile_scope,
+          tone: pathologyLayer(row).tone
+        }));
+      }
+      function renderPathologySourceCoverage() {
+        const wanted = ["SDS_pato", "PATOBANK", "SDS_t_mikro", "SDS_t_konk", "SDS_t_tumor", "tumor"];
+        const cards = wanted.map(source => {
+          const sourceKey = normalizeClinicalKey(source);
+          const catalog = (catalogRows || []).find(row => normalizeClinicalKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" ")).includes(sourceKey));
+          const kpi = (panelKpiRows || []).find(row => row.panel_id === "clinical_pathology" && normalizeClinicalKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const distRows = pathologyDistributionRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const rawRows = pathologyRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const layer = rawRows[0] ? pathologyLayer(rawRows[0]) : distRows[0] ? pathologyLayer(distRows[0]) : pathologyLayer({ source_name: source });
+          const count = numberValue(catalog && catalog.n_rows) || numberValue(kpi && kpi.value) || distRows.reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0) || rawRows.reduce((sum, row) => sum + numberValue(row.n_rows), 0);
+          const fields = new Set(rawRows.map(row => row.raw_column).filter(Boolean));
+          return `<article class="clinical-card">
+            ${renderBadge(layer.label, layer.tone)}
+            <h3>${escapeHtml(source)}</h3>
+            ${renderKpiStrip([
+              { label: "aggregate rows", value: count || "not available in current aggregate output", tone: layer.tone },
+              { label: "fields/codes", value: fields.size || "not available", tone: "cyan" }
+            ], { tone: layer.tone })}
+            <p class="mini">${escapeHtml(layer.caveat)}</p>
+          </article>`;
+        }).join("");
+        return `<div class="grid grid-3">${cards}</div>`;
+      }
+      function renderPathologyLayerCards() {
+        return `<div class="grid grid-3">${pathologyLayerSpecs.filter(layer => layer.id !== "candidate").map(layer => `
+          <article class="raw-lineage-card">
+            ${renderBadge(layer.label, layer.tone)}
+            <p><strong>Captures:</strong> ${escapeHtml(layer.captures)}</p>
+            <p><strong>Best use:</strong> ${escapeHtml(layer.best)}</p>
+            <p class="mini"><strong>Caveat:</strong> ${escapeHtml(layer.caveat)}</p>
+            <p class="mono mini">${escapeHtml(layer.fields.join("; "))}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderPathologyLayerSection(layerId, tone, options) {
+        const opts = options || {};
+        const rows = pathologyRowsForLayer(layerId).slice(0, opts.limit || 12);
+        const rawRows = pathologyRawRows(row => pathologyLayer(row).id === layerId);
+        const bars = rows.filter(row => !pathologyIsFreeText(row) && !pathologyIsDateLike(row));
+        const availability = rows.filter(row => pathologyIsFreeText(row)).concat(rawRows.filter(row => pathologyIsFreeText(row)));
+        return `
+          ${bars.length ? renderHBarRows(pathologyBarRows(bars), { tone, limit: opts.limit || 12 }) : `<div class="empty">${escapeHtml(opts.empty || "not available in current aggregate output")}</div>`}
+          ${availability.length ? `<p class="mini">free-text field present; values not emitted</p>${renderCollapsedRawLineage(availability, { limit: 5 })}` : ""}
+          ${rawRows.length && !opts.noLineage ? renderCollapsedRawLineage(rawRows, { limit: 6 }) : ""}
+        `;
+      }
+      function renderPathologyRawLineageByLayer() {
+        const rows = pathologyRawRows();
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        const groups = [
+          { id: "coded_pato", label: "SDS/PATOBANK coded pathology" },
+          { id: "snomed", label: "SNOMED code rows" },
+          { id: "specimen", label: "Specimen/material rows" },
+          { id: "institution", label: "Institution/lab rows" },
+          { id: "microscopy_text", label: "Microscopy/free-text availability" },
+          { id: "conclusion_text", label: "Conclusion/report-text availability" },
+          { id: "tumor", label: "Tumor-coded evidence" },
+          { id: "candidate", label: "Candidate / needs-validation" }
+        ];
+        return groups.map(group => {
+          const groupRows = rows.filter(row => pathologyLayer(row).id === group.id);
+          if (!groupRows.length) return "";
+          return `<details class="lineage-block"><summary>${escapeHtml(group.label)}</summary>${renderCollapsedRawLineage(groupRows, { limit: group.id === "candidate" ? 6 : 10 })}</details>`;
+        }).join("") || `<div class="empty">not available in current aggregate output</div>`;
+      }
+      function renderPathologyPanel() {
+        const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_pathology") || {};
+        const rows = pathologyRawRows();
+        const distributions = pathologyDistributionRows();
+        return `
+          <div class="dashboard-grid pathology-dashboard">
+            ${renderKpiStrip([
+              { label: "sources", value: new Set(rows.map(row => row.source_name).filter(Boolean)).size || "not available", tone: "blue" },
+              { label: "raw fields", value: rows.length || "not available", tone: "green" },
+              { label: "distribution rows", value: distributions.length || "not available", tone: "amber" },
+              { label: "text fields", value: rows.filter(pathologyIsFreeText).length || "availability only", tone: "plum" }
+            ], { tone: "blue" })}
+            ${renderSectionCard("Source / coverage", renderPathologySourceCoverage(), "blue")}
+            ${renderSectionCard("Pathology evidence layers", renderPathologyLayerCards(), "cyan")}
+            ${renderSectionCard("SNOMED-coded pathology", renderPathologyLayerSection("snomed", "green"), "green")}
+            ${renderSectionCard("Specimen / material", renderPathologyLayerSection("specimen", "cyan"), "cyan")}
+            ${renderSectionCard("Pathology institution / lab source", renderPathologyLayerSection("institution", "violet"), "violet")}
+            ${renderSectionCard("Microscopy / free-text availability", `
+              <p class="mini">free-text field present; non-empty count not available in current aggregate output unless shown as aggregate evidence. Raw microscopy text is not emitted.</p>
+              ${renderPathologyLayerSection("microscopy_text", "plum", { empty: "free-text field present; non-empty count not available in current aggregate output" })}
+            `, "plum")}
+            ${renderSectionCard("Conclusion / report-text availability", `
+              <p class="mini">free-text field present; values not emitted. Raw conclusion text is not emitted.</p>
+              ${renderPathologyLayerSection("conclusion_text", "amber", { empty: "free-text field present; non-empty count not available in current aggregate output" })}
+            `, "amber")}
+            ${renderSectionCard("Tumor-coded evidence", renderPathologyLayerSection("tumor", "red"), "red")}
+            ${renderSectionCard("Raw names / data lineage", renderPathologyRawLineageByLayer(), "blue")}
+            ${renderSectionCard("Use cases", `
+              <ul>
+                <li>Biopsy/pathology evidence discovery.</li>
+                <li>SNOMED-coded cohort refinement.</li>
+                <li>Specimen/material availability review.</li>
+                <li>Pathology institution/source coverage review.</li>
+                <li>Planning text-mining access for microscopy/conclusion fields.</li>
+                <li>Tumor-coded field discovery.</li>
+                <li>Linking pathology evidence to diagnosis, treatment, and outcomes.</li>
+              </ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <p>${escapeHtml(panel.caveats || "Pathology code summaries are aggregate evidence, not full report review. SNOMED labels may require a separate code dictionary for clinical interpretation.")}</p>
+              <p>Raw pathology report text is not emitted. Free text/microscopy/conclusion fields are not emitted in the static atlas. Rare SNOMED/specimen combinations may require suppression or grouping.</p>
+              <p>Tumor-coded evidence and PATOBANK evidence must remain source-scoped. Patient-level completeness requires patient-level aggregate outputs. Date fields are structural metadata and are not rendered as categorical bars.</p>
+            `, "amber")}
+          </div>`;
+      }
+
       const labConceptSpecs = [
         { id: "haemoglobin", title: "Haemoglobin", subgroup: "Haematology", codes: ["NPU02319"], fields: ["Reg_Haemoglobin", "Reg_Haemoglobin_mmolL"], tone: "red" },
         { id: "creatinine", title: "Creatinine", subgroup: "Renal function", codes: ["NPU02593"], fields: ["Reg_Creatinin_mikmoll", "Reg_Creatinin_mmoll", "Reg_Creatinin_millimoll", "CREA"], tone: "blue" },
@@ -3880,6 +4068,7 @@
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
         setHtml("clinical-imaging-cards", renderImagingPanel());
         setHtml("clinical-microbiology-cards", renderMicrobiologyPanel());
+        setHtml("clinical-pathology-cards", renderPathologyPanel());
         setHtml("clinical-vitals-cards", renderVitalsPanel());
         setHtml("clinical-notes-cards", renderDomainPanel("clinical_notes"));
         setHtml("clinical-social-cards", renderSocialHistoryPanel());
