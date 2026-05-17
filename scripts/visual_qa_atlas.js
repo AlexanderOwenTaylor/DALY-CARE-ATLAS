@@ -78,6 +78,7 @@ const targets = [
   { name: "clinical_variables", tab: "variables", sub: "variables-concepts" },
   { name: "vitals", tab: "clinical", sub: "clinical-vitals" },
   { name: "social_history", tab: "clinical", sub: "clinical-social" },
+  { name: "imaging", tab: "clinical", sub: "clinical-imaging" },
   { name: "damyda", tab: "registries", sub: "reg-damyda" },
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
   { name: "cll", tab: "registries", sub: "reg-cll" },
@@ -139,6 +140,9 @@ for (const viewport of viewports) {
     if (target.name === "microbiology") {
       report.microbiologyAtGlancePresent = /class=["'][^"']*microbiology-at-a-glance/.test(dom) && /At a glance/.test(dom);
     }
+    if (target.name === "imaging") {
+      report.imagingPanelPresent = /Medical imaging atlas/.test(dom) && /Imaging evidence layers/.test(dom) && /Raw names \/ data lineage/.test(dom);
+    }
     reports.push(report);
   }
 }
@@ -160,7 +164,8 @@ const failures = reports.filter(report =>
   report.bodyOverflow ||
   (report.overflowing || []).length ||
   (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
-  (report.target === "microbiology" && !report.microbiologyAtGlancePresent)
+  (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
+  (report.target === "imaging" && !report.imagingPanelPresent)
 );
 if (failures.length) {
   console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);

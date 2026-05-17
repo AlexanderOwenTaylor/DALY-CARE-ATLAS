@@ -1157,7 +1157,7 @@
       </div>
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging Sources</h2><p class="panel-sub">SP billed imaging and radiology-like sources.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><div class="lineage-block"><h3>Key raw fields</h3><div id="semantic-clinical-imaging"></div></div></div></div></div>
+      <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Procedure-code imaging, DaMyDa registry imaging/bone disease, SP metadata/report availability, and radiotherapy signals.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
@@ -3050,6 +3050,229 @@
           </div>`;
       }
 
+      const imagingLayerSpecs = [
+        { id: "national_procedure", label: "Nationwide procedure-code imaging", tone: "blue", terms: ["SDS_t_sksube", "SDS_procedurer_andre", "procedurekode", "UX"], captures: "National SKS/UX/BWGC procedure-coded imaging or radiotherapy signal.", best: "CT/MRI/PET-CT/X-ray procedure-code cohort enrichment.", caveat: "Procedure-code signals are event/procedure evidence, not image pixels and not necessarily report text.", fields: ["procedurekode", "c_opr", "UXZ10", "UXZ11", "UXRC00", "UXCC00"] },
+        { id: "damyda_registry", label: "DaMyDa registry imaging / bone disease", tone: "plum", terms: ["RKKP_DaMyDa", "Reg_Knogleundersoegelser", "Reg_Knogleforandringer"], captures: "Disease-specific registry imaging/modality and myeloma bone-disease fields.", best: "Myeloma bone disease and modality-field review.", caveat: "Registry modality fields are disease-specific summaries, not full imaging-event streams.", fields: ["Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_PETCT", "Reg_Knogleforandringer"] },
+        { id: "sp_metadata", label: "SP imaging metadata/report layer", tone: "cyan", terms: ["SP_Billeddiagnostik", "bestillingsnavn", "bld_kode"], captures: "EHR-native imaging order, code, metadata, and report-text availability layer.", best: "SP imaging metadata availability and report-text linkage planning where access allows.", caveat: "Report text/free text must not be emitted into the static atlas.", fields: ["bestillingsnavn", "bld_kode", "hospital_area_name", "bestillingstidspunkt", "beskrivelse"] },
+        { id: "radiotherapy", label: "Radiotherapy procedure signals", tone: "red", terms: ["BWGC", "radiotherapy", "straalebehandling"], captures: "Radiotherapy procedure-coded evidence.", best: "Radiotherapy procedure-signal review.", caveat: "Radiotherapy procedure codes are treatment/procedure signals, not medication exposure or image pixels.", fields: ["BWGC1", "BWGC4A", "radiotherapy"] },
+        { id: "candidate", label: "Candidate / needs-validation", tone: "amber", terms: [], captures: "Candidate imaging evidence.", best: "Discovery only.", caveat: "Validate source-specific meaning before analytic use.", fields: [] }
+      ];
+      const imagingSourceNames = [
+        "SDS_t_sksube",
+        "SDS_procedurer_andre",
+        "SDS_procedure_andre",
+        "SDS_procedurer_kirurgi",
+        "SDS_procedure_kirurgi",
+        "RKKP_DaMyDa",
+        "SP_BilleddiagnostikeUndersoegelser_Del1",
+        "SP_BilleddiagnostiskeUndersøgelser_Del1",
+        "SP_BilleddiagnostikeUndersoegelser_Del2",
+        "SP_BilleddiagnostiskeUndersøgelser_Del2"
+      ];
+      const imagingModalitySpecs = [
+        { title: "CT", ids: ["imaging_ct", "myeloma_ct_modality"], terms: ["CT", "UXZ10", "UXCC00", "UXCD00", "APAA4"], tone: "blue" },
+        { title: "MRI", ids: ["imaging_mri", "myeloma_mri_modality"], terms: ["MRI", "MR", "UXZ11"], tone: "violet" },
+        { title: "PET / PET-CT", ids: ["imaging_pet_ct", "myeloma_pet_ct_modality"], terms: ["PET", "PET/CT", "FDG", "F-18-FDG"], tone: "plum" },
+        { title: "X-ray", ids: ["imaging_xray"], terms: ["X-ray", "Rontgen", "RU THORAX", "UXRC00"], tone: "cyan" },
+        { title: "Radiotherapy", ids: ["radiotherapy"], terms: ["BWGC1", "BWGC4A", "radiotherapy"], tone: "red" }
+      ];
+      function imagingIsDateLike(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.raw_value, row.raw_descriptor, row.display_value].map(text).join(" "));
+        return /date|dato|datetime|tidspunkt|bestillingstidspunkt|_dt|time/.test(key);
+      }
+      function imagingIsFreeText(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.value_type, row.privacy_note].map(text).join(" "));
+        return /rapporttekst|reporttext|report_text|beskrivelse|freetext|free_text|tekst|text|note/.test(key);
+      }
+      function imagingSafeLabel(row) {
+        if (imagingIsDateLike(row) || imagingIsFreeText(row)) return "";
+        return [row.raw_descriptor, row.raw_code, row.raw_value, row.display_value, row.code]
+          .map(text)
+          .find(value => {
+            const key = normalizeClinicalKey(value);
+            return key && key !== "null" && key !== "suppressednotshown" && key !== normalizeClinicalKey(row.clinical_variable || "");
+          }) || "";
+      }
+      function imagingLayer(row) {
+        const key = normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file, row.raw_column, row.raw_code, row.raw_descriptor, row.clinical_concept_id].map(text).join(" "));
+        if (/radiotherapy|bwgc/.test(key)) return imagingLayerSpecs[3];
+        if (/rkkpdamyda|damyda|myeloma/.test(key) && /knogle|bone|modality|imaging/.test(key)) return imagingLayerSpecs[1];
+        if (/spbilleddiagnostik|spbilleddiagnostiske|billeddiagnostik|billeddiagnostiske|bestillingsnavn|bldkode|hospitalareaname/.test(key)) return imagingLayerSpecs[2];
+        if (/sdstsk|sdsprocedure|sdsprocedurer|procedurekode|sks|ux/.test(key)) return imagingLayerSpecs[0];
+        return imagingLayerSpecs[4];
+      }
+      function imagingAllRawRows() {
+        return (panelRawFieldRows || [])
+          .filter(row => row.panel_id === "clinical_imaging" || row.clinical_group === "Imaging")
+          .filter(row => !imagingIsDateLike(row))
+          .filter(row => !imagingIsFreeText(row))
+          .sort((a, b) => {
+            const aRank = (a.mapping_status === "confirmed" ? 0 : 1) + (a.mapping_confidence === "high" ? 0 : 1);
+            const bRank = (b.mapping_status === "confirmed" ? 0 : 1) + (b.mapping_confidence === "high" ? 0 : 1);
+            return aRank - bRank || numberValue(b.n_rows) - numberValue(a.n_rows) || numberValue(a.sort_order) - numberValue(b.sort_order);
+          });
+      }
+      function imagingPanelDistributionRows(predicate) {
+        return (panelDistributionRows || [])
+          .filter(row => row.panel_id === "clinical_imaging")
+          .filter(row => !imagingIsDateLike(row))
+          .filter(row => !imagingIsFreeText(row))
+          .filter(row => imagingSafeLabel(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => numberValue(b.n || b.statistic_value) - numberValue(a.n || a.statistic_value) || numberValue(a.sort_order) - numberValue(b.sort_order));
+      }
+      function imagingFallbackRows(predicate) {
+        return imagingAllRawRows()
+          .filter(row => imagingSafeLabel(row))
+          .filter(row => predicate ? predicate(row) : true);
+      }
+      function imagingRowsForConcept(ids) {
+        const wanted = new Set(Array.isArray(ids) ? ids : [ids]);
+        const matchesConcept = row => wanted.has(row.clinical_concept_id);
+        const dist = imagingPanelDistributionRows(matchesConcept);
+        if (dist.length) return dist;
+        return imagingFallbackRows(matchesConcept);
+      }
+      function imagingRowsForLayer(layerId) {
+        const matchesLayer = row => imagingLayer(row).id === layerId;
+        const dist = imagingPanelDistributionRows(matchesLayer);
+        return dist.length ? dist : imagingAllRawRows().filter(matchesLayer);
+      }
+      function imagingBarRows(rows) {
+        return (rows || []).map(row => ({
+          label: imagingSafeLabel(row) || row.raw_column || row.clinical_variable,
+          n: row.n || row.n_rows || row.statistic_value || "",
+          pct: row.pct,
+          count_scope: row.count_scope,
+          denominator_scope: row.denominator_scope,
+          profile_scope: row.profile_scope,
+          tone: imagingLayer(row).tone
+        }));
+      }
+      function imagingValueMatches(row, terms) {
+        if (!terms || !terms.length) return true;
+        const labelKey = normalizeClinicalKey(imagingSafeLabel(row));
+        const hay = normalizeClinicalKey([row.raw_column, row.raw_descriptor, row.raw_code, row.display_value, row.clinical_variable].map(text).join(" "));
+        return terms.some(term => {
+          const key = normalizeClinicalKey(term);
+          return labelKey === key || hay.includes(key);
+        });
+      }
+      function renderImagingSourceCoverage() {
+        const cards = imagingSourceNames.map(source => {
+          const sourceKey = normalizeClinicalKey(source);
+          const catalog = (catalogRows || []).find(row => normalizeClinicalKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" ")).includes(sourceKey));
+          const kpi = (panelKpiRows || []).find(row => row.panel_id === "clinical_imaging" && normalizeClinicalKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const distributions = imagingPanelDistributionRows(row => normalizeClinicalKey(row.source_name || "").includes(sourceKey));
+          const rawRows = imagingAllRawRows().filter(row => normalizeClinicalKey(row.source_name || "").includes(sourceKey));
+          const count = numberValue(catalog && catalog.n_rows) || numberValue(kpi && kpi.value) || distributions.reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0) || rawRows.reduce((sum, row) => sum + numberValue(row.n_rows), 0);
+          const found = catalog || kpi || distributions.length || rawRows.length;
+          const layer = rawRows[0] ? imagingLayer(rawRows[0]) : distributions[0] ? imagingLayer(distributions[0]) : imagingLayer({ source_name: source });
+          const reportUnavailable = /Del2|del2/.test(source) && !found;
+          return `<article class="clinical-card">
+            ${renderBadge(layer.label, layer.tone)}
+            <h3>${escapeHtml(source)}</h3>
+            ${renderKpiStrip([
+              { label: "aggregate rows", value: count || (reportUnavailable ? "SP imaging report-text table not available in current aggregate output" : "not available in current aggregate output"), tone: layer.tone },
+              { label: "fields/codes", value: rawRows.length || "not available", tone: "cyan" }
+            ], { tone: layer.tone })}
+            <p class="mini">${escapeHtml(layer.caveat)}</p>
+          </article>`;
+        }).join("");
+        return `<div class="grid grid-4">${cards}</div>`;
+      }
+      function renderImagingLayerCards() {
+        return `<div class="grid grid-4">${imagingLayerSpecs.filter(layer => layer.id !== "candidate").map(layer => `
+          <article class="raw-lineage-card">
+            ${renderBadge(layer.label, layer.tone)}
+            <p><strong>Captures:</strong> ${escapeHtml(layer.captures)}</p>
+            <p><strong>Best use:</strong> ${escapeHtml(layer.best)}</p>
+            <p class="mini"><strong>Caveat:</strong> ${escapeHtml(layer.caveat)}</p>
+            <p class="mono mini">${escapeHtml(layer.fields.join("; "))}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderImagingModalityCard(spec) {
+        const rows = imagingRowsForConcept(spec.ids).filter(row => imagingValueMatches(row, spec.terms) || spec.ids.includes(row.clinical_concept_id));
+        return renderValueMapCard(spec.title, imagingBarRows(rows), {
+          tone: spec.tone,
+          limit: 10,
+          scope: rows.find(row => row.count_scope || row.denominator_scope || row.profile_scope),
+          empty: "not available in current aggregate output"
+        });
+      }
+      function renderImagingLayerSection(layerId, tone) {
+        const rows = imagingRowsForLayer(layerId).slice(0, 12);
+        const rawRows = imagingAllRawRows().filter(row => imagingLayer(row).id === layerId);
+        return `
+          ${rows.length ? renderHBarRows(imagingBarRows(rows), { tone, limit: 12 }) : `<div class="empty">not available in current aggregate output</div>`}
+          ${rawRows.length ? renderCollapsedRawLineage(rawRows, { limit: 8 }) : ""}
+        `;
+      }
+      function renderImagingRawLineageByLayer() {
+        const rows = imagingAllRawRows();
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return ["national_procedure", "damyda_registry", "sp_metadata", "radiotherapy", "candidate"].map(id => {
+          const layerRows = rows.filter(row => imagingLayer(row).id === id);
+          if (!layerRows.length) return "";
+          const layer = imagingLayerSpecs.find(spec => spec.id === id) || imagingLayerSpecs[4];
+          const content = renderCollapsedRawLineage(layerRows, { limit: id === "candidate" ? 6 : 10 });
+          return id === "candidate"
+            ? `<details><summary>${escapeHtml(layer.label)}</summary>${content}</details>`
+            : `<div class="lineage-block"><h3>${escapeHtml(layer.label)}</h3>${content}</div>`;
+        }).join("") || `<div class="empty">not available in current aggregate output</div>`;
+      }
+      function renderImagingPanel() {
+        const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_imaging") || {};
+        const allRows = imagingAllRawRows();
+        const distributionRows = imagingPanelDistributionRows();
+        return `
+          <div class="dashboard-grid imaging-dashboard">
+            ${renderKpiStrip([
+              { label: "imaging distribution rows", value: distributionRows.length, tone: "blue" },
+              { label: "raw lineage rows", value: allRows.length, tone: "green" },
+              { label: "SP metadata rows", value: allRows.filter(row => imagingLayer(row).id === "sp_metadata").length, tone: "cyan" },
+              { label: "registry imaging rows", value: allRows.filter(row => imagingLayer(row).id === "damyda_registry").length, tone: "plum" }
+            ], { tone: "blue" })}
+            ${renderSectionCard("Source / coverage", `
+              <p>${escapeHtml(panel.clinical_purpose || "Imaging evidence across national procedure codes, DaMyDa registry imaging/bone disease, SP metadata/report availability, and radiotherapy procedure signals.")}</p>
+              ${renderImagingSourceCoverage()}
+            `, "blue")}
+            ${renderSectionCard("Imaging evidence layers", renderImagingLayerCards(), "cyan")}
+            ${renderSectionCard("Nationwide procedure-code imaging", renderImagingLayerSection("national_procedure", "blue"), "blue")}
+            ${renderSectionCard("DaMyDa registry imaging / bone disease", renderImagingLayerSection("damyda_registry", "plum"), "plum")}
+            ${renderSectionCard("SP imaging metadata/report layer", `
+              <p class="mini">SP imaging metadata is order/code/report-availability evidence. SP imaging report text is not emitted.</p>
+              ${renderImagingLayerSection("sp_metadata", "cyan")}
+            `, "cyan")}
+            ${renderSectionCard("CT", renderImagingModalityCard(imagingModalitySpecs[0]), "blue")}
+            ${renderSectionCard("MRI", renderImagingModalityCard(imagingModalitySpecs[1]), "violet")}
+            ${renderSectionCard("PET / PET-CT", renderImagingModalityCard(imagingModalitySpecs[2]), "plum")}
+            ${renderSectionCard("X-ray", renderImagingModalityCard(imagingModalitySpecs[3]), "cyan")}
+            ${renderSectionCard("Radiotherapy", `
+              ${renderImagingModalityCard(imagingModalitySpecs[4])}
+              <p class="mini">Radiotherapy rows are procedure signals, not medication treatment exposure.</p>
+            `, "red")}
+            ${renderSectionCard("Raw names / data lineage", renderImagingRawLineageByLayer(), "blue")}
+            ${renderSectionCard("Use cases", `
+              <ul>
+                <li>Imaging evidence discovery.</li>
+                <li>CT/MRI/PET-CT procedure-code cohort enrichment.</li>
+                <li>Radiotherapy procedure-signal review.</li>
+                <li>Myeloma bone disease / modality review.</li>
+                <li>SP imaging metadata availability review.</li>
+                <li>Planning NLP/report-text linkage where access allows.</li>
+                <li>Cross-source imaging evidence triangulation.</li>
+              </ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <p>Imaging signals are procedure/metadata/registry evidence, not image pixels. Procedure-code imaging does not guarantee report text or image availability.</p>
+              <p>SP imaging report/free text must not be emitted into the static atlas. DaMyDa imaging fields are disease-specific registry summaries, not full imaging-event streams.</p>
+              <p>Radiotherapy procedure codes are treatment/procedure signals, not medication exposure. Patient-level completeness requires patient-level aggregate outputs. Date fields should not be rendered as categorical bars.</p>
+            `, "amber")}
+          </div>`;
+      }
+
       const microbiologyLayerSpecs = [
         { id: "persimune_analysis", label: "PERSIMUNE analysis", tone: "blue", terms: ["persimune_microbiology_analysis"], captures: "PERSIMUNE_microbiology_analysis: analysis/test layer, including sample material, domain, analysis group, and result interpretation where available.", best: "Analysis and infection-evidence availability review.", caveat: "PERSIMUNE coverage may be regional/research-specific and not nationwide.", fields: ["samplematerial", "c_domain", "c_analysisgroup", "Virus", "Bacteria", "Fungus"] },
         { id: "persimune_culture", label: "PERSIMUNE culture", tone: "green", terms: ["persimune_microbiology_culture"], captures: "PERSIMUNE_microbiology_culture: culture investigation layer with culture group, sample material, organism/domain, and interpretation.", best: "Culture/result-class cohort definition.", caveat: "Culture rows require study-specific infection-event definitions.", fields: ["c_analysisgroup", "samplematerial", "c_domain", "BLOODCULTURE", "URINECULTURE", "BAL"] },
@@ -3620,7 +3843,7 @@
 
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
-        setHtml("clinical-imaging-cards", renderDomainPanel("clinical_imaging"));
+        setHtml("clinical-imaging-cards", renderImagingPanel());
         setHtml("clinical-microbiology-cards", renderMicrobiologyPanel());
         setHtml("clinical-vitals-cards", renderVitalsPanel());
         setHtml("clinical-notes-cards", renderDomainPanel("clinical_notes"));

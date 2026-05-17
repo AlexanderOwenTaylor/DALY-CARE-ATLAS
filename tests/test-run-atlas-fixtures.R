@@ -123,6 +123,7 @@ expect_true(grepl("function renderCLLPanel()", html, fixed = TRUE), "HTML should
 expect_true(grepl("function renderTreatmentPanel()", html, fixed = TRUE), "HTML should include the dedicated Treatment renderer.")
 expect_true(grepl("function renderLaboratoryNPUPanel()", html, fixed = TRUE), "HTML should include the dedicated Laboratory/NPU renderer.")
 expect_true(grepl("function renderMicrobiologyPanel()", html, fixed = TRUE), "HTML should include the dedicated Microbiology/Infection renderer.")
+expect_true(grepl("function renderImagingPanel()", html, fixed = TRUE), "HTML should include the dedicated Imaging renderer.")
 for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
 }
@@ -144,7 +145,9 @@ expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", vi
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
 expect_true(grepl("{ name: \"microbiology\", tab: \"clinical\", sub: \"clinical-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Microbiology/Infection target.")
+expect_true(grepl("{ name: \"imaging\", tab: \"clinical\", sub: \"clinical-imaging\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Imaging target.")
 expect_true(grepl("microbiologyAtGlancePresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Microbiology At a glance section.")
+expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Imaging panel.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -161,6 +164,8 @@ expect_true(grepl("setHtml(\"registry-cll\", renderCLLPanel())", html, fixed = T
 expect_true(grepl("setHtml(\"treatment-dashboard\", renderTreatmentPanel())", html, fixed = TRUE), "Treatment should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"laboratory-npu-dashboard\", renderLaboratoryNPUPanel())", html, fixed = TRUE), "Laboratory/NPU should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"clinical-microbiology-cards\", renderMicrobiologyPanel())", html, fixed = TRUE), "Microbiology/Infection should be wired to its dedicated renderer.")
+expect_true(grepl("setHtml(\"clinical-imaging-cards\", renderImagingPanel())", html, fixed = TRUE), "Imaging should be wired to its dedicated renderer.")
+expect_false(grepl("setHtml(\"clinical-imaging-cards\", renderDomainPanel(\"clinical_imaging\"))", html, fixed = TRUE), "Imaging should not be rendered through the generic domain panel renderer.")
 expect_false(grepl("setHtml(\"treatment-source-cards\", sourceTiles", html, fixed = TRUE), "Treatment should not render source summary through generic source tiles.")
 expect_false(grepl("setHtml(\"treatment-medicine-cards\", sourceTiles", html, fixed = TRUE), "Treatment medicine evidence should not render through generic source tiles.")
 expect_false(grepl("setHtml(\"treatment-procedure-cards\", sourceTiles", html, fixed = TRUE), "Treatment procedure evidence should not render through generic source tiles.")
@@ -196,6 +201,15 @@ for (needle in c("Laboratory / NPU atlas", "Lab evidence layers", "Core lab conc
 }
 for (needle in c("Microbiology / infection atlas", "Microbiology evidence layers", "At a glance", "PERSIMUNE analysis", "PERSIMUNE culture", "Resistance / susceptibility", "Microscopy", "SP blood-culture workflow", "Sample material", "Organism/domain", "Result class", "Antibiotic/susceptibility", "Hospital/lab source", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should contain section:", needle))
+}
+for (needle in c("Medical imaging atlas", "Imaging evidence layers", "Nationwide procedure-code imaging", "DaMyDa registry imaging / bone disease", "SP imaging metadata/report layer", "CT", "MRI", "PET / PET-CT", "X-ray", "Radiotherapy", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Imaging renderer should contain section:", needle))
+}
+for (needle in c("function imagingLayer", "function imagingPanelDistributionRows", "function renderImagingLayerCards", "function renderImagingRawLineageByLayer", "SP imaging report-text table not available in current aggregate output", "Imaging signals are procedure/metadata/registry evidence, not image pixels", "Report text/free text must not be emitted into the static atlas", "Radiotherapy rows are procedure signals, not medication treatment exposure")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Imaging renderer should include guarded source-aware logic:", needle))
+}
+for (needle in c("SDS_t_sksube", "SDS_procedurer_andre", "SP_Billeddiagnostik", "RKKP_DaMyDa", "APAA4", "UXZ11", "UXZ10", "UXRC00", "UXCC00", "UXCD00", "BWGC1", "BWGC4A", "CT", "MRI", "PET", "PET/CT", "F-18-FDG", "RU THORAX", "Reg_Knogleundersoegelser_CT", "Reg_Knogleundersoegelser_MR", "Reg_Knogleundersoegelser_PETCT", "Reg_Knogleforandringer")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Imaging renderer should be able to surface evidenced term:", needle))
 }
 for (needle in c("function microbiologyLayer", "function microbiologyPanelDistributionRows", "function microbiologyRowsForAtGlance", "function renderMicrobiologyAtGlance", "microbiology-at-a-glance", "panelDistributionRows || []", "function renderMicrobiologyLayerCards", "function renderSpBloodCultureWorkflow", "function renderMicrobiologyRawLineageByLayer", "Aggregate rows not available in current output", "Detailed organism/species values are suppressed or grouped", "Free text, notes, report examples, and raw date values are not emitted as categorical bars")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Microbiology/Infection renderer should include guarded source-aware logic:", needle))
@@ -701,6 +715,49 @@ expect_false(any(grepl("clinicalinformation|requisitioninformationtext|commentsg
 broad_micro_values <- c("Virus", "Bacteria", "Bacterium", "Fungus", "Fungi", "Parasites/Protozoa/Helminths", "Other", "Unclassified", "Unknown", "NULL", "Negative", "Positive", "Not interpreted", "Not analyzed", "Not analysed", "Inconclusive", "Sent to external lab", "suppressed / not shown")
 organism_rows <- microbiology_rows[microbiology_rows$clinical_concept_id == "microbiology_organism_domain" & nzchar(microbiology_rows$raw_value), , drop = FALSE]
 expect_true(all(organism_rows$raw_value %in% broad_micro_values), "Detailed organism/species values should be suppressed/grouped before public semantic output.")
+imaging_rows <- semantic_dictionary[semantic_dictionary$clinical_group == "Imaging", , drop = FALSE]
+expect_true(nrow(imaging_rows) > 0, "Semantic output should include imaging rows.")
+imaging_code_rows <- semantic_code_map[semantic_code_map$clinical_group == "Imaging", , drop = FALSE]
+imaging_panel_raw <- panel_raw_fields[panel_raw_fields$panel_id == "clinical_imaging", , drop = FALSE]
+imaging_panel_distributions <- panel_distributions[panel_distributions$panel_id == "clinical_imaging", , drop = FALSE]
+imaging_expect_code_if_present <- function(codes, concept_id, message) {
+  present <- imaging_rows$raw_code %in% codes | imaging_rows$raw_descriptor %in% codes | imaging_code_rows$code %in% codes
+  if (any(present)) {
+    expect_true(any((imaging_rows$raw_code %in% codes | imaging_rows$raw_descriptor %in% codes) & imaging_rows$clinical_concept_id == concept_id) ||
+      any(imaging_code_rows$code %in% codes & imaging_code_rows$clinical_concept_id == concept_id), message)
+  }
+}
+imaging_expect_value_if_present <- function(values, concept_id, message) {
+  hay <- apply(imaging_rows[, intersect(c("raw_code", "raw_descriptor", "raw_value", "clinical_variable"), names(imaging_rows)), drop = FALSE], 1, paste, collapse = " ")
+  present <- vapply(values, function(value) any(grepl(value, hay, ignore.case = TRUE)), logical(1))
+  if (any(present)) {
+    expect_true(any(vapply(values, function(value) any(grepl(value, hay, ignore.case = TRUE) & imaging_rows$clinical_concept_id == concept_id), logical(1))), message)
+  }
+}
+imaging_expect_code_if_present(c("UXZ10", "UXCC00", "UXCD00", "UXCD10", "UXCD15", "UXCA00", "APAA4"), "imaging_ct", "CT imaging codes should map to CT imaging signal.")
+imaging_expect_code_if_present("UXZ11", "imaging_mri", "UXZ11 should map to MRI imaging signal.")
+imaging_expect_code_if_present("UXRC00", "imaging_xray", "UXRC00 should map to X-ray imaging signal.")
+imaging_expect_code_if_present(c("BWGC1", "BWGC4A"), "radiotherapy", "BWGC radiotherapy codes should map to radiotherapy procedure signal.")
+imaging_expect_value_if_present(c("PET", "F-18-FDG", "FDG"), "imaging_pet_ct", "PET/FDG labels should map to PET/PET-CT imaging signal.")
+imaging_expect_value_if_present(c("RU THORAX"), "imaging_xray", "RU THORAX should map to X-ray imaging signal.")
+imaging_expect_value_if_present(c("CT THORAX", "CT ABDOMEN", "CT CEREBRUM", "CT HELKROP"), "imaging_ct", "CT labels should map to CT imaging signal.")
+damyda_imaging <- imaging_rows[imaging_rows$source_name == "RKKP_DaMyDa" | grepl("^Reg_Knogle", imaging_rows$raw_column), , drop = FALSE]
+if (nrow(damyda_imaging)) {
+  expect_true(any(grepl("DaMyDa registry imaging / bone disease|Myeloma registry imaging / bone disease", damyda_imaging$clinical_subgroup)), "DaMyDa imaging/bone rows should preserve myeloma registry context.")
+  expect_false(any(damyda_imaging$clinical_concept_id == "imaging_candidate_signal" & grepl("Reg_Knogle", damyda_imaging$raw_column)), "DaMyDa exact imaging/bone fields should not fall through to generic imaging candidates.")
+}
+sp_imaging <- imaging_rows[grepl("^SP_Billeddiagnost", imaging_rows$source_name), , drop = FALSE]
+if (nrow(sp_imaging)) {
+  expect_true(any(grepl("SP imaging metadata/report layer", sp_imaging$clinical_subgroup)), "SP imaging rows should preserve SP metadata/report context.")
+  expect_false(all(grepl("Nationwide procedure-code imaging", sp_imaging$clinical_subgroup)), "SP imaging metadata rows must not be treated only as national SKS procedure rows.")
+}
+expect_false(any(grepl("rapporttekst|report_text|reporttext|beskrivelse|tekst|text|note", imaging_rows$raw_column, ignore.case = TRUE) & nzchar(imaging_rows$raw_value)), "Imaging semantic rows must not emit report-text/free-text values.")
+expect_false(any(grepl("date|dato|tidspunkt|bestillingstidspunkt|_dt", imaging_panel_distributions$raw_column, ignore.case = TRUE)), "Imaging panel distributions should not render date-like rows as categorical bars.")
+expect_false(any(grepl("patient|cpr|pnr", imaging_panel_distributions$raw_value, ignore.case = TRUE)), "Imaging distributions must not render patient IDs or CPR-like values.")
+expect_false(any(imaging_code_rows$clinical_concept_id == "radiotherapy" & grepl("medication|medicine", imaging_code_rows$clinical_variable, ignore.case = TRUE)), "Radiotherapy procedure codes must not be classified as medication treatment.")
+expect_false(any(grepl("image pixel|image-pixel", imaging_rows$semantic_meaning, ignore.case = TRUE)), "Procedure-code imaging rows must not be described as image pixels.")
+expect_true(nrow(imaging_panel_raw) > 0, "Imaging panel raw fields should be generated.")
+expect_true(nrow(imaging_panel_distributions) > 0, "Imaging panel distributions should be generated.")
 expect_true(any(semantic_code_map$code_system == "SNOMED"), "Semantic code map should include SNOMED pathology signals.")
 expect_true(nrow(semantic_panel_links) > 0, "Semantic panel links should be generated.")
 expect_true(all(nzchar(semantic_dictionary$evidence_file)), "Every semantic row should include an evidence file.")

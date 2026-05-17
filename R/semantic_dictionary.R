@@ -1516,6 +1516,90 @@ damyda_registry_column_definition <- function(column, key, mk) {
     any(startsWith(key, vapply(prefixes, semantic_id_from, character(1))))
   }
 
+  if (exact("Reg_Knogleundersoegelser_CT")) {
+    return(mk(
+      "myeloma_ct_modality",
+      "Myeloma CT modality field",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field indicating CT use in myeloma bone/imaging assessment.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "CT", "bone imaging", column),
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams."
+    ))
+  }
+
+  if (exact("Reg_Knogleundersoegelser_MR")) {
+    return(mk(
+      "myeloma_mri_modality",
+      "Myeloma MRI modality field",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field indicating MRI use in myeloma bone/imaging assessment.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "MRI", "MR", "bone imaging", column),
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams."
+    ))
+  }
+
+  if (exact("Reg_Knogleundersoegelser_PETCT")) {
+    return(mk(
+      "myeloma_pet_ct_modality",
+      "Myeloma PET/CT modality field",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field indicating PET/CT use in myeloma bone/imaging assessment.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "PET/CT", "FDG", "bone imaging", column),
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams."
+    ))
+  }
+
+  if (exact("Reg_AndreKnogleundersoegelse")) {
+    return(mk(
+      "myeloma_other_imaging",
+      "Other myeloma bone/imaging investigation",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field for other bone/imaging investigations.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "other imaging", "bone investigation", column),
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams."
+    ))
+  }
+
+  if (exact("Reg_Knogleforandringer")) {
+    return(mk(
+      "myeloma_bone_disease",
+      "Myeloma bone disease / bone lesions",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field indicating bone disease or bone lesions.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "bone disease", "bone lesions", column),
+      "Bone-disease fields preserve registry context and are not generic imaging-event streams."
+    ))
+  }
+
+  if (exact("Reg_Knogleforandringer_type")) {
+    return(mk(
+      "myeloma_bone_lesion_type",
+      "Myeloma bone lesion type",
+      "Myeloma registry imaging / bone disease",
+      "DaMyDa registry field describing the type of bone lesion or bone disease.",
+      "categorical",
+      "high",
+      "confirmed",
+      c("DaMyDa", "myeloma", "bone lesion type", column),
+      "Bone-disease fields preserve registry context and are not generic imaging-event streams."
+    ))
+  }
+
   if (exact(c("Reg_CReaktivtProtein_gl", "Reg_CReaktivtProtein_nMoll"))) {
     return(mk(
       "crp",
@@ -2407,46 +2491,95 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
       code <- x[[val_col]][[i]]
       column <- if (!is.na(col_col)) x[[col_col]][[i]] else ""
       if (semantic_identifier_like_column(column)) next
-      if (clinical_group == "Microbiology" && (microbiology_date_like_column(column) || microbiology_free_text_column(column))) next
+      is_microbiology <- identical(clinical_group, "Microbiology")
+      is_imaging <- identical(clinical_group, "Imaging")
+      if (is_microbiology && (microbiology_date_like_column(column) || microbiology_free_text_column(column))) next
+      if (is_imaging && (imaging_date_like_column(column) || imaging_free_text_column(column))) next
       n <- semantic_suppress_count(x[[count_col]][[i]], min_cell_count)
       row_source <- semantic_vector_value(source_name, i)
       row_object <- semantic_vector_value(object_name, i, row_source)
-      micro_def <- if (clinical_group == "Microbiology") microbiology_column_definition(row_source, column) else NULL
-      micro_ctx <- if (clinical_group == "Microbiology") microbiology_source_context(row_source, row_object, file) else NULL
-      variable <- if (clinical_group == "Microbiology") micro_def$variable else semantic_domain_variable(clinical_group, code, column)
-      concept_id <- if (clinical_group == "Microbiology") micro_def$concept_id else semantic_id_from(c(clinical_group, variable))
-      subgroup_value <- if (clinical_group == "Microbiology") paste(micro_ctx$layer, micro_def$subgroup, sep = " - ") else subgroup
-      safe_value <- if (clinical_group == "Microbiology") microbiology_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count) else code
+      micro_def <- if (is_microbiology) microbiology_column_definition(row_source, column) else NULL
+      micro_ctx <- if (is_microbiology) microbiology_source_context(row_source, row_object, file) else NULL
+      imaging_def <- if (is_imaging) imaging_column_definition(row_source, row_object, column, code) else NULL
+      imaging_ctx <- if (is_imaging) imaging_source_context(row_source, row_object, file, code, column) else NULL
+      variable <- if (is_microbiology) {
+        micro_def$variable
+      } else if (is_imaging) {
+        imaging_def$variable
+      } else {
+        semantic_domain_variable(clinical_group, code, column)
+      }
+      concept_id <- if (is_microbiology) {
+        micro_def$concept_id
+      } else if (is_imaging) {
+        imaging_def$concept_id
+      } else {
+        semantic_id_from(c(clinical_group, variable))
+      }
+      subgroup_value <- if (is_microbiology) {
+        paste(micro_ctx$layer, micro_def$subgroup, sep = " - ")
+      } else if (is_imaging) {
+        paste(imaging_ctx$layer, imaging_def$subgroup, sep = " - ")
+      } else {
+        subgroup
+      }
+      safe_value <- if (is_microbiology) {
+        microbiology_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count)
+      } else if (is_imaging) {
+        imaging_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count)
+      } else {
+        code
+      }
+      if (!nzchar(safe_value)) next
       semantic_id <- semantic_id_from(c(clinical_group, row_source, column, safe_value))
-      micro_meaning <- if (clinical_group == "Microbiology") paste(micro_ctx$meaning, micro_def$meaning) else semantic_domain_meaning(clinical_group, code, column)
-      micro_caveat <- if (clinical_group == "Microbiology") paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.", micro_def$meaning) else semantic_domain_caveat(clinical_group)
-      micro_terms <- if (clinical_group == "Microbiology") c(terms, micro_ctx$terms, micro_def$terms, safe_value, column, row_source, micro_ctx$layer) else c(terms, code, column, row_source)
+      semantic_meaning <- if (is_microbiology) {
+        paste(micro_ctx$meaning, micro_def$meaning)
+      } else if (is_imaging) {
+        paste(imaging_ctx$meaning, imaging_def$meaning)
+      } else {
+        semantic_domain_meaning(clinical_group, code, column)
+      }
+      clinical_caveat <- if (is_microbiology) {
+        paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.", micro_def$meaning)
+      } else if (is_imaging) {
+        paste(imaging_ctx$caveat, imaging_def$caveat, "No report text, patient rows, image pixels, or raw dates are emitted.")
+      } else {
+        semantic_domain_caveat(clinical_group)
+      }
+      search_terms <- if (is_microbiology) {
+        c(terms, micro_ctx$terms, micro_def$terms, safe_value, column, row_source, micro_ctx$layer)
+      } else if (is_imaging) {
+        c(terms, imaging_ctx$terms, imaging_def$terms, safe_value, column, row_source, imaging_ctx$layer)
+      } else {
+        c(terms, code, column, row_source)
+      }
+      code_system <- if (is_imaging) imaging_def$code_system else semantic_domain_code_system(clinical_group, code, column)
       dict_rows[[length(dict_rows) + 1L]] <- semantic_row(
         semantic_id = semantic_id,
         clinical_concept_id = concept_id,
         clinical_variable = variable,
         clinical_group = clinical_group,
         clinical_subgroup = subgroup_value,
-        semantic_meaning = micro_meaning,
+        semantic_meaning = semantic_meaning,
         source_name = row_source,
         object_name = row_object,
         raw_column = column,
-        raw_descriptor = if (clinical_group == "Microbiology") safe_value else if (clinical_group %in% c("Imaging", "Biobank")) code else "",
-        raw_code = if (clinical_group == "Microbiology") "" else if (clinical_group %in% c("Treatment", "Pathology", "Imaging") || grepl("^[A-Z0-9]{3,}", code)) code else "",
-        raw_value = if (clinical_group == "Microbiology") safe_value else if (clinical_group %in% c("Biobank", "Outcomes")) code else "",
-        code_system = semantic_domain_code_system(clinical_group, code, column),
-        value_type = if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text" else "code",
+        raw_descriptor = if (is_microbiology || is_imaging) safe_value else if (clinical_group %in% c("Biobank")) code else "",
+        raw_code = if (is_microbiology) "" else if (clinical_group %in% c("Treatment", "Pathology", "Imaging") || grepl("^[A-Z0-9]{3,}", code)) safe_value else "",
+        raw_value = if (is_microbiology) safe_value else if (clinical_group %in% c("Biobank", "Outcomes")) code else "",
+        code_system = code_system,
+        value_type = if (is_imaging) imaging_def$value_type else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text" else "code",
         data_shape = "code_table",
         source_level = source_level_for_source(row_source),
         geography = geography_for_source(row_source),
         n_rows = n,
         evidence_file = file,
         evidence_filter = paste0(column, "=", safe_value),
-        mapping_confidence = if (clinical_group == "Microbiology") micro_def$confidence else if (clinical_group == "Biobank") "medium" else "high",
-        mapping_status = if (clinical_group == "Microbiology") micro_def$status else if (clinical_group == "Biobank") "candidate" else "inferred",
-        privacy_note = if (clinical_group == "Microbiology" && identical(safe_value, "suppressed / not shown")) "aggregate_only_suppressed_value" else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text_not_exposed" else "aggregate_only",
-        clinical_caveat = micro_caveat,
-        search_terms = semantic_terms(micro_terms)
+        mapping_confidence = if (is_microbiology) micro_def$confidence else if (is_imaging) imaging_def$confidence else if (clinical_group == "Biobank") "medium" else "high",
+        mapping_status = if (is_microbiology) micro_def$status else if (is_imaging) imaging_def$status else if (clinical_group == "Biobank") "candidate" else "inferred",
+        privacy_note = if (is_microbiology && identical(safe_value, "suppressed / not shown")) "aggregate_only_suppressed_value" else if (is_imaging && imaging_free_text_column(column)) "free_text_not_exposed" else if (is_imaging && imaging_date_like_column(column)) "date_values_not_exposed" else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text_not_exposed" else "aggregate_only",
+        clinical_caveat = clinical_caveat,
+        search_terms = semantic_terms(search_terms)
       )
       if (nzchar(safe_value)) {
         code_rows[[length(code_rows) + 1L]] <- semantic_code_row(
@@ -2456,14 +2589,14 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
           clinical_group = clinical_group,
           source_name = row_source,
           object_name = row_object,
-          code_system = semantic_domain_code_system(clinical_group, code, column),
+          code_system = code_system,
           code = safe_value,
           code_name = variable,
           panel = subgroup_value,
           n_rows = n,
           evidence_file = file,
-          mapping_confidence = if (clinical_group == "Microbiology") micro_def$confidence else "medium",
-          notes = if (clinical_group == "Microbiology") paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.") else semantic_domain_caveat(clinical_group)
+          mapping_confidence = if (is_microbiology) micro_def$confidence else if (is_imaging) imaging_def$confidence else "medium",
+          notes = if (is_microbiology) paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.") else if (is_imaging) clinical_caveat else semantic_domain_caveat(clinical_group)
         )
       }
     }
@@ -2561,10 +2694,260 @@ geography_for_source <- function(source_name) {
   "unknown"
 }
 
+imaging_date_like_column <- function(column) {
+  grepl("(^|_)(date|dato|datetime|time|tidspunkt)($|_)|_dt$|dato|tidspunkt|bestillingstidspunkt", column, ignore.case = TRUE)
+}
+
+imaging_free_text_column <- function(column) {
+  grepl("rapporttekst|report_text|reporttext|beskrivelse|tekst|text|note|free_text", column, ignore.case = TRUE)
+}
+
+imaging_source_context <- function(source_name = "", object_name = "", evidence_file = "", code = "", column = "") {
+  key <- semantic_id_from(paste(source_name %||% "", object_name %||% "", evidence_file %||% "", column %||% "", sep = " "))
+  code_text <- paste(code %||% "", column %||% "")
+  mk <- function(layer, subgroup, meaning, caveat, terms) {
+    list(layer = layer, subgroup = subgroup, meaning = meaning, caveat = caveat, terms = terms)
+  }
+  if (grepl("^BWGC|radioter|straale|straalebehandling|strale|stråle", code_text, ignore.case = TRUE)) {
+    return(mk(
+      "Radiotherapy procedure signals",
+      "Radiotherapy procedure signals",
+      "Radiotherapy procedure-code signal.",
+      "Radiotherapy procedure codes are treatment/procedure signals, not medication exposure or image pixels.",
+      c("radiotherapy", "BWGC", "procedure")
+    ))
+  }
+  if (grepl("rkkp_damyda|damyda", key)) {
+    return(mk(
+      "DaMyDa registry imaging / bone disease",
+      "DaMyDa registry imaging / bone disease",
+      "Disease-specific DaMyDa registry imaging, modality, or bone-disease field.",
+      "Registry modality fields are disease-specific summaries, not full imaging-event streams.",
+      c("DaMyDa", "registry imaging", "bone disease")
+    ))
+  }
+  if (grepl("billeddiagnostik|billeddiagnostiske|sp_billed", key)) {
+    return(mk(
+      "SP imaging metadata/report layer",
+      "SP imaging metadata/report layer",
+      "EHR-native imaging order, code, metadata, or report-text availability layer.",
+      "Report text/free text must not be emitted into the static atlas. Show availability and metadata only.",
+      c("SP imaging", "billeddiagnostik", "metadata", "report availability")
+    ))
+  }
+  if (grepl("sksube|procedurer|procedure|sds", key)) {
+    return(mk(
+      "Nationwide procedure-code imaging",
+      "Procedure-code imaging",
+      "National SKS/UX/BWGC procedure-coded imaging or radiotherapy signal.",
+      "Procedure-code signals are event/procedure evidence, not image pixels and not necessarily report text.",
+      c("SDS", "SKS", "procedure", "UX", "BWGC")
+    ))
+  }
+  mk(
+    "Candidate imaging evidence",
+    "Candidate imaging evidence",
+    "Candidate imaging aggregate evidence layer.",
+    "Candidate imaging rows require source-specific validation and do not imply image-pixel availability.",
+    c("imaging", "candidate")
+  )
+}
+
+imaging_column_definition <- function(source_name = "", object_name = "", column = "", value = "") {
+  col_key <- semantic_id_from(column)
+  value_text <- as.character(value %||% "")
+  value_key <- toupper(value_text)
+  combined <- paste(value_text, column)
+  mk <- function(id, variable, subgroup, meaning, terms, confidence = "high", status = "confirmed",
+                 value_type = "code", code_system = "local_imaging_code", caveat = "") {
+    list(
+      concept_id = id,
+      variable = variable,
+      subgroup = subgroup,
+      meaning = meaning,
+      terms = terms,
+      confidence = confidence,
+      status = status,
+      value_type = value_type,
+      code_system = code_system,
+      caveat = caveat
+    )
+  }
+  if (imaging_free_text_column(column)) {
+    return(mk(
+      "sp_imaging_report_text_availability",
+      "SP imaging report text availability",
+      "SP imaging metadata/report layer",
+      "SP imaging report/free-text availability field.",
+      c("SP imaging", "report text", "rapporttekst", column),
+      "high",
+      "confirmed",
+      "free_text",
+      "SP_imaging_metadata",
+      "Report text values are not emitted into the static atlas."
+    ))
+  }
+  if (imaging_date_like_column(column)) {
+    return(mk(
+      "sp_imaging_order_date",
+      "SP imaging order time / date field",
+      "SP imaging metadata/report layer",
+      "SP imaging order or examination time metadata field.",
+      c("SP imaging", "order date", "bestillingstidspunkt", column),
+      "high",
+      "confirmed",
+      "date",
+      "SP_imaging_metadata",
+      "Date values are retained as structural metadata only and are not rendered as categorical bars."
+    ))
+  }
+  if (col_key == "hospital_area_name") {
+    return(mk(
+      "sp_imaging_hospital_area",
+      "SP imaging hospital area",
+      "SP imaging metadata/report layer",
+      "SP imaging hospital-area metadata field.",
+      c("SP imaging", "hospital area", column),
+      "high",
+      "confirmed",
+      "categorical",
+      "SP_imaging_metadata",
+      "Hospital-area metadata is source coverage context, not a clinical imaging phenotype."
+    ))
+  }
+  if (grepl("^BWGC", value_key) || grepl("\\bBWGC|radioter|straale|strale|strålebehandling|electron beam", combined, ignore.case = TRUE)) {
+    return(mk(
+      "radiotherapy",
+      "Radiotherapy procedure signal",
+      "Radiotherapy procedure signals",
+      "Radiotherapy procedure-coded signal.",
+      c("radiotherapy", "BWGC", "procedure", value_text),
+      "high",
+      "confirmed",
+      "code",
+      "SKS",
+      "Radiotherapy is a procedure/treatment signal, not medication exposure or image pixels."
+    ))
+  }
+  if (grepl("PET|PET[-/ ]?CT|FDG|F-18", combined, ignore.case = TRUE)) {
+    return(mk(
+      "imaging_pet_ct",
+      "PET / PET-CT imaging signal",
+      "Procedure-code imaging",
+      "PET or PET/CT imaging procedure or SP imaging metadata signal.",
+      c("PET", "PET/CT", "FDG", value_text),
+      "high",
+      "confirmed",
+      "code",
+      if (grepl("^UX|^BW|^AP", value_key)) "SKS" else "local_imaging_code",
+      "PET/PET-CT rows are procedure or metadata evidence, not image pixels."
+    ))
+  }
+  if (value_key %in% c("UXZ11") || grepl("(^|[^A-Z])MRI([^A-Z]|$)|(^|[^A-Z])MR([^A-Z]|$)|magnetic resonance", combined, ignore.case = TRUE)) {
+    return(mk(
+      "imaging_mri",
+      "MRI imaging signal",
+      "Procedure-code imaging",
+      "MRI imaging procedure or SP imaging metadata signal.",
+      c("MRI", "MR", "UXZ11", value_text),
+      "high",
+      "confirmed",
+      "code",
+      if (grepl("^UX|^BW|^AP", value_key)) "SKS" else "local_imaging_code",
+      "MRI rows are procedure or metadata evidence, not image pixels."
+    ))
+  }
+  if (value_key %in% c("UXRC00") || grepl("RU THORAX|R[OØ]NTGEN|RONTGEN|X[- ]?RAY|CHEST X[- ]?RAY", combined, ignore.case = TRUE)) {
+    return(mk(
+      "imaging_xray",
+      "X-ray imaging signal",
+      "Procedure-code imaging",
+      "X-ray imaging procedure or SP imaging metadata signal.",
+      c("X-ray", "Rontgen", "RU THORAX", "UXRC00", value_text),
+      "high",
+      "confirmed",
+      "code",
+      if (grepl("^UX|^BW|^AP", value_key)) "SKS" else "local_imaging_code",
+      "X-ray rows are procedure or metadata evidence, not image pixels."
+    ))
+  }
+  if (value_key %in% c("APAA4", "UXZ10", "UXCC00", "UXCD00", "UXCD10", "UXCD15", "UXCA00") || grepl("(^|[^A-Z])CT([^A-Z]|$)|CT THORAX|CT ABDOMEN|CT CEREBRUM|CT HELKROP|CT HALS", combined, ignore.case = TRUE)) {
+    return(mk(
+      "imaging_ct",
+      "CT imaging signal",
+      "Procedure-code imaging",
+      "CT imaging procedure or SP imaging metadata signal.",
+      c("CT", "UXZ10", "UXCC00", "UXCD00", "APAA4", value_text),
+      "high",
+      "confirmed",
+      "code",
+      if (grepl("^UX|^BW|^AP", value_key)) "SKS" else "local_imaging_code",
+      "CT rows are procedure or metadata evidence, not image pixels."
+    ))
+  }
+  if (col_key == "bestillingsnavn") {
+    return(mk(
+      "sp_imaging_exam_name",
+      "SP imaging order/examination name",
+      "SP imaging metadata/report layer",
+      "SP imaging order or examination-name metadata field.",
+      c("SP imaging", "bestillingsnavn", value_text),
+      "medium",
+      "confirmed",
+      "categorical",
+      "SP_imaging_metadata",
+      "SP imaging names are EHR metadata and do not imply image-pixel or report-text availability."
+    ))
+  }
+  if (col_key == "bld_kode") {
+    return(mk(
+      "sp_imaging_code",
+      "SP imaging code",
+      "SP imaging metadata/report layer",
+      "SP imaging local code metadata field.",
+      c("SP imaging", "bld_kode", value_text),
+      "medium",
+      "confirmed",
+      "code",
+      "SP_imaging_metadata",
+      "SP imaging local codes are metadata signals, not image pixels."
+    ))
+  }
+  mk(
+    "imaging_candidate_signal",
+    "Imaging metadata / procedure signal",
+    "Candidate imaging evidence",
+    "Candidate imaging procedure or metadata signal.",
+    c("imaging", column, value_text),
+    "medium",
+    "candidate",
+    "code",
+    if (grepl("^UX|^BW|^AP", value_key)) "SKS" else "local_imaging_code",
+    "Candidate imaging rows require source-specific validation and do not imply image-pixel availability."
+  )
+}
+
+imaging_value_is_relevant <- function(values) {
+  values <- as.character(values)
+  grepl(
+    "PET|FDG|F-18|(^|[^A-Z])CT([^A-Z]|$)|MRI|(^|[^A-Z])MR([^A-Z]|$)|R[OØ]NT|RONT|RU THORAX|X[- ]?RAY|UX|BWGC|radioter|straale|strale|stråle|APAA4",
+    values,
+    ignore.case = TRUE
+  )
+}
+
+imaging_safe_display_value <- function(column, value, concept_id, n, min_cell_count) {
+  value <- as.character(value %||% "")
+  if (!nzchar(value)) return("")
+  if (imaging_date_like_column(column) || imaging_free_text_column(column)) return("")
+  if (is.na(suppressWarnings(as.numeric(n))) || suppressWarnings(as.numeric(n)) < min_cell_count) return("suppressed / not shown")
+  value
+}
+
 semantic_domain_keep_rows <- function(values, clinical_group) {
   values <- as.character(values)
   if (clinical_group == "Imaging") {
-    return(grepl("PET|FDG|\\bCT\\b|MR|MRI|R[Oo]nt|RU |UX|BWGC|radioter", values, ignore.case = TRUE))
+    return(imaging_value_is_relevant(values))
   }
   rep(TRUE, length(values))
 }
@@ -2824,6 +3207,7 @@ semantic_recover_source_name <- function(source_name, evidence_file = "", object
     "LABKA" = c("labka"),
     "PERSIMUNE_biochemistry" = c("persimune_biochem", "persimune_biochemistry"),
     "SP_BilleddiagnostikeUndersoegelser_Del1" = c("billeddiagnostik_del1", "billeddiagnostikeundersoegelser_del1"),
+    "SP_BilleddiagnostikeUndersoegelser_Del2" = c("billeddiagnostik_del2", "billeddiagnostikeundersoegelser_del2"),
     "SDS_t_sksube" = c("sds_t_sksube"),
     "SDS_procedurer_andre" = c("sds_procedure_andre", "procedurer_andre"),
     "SDS_procedurer_kirurgi" = c("sds_procedure_kirurgi", "procedurer_kirurgi"),
