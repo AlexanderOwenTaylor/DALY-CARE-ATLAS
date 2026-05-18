@@ -155,6 +155,21 @@ if (nrow(treatment_matrix_lab_rows)) {
 expect_true(nrow(search_semantic("ATC")) > 0, "Search for ATC should return treatment/medication signals.")
 expect_true(nrow(search_semantic("SKS")) > 0, "Search for SKS should return diagnosis/procedure/treatment/imaging signals.")
 expect_true(nrow(search_semantic("SNOMED")) > 0, "Search for SNOMED should return pathology signals.")
+sds_pato_snomed <- dictionary[dictionary$source_name == "SDS_pato" & dictionary$raw_column == "c_snomedkode", , drop = FALSE]
+expect_true(nrow(sds_pato_snomed) > 0, "SDS_pato.c_snomedkode should be present in the semantic dictionary when PATOBANK evidence exists.")
+expect_true(all(sds_pato_snomed$clinical_group == "Pathology"), "SDS_pato.c_snomedkode must map to Pathology.")
+expect_true(all(sds_pato_snomed$clinical_concept_id == "pathology_snomed_code"), "SDS_pato.c_snomedkode must map to pathology_snomed_code.")
+expect_true(all(sds_pato_snomed$clinical_variable == "SNOMED pathology code"), "SDS_pato.c_snomedkode must use the SNOMED pathology code label.")
+expect_true(all(sds_pato_snomed$code_system == "SNOMED"), "SDS_pato.c_snomedkode must use SNOMED as code system.")
+expect_false(any(sds_pato_snomed$clinical_group == "Treatment"), "SDS_pato.c_snomedkode must not map to Treatment.")
+expect_false(any(grepl("sks", sds_pato_snomed$clinical_concept_id, ignore.case = TRUE)), "SDS_pato.c_snomedkode concept IDs must not contain SKS.")
+expect_false(any(grepl("SKS", sds_pato_snomed$clinical_variable, fixed = TRUE)), "SDS_pato.c_snomedkode labels must not say SKS.")
+sds_pato_code_map <- code_map[code_map$source_name == "SDS_pato", , drop = FALSE]
+if (nrow(sds_pato_code_map)) {
+  expect_false(any(sds_pato_code_map$clinical_group == "Treatment"), "SDS_pato code-map rows must not map to Treatment.")
+  expect_false(any(sds_pato_code_map$code_system == "SKS"), "SDS_pato code-map rows must not use SKS.")
+  expect_true(any(sds_pato_code_map$clinical_group == "Pathology" & sds_pato_code_map$clinical_concept_id == "pathology_snomed_code" & sds_pato_code_map$code_system == "SNOMED"), "SDS_pato SNOMED code-map rows should remain Pathology/SNOMED.")
+}
 expect_true(nrow(search_semantic("blood culture")) > 0, "Search for blood culture should return microbiology/SP blood-culture workflow signals.")
 
 smoking_values <- value_map[value_map$semantic_id == "sp_social_hx_ryger_smoking_status", , drop = FALSE]

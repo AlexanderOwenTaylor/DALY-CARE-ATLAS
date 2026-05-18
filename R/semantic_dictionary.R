@@ -1165,7 +1165,21 @@ semantic_candidate_discovery <- function(project_root, min_cell_count) {
     column <- hits$matched_column[[i]]
     if (is_sensitive_column(column)) return(NULL)
     source_name <- hits$source_name[[i]]
-    if (grepl("CLL", source_name, ignore.case = TRUE) && !grepl("LAB", source_name, ignore.case = TRUE)) {
+    if (pathology_sds_pato_snomed_field(source_name, column)) {
+      def <- list(
+        concept_id = "pathology_snomed_code",
+        variable = "SNOMED pathology code",
+        group = "Pathology",
+        subgroup = "SNOMED-coded pathology",
+        value_type = "code",
+        code_system = "SNOMED",
+        terms = c("SDS_pato", "PATOBANK", "SNOMED", "c_snomedkode", "pathology"),
+        confidence = "high",
+        status = "confirmed",
+        caveat = "SDS_pato.c_snomedkode is a SNOMED pathology code field; do not interpret it as SKS treatment/procedure evidence.",
+        meaning = "Exact SDS/PATOBANK SNOMED pathology code field."
+      )
+    } else if (grepl("CLL", source_name, ignore.case = TRUE) && !grepl("LAB", source_name, ignore.case = TRUE)) {
       cll_def <- registry_column_definition(column, "RKKP_CLL")
       def <- list(
         concept_id = cll_def$concept_id,
@@ -2525,10 +2539,13 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
     for (i in seq_len(nrow(x))) {
       code <- x[[val_col]][[i]]
       column <- if (!is.na(col_col)) x[[col_col]][[i]] else ""
-      if (semantic_identifier_like_column(column)) next
       is_microbiology <- identical(clinical_group, "Microbiology")
       is_imaging <- identical(clinical_group, "Imaging")
       is_pathology <- identical(clinical_group, "Pathology")
+      if (is_pathology && !nzchar(column) && identical(file, "cartography_pato_top_snomed.tsv")) {
+        column <- "c_snomedkode"
+      }
+      if (semantic_identifier_like_column(column)) next
       if (is_microbiology && (microbiology_date_like_column(column) || microbiology_free_text_column(column))) next
       if (is_imaging && (imaging_date_like_column(column) || imaging_free_text_column(column))) next
       n <- semantic_suppress_count(x[[count_col]][[i]], min_cell_count)
@@ -3128,6 +3145,11 @@ pathology_source_context <- function(source_name = "", object_name = "", evidenc
     "Coded pathology records are not the same as raw pathology report text.",
     c("SDS_pato", "PATOBANK", "SNOMED", "pathology")
   )
+}
+
+pathology_sds_pato_snomed_field <- function(source_name = "", column = "") {
+  identical(semantic_id_from(source_name), "sds_pato") &&
+    identical(semantic_id_from(column), "c_snomedkode")
 }
 
 pathology_column_definition <- function(source_name = "", object_name = "", column = "", value = "") {

@@ -815,6 +815,30 @@ expect_true(nrow(pathology_rows) > 0, "Semantic output should include Pathology/
 expect_true(nrow(pathology_panel_raw) > 0, "Pathology/PATOBANK panel raw fields should be generated.")
 expect_false(any(pathology_rows$clinical_group %in% c("Treatment", "Laboratory", "Microbiology")), "Pathology rows must not be classified as treatment, laboratory, or microbiology.")
 expect_false(any(pathology_rows$clinical_concept_id %in% c("microbiology_sample_material", "microbiology_lab_source")), "Pathology specimen/source rows must not use microbiology concepts.")
+sds_pato_snomed_dictionary <- semantic_dictionary[semantic_dictionary$source_name == "SDS_pato" & semantic_dictionary$raw_column == "c_snomedkode", , drop = FALSE]
+expect_true(nrow(sds_pato_snomed_dictionary) > 0, "SDS_pato.c_snomedkode should be present in the semantic dictionary.")
+expect_true(all(sds_pato_snomed_dictionary$clinical_group == "Pathology"), "SDS_pato.c_snomedkode must map to Pathology in the semantic dictionary.")
+expect_true(all(sds_pato_snomed_dictionary$clinical_concept_id == "pathology_snomed_code"), "SDS_pato.c_snomedkode must map to pathology_snomed_code.")
+expect_true(all(sds_pato_snomed_dictionary$clinical_variable == "SNOMED pathology code"), "SDS_pato.c_snomedkode must use SNOMED pathology code as label.")
+expect_true(all(sds_pato_snomed_dictionary$code_system == "SNOMED"), "SDS_pato.c_snomedkode must use SNOMED code system.")
+expect_false(any(sds_pato_snomed_dictionary$clinical_group == "Treatment"), "SDS_pato.c_snomedkode must not map to Treatment.")
+expect_false(any(grepl("sks", sds_pato_snomed_dictionary$clinical_concept_id, ignore.case = TRUE)), "SDS_pato.c_snomedkode concept IDs must not contain SKS.")
+expect_false(any(grepl("SKS", sds_pato_snomed_dictionary$clinical_variable, fixed = TRUE)), "SDS_pato.c_snomedkode labels must not say SKS.")
+sds_pato_snomed_panel <- panel_raw_fields[panel_raw_fields$source_name == "SDS_pato" & panel_raw_fields$raw_column == "c_snomedkode", , drop = FALSE]
+expect_true(nrow(sds_pato_snomed_panel) > 0, "SDS_pato.c_snomedkode should flow into atlas_panel_raw_fields.csv.")
+expect_true(all(sds_pato_snomed_panel$clinical_concept_id == "pathology_snomed_code" & sds_pato_snomed_panel$clinical_variable == "SNOMED pathology code"), "SDS_pato.c_snomedkode panel raw fields should remain Pathology/SNOMED.")
+expect_false(any(grepl("sks", sds_pato_snomed_panel$clinical_concept_id, ignore.case = TRUE) | grepl("SKS", sds_pato_snomed_panel$clinical_variable, fixed = TRUE)), "SDS_pato.c_snomedkode panel raw fields must not be SKS-coded treatment rows.")
+sds_pato_code_map <- semantic_code_map[semantic_code_map$source_name == "SDS_pato", , drop = FALSE]
+if (nrow(sds_pato_code_map)) {
+  expect_false(any(sds_pato_code_map$clinical_group == "Treatment"), "SDS_pato code-map rows must not map to Treatment.")
+  expect_false(any(sds_pato_code_map$code_system == "SKS"), "SDS_pato code-map rows must not use SKS.")
+  expect_true(any(sds_pato_code_map$clinical_group == "Pathology" & sds_pato_code_map$clinical_concept_id == "pathology_snomed_code" & sds_pato_code_map$clinical_variable == "SNOMED pathology code" & sds_pato_code_map$code_system == "SNOMED"), "SDS_pato code-map rows should include Pathology/SNOMED entries.")
+}
+if (grepl("\"source_name\":\"SDS_pato\"", payload, fixed = TRUE) && grepl("\"raw_column\":\"c_snomedkode\"", payload, fixed = TRUE)) {
+  expect_true(grepl("\"clinical_concept_id\":\"pathology_snomed_code\"", payload, fixed = TRUE) && grepl("\"clinical_variable\":\"SNOMED pathology code\"", payload, fixed = TRUE), "DALYCARE_atlas_payload.js should carry SDS_pato.c_snomedkode as Pathology/SNOMED when that row appears in the payload slice.")
+  expect_false(grepl("\"source_name\":\"SDS_pato\"[^}]*\"raw_column\":\"c_snomedkode\"[^}]*\"clinical_group\":\"Treatment\"", payload), "DALYCARE_atlas_payload.js must not carry SDS_pato.c_snomedkode as Treatment.")
+  expect_false(grepl("\"source_name\":\"SDS_pato\"[^}]*\"raw_column\":\"c_snomedkode\"[^}]*\"code_system\":\"SKS\"", payload), "DALYCARE_atlas_payload.js must not carry SDS_pato.c_snomedkode as SKS.")
+}
 snomed_pathology_rows <- pathology_rows[
   pathology_rows$code_system == "SNOMED" |
     grepl("snomed|c_snomedkode", pathology_rows$raw_column, ignore.case = TRUE) |
