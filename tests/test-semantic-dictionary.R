@@ -152,6 +152,25 @@ treatment_matrix_lab_rows <- npu_dnk_code_rows[grepl("cartography_disease_treatm
 if (nrow(treatment_matrix_lab_rows)) {
   expect_true(all(grepl("supporting laboratory evidence; not treatment exposure", treatment_matrix_lab_rows$notes, fixed = TRUE)), "Treatment-matrix NPU/DNK rows should carry supporting-lab provenance caveat.")
 }
+biobank_rows <- dictionary[dictionary$clinical_group == "Biobank", , drop = FALSE]
+biobank_source_rows <- dictionary[dictionary$source_name == "LAB_BIOBANK_SAMPLES", , drop = FALSE]
+expect_true(nrow(biobank_rows) > 0, "Semantic dictionary should include Biobank sample rows.")
+expect_true(nrow(biobank_source_rows) > 0, "Semantic dictionary should include LAB_BIOBANK_SAMPLES rows.")
+expect_true(all(biobank_source_rows$clinical_group == "Biobank"), "LAB_BIOBANK_SAMPLES rows should all stay in the Biobank clinical group.")
+biobank_sample_source <- biobank_rows[biobank_rows$source_name == "LAB_BIOBANK_SAMPLES" & biobank_rows$raw_column == "Sample_source", , drop = FALSE]
+expect_true(nrow(biobank_sample_source) > 0, "LAB_BIOBANK_SAMPLES.Sample_source should be present in Biobank semantics.")
+expect_true(any(biobank_sample_source$clinical_concept_id %in% c("biobank_sample_source", "biobank_translational_source")), "Sample_source should map to Biobank sample source or translational source labels.")
+expect_true(all(biobank_sample_source$clinical_group == "Biobank"), "Sample_source rows should stay in the Biobank clinical group.")
+biobank_sample_type <- biobank_rows[biobank_rows$source_name == "LAB_BIOBANK_SAMPLES" & biobank_rows$raw_column %in% c("Type", "Sample_type"), , drop = FALSE]
+expect_true(nrow(biobank_sample_type) > 0, "LAB_BIOBANK_SAMPLES.Type/Sample_type should be present in Biobank semantics.")
+expect_true(all(biobank_sample_type$clinical_concept_id == "biobank_sample_type"), "Type/Sample_type rows should map to Biobank sample type.")
+expect_false(any(biobank_source_rows$clinical_group %in% c("Treatment", "Pathology", "Microbiology", "Laboratory")), "Biobank rows must not leak into treatment, pathology, microbiology, or laboratory groups.")
+expect_false(any(biobank_source_rows$clinical_concept_id %in% c("sks_code", "bone_involvement", "height", "microbiology_sample_material", "pathology_specimen_material")), "Biobank sample rows must not become SKS, bone, height, microbiology, or pathology concepts.")
+for (label in c("CHB", "DCB", "PERSIMUNE", "CLL_BIOBANK")) {
+  expect_true(any(biobank_rows$raw_value == label | biobank_rows$raw_descriptor == label | biobank_rows$raw_code == label), paste("Biobank rows should preserve raw source label:", label))
+}
+expect_false(any(grepl("sample_id|aliquot|tube|patient|cpr|pnr", biobank_rows$raw_value, ignore.case = TRUE)), "Biobank semantic rows must not emit sample, patient, aliquot, tube, CPR, or PNR values.")
+expect_false(any(grepl("date|dato|samplecollection", biobank_rows$raw_column, ignore.case = TRUE) & nzchar(biobank_rows$raw_value)), "Biobank collection/date fields must not emit categorical date values.")
 expect_true(nrow(search_semantic("ATC")) > 0, "Search for ATC should return treatment/medication signals.")
 expect_true(nrow(search_semantic("SKS")) > 0, "Search for SKS should return diagnosis/procedure/treatment/imaging signals.")
 expect_true(nrow(search_semantic("SNOMED")) > 0, "Search for SNOMED should return pathology signals.")

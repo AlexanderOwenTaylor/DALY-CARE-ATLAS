@@ -1179,6 +1179,21 @@ semantic_candidate_discovery <- function(project_root, min_cell_count) {
         caveat = "SDS_pato.c_snomedkode is a SNOMED pathology code field; do not interpret it as SKS treatment/procedure evidence.",
         meaning = "Exact SDS/PATOBANK SNOMED pathology code field."
       )
+    } else if (grepl("biobank", source_name, ignore.case = TRUE)) {
+      biobank_def <- biobank_column_definition(source_name, hits$object_name[[i]] %||% source_name, column, "")
+      def <- list(
+        concept_id = biobank_def$concept_id,
+        variable = biobank_def$variable,
+        group = "Biobank",
+        subgroup = biobank_def$subgroup,
+        value_type = biobank_def$value_type,
+        code_system = biobank_def$code_system,
+        terms = biobank_def$terms,
+        confidence = biobank_def$confidence,
+        status = biobank_def$status,
+        caveat = biobank_def$caveat,
+        meaning = biobank_def$meaning
+      )
     } else if (grepl("CLL", source_name, ignore.case = TRUE) && !grepl("LAB", source_name, ignore.case = TRUE)) {
       cll_def <- registry_column_definition(column, "RKKP_CLL")
       def <- list(
@@ -2557,12 +2572,17 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
       imaging_ctx <- if (is_imaging) imaging_source_context(row_source, row_object, file, code, column) else NULL
       pathology_def <- if (is_pathology) pathology_column_definition(row_source, row_object, column, code) else NULL
       pathology_ctx <- if (is_pathology) pathology_source_context(row_source, row_object, file, column) else NULL
+      is_biobank <- identical(clinical_group, "Biobank")
+      biobank_def <- if (is_biobank) biobank_column_definition(row_source, row_object, column, code) else NULL
+      biobank_ctx <- if (is_biobank) biobank_source_context(row_source, row_object, file, column) else NULL
       variable <- if (is_microbiology) {
         micro_def$variable
       } else if (is_imaging) {
         imaging_def$variable
       } else if (is_pathology) {
         pathology_def$variable
+      } else if (is_biobank) {
+        biobank_def$variable
       } else {
         semantic_domain_variable(clinical_group, code, column)
       }
@@ -2572,6 +2592,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         imaging_def$concept_id
       } else if (is_pathology) {
         pathology_def$concept_id
+      } else if (is_biobank) {
+        biobank_def$concept_id
       } else {
         semantic_id_from(c(clinical_group, variable))
       }
@@ -2581,6 +2603,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         paste(imaging_ctx$layer, imaging_def$subgroup, sep = " - ")
       } else if (is_pathology) {
         paste(pathology_ctx$layer, pathology_def$subgroup, sep = " - ")
+      } else if (is_biobank) {
+        paste(biobank_ctx$layer, biobank_def$subgroup, sep = " - ")
       } else {
         subgroup
       }
@@ -2590,6 +2614,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         imaging_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count)
       } else if (is_pathology) {
         pathology_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count)
+      } else if (is_biobank) {
+        biobank_safe_display_value(column, code, concept_id, x[[count_col]][[i]], min_cell_count)
       } else {
         code
       }
@@ -2601,6 +2627,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         paste(imaging_ctx$meaning, imaging_def$meaning)
       } else if (is_pathology) {
         paste(pathology_ctx$meaning, pathology_def$meaning)
+      } else if (is_biobank) {
+        paste(biobank_ctx$meaning, biobank_def$meaning)
       } else {
         semantic_domain_meaning(clinical_group, code, column)
       }
@@ -2610,6 +2638,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         paste(imaging_ctx$caveat, imaging_def$caveat, "No report text, patient rows, image pixels, or raw dates are emitted.")
       } else if (is_pathology) {
         paste(pathology_ctx$caveat, pathology_def$caveat, "No raw pathology report text, patient rows, or raw date values are emitted.")
+      } else if (is_biobank) {
+        paste(biobank_ctx$caveat, biobank_def$caveat, "Sample IDs, aliquot/tube IDs, patient IDs, and collection dates are not emitted.")
       } else {
         semantic_domain_caveat(clinical_group)
       }
@@ -2619,6 +2649,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         c(terms, imaging_ctx$terms, imaging_def$terms, safe_value, column, row_source, imaging_ctx$layer)
       } else if (is_pathology) {
         c(terms, pathology_ctx$terms, pathology_def$terms, safe_value, column, row_source, pathology_ctx$layer)
+      } else if (is_biobank) {
+        c(terms, biobank_ctx$terms, biobank_def$terms, safe_value, column, row_source, biobank_ctx$layer)
       } else {
         c(terms, code, column, row_source)
       }
@@ -2626,6 +2658,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         imaging_def$code_system
       } else if (is_pathology) {
         pathology_def$code_system
+      } else if (is_biobank) {
+        biobank_def$code_system
       } else {
         semantic_domain_code_system(clinical_group, code, column)
       }
@@ -2639,20 +2673,20 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
         source_name = row_source,
         object_name = row_object,
         raw_column = column,
-        raw_descriptor = if (is_microbiology || is_imaging || is_pathology) safe_value else if (clinical_group %in% c("Biobank")) code else "",
+        raw_descriptor = if (is_microbiology || is_imaging || is_pathology || is_biobank) safe_value else "",
         raw_code = if (is_microbiology || (is_pathology && identical(pathology_def$value_type, "free_text"))) "" else if (clinical_group %in% c("Treatment", "Pathology", "Imaging") || grepl("^[A-Z0-9]{3,}", code)) safe_value else "",
-        raw_value = if (is_microbiology) safe_value else if (clinical_group %in% c("Biobank", "Outcomes")) code else "",
+        raw_value = if (is_microbiology || is_biobank) safe_value else if (clinical_group %in% c("Outcomes")) code else "",
         code_system = code_system,
-        value_type = if (is_imaging) imaging_def$value_type else if (is_pathology) pathology_def$value_type else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text" else "code",
+        value_type = if (is_imaging) imaging_def$value_type else if (is_pathology) pathology_def$value_type else if (is_biobank) biobank_def$value_type else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text" else "code",
         data_shape = "code_table",
         source_level = source_level_for_source(row_source),
         geography = geography_for_source(row_source),
         n_rows = n,
         evidence_file = file,
         evidence_filter = paste0(column, "=", safe_value),
-        mapping_confidence = if (is_microbiology) micro_def$confidence else if (is_imaging) imaging_def$confidence else if (is_pathology) pathology_def$confidence else if (clinical_group == "Biobank") "medium" else "high",
-        mapping_status = if (is_microbiology) micro_def$status else if (is_imaging) imaging_def$status else if (is_pathology) pathology_def$status else if (clinical_group == "Biobank") "candidate" else "inferred",
-        privacy_note = if (is_microbiology && identical(safe_value, "suppressed / not shown")) "aggregate_only_suppressed_value" else if (is_pathology && pathology_free_text_column(column)) "free_text_not_exposed" else if (is_pathology && pathology_date_like_column(column)) "date_values_not_exposed" else if (is_imaging && imaging_free_text_column(column)) "free_text_not_exposed" else if (is_imaging && imaging_date_like_column(column)) "date_values_not_exposed" else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text_not_exposed" else "aggregate_only",
+        mapping_confidence = if (is_microbiology) micro_def$confidence else if (is_imaging) imaging_def$confidence else if (is_pathology) pathology_def$confidence else if (is_biobank) biobank_def$confidence else "high",
+        mapping_status = if (is_microbiology) micro_def$status else if (is_imaging) imaging_def$status else if (is_pathology) pathology_def$status else if (is_biobank) biobank_def$status else "inferred",
+        privacy_note = if (is_microbiology && identical(safe_value, "suppressed / not shown")) "aggregate_only_suppressed_value" else if (is_biobank && identical(safe_value, "suppressed / not shown")) "aggregate_only_suppressed_value" else if (is_biobank && biobank_date_like_column(column)) "date_values_not_exposed" else if (is_biobank && biobank_identifier_column(column)) "identifier_values_not_exposed" else if (is_pathology && pathology_free_text_column(column)) "free_text_not_exposed" else if (is_pathology && pathology_date_like_column(column)) "date_values_not_exposed" else if (is_imaging && imaging_free_text_column(column)) "free_text_not_exposed" else if (is_imaging && imaging_date_like_column(column)) "date_values_not_exposed" else if (grepl("text|note|beskrivelse", column, ignore.case = TRUE)) "free_text_not_exposed" else "aggregate_only",
         clinical_caveat = clinical_caveat,
         search_terms = semantic_terms(search_terms)
       )
@@ -2670,8 +2704,8 @@ semantic_value_count_code_rows <- function(project_root, files, clinical_group, 
           panel = subgroup_value,
           n_rows = n,
           evidence_file = file,
-          mapping_confidence = if (is_microbiology) micro_def$confidence else if (is_imaging) imaging_def$confidence else if (is_pathology) pathology_def$confidence else "medium",
-          notes = if (is_microbiology) paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.") else if (is_imaging) clinical_caveat else if (is_pathology) clinical_caveat else semantic_domain_caveat(clinical_group)
+          mapping_confidence = if (is_microbiology) micro_def$confidence else if (is_imaging) imaging_def$confidence else if (is_pathology) pathology_def$confidence else if (is_biobank) biobank_def$confidence else "medium",
+          notes = if (is_microbiology) paste(micro_ctx$caveat, "Detailed organism/species values and free text are suppressed or grouped.") else if (is_imaging) clinical_caveat else if (is_pathology) clinical_caveat else if (is_biobank) clinical_caveat else semantic_domain_caveat(clinical_group)
         )
       }
     }
@@ -3287,6 +3321,152 @@ pathology_safe_display_value <- function(column, value, concept_id, n, min_cell_
   value
 }
 
+biobank_source_context <- function(source_name = "", object_name = "", evidence_file = "", column = "") {
+  key <- semantic_id_from(paste(source_name %||% "", object_name %||% "", evidence_file %||% "", column %||% "", sep = " "))
+  mk <- function(layer, subgroup, meaning, caveat, terms) {
+    list(layer = layer, subgroup = subgroup, meaning = meaning, caveat = caveat, terms = terms)
+  }
+  if (grepl("lab_biobank_samples|biobank_samples|biobank", key)) {
+    return(mk(
+      "Biobank sample table",
+      "Biobank sample evidence",
+      "Biobank sample-source, sample-type/material, and aggregate sample availability evidence.",
+      "Biobank rows indicate sample availability, not assay completion, molecular data, sequencing, immune profiling, or biomarker results.",
+      c("LAB_BIOBANK_SAMPLES", "biobank samples", "sample source", "sample type")
+    ))
+  }
+  mk(
+    "Candidate biobank evidence",
+    "Candidate biobank evidence",
+    "Candidate biobank/sample evidence layer.",
+    "Candidate biobank rows require source-specific validation and do not imply assay availability.",
+    c("biobank", "sample", "candidate")
+  )
+}
+
+biobank_translational_value <- function(value) {
+  key <- toupper(trimws(as.character(value %||% "")))
+  key %in% c("CHB", "DCB", "DCB PLASMA", "IGHV", "PERSIMUNE", "PERSIMUNE_PLASMA", "CLL_BIOBANK", "N2")
+}
+
+biobank_date_like_column <- function(column) {
+  grepl("date|dato|datetime|tidspunkt|collection|collected|samplecollection|_dt$|time", column, ignore.case = TRUE)
+}
+
+biobank_identifier_column <- function(column) {
+  grepl("sample_?id|aliquot|tube|vial|barcode|identifier|patient|person|cpr|pnr", column, ignore.case = TRUE)
+}
+
+biobank_column_definition <- function(source_name = "", object_name = "", column = "", value = "") {
+  col_key <- semantic_id_from(column)
+  value_text <- as.character(value %||% "")
+  mk <- function(id, variable, subgroup, meaning, terms, confidence = "high", status = "confirmed",
+                 value_type = "categorical", code_system = "local_biobank", caveat = "") {
+    list(
+      concept_id = id,
+      variable = variable,
+      subgroup = subgroup,
+      meaning = meaning,
+      terms = terms,
+      confidence = confidence,
+      status = status,
+      value_type = value_type,
+      code_system = code_system,
+      caveat = caveat
+    )
+  }
+  if (biobank_identifier_column(column)) {
+    return(mk(
+      "biobank_sample_identifier",
+      "Biobank sample identifier field",
+      "Identifier availability",
+      "Biobank sample, aliquot, tube, patient, or local identifier field.",
+      c("sample identifier", "aliquot", "tube", "patient id", column),
+      "medium",
+      "candidate",
+      "identifier",
+      "local_biobank",
+      "Identifier values are not emitted in the static atlas."
+    ))
+  }
+  if (biobank_date_like_column(column)) {
+    return(mk(
+      "biobank_collection_date",
+      "Biobank collection date field",
+      "Structural date field",
+      "Biobank sample collection or date metadata field.",
+      c("collection date", "date_samplecollection", column),
+      "medium",
+      "candidate",
+      "date",
+      "local_biobank",
+      "Collection-date values are structural metadata only and are not rendered as categorical bars."
+    ))
+  }
+  if (col_key %in% c("sample_source", "source", "biobank_source", "cohort")) {
+    if (biobank_translational_value(value_text)) {
+      return(mk(
+        "biobank_translational_source",
+        "Biobank translational/cohort source",
+        "Translational/cohort labels",
+        "Biobank source/cohort label that may support translational or biomarker linkage planning.",
+        c("translational source", "cohort label", value_text, column),
+        "high",
+        "confirmed",
+        "categorical",
+        "local_biobank",
+        "Cohort/source labels require source-specific interpretation and access rules; no assay availability is implied."
+      ))
+    }
+    return(mk(
+      "biobank_sample_source",
+      "Biobank sample source",
+      "Sample source",
+      "Biobank/source label for sample availability.",
+      c("sample source", "biobank source", "cohort", value_text, column),
+      "high",
+      "confirmed",
+      "categorical",
+      "local_biobank",
+      "Sample-source labels are raw/local source labels and require source-specific interpretation."
+    ))
+  }
+  if (col_key %in% c("type", "sample_type", "sampletype", "material", "specimen", "sample_material")) {
+    return(mk(
+      "biobank_sample_type",
+      "Biobank sample type",
+      "Sample type/material",
+      "Biobank biological material or sample-type field.",
+      c("sample type", "sample material", "biobank material", value_text, column),
+      "high",
+      "confirmed",
+      "categorical",
+      "local_biobank",
+      "Sample type labels may be raw/local labels and do not imply assay availability."
+    ))
+  }
+  mk(
+    "biobank_sample_availability",
+    "Biobank sample availability",
+    "Availability",
+    "Aggregate biobank sample availability evidence.",
+    c("biobank", "sample availability", column, value_text),
+    "medium",
+    "candidate",
+    "categorical",
+    "local_biobank",
+    "Sample availability does not mean a molecular, sequencing, immune, or biomarker assay was performed."
+  )
+}
+
+biobank_safe_display_value <- function(column, value, concept_id, n, min_cell_count) {
+  value <- as.character(value %||% "")
+  if (!nzchar(value)) return("")
+  if (biobank_identifier_column(column) || biobank_date_like_column(column)) return("")
+  if (is.na(suppressWarnings(as.numeric(n))) || suppressWarnings(as.numeric(n)) < min_cell_count) return("suppressed / not shown")
+  value
+}
+
 semantic_domain_variable <- function(clinical_group, code, column) {
   text <- paste(code, column)
   if (clinical_group == "Imaging") {
@@ -3366,7 +3546,7 @@ panel_for_semantic_row <- function(row) {
   if (group == "Imaging") return(list(id = "clinical_imaging", section = "Clinical Data"))
   if (group == "Microbiology") return(list(id = "clinical_microbiology", section = "Clinical Data"))
   if (group == "Pathology") return(list(id = "clinical_pathology", section = "Clinical Data"))
-  if (group == "Biobank") return(list(id = "laboratory_biobank", section = "Laboratory"))
+  if (group == "Biobank") return(list(id = "clinical_biobank", section = "Laboratory"))
   if (group == "Outcomes") return(list(id = "clinical_outcomes", section = "Clinical Data"))
   list(id = "data_dictionary", section = "Data Dictionary")
 }

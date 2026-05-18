@@ -1175,11 +1175,13 @@
         <button class="sub-tab active" data-sub="lab-npu">NPU Vectors</button>
         <button class="sub-tab" data-sub="lab-detective">NPU Detective</button>
         <button class="sub-tab" data-sub="lab-isotype">Isotype Finder</button>
+        <button class="sub-tab" data-sub="lab-biobank">Biobank</button>
         <button class="sub-tab" data-sub="lab-sources">Lab Sources</button>
       </div>
       <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory / NPU atlas</h2><p class="panel-sub">Clinician-facing laboratory concept discovery across NPU/DNK codes, national LABKA/SDS, SP AlleProvesvar, PERSIMUNE biochemistry, and registry lab fields.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
       <div class="sub-pane" id="lab-detective"><div class="panel"><div class="panel-head"><h2 class="panel-title">NPU Detective</h2><p class="panel-sub">Observed NPU inventory and candidate codes from aggregate code panels.</p></div><div class="panel-body"><div id="detective-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-isotype"><div class="panel"><div class="panel-head"><h2 class="panel-title">Isotype Finder</h2><p class="panel-sub">M-spike and isotype code families at aggregate level.</p></div><div class="panel-body"><div id="isotype-cards" class="grid"></div></div></div></div>
+      <div class="sub-pane" id="lab-biobank"><div class="panel"><div class="panel-head"><h2 class="panel-title">Biobank sample atlas</h2><p class="panel-sub">Aggregate sample-source, sample-type/material, availability, and translational/cohort source evidence. Sample identifiers and collection-date values are not emitted.</p></div><div class="panel-body"><div id="biobank-dashboard"></div></div></div></div>
       <div class="sub-pane" id="lab-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory Sources</h2><p class="panel-sub">Lab-like source metadata and relevant NPU/isotype panels.</p></div><div class="panel-body"><div id="laboratory-source-cards"></div></div></div></div>
     </section>
 
@@ -4028,6 +4030,206 @@
           </div>`;
       }
 
+      const biobankLayerSpecs = [
+        { id: "sample_source", label: "Sample source", tone: "blue", terms: ["Sample_source", "sample_source", "source", "biobank_source", "cohort"], captures: "Biobank/source label for aggregate sample availability.", best: "Source and cohort feasibility review.", caveat: "Source labels are raw/local labels and require source-specific interpretation.", fields: ["LAB_BIOBANK_SAMPLES", "Sample_source", "CHB", "DCB", "PERSIMUNE", "CLL_BIOBANK"] },
+        { id: "sample_type", label: "Sample type/material", tone: "green", terms: ["Type", "Sample_type", "sample_type", "material", "specimen"], captures: "Type of biological material or sample.", best: "Material availability review before translational study planning.", caveat: "Sample type does not imply assay, sequencing, molecular, immune, or biomarker availability.", fields: ["Type", "Sample_type", "Blod", "PLASMA", "DNA", "Tumor tissue", "Viable"] },
+        { id: "availability", label: "Sample availability", tone: "cyan", terms: ["sample availability", "sample rows", "n samples"], captures: "Aggregate sample availability and sample-row evidence.", best: "Feasibility review for sample-linked research.", caveat: "Sample rows are not patient-level sample inventories and do not imply individual completeness.", fields: ["sample count", "sample rows", "individuals with samples"] },
+        { id: "translational", label: "Translational source labels", tone: "plum", terms: ["CHB", "DCB", "DCB PLASMA", "IGHV", "PERSIMUNE", "PERSIMUNE_PLASMA", "CLL_BIOBANK", "N2"], captures: "Raw cohort/source labels that may support translational or biomarker linkage planning.", best: "Candidate cohort/source discovery before access requests.", caveat: "Do not invent meanings for labels; interpretation and access rules are source-specific.", fields: ["CHB", "DCB", "DCB PLASMA", "IGHV", "PERSIMUNE", "PERSIMUNE_PLASMA", "CLL_BIOBANK", "N2"] },
+        { id: "candidate", label: "Candidate / needs-validation", tone: "amber", terms: [], captures: "Candidate biobank evidence.", best: "Discovery only.", caveat: "Validate source-specific meaning before analytic use.", fields: [] }
+      ];
+      function biobankIsDateLike(rowOrValue) {
+        const value = typeof rowOrValue === "string" ? rowOrValue : [rowOrValue.raw_column, rowOrValue.raw_value, rowOrValue.raw_descriptor, rowOrValue.display_value].map(text).join(" ");
+        return /date|dato|datetime|tidspunkt|collection|collected|samplecollection|dt$|time/.test(normalizeClinicalKey(value));
+      }
+      function biobankIsIdentifierLike(rowOrValue) {
+        const value = typeof rowOrValue === "string" ? rowOrValue : [rowOrValue.raw_column, rowOrValue.raw_value, rowOrValue.raw_descriptor, rowOrValue.display_value, rowOrValue.privacy_note].map(text).join(" ");
+        return /sampleid|aliquot|tube|vial|barcode|identifier|patient|person|cpr|pnr/.test(normalizeClinicalKey(value));
+      }
+      function biobankSafeLabel(row) {
+        if (biobankIsDateLike(row) || biobankIsIdentifierLike(row)) return "";
+        const label = [row.raw_value, row.raw_descriptor, row.raw_code, row.display_value]
+          .map(text)
+          .find(value => {
+            const key = normalizeClinicalKey(value);
+            return key && key !== "null" && key !== "notavailable" && key !== normalizeClinicalKey(row.clinical_variable || "");
+          });
+        return label || "";
+      }
+      function biobankRowText(row) {
+        return [row.source_name, row.object_name, row.table_name, row.raw_column, row.raw_descriptor, row.raw_code, row.raw_value, row.display_value, row.clinical_variable, row.clinical_concept_id, row.evidence_file].map(text).join(" ");
+      }
+      function biobankLayer(row) {
+        const key = normalizeClinicalKey(biobankRowText(row));
+        const columnKey = normalizeClinicalKey(row.raw_column || "");
+        const valueKey = normalizeClinicalKey(biobankSafeLabel(row));
+        if (/biobanktranslationalsource/.test(key) || ["chb", "dcb", "dcbplasma", "ighv", "persimune", "persimuneplasma", "cllbiobank", "n2"].includes(valueKey)) return biobankLayerSpecs[3];
+        if (/samplesource|biobanksamplesource|biobanksource|cohort/.test(key) || columnKey === "samplesource") return biobankLayerSpecs[0];
+        if (/sampletype|samplematerial|biobanksampletype/.test(key) || ["type", "sampletype", "material", "specimen"].includes(columnKey)) return biobankLayerSpecs[1];
+        if (/sampleavailability|samples|samplerows|labbiobanksamples/.test(key)) return biobankLayerSpecs[2];
+        return biobankLayerSpecs[4];
+      }
+      function biobankRawRows(predicate) {
+        return (panelRawFieldRows || [])
+          .filter(row => row.panel_id === "clinical_biobank" || row.clinical_group === "Biobank")
+          .filter(row => !biobankIsDateLike(row))
+          .filter(row => !biobankIsIdentifierLike(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => {
+            const aRank = (a.mapping_status === "confirmed" ? 0 : 1) + (a.mapping_confidence === "high" ? 0 : 1);
+            const bRank = (b.mapping_status === "confirmed" ? 0 : 1) + (b.mapping_confidence === "high" ? 0 : 1);
+            return aRank - bRank || numberValue(b.n_rows) - numberValue(a.n_rows) || numberValue(a.sort_order) - numberValue(b.sort_order);
+          });
+      }
+      function biobankPanelDistributionRows(predicate) {
+        return (panelDistributionRows || [])
+          .filter(row => row.panel_id === "clinical_biobank")
+          .filter(row => !biobankIsDateLike(row))
+          .filter(row => !biobankIsIdentifierLike(row))
+          .filter(row => biobankSafeLabel(row))
+          .filter(row => predicate ? predicate(row) : true)
+          .sort((a, b) => numberValue(b.n || b.statistic_value) - numberValue(a.n || a.statistic_value) || numberValue(a.sort_order) - numberValue(b.sort_order));
+      }
+      function biobankMatchesLayer(row, layerId) {
+        const columnKey = normalizeClinicalKey(row.raw_column || "");
+        const valueKey = normalizeClinicalKey(biobankSafeLabel(row));
+        if (layerId === "sample_source") return ["samplesource", "source", "biobanksource", "cohort"].includes(columnKey);
+        if (layerId === "sample_type") return ["type", "sampletype", "material", "specimen", "samplematerial"].includes(columnKey) || row.clinical_concept_id === "biobank_sample_type";
+        if (layerId === "translational") return ["chb", "dcb", "dcbplasma", "ighv", "persimune", "persimuneplasma", "cllbiobank", "n2"].includes(valueKey) || row.clinical_concept_id === "biobank_translational_source";
+        return biobankLayer(row).id === layerId;
+      }
+      function biobankRowsForLayer(layerId) {
+        const matches = row => biobankMatchesLayer(row, layerId);
+        const dist = biobankPanelDistributionRows(matches);
+        return dist.length ? dist : biobankRawRows(matches);
+      }
+      function biobankBarRows(rows) {
+        return (rows || []).map(row => ({
+          label: biobankSafeLabel(row) || row.raw_column || row.clinical_variable,
+          n: row.n || row.n_rows || row.statistic_value || "",
+          pct: row.pct,
+          count_scope: row.count_scope,
+          denominator_scope: row.denominator_scope,
+          profile_scope: row.profile_scope,
+          tone: biobankLayer(row).tone
+        }));
+      }
+      function renderBiobankSourceCoverage() {
+        const wanted = ["LAB_BIOBANK_SAMPLES", "BIOBANK_SAMPLES", "biobank sample table"];
+        const cards = wanted.map(source => {
+          const sourceKey = normalizeClinicalKey(source);
+          const catalog = (catalogRows || []).find(row => normalizeClinicalKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" ")).includes(sourceKey));
+          const kpi = (panelKpiRows || []).find(row => row.panel_id === "clinical_biobank" && normalizeClinicalKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const distRows = biobankPanelDistributionRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const rawRows = biobankRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
+          const count = numberValue(catalog && catalog.n_rows) || numberValue(kpi && kpi.value) || distRows.reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0) || rawRows.reduce((sum, row) => sum + numberValue(row.n_rows), 0);
+          const fields = new Set(rawRows.map(row => row.raw_column).filter(Boolean));
+          const found = catalog || kpi || distRows.length || rawRows.length;
+          return `<article class="clinical-card">
+            ${renderBadge("Biobank sample table", "blue")}
+            <h3>${escapeHtml(source)}</h3>
+            ${renderKpiStrip([
+              { label: "aggregate rows", value: count || "not available in current aggregate output", tone: "blue" },
+              { label: "fields", value: fields.size || (found ? "not available" : "not available"), tone: "cyan" }
+            ], { tone: "blue" })}
+            <p class="mini">Sample availability evidence only; no assay completion or molecular result is implied.</p>
+          </article>`;
+        }).join("");
+        return `<div class="grid grid-3">${cards}</div>`;
+      }
+      function renderBiobankLayerCards() {
+        return `<div class="grid grid-3">${biobankLayerSpecs.filter(layer => layer.id !== "candidate").map(layer => `
+          <article class="raw-lineage-card">
+            ${renderBadge(layer.label, layer.tone)}
+            <p><strong>Captures:</strong> ${escapeHtml(layer.captures)}</p>
+            <p><strong>Best use:</strong> ${escapeHtml(layer.best)}</p>
+            <p class="mini"><strong>Caveat:</strong> ${escapeHtml(layer.caveat)}</p>
+            <p class="mono mini">${escapeHtml(layer.fields.join("; "))}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderBiobankLayerSection(layerId, tone, options) {
+        const opts = options || {};
+        const rows = biobankRowsForLayer(layerId).slice(0, opts.limit || 12);
+        const rawRows = biobankRawRows(row => biobankLayer(row).id === layerId);
+        return `
+          ${rows.length ? renderHBarRows(biobankBarRows(rows), { tone, limit: opts.limit || 12 }) : `<div class="empty">${escapeHtml(opts.empty || "not available in current aggregate output")}</div>`}
+          ${rawRows.length && !opts.noLineage ? renderCollapsedRawLineage(rawRows, { limit: 6 }) : ""}
+        `;
+      }
+      function renderBiobankAvailability() {
+        const rows = biobankPanelDistributionRows();
+        const rawRows = biobankRawRows();
+        const sourceCount = rows.filter(row => normalizeClinicalKey(row.raw_column || "").includes("samplesource")).reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0);
+        const typeCount = rows.filter(row => ["type", "sampletype"].includes(normalizeClinicalKey(row.raw_column || ""))).reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0);
+        return `
+          ${renderKpiStrip([
+            { label: "sample-source rows", value: sourceCount || "not available", tone: "blue" },
+            { label: "sample-type rows", value: typeCount || "not available", tone: "green" },
+            { label: "raw lineage rows", value: rawRows.length || "not available", tone: "cyan" },
+            { label: "individual-level sample availability", value: "not available in current aggregate output", tone: "amber" }
+          ], { tone: "blue" })}
+          <p class="mini">Do not infer individuals from sample rows unless a dedicated patient-level aggregate output is present.</p>
+        `;
+      }
+      function renderBiobankRawLineageByLayer() {
+        const rows = biobankRawRows();
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        const groups = [
+          { id: "sample_source", label: "Sample source" },
+          { id: "sample_type", label: "Sample type/material" },
+          { id: "availability", label: "Sample availability" },
+          { id: "translational", label: "Translational/cohort labels" },
+          { id: "candidate", label: "Candidate / needs-validation" }
+        ];
+        return groups.map(group => {
+          const groupRows = rows.filter(row => biobankMatchesLayer(row, group.id));
+          if (!groupRows.length) return "";
+          return group.id === "candidate"
+            ? `<details class="lineage-block"><summary>${escapeHtml(group.label)}</summary>${renderCollapsedRawLineage(groupRows, { limit: 6 })}</details>`
+            : `<div class="lineage-block"><h3>${escapeHtml(group.label)}</h3>${renderCollapsedRawLineage(groupRows, { limit: 10 })}</div>`;
+        }).join("") || `<div class="empty">not available in current aggregate output</div>`;
+      }
+      function renderBiobankPanel() {
+        const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_biobank") || {};
+        const rawRows = biobankRawRows();
+        const distributions = biobankPanelDistributionRows();
+        return `
+          <div class="dashboard-grid biobank-dashboard">
+            ${renderKpiStrip([
+              { label: "biobank sources", value: new Set(rawRows.map(row => row.source_name).filter(Boolean)).size || "not available", tone: "blue" },
+              { label: "distribution rows", value: distributions.length || "not available", tone: "green" },
+              { label: "raw lineage rows", value: rawRows.length || "not available", tone: "cyan" },
+              { label: "sample IDs emitted", value: "0", tone: "red" }
+            ], { tone: "blue" })}
+            ${renderSectionCard("Source / coverage", renderBiobankSourceCoverage(), "blue")}
+            ${renderSectionCard("Biobank evidence layers", renderBiobankLayerCards(), "cyan")}
+            ${renderSectionCard("Sample sources", renderBiobankLayerSection("sample_source", "blue", { limit: 10 }), "blue")}
+            ${renderSectionCard("Sample types", renderBiobankLayerSection("sample_type", "green", { limit: 12 }), "green")}
+            ${renderSectionCard("Sample availability", renderBiobankAvailability(), "cyan")}
+            ${renderSectionCard("Translational source labels", `
+              <p class="mini">Raw source/cohort labels are shown without invented interpretation.</p>
+              ${renderBiobankLayerSection("translational", "plum", { limit: 10 })}
+            `, "plum")}
+            ${renderSectionCard("Raw names / data lineage", renderBiobankRawLineageByLayer(), "blue")}
+            ${renderSectionCard("Use cases", `
+              <ul>
+                <li>Translational-study feasibility review.</li>
+                <li>Sample-source and material availability discovery.</li>
+                <li>Biomarker validation planning.</li>
+                <li>Linkage planning with diagnosis, registry, laboratory, treatment, and outcome data.</li>
+                <li>Selecting candidate cohorts for molecular or immune profiling.</li>
+                <li>Assessing whether sample availability exists before requesting access.</li>
+              </ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <p>${escapeHtml(panel.caveats || "Biobank rows indicate sample availability, not assay completion. Sample source labels require source-specific interpretation.")}</p>
+              <p>Sample availability does not imply assay availability, molecular data, sequencing, immune profiling, or biomarker results.</p>
+              <p>Sample type labels may be raw/local labels and require harmonization. Individual-level sample completeness requires dedicated patient-level aggregate outputs.</p>
+              <p>Do not infer molecular, sequencing, immune, or biomarker data solely from sample presence. Sample IDs, aliquot IDs, patient IDs, and collection dates are not emitted in the static atlas. Rare sample categories may require suppression or grouping.</p>
+            `, "amber")}
+          </div>`;
+      }
+
       function renderCodeDiscoveryCards() {
         const detectiveObserved = detectiveCards.observed_codes || [];
         const detectiveCandidates = detectiveCards.candidate_codes || [];
@@ -4076,6 +4278,7 @@
         setHtml("treatment-dashboard", renderTreatmentPanel());
 
         setHtml("laboratory-npu-dashboard", renderLaboratoryNPUPanel());
+        setHtml("biobank-dashboard", renderBiobankPanel());
         setHtml("laboratory-source-cards", sourceTiles(reviewLaboratory.lab_sources, "No lab-like sources were mapped in this run."));
         setHtml("ehr-sp-cards", sourceTiles(reviewEhr.sp, "No SP sources were mapped in this run."));
         setHtml("ehr-sds-cards", sourceTiles(reviewEhr.sds_lpr, "No SDS/LPR sources were mapped in this run."));

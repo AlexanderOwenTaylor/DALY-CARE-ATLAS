@@ -97,6 +97,7 @@ expect_true(grepl("data-sub=\"clinical-microbiology\"", html, fixed = TRUE), "HT
 expect_true(grepl("data-sub=\"clinical-pathology\"", html, fixed = TRUE), "HTML should include Pathology/PATOBANK clinical sub-tab.")
 expect_true(grepl("treatment-dashboard", html, fixed = TRUE), "HTML should include the Treatment dashboard container.")
 expect_true(grepl("data-sub=\"lab-npu\"", html, fixed = TRUE), "HTML should include laboratory/NPU sub-tabs.")
+expect_true(grepl("data-sub=\"lab-biobank\"", html, fixed = TRUE), "HTML should include Biobank laboratory sub-tab.")
 expect_true(grepl("data-sub=\"ehr-sp\"", html, fixed = TRUE), "HTML should include EHR module sub-tabs.")
 expect_true(grepl("data-sub=\"infra-actions\"", html, fixed = TRUE), "HTML should include run action item sub-tabs.")
 expect_true(grepl("data-sub=\"infra-catalog\"", html, fixed = TRUE), "HTML should include infrastructure sub-tabs.")
@@ -126,6 +127,7 @@ expect_true(grepl("function renderLaboratoryNPUPanel()", html, fixed = TRUE), "H
 expect_true(grepl("function renderMicrobiologyPanel()", html, fixed = TRUE), "HTML should include the dedicated Microbiology/Infection renderer.")
 expect_true(grepl("function renderImagingPanel()", html, fixed = TRUE), "HTML should include the dedicated Imaging renderer.")
 expect_true(grepl("function renderPathologyPanel()", html, fixed = TRUE), "HTML should include the dedicated Pathology/PATOBANK renderer.")
+expect_true(grepl("function renderBiobankPanel()", html, fixed = TRUE), "HTML should include the dedicated Biobank renderer.")
 for (needle in c("--green", "--blue", "--amber", "--plum", "--violet", "--red", "--cyan", "--surface", "--surface2", "--surface3", "--line", "--muted", "--shadow", "--radius")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML design system should define:", needle))
 }
@@ -146,12 +148,14 @@ expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visu
 expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
+expect_true(grepl("{ name: \"biobank\", tab: \"laboratory\", sub: \"lab-biobank\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Biobank target.")
 expect_true(grepl("{ name: \"microbiology\", tab: \"clinical\", sub: \"clinical-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Microbiology/Infection target.")
 expect_true(grepl("{ name: \"imaging\", tab: \"clinical\", sub: \"clinical-imaging\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Imaging target.")
 expect_true(grepl("{ name: \"pathology\", tab: \"clinical\", sub: \"clinical-pathology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Pathology/PATOBANK target.")
 expect_true(grepl("microbiologyAtGlancePresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Microbiology At a glance section.")
 expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Imaging panel.")
 expect_true(grepl("pathologyPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Pathology/PATOBANK panel.")
+expect_true(grepl("biobankPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Biobank panel.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
@@ -167,6 +171,7 @@ expect_false(grepl("renderRegistryDetail(\"registry-cll\", \"reg_cll\")", html, 
 expect_true(grepl("setHtml(\"registry-cll\", renderCLLPanel())", html, fixed = TRUE), "CLL should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"treatment-dashboard\", renderTreatmentPanel())", html, fixed = TRUE), "Treatment should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"laboratory-npu-dashboard\", renderLaboratoryNPUPanel())", html, fixed = TRUE), "Laboratory/NPU should be wired to its dedicated renderer.")
+expect_true(grepl("setHtml(\"biobank-dashboard\", renderBiobankPanel())", html, fixed = TRUE), "Biobank should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"clinical-microbiology-cards\", renderMicrobiologyPanel())", html, fixed = TRUE), "Microbiology/Infection should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"clinical-imaging-cards\", renderImagingPanel())", html, fixed = TRUE), "Imaging should be wired to its dedicated renderer.")
 expect_true(grepl("setHtml(\"clinical-pathology-cards\", renderPathologyPanel())", html, fixed = TRUE), "Pathology/PATOBANK should be wired to its dedicated renderer.")
@@ -213,6 +218,15 @@ for (needle in c("Medical imaging atlas", "Imaging evidence layers", "Nationwide
 }
 for (needle in c("Pathology / PATOBANK atlas", "Pathology evidence layers", "SNOMED-coded pathology", "Specimen / material", "Pathology institution / lab source", "Microscopy / free-text availability", "Conclusion / report-text availability", "Tumor-coded evidence", "Raw names / data lineage", "Use cases", "Caveats")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Pathology/PATOBANK renderer should contain section:", needle))
+}
+for (needle in c("Biobank sample atlas", "Biobank evidence layers", "Sample sources", "Sample types", "Sample availability", "Translational source labels", "Raw names / data lineage", "Use cases", "Caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Biobank renderer should contain section:", needle))
+}
+for (needle in c("function biobankLayer", "function biobankPanelDistributionRows", "function renderBiobankLayerCards", "function renderBiobankRawLineageByLayer", "Sample IDs, aliquot IDs, patient IDs, and collection dates are not emitted", "Sample availability does not imply assay", "Do not infer molecular, sequencing, immune, or biomarker data")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Biobank renderer should include guarded sample-atlas logic:", needle))
+}
+for (needle in c("LAB_BIOBANK_SAMPLES", "Sample_source", "Sample_type", "CHB", "DCB", "PERSIMUNE", "CLL_BIOBANK", "PLASMA", "DNA", "Blod")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Biobank renderer should be able to surface evidenced term:", needle))
 }
 for (needle in c("function pathologyLayer", "function pathologyDistributionRows", "function renderPathologyLayerCards", "function renderPathologyRawLineageByLayer", "free-text field present; values not emitted", "Raw pathology report text is not emitted", "Date fields are structural metadata and are not rendered as categorical bars")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Pathology/PATOBANK renderer should include guarded source-aware logic:", needle))
@@ -871,6 +885,26 @@ if (nrow(tumor_pathology_rows)) {
 expect_false(any(grepl("date|dato|datetime|tidspunkt|svardato|_dt", pathology_panel_distributions$raw_column, ignore.case = TRUE)), "Pathology panel distributions should not render date-like rows as categorical bars.")
 expect_false(any(grepl("patient|cpr|pnr", pathology_panel_distributions$raw_value, ignore.case = TRUE)), "Pathology distributions must not render patient IDs or CPR-like values.")
 expect_true(any(semantic_code_map$code_system == "SNOMED"), "Semantic code map should include SNOMED pathology signals.")
+biobank_rows <- semantic_dictionary[semantic_dictionary$clinical_group == "Biobank", , drop = FALSE]
+biobank_source_rows <- semantic_dictionary[semantic_dictionary$source_name == "LAB_BIOBANK_SAMPLES", , drop = FALSE]
+biobank_panel_raw <- panel_raw_fields[panel_raw_fields$panel_id == "clinical_biobank", , drop = FALSE]
+biobank_panel_distributions <- panel_distributions[panel_distributions$panel_id == "clinical_biobank", , drop = FALSE]
+expect_true(nrow(biobank_rows) > 0, "Semantic output should include Biobank rows.")
+expect_true(nrow(biobank_source_rows) > 0, "Semantic output should include LAB_BIOBANK_SAMPLES rows.")
+expect_true(all(biobank_source_rows$clinical_group == "Biobank"), "LAB_BIOBANK_SAMPLES rows should all stay in Biobank semantics.")
+expect_true(nrow(biobank_panel_raw) > 0, "Biobank panel raw fields should be generated.")
+expect_true(nrow(biobank_panel_distributions) > 0, "Biobank panel distributions should be generated.")
+expect_true(any(biobank_rows$source_name == "LAB_BIOBANK_SAMPLES" & biobank_rows$raw_column == "Sample_source" & biobank_rows$clinical_group == "Biobank"), "LAB_BIOBANK_SAMPLES.Sample_source should stay in Biobank semantics.")
+expect_true(any(biobank_rows$source_name == "LAB_BIOBANK_SAMPLES" & biobank_rows$raw_column %in% c("Type", "Sample_type") & biobank_rows$clinical_concept_id == "biobank_sample_type"), "LAB_BIOBANK_SAMPLES.Type/Sample_type should map to Biobank sample type.")
+expect_false(any(biobank_source_rows$clinical_group %in% c("Treatment", "Pathology", "Microbiology", "Laboratory")), "Biobank rows must not be classified as treatment, pathology, microbiology, or laboratory.")
+expect_false(any(biobank_source_rows$clinical_concept_id %in% c("sks_code", "bone_involvement", "height", "microbiology_sample_material", "pathology_specimen_material")), "Biobank sample rows must not become SKS, bone involvement, height, microbiology, or pathology concepts.")
+for (label in c("CHB", "DCB", "PERSIMUNE", "CLL_BIOBANK")) {
+  expect_true(any(biobank_panel_distributions$raw_code == label | biobank_panel_distributions$raw_value == label | biobank_panel_distributions$raw_descriptor == label), paste("Biobank panel distributions should preserve raw source label:", label))
+  expect_true(grepl(label, html, fixed = TRUE), paste("Biobank renderer should be able to show raw source label:", label))
+}
+expect_false(any(grepl("sample_id|aliquot|tube|patient|cpr|pnr", biobank_panel_distributions$raw_value, ignore.case = TRUE)), "Biobank distributions must not render sample, patient, aliquot, tube, CPR, or PNR values.")
+expect_false(any(grepl("date|dato|samplecollection|collection", biobank_panel_distributions$raw_column, ignore.case = TRUE)), "Biobank panel distributions should not render collection/date fields as categorical bars.")
+expect_false(any(grepl("assay availability|sequencing result|biomarker result", biobank_rows$clinical_variable, ignore.case = TRUE)), "Biobank rows must not describe sample availability as assay availability.")
 expect_true(nrow(semantic_panel_links) > 0, "Semantic panel links should be generated.")
 expect_true(all(nzchar(semantic_dictionary$evidence_file)), "Every semantic row should include an evidence file.")
 expect_false(any(vapply(semantic_dictionary$raw_column, is_sensitive_column, logical(1))), "Semantic dictionary should not turn identifier-like columns into variables.")
