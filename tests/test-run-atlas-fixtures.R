@@ -116,6 +116,24 @@ expect_true(grepl("function stableClinicalConceptSort", html, fixed = TRUE), "Cl
 for (needle in c("Height and weight / BMI", "Smoking status", "Alcohol use", "Diagnosis date/source", "Stage/risk", "LDH", "Haemoglobin", "Creatinine/eGFR", "Treatment exposure", "Imaging availability", "Microbiology/infection", "Pathology", "Biobank samples")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Clinical Variables priority list should include:", needle))
 }
+expect_true(grepl("What can I find in DALY-CARE?", html, fixed = TRUE), "Overview should include the clinician-facing entry section.")
+for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Overview entry cards should include:", needle))
+}
+expect_true(grepl("Atlas restoration status", html, fixed = TRUE), "Overview should include a restoration status dashboard.")
+expect_true(grepl("source-context QA passed", html, fixed = TRUE), "Treatment status should describe source-context QA.")
+expect_true(grepl("lab-vs-treatment cleanup passed", html, fixed = TRUE), "Laboratory/NPU status should describe lab-vs-treatment cleanup.")
+expect_true(grepl("SNOMED cleanup passed", html, fixed = TRUE), "Pathology/PATOBANK status should describe SNOMED cleanup.")
+expect_true(grepl("distribution-first QA passed", html, fixed = TRUE), "Microbiology/CLL status should describe distribution-first QA.")
+expect_true(grepl("identifier/date and low-count safeguards in place", html, fixed = TRUE), "Biobank should not be marked restored without privacy/suppression safeguards.")
+expect_true(grepl("Global scope and caveats", html, fixed = TRUE), "Overview and Clinical Variables should include a global caveat card.")
+for (needle in c("All panels are aggregate-only.", "Counts may be row/code/source/profile counts, not patient-level completeness unless explicitly labelled.", "Cartography scan/top-N outputs are not full cohort denominators.", "Free text and patient-level rows are not emitted.", "Clinical use requires source-specific study definitions.")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Global caveat should include:", needle))
+}
+expect_true(grepl("Common cross-panel routes", html, fixed = TRUE), "Overview should include common cross-panel routes.")
+expect_true(grepl("function jumpToPanel", html, fixed = TRUE), "HTML should include a shared panel jump helper.")
+expect_true(grepl("data-jump-sub", html, fixed = TRUE), "Overview links should support subtab jumps.")
+expect_true(grepl("clinical-variable-global-caveat", html, fixed = TRUE), "Clinical Variables landing should include the global caveat container.")
 expect_true(grepl("renderDomainPanel", html, fixed = TRUE), "HTML should include the product-layer domain panel renderer.")
 expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML should include the dedicated Vitals renderer.")
 expect_true(grepl("function renderSocialHistoryPanel()", html, fixed = TRUE), "HTML should include the dedicated Social History renderer.")
@@ -145,6 +163,17 @@ expect_file(file.path(root, "scripts", "visual_qa_atlas.js"))
 visual_qa_script <- paste(readLines(file.path(root, "scripts", "visual_qa_atlas.js"), warn = FALSE), collapse = "\n")
 expect_true(grepl("overflow_desktop.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a desktop overflow report.")
 expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a mobile overflow report.")
+for (needle in c(
+  "{ name: \"overview\", tab: \"overview\", sub: \"overview-summary\" }",
+  "{ name: \"clinical_variables\", tab: \"variables\", sub: \"variables-concepts\" }",
+  "{ name: \"vitals\", tab: \"clinical\", sub: \"clinical-vitals\" }",
+  "{ name: \"social_history\", tab: \"clinical\", sub: \"clinical-social\" }",
+  "{ name: \"damyda\", tab: \"registries\", sub: \"reg-damyda\" }",
+  "{ name: \"lyfo\", tab: \"registries\", sub: \"reg-lyfo\" }",
+  "{ name: \"data_dictionary\", tab: \"dictionary\", sub: \"dictionary-lineage\" }"
+)) {
+  expect_true(grepl(needle, visual_qa_script, fixed = TRUE), paste("Visual QA script should include target:", needle))
+}
 expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
@@ -156,6 +185,7 @@ expect_true(grepl("microbiologyAtGlancePresent", visual_qa_script, fixed = TRUE)
 expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Imaging panel.")
 expect_true(grepl("pathologyPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Pathology/PATOBANK panel.")
 expect_true(grepl("biobankPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Biobank panel.")
+expect_true(grepl("overviewConsolidationPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Overview consolidation section.")
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")

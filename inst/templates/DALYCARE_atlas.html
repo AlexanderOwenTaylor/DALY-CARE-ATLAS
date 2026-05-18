@@ -849,6 +849,36 @@
         <button class="sub-tab" data-sub="overview-qa">Priority QA</button>
       </div>
       <div class="sub-pane active" id="overview-summary">
+        <div class="panel atlas-entry-panel">
+          <div class="panel-head">
+            <p class="section-kicker">Start with a clinical question</p>
+            <h2 class="panel-title">What can I find in DALY-CARE?</h2>
+            <p class="panel-sub">Choose the restored panel that matches your question. These links are navigation aids over aggregate evidence; they do not create analytic definitions or patient-level completeness claims.</p>
+          </div>
+          <div class="panel-body">
+            <div id="overview-entry-cards" class="grid"></div>
+            <div style="height:14px"></div>
+            <div id="overview-global-caveat"></div>
+          </div>
+        </div>
+        <div class="review-lead">
+          <div class="panel">
+            <div class="panel-head">
+              <p class="section-kicker">Restoration status</p>
+              <h2 class="panel-title">Atlas restoration status</h2>
+              <p class="panel-sub">Display-only status for restored panels. Status badges summarize UI restoration and QA posture, not cohort completeness.</p>
+            </div>
+            <div class="panel-body"><div id="atlas-restoration-status" class="grid"></div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <p class="section-kicker">Cross-panel routes</p>
+              <h2 class="panel-title">Common cross-panel routes</h2>
+              <p class="panel-sub">Shortcuts for common review paths. They are navigation prompts, not evidence of analytic linkage.</p>
+            </div>
+            <div class="panel-body"><div id="overview-cross-panel-routes" class="grid"></div></div>
+          </div>
+        </div>
         <div class="panel">
           <div class="panel-head">
             <p class="section-kicker">Scope and provenance</p>
@@ -961,6 +991,8 @@
             <p class="panel-sub">Clinician-facing concept cards powered by semantic lineage, value maps, code maps, domain panels, and cartography evidence.</p>
           </div>
           <div class="panel-body">
+            <div id="clinical-variable-global-caveat"></div>
+            <div style="height:14px"></div>
             <div class="toolbar">
               <label>Search <input id="clinical-variable-search" type="search" placeholder="height, weight, BMI, smoking, ryger, drikker, LDH, NPU02319, PET, CT, blood culture, IGHV"></label>
               <label>Group <select id="clinical-variable-group-filter"><option value="">All groups</option></select></label>
@@ -1356,6 +1388,49 @@
       const panelRawFieldRows = payload.panel_raw_field_rows || [];
       const panelParityRows = payload.panel_parity_rows || [];
       const regionState = { code: null };
+      const globalAtlasCaveats = [
+        "All panels are aggregate-only.",
+        "Counts may be row/code/source/profile counts, not patient-level completeness unless explicitly labelled.",
+        "Cartography scan/top-N outputs are not full cohort denominators.",
+        "Free text and patient-level rows are not emitted.",
+        "Clinical use requires source-specific study definitions."
+      ];
+      const overviewEntryCards = [
+        { title: "Find clinical variables", status: "restored", tone: "green", purpose: "Search clinician-facing concepts, source-scoped raw names, and related panels.", examples: ["height", "LDH", "treatment exposure"], tab: "variables", sub: "variables-concepts", search: "" },
+        { title: "Vitals and anthropometrics", status: "restored", tone: "green", purpose: "Weight, height, BMI, and vital-sign descriptor evidence.", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
+        { title: "Smoking and alcohol", status: "restored", tone: "green", purpose: "Social-history smoking and alcohol categories from EHR evidence.", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
+        { title: "Disease registries", status: "restored", tone: "green", purpose: "DaMyDa, LYFO, and CLL registry review panels.", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
+        { title: "Treatment evidence", status: "restored", tone: "green", purpose: "Compare registry, SP, ATC, SKS, SMR, and prescription treatment evidence layers.", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
+        { title: "Laboratory / NPU", status: "restored", tone: "green", purpose: "Find lab concepts, NPU/DNK codes, and source coverage.", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
+        { title: "Microbiology / infection", status: "restored", tone: "green", purpose: "Culture, resistance, sample material, organism/domain, and result-class evidence.", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "clinical", sub: "clinical-microbiology" },
+        { title: "Imaging", status: "restored", tone: "green", purpose: "Procedure-code imaging, SP metadata, radiotherapy, and registry modality fields.", examples: ["CT", "UXZ11", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
+        { title: "Pathology / PATOBANK", status: "restored", tone: "green", purpose: "SNOMED, specimen/material, institution, report-text availability, and tumor-coded evidence.", examples: ["c_snomedkode", "c_mattype", "SDS_pato"], tab: "clinical", sub: "clinical-pathology" },
+        { title: "Biobank samples", status: "restored", tone: "green", purpose: "Sample source/type, availability, and translational source labels with identifier/date safeguards.", examples: ["Sample_source", "PLASMA", "CLL_BIOBANK"], tab: "laboratory", sub: "lab-biobank" },
+        { title: "Raw names / Data Dictionary", status: "restored", tone: "green", purpose: "Find exact table, column, code, descriptor, and value names for analyst lineage.", examples: ["Reg_LDH", "NPU02319", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
+      ];
+      const atlasRestorationStatus = [
+        { panel: "Vitals", status: "restored", note: "dedicated renderer and visual QA target", tone: "green" },
+        { panel: "Social History", status: "restored", note: "smoking/alcohol panel restored", tone: "green" },
+        { panel: "DaMyDa", status: "restored", note: "registry review restored", tone: "green" },
+        { panel: "LYFO", status: "restored", note: "lymphoma registry review restored", tone: "green" },
+        { panel: "CLL", status: "restored", note: "distribution-first registry QA passed", tone: "green" },
+        { panel: "Treatment", status: "restored", note: "source-context QA passed", tone: "green" },
+        { panel: "Laboratory/NPU", status: "restored", note: "lab-vs-treatment cleanup passed", tone: "green" },
+        { panel: "Microbiology/Infection", status: "restored", note: "distribution-first QA passed", tone: "green" },
+        { panel: "Imaging", status: "restored", note: "DaMyDa imaging follow-up included", tone: "green" },
+        { panel: "Pathology/PATOBANK", status: "restored", note: "SNOMED cleanup passed", tone: "green" },
+        { panel: "Biobank", status: "restored", note: "identifier/date and low-count safeguards in place", tone: "green" },
+        { panel: "Clinical Variables", status: "restored", note: "clinician-first concept ordering", tone: "green" },
+        { panel: "Data Dictionary", status: "restored", note: "stacked raw-lineage detail pane", tone: "green" }
+      ];
+      const overviewCrossPanelRoutes = [
+        { title: "Registry to treatment evidence", from: "DaMyDa / LYFO / CLL", to: "Treatment", examples: ["Bortezomib", "R-CHOP", "Ibrutinib"], tab: "treatment", sub: "treatment-dashboard" },
+        { title: "Registry to labs and NPU codes", from: "Disease registries", to: "Laboratory / NPU", examples: ["LDH", "Creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
+        { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "clinical", sub: "clinical-microbiology" },
+        { title: "Myeloma bone disease to imaging", from: "DaMyDa", to: "Imaging", examples: ["PET/CT", "Reg_Knogleforandringer", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
+        { title: "Pathology to sample availability", from: "Pathology / PATOBANK", to: "Biobank samples", examples: ["SNOMED", "Sample_source", "PLASMA"], tab: "laboratory", sub: "lab-biobank" },
+        { title: "Concept to raw lineage", from: "Clinical Variables", to: "Raw names / Data Dictionary", examples: ["Reg_LDH", "ryger", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
+      ];
 
       function text(value) {
         if (value === null || value === undefined) return "";
@@ -1575,6 +1650,43 @@
         const textBits = bits.filter(Boolean);
         return textBits.length ? `<span class="scope-chip">scope: ${escapeHtml(Array.from(new Set(textBits)).join(" / "))}</span>` : "";
       }
+      function renderGlobalAtlasCaveat() {
+        return `<article class="caveat-box global-atlas-caveat">
+          <h3>Global scope and caveats</h3>
+          <ul>${globalAtlasCaveats.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
+        </article>`;
+      }
+      function renderOverviewEntryCards() {
+        return overviewEntryCards.map(card => `
+          <article class="card overview-entry-card">
+            <div>${renderBadge(card.status, card.tone)}</div>
+            <h3>${escapeHtml(card.title)}</h3>
+            <p>${escapeHtml(card.purpose)}</p>
+            <p class="mini"><strong>Examples:</strong> ${card.examples.map(example => `<code>${escapeHtml(example)}</code>`).join(" ")}</p>
+            <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(card.tab)}" data-jump-sub="${escapeHtml(card.sub)}"${card.search ? ` data-jump-search="${escapeHtml(card.search)}"` : ""}>Open panel</button>
+          </article>
+        `).join("");
+      }
+      function renderAtlasRestorationStatus() {
+        return atlasRestorationStatus.map(row => `
+          <article class="card atlas-status-card">
+            <div>${renderBadge(row.status, row.tone)}</div>
+            <h3>${escapeHtml(row.panel)}</h3>
+            <p class="mini">${escapeHtml(row.note)}</p>
+          </article>
+        `).join("");
+      }
+      function renderOverviewCrossPanelRoutes() {
+        return overviewCrossPanelRoutes.map(route => `
+          <article class="card cross-panel-route-card">
+            <div>${renderBadge("navigation aid", "blue")}</div>
+            <h3>${escapeHtml(route.title)}</h3>
+            <p class="mini"><strong>From:</strong> ${escapeHtml(route.from)}<br><strong>Go to:</strong> ${escapeHtml(route.to)}</p>
+            <p class="mini"><strong>Examples:</strong> ${route.examples.map(example => `<code>${escapeHtml(example)}</code>`).join(" ")}</p>
+            <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(route.tab)}" data-jump-sub="${escapeHtml(route.sub)}">Open route</button>
+          </article>
+        `).join("");
+      }
       function scopeLabel(row) {
         return renderScopeChip(row);
       }
@@ -1714,25 +1826,12 @@
         return (rows || []).find(predicate) || null;
       }
       function jumpToClinicalConcept(query) {
-        activateTab("variables");
-        const variablesPage = document.getElementById("tab-variables");
-        if (variablesPage) {
-          variablesPage.querySelectorAll(".sub-tab").forEach(button => button.classList.toggle("active", button.dataset.sub === "variables-concepts"));
-          variablesPage.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === "variables-concepts"));
-        }
         const search = document.getElementById("clinical-variable-search");
         const group = document.getElementById("clinical-variable-group-filter");
         const status = document.getElementById("clinical-variable-status-filter");
         if (group) group.value = "";
         if (status) status.value = "";
-        if (search) {
-          search.value = query || "";
-          search.dispatchEvent(new Event("input", { bubbles: true }));
-        } else {
-          renderClinicalVariables();
-        }
-        const cards = document.getElementById("clinical-variable-cards");
-        if (cards) cards.scrollIntoView({ behavior: "smooth", block: "start" });
+        jumpToPanel("variables", "variables-concepts", { search: query || "", scrollId: "clinical-variable-cards" });
       }
       function rawFieldDisplay(row) {
         return row.raw_field_label || semanticRawName(row) || row.raw_column || row.raw_code || row.source_name || "";
@@ -2680,6 +2779,32 @@
         document.querySelectorAll(".tab-button").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
         document.querySelectorAll(".tab-page").forEach(page => page.classList.toggle("active", page.id === `tab-${tabId}`));
       }
+      function activateSubPane(tabId, subId) {
+        if (!subId) return;
+        const page = document.getElementById(`tab-${tabId}`);
+        if (!page) return;
+        page.querySelectorAll(".sub-tab").forEach(button => button.classList.toggle("active", button.dataset.sub === subId));
+        page.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === subId));
+      }
+      function jumpToPanel(tabId, subId, options) {
+        const opts = options || {};
+        const tab = tabId || "overview";
+        activateTab(tab);
+        activateSubPane(tab, subId);
+        if (tab === "variables" && Object.prototype.hasOwnProperty.call(opts, "search")) {
+          const search = document.getElementById("clinical-variable-search");
+          if (search) {
+            search.value = opts.search || "";
+            search.dispatchEvent(new Event("input", { bubbles: true }));
+          } else {
+            renderClinicalVariables();
+          }
+        }
+        const target = (opts.scrollId && document.getElementById(opts.scrollId)) ||
+          (subId && document.getElementById(subId)) ||
+          document.getElementById(`tab-${tab}`);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       document.querySelectorAll(".tab-button").forEach(button => {
         button.addEventListener("click", () => activateTab(button.dataset.tab));
       });
@@ -2704,7 +2829,20 @@
         if (!button) return;
         jumpToClinicalConcept(button.dataset.conceptSearch || "");
       });
+      document.addEventListener("click", event => {
+        const button = event.target.closest("[data-jump-tab]");
+        if (!button) return;
+        jumpToPanel(button.dataset.jumpTab || "overview", button.dataset.jumpSub || "", {
+          search: button.dataset.jumpSearch || "",
+          scrollId: button.dataset.jumpScroll || ""
+        });
+      });
 
+      setHtml("overview-entry-cards", renderOverviewEntryCards());
+      setHtml("atlas-restoration-status", renderAtlasRestorationStatus());
+      setHtml("overview-cross-panel-routes", renderOverviewCrossPanelRoutes());
+      setHtml("overview-global-caveat", renderGlobalAtlasCaveat());
+      setHtml("clinical-variable-global-caveat", renderGlobalAtlasCaveat());
       setHtml("scope-notes", reviewScopeNotes.map(row => `
         <article class="card">
           <h3>${escapeHtml(row.note || "Note")}</h3>
@@ -2718,10 +2856,6 @@
           <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(row.target_tab || "overview")}">Open section</button>
         </article>
       `).join(""));
-      document.querySelectorAll("[data-jump-tab]").forEach(button => {
-        button.addEventListener("click", () => activateTab(button.dataset.jumpTab || "overview"));
-      });
-
       setHtml("domain-cards", (payload.domain_cards || []).map(card => `
         <article class="card">
           <h3>${escapeHtml(card.domain || "Unassigned")}</h3>

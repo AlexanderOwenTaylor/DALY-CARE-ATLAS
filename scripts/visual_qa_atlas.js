@@ -134,6 +134,12 @@ for (const viewport of viewports) {
     const report = JSON.parse(htmlDecode(match[1]));
     report.target = target.name;
     report.viewportName = viewport.name;
+    if (target.name === "overview") {
+      report.overviewConsolidationPresent = /What can I find in DALY-CARE\?/.test(dom) &&
+        /Atlas restoration status/.test(dom) &&
+        /Common cross-panel routes/.test(dom) &&
+        /Global scope and caveats/.test(dom);
+    }
     if (target.name === "data_dictionary") {
       report.dataDictionaryDetailStackPresent = /class=["'][^"']*semantic-detail-stack/.test(dom);
       const fullLineage = dom.match(/<div[^>]*class=["'][^"']*semantic-full-lineage[^"']*["'][^>]*>([\s\S]*?)<div[^>]*class=["'][^"']*lineage-block["'][^>]*>\s*<h3>Value map<\/h3>/i);
@@ -171,6 +177,7 @@ fs.writeFileSync(
 const failures = reports.filter(report =>
   report.bodyOverflow ||
   (report.overflowing || []).length ||
+  (report.target === "overview" && !report.overviewConsolidationPresent) ||
   (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
   (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
   (report.target === "imaging" && !report.imagingPanelPresent) ||
