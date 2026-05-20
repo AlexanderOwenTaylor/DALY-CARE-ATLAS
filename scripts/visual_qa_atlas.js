@@ -430,7 +430,12 @@ const normalScreenshotCaptures = [
   { file: "treatment_normal_mobile_375_rituximab.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[1] },
   { file: "treatment_normal_mobile.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[2] },
   { file: "mcl_triangle_desktop.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0] },
-  { file: "mcl_triangle_mobile.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[2] }
+  { file: "mcl_triangle_mobile.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[2] },
+  { file: "mcl_triangle_ki67_desktop.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0], scrollSelector: "#mcl-ki67-readiness" },
+  { file: "mcl_triangle_ki67_mobile_375.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1], scrollSelector: "#mcl-ki67-readiness" },
+  { file: "global_search_ki67_desktop.png", name: "global_search_ki67", tab: "overview", sub: "overview-summary", search: "Ki-67", viewport: qaViewports[0], autoScroll: false },
+  { file: "global_search_mib1_desktop.png", name: "global_search_mib1", tab: "overview", sub: "overview-summary", search: "MIB-1", viewport: qaViewports[0], autoScroll: false },
+  { file: "global_search_proliferationsindeks_desktop.png", name: "global_search_proliferationsindeks", tab: "overview", sub: "overview-summary", search: "proliferationsindeks", viewport: qaViewports[0], autoScroll: false }
 ];
 
 const normalOverflowCaptures = [

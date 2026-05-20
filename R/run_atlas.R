@@ -387,6 +387,26 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     sources = sources,
     canonical = canonical_resources
   )
+  ki67_discovery <- build_ki67_discovery_outputs(
+    project_root = project_root,
+    include_reference_files = TRUE,
+    semantic_dictionary = semantic_outputs$dictionary,
+    semantic_value_map = semantic_outputs$value_map,
+    semantic_code_map = semantic_outputs$code_map,
+    semantic_panel_links = semantic_outputs$panel_links,
+    clinical_concepts = product_outputs$clinical_concepts,
+    domain_panels = product_outputs$domain_panels,
+    panel_kpis = product_outputs$panel_kpis,
+    panel_distributions = product_outputs$panel_distributions,
+    panel_raw_fields = product_outputs$panel_raw_fields,
+    sources = sources,
+    columns = columns,
+    column_profiles = column_profiles,
+    column_top_values = column_top_values,
+    source_resolution = source_resolution,
+    canonical_reconciliation = canonical_reconciliation,
+    legacy_reference_vs_current = legacy_reference_vs_current
+  )
   mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
     project_root = project_root,
     semantic_dictionary = semantic_outputs$dictionary,
@@ -398,7 +418,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panel_kpis = product_outputs$panel_kpis,
     sources = sources,
     canonical_reconciliation = canonical_reconciliation,
-    legacy_reference_vs_current = legacy_reference_vs_current
+    legacy_reference_vs_current = legacy_reference_vs_current,
+    ki67_discovery = ki67_discovery
   )
   resource_checks <- resource_reconciliation_checks(resource_reconciliation)
   if (nrow(resource_checks)) checks <- bind_rows_base(list(checks, resource_checks))
@@ -441,6 +462,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$source_map_row_to_canonical_resource_crosswalk <- write_csv(source_map_crosswalk, file.path(output_dir, "source_map_row_to_canonical_resource_crosswalk.csv"))
   output_paths$legacy_reference_vs_current_profiled_evidence <- write_csv(legacy_reference_vs_current, file.path(output_dir, "legacy_reference_vs_current_profiled_evidence.csv"))
   output_paths$remaining_canonical_resources_activation_plan <- write_csv(remaining_activation_plan, file.path(output_dir, "remaining_canonical_resources_activation_plan.csv"))
+  ki67_paths <- ki67_write_outputs(ki67_discovery, output_dir = output_dir, project_root = project_root)
+  ki67_paths <- ki67_paths[setdiff(names(ki67_paths), "extraction_spec")]
+  names(ki67_paths) <- paste0("ki67_", names(ki67_paths))
+  output_paths <- c(output_paths, ki67_paths)
   mcl_triangle_paths <- mcl_triangle_write_outputs(mcl_triangle_feasibility, output_dir)
   names(mcl_triangle_paths) <- paste0("mcl_triangle_", names(mcl_triangle_paths))
   output_paths <- c(output_paths, mcl_triangle_paths)
@@ -529,6 +554,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_source_map_crosswalk <- safe_read_output_csv(output_paths$source_map_row_to_canonical_resource_crosswalk, source_map_crosswalk)
   payload_legacy_reference_vs_current <- safe_read_output_csv(output_paths$legacy_reference_vs_current_profiled_evidence, legacy_reference_vs_current)
   payload_remaining_activation_plan <- safe_read_output_csv(output_paths$remaining_canonical_resources_activation_plan, remaining_activation_plan)
+  payload_ki67_discovery <- list(
+    search_inventory = safe_read_output_csv(output_paths$ki67_search_inventory, ki67_discovery$search_inventory),
+    registry_field_candidates = safe_read_output_csv(output_paths$ki67_registry_field_candidates, ki67_discovery$registry_field_candidates),
+    pathology_code_candidates = safe_read_output_csv(output_paths$ki67_pathology_code_candidates, ki67_discovery$pathology_code_candidates),
+    text_pattern_candidates = safe_read_output_csv(output_paths$ki67_text_pattern_candidates, ki67_discovery$text_pattern_candidates),
+    summary = ki67_discovery$summary
+  )
   payload_mcl_triangle_feasibility <- list(
     summary = safe_read_output_csv(output_paths$mcl_triangle_summary, mcl_triangle_feasibility$summary),
     variable_inventory = safe_read_output_csv(output_paths$mcl_triangle_variable_inventory, mcl_triangle_feasibility$variable_inventory),
@@ -536,6 +568,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     outcome_inventory = safe_read_output_csv(output_paths$mcl_triangle_outcome_inventory, mcl_triangle_feasibility$outcome_inventory),
     biology_gap_analysis = safe_read_output_csv(output_paths$mcl_triangle_biology_gap_analysis, mcl_triangle_feasibility$biology_gap_analysis),
     study_readiness_matrix = safe_read_output_csv(output_paths$mcl_triangle_study_readiness_matrix, mcl_triangle_feasibility$study_readiness_matrix),
+    ki67_discovery = payload_ki67_discovery,
     recommended_next_actions = mcl_triangle_feasibility$recommended_next_actions,
     caveats = mcl_triangle_feasibility$caveats,
     verdict_metadata = mcl_triangle_feasibility$verdict_metadata
@@ -578,6 +611,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     source_map_crosswalk = payload_source_map_crosswalk,
     legacy_reference_vs_current = payload_legacy_reference_vs_current,
     remaining_activation_plan = payload_remaining_activation_plan,
+    ki67_discovery = payload_ki67_discovery,
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)

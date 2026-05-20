@@ -1644,6 +1644,7 @@
       const sourceMapCrosswalkRows = payload.source_map_crosswalk_rows || [];
       const legacyReferenceVsCurrentRows = payload.legacy_reference_vs_current_rows || [];
       const remainingActivationPlanRows = payload.remaining_activation_plan_rows || [];
+      const ki67Discovery = payload.ki67_discovery || {};
       const mclTriangleFeasibility = payload.mcl_triangle_feasibility || {};
       const columnRows = payload.column_profile_rows || [];
       const columnTopValues = payload.column_top_value_rows || [];
@@ -1873,8 +1874,12 @@
         ibrutinib: ["Imbruvica", "L01XE27", "BTK inhibitor", "BWHA169"],
         imbruvica: ["ibrutinib", "L01XE27"],
         tp53: ["p53", "del17p"],
-        ki67: ["Ki-67", "proliferation index"],
-        "ki 67": ["Ki-67", "proliferation index"],
+        ki67: ["Ki-67", "MIB-1", "proliferation index", "proliferationsindeks"],
+        "ki 67": ["Ki-67", "MIB-1", "proliferation index", "proliferationsindeks"],
+        "ki-67": ["Ki67", "MIB-1", "proliferation index", "proliferationsindeks"],
+        "mib-1": ["Ki-67", "Ki67", "proliferation index"],
+        mib1: ["Ki-67", "Ki67", "proliferation index"],
+        proliferationsindeks: ["Ki-67", "Ki67", "MIB-1"],
         mipi: ["MIPI-c", "LDH", "ECOG"],
         "mipi c": ["MIPI", "Ki-67"]
       };
@@ -2074,6 +2079,24 @@
               row,
               { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
               { query: row.study_requirement || q, item: row.study_requirement || "", status: row.readiness_status, copy: row.study_requirement || "", score }
+            ));
+          }
+        });
+        ((ki67Discovery && ki67Discovery.search_inventory) || []).forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["matched_term", "matched_field_or_column"],
+            title: ["matched_term", "evidence_strength", "evidence_type"],
+            source: ["resource_id", "file_or_table", "source_domain"],
+            body: ["concept_interpretation", "notes", "value_class"]
+          });
+          if (score > 0) {
+            grouped["Panels"].push(makeSearchResult(
+              "Panels",
+              `Ki-67 discovery: ${row.matched_term || "candidate"}`,
+              [row.evidence_strength, row.evidence_type, row.concept_interpretation].filter(Boolean).join(" - "),
+              row,
+              { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+              { query: row.matched_term || q, item: "ki67_discovery", status: row.evidence_strength, copy: row.matched_term || "Ki-67", score: score + 20 }
             ));
           }
         });
@@ -5496,9 +5519,9 @@
       }
       function mclStatusTone(status) {
         const s = text(status || "").toLowerCase();
-        if (/ready|strongly|current_profiled/.test(s)) return "green";
-        if (/proxy|feasible_with_mapping|biology gaps/.test(s)) return "blue";
-        if (/legacy|source_activation|manual|partial/.test(s)) return "amber";
+        if (/ready|strongly|current_profiled|strong_structured/.test(s)) return "green";
+        if (/proxy|feasible_with_mapping|biology gaps|moderate_text_extractable/.test(s)) return "blue";
+        if (/legacy|source_activation|manual|partial|weak_candidate|requires_manual_validation|not_tested_fixture/.test(s)) return "amber";
         if (/not_found|not currently/.test(s)) return "red";
         return "plum";
       }
@@ -5552,6 +5575,54 @@
           `).join("")}</tbody>
         </table></div>`;
       }
+      function renderMclKi67Readiness(matrix, biology) {
+        const discovery = (mclTriangleFeasibility && mclTriangleFeasibility.ki67_discovery) || ki67Discovery || {};
+        const ki67Matrix = (matrix || []).find(row => row.study_requirement === "Ki-67") || {};
+        const ki67Biology = (biology || []).find(row => row.marker === "Ki-67") || {};
+        const summary = discovery.summary || [];
+        const inventory = discovery.search_inventory || [];
+        const registry = discovery.registry_field_candidates || [];
+        const pathology = discovery.pathology_code_candidates || [];
+        const textPatterns = discovery.text_pattern_candidates || [];
+        const metric = key => {
+          const row = summary.find(item => item.metric === key) || {};
+          return row.value || "0";
+        };
+        const status = ki67Matrix.readiness_status || ki67Biology.feasibility_status || "not_found";
+        const directHits = inventory.filter(row => /strong_direct|moderate_direct/.test(row.evidence_strength || "") && row.evidence_type !== "source_only_not_evidence");
+        const sourceOnly = inventory.filter(row => row.evidence_strength === "source_only" || row.evidence_type === "source_only_not_evidence");
+        const bestSources = uniqueValues(directHits.length ? directHits : sourceOnly, "file_or_table").slice(0, 5).join("; ");
+        return `
+          ${renderBadge(status, mclStatusTone(status))}
+          <p><strong>Ki-67 evidence status:</strong> ${escapeHtml(ki67Matrix.key_limitation || ki67Biology.notes || "Ki-67-specific evidence has not been found in current aggregate outputs.")}</p>
+          ${renderKpiStrip([
+            { label: "direct metadata hits", value: metric("strong_direct_hits"), tone: Number(metric("strong_direct_hits")) ? "green" : "amber" },
+            { label: "moderate hits", value: metric("moderate_direct_hits"), tone: Number(metric("moderate_direct_hits")) ? "blue" : "amber" },
+            { label: "source-only hits", value: metric("source_only_hits"), tone: Number(metric("source_only_hits")) ? "amber" : "blue" },
+            { label: "numeric % hits", value: metric("numeric_percent_like_hits"), tone: Number(metric("numeric_percent_like_hits")) ? "green" : "amber" }
+          ], { tone: "amber" })}
+          <div class="grid grid-3">
+            <article class="clinical-card">
+              ${renderBadge(registry.some(row => row.evidence_strength === "strong_direct") ? "structured candidate" : "not confirmed", registry.some(row => row.evidence_strength === "strong_direct") ? "green" : "amber")}
+              <h3>Structured registry fields</h3>
+              <p class="mini">${escapeHtml(registry.slice(0, 4).map(row => row.field_name || row.table_or_file).filter(Boolean).join("; ") || "No direct structured Ki-67 field confirmed.")}</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge(pathology.some(row => row.evidence_strength === "strong_direct") ? "code candidate" : "anchor only", pathology.some(row => row.evidence_strength === "strong_direct") ? "green" : "blue")}
+              <h3>Pathology / SNOMED codes</h3>
+              <p class="mini">External SNOMED CT 1255078008 is a reference anchor; Danish Patobank coding requires codebook validation.</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge(textPatterns.some(row => row.numeric_extraction_possible && row.false_positive_risk !== "high") ? "text pattern specified" : "needs validation", "blue")}
+              <h3>Text extraction readiness</h3>
+              <p class="mini">Synthetic patterns cover exact %, ranges, inequalities, qualitative mentions, and unknown/not-stated values. Raw report text is not emitted.</p>
+            </article>
+          </div>
+          <p class="mini"><strong>Best aggregate source/search space:</strong> ${escapeHtml(bestSources || "not available in current aggregate output")}</p>
+          <div class="callout warn"><strong>Interpretation caveat:</strong> Ki-67 should be represented as an observation/test concept with a numeric percent value. Source-only pathology, LYFO, <code>t_mikro</code>, or <code>t_konk</code> availability is search space, not direct Ki-67 evidence.</div>
+          <div class="callout"><strong>Danish Patobank code note:</strong> Danish Patobank may encode numeric Ki-67 index using <code>ÆKIxxx</code>, where <code>xxx</code> is the percentage. p16/Ki-67 double-stain cervix triage codes are tracked separately and are not treated as numeric MCL Ki-67 proliferation-index values.</div>
+        `;
+      }
       function renderMclTimingSection(matrix) {
         const timing = (matrix || []).find(row => row.study_requirement === "first-line treatment timing") || {};
         return `
@@ -5597,6 +5668,7 @@
             ${renderSectionCard("Treatment exposure evidence", renderMclEvidenceCards(treatment, "exposure_name", 12), "green")}
             ${renderSectionCard("Treatment-timing feasibility", renderMclTimingSection(matrix), "cyan")}
             ${renderSectionCard("Outcome evidence", renderMclEvidenceCards(outcomes, "outcome_name", 10), "blue")}
+            <div id="mcl-ki67-readiness">${renderSectionCard("Ki-67 discovery readiness", renderMclKi67Readiness(matrix, biology), "amber")}</div>
             ${renderSectionCard("High-risk biology readiness", renderMclBiologyTable(biology), "amber")}
             ${renderSectionCard("Current-profiled vs legacy/reference-only evidence", `
               ${renderKpiStrip([
