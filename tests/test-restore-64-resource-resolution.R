@@ -24,6 +24,7 @@ expect_true(all(view_rows$source_map_role_secondary == "derived_view" | view_row
 
 del2_id <- "BilleddiagnostikeUndersøgelser_Del2"
 del2_ascii <- "BilleddiagnostikeUndersoegelser_Del2"
+del2_keys <- resource_key(c(del2_id, del2_ascii, "BilleddiagnostikeUndersogelser_Del2"))
 del2_source_map_hit <- grepl(resource_key(del2_ascii), resource_key(current_source_map$table_name), fixed = TRUE) |
   grepl(resource_key(del2_ascii), resource_key(current_source_map$source), fixed = TRUE)
 del2_canonical <- canonical[resource_key(canonical$canonical_resource_id) == resource_key(del2_id), , drop = FALSE]
@@ -149,3 +150,141 @@ del2_evidence <- legacy_vs_current[resource_key(legacy_vs_current$evidence_sourc
 t_mikro_evidence <- legacy_vs_current[legacy_vs_current$evidence_source == "t_mikro", , drop = FALSE]
 expect_true(nrow(del2_evidence) == 1L && isTRUE(as.logical(del2_evidence$current_profiled_this_run[[1]])), "Del2 semantic evidence should be marked current-profiled when the source was profiled.")
 expect_true(nrow(t_mikro_evidence) == 1L && isTRUE(as.logical(t_mikro_evidence$warning_needed[[1]])), "Legacy/reference-only evidence should be flagged when the current production run did not profile that source.")
+
+restored_is_fish <- resource_key(restored_source_map$canonical_resource_id) == resource_key("FISH") |
+  resource_key(restored_source_map$table_name) == resource_key("FISH")
+restored_is_danricht <- resource_key(restored_source_map$canonical_resource_id) == resource_key("DANRICHT") |
+  resource_key(restored_source_map$table_name) == resource_key("DANRICHT")
+restored_is_del2 <- resource_key(restored_source_map$canonical_resource_id) %in% del2_keys |
+  grepl(resource_key(del2_ascii), resource_key(restored_source_map$table_name), fixed = TRUE) |
+  grepl(resource_key(del2_ascii), resource_key(restored_source_map$source), fixed = TRUE)
+
+restored_sources <- data.frame(
+  table_name = restored_source_map$table_name,
+  source = restored_source_map$source,
+  table = ifelse(
+    restored_is_del2,
+    "SP_BilleddiagnostiskeUndersÃ¸gelser_Del2",
+    ifelse(nzchar(restored_source_map$table), restored_source_map$table, restored_source_map$table_name)
+  ),
+  db_name = ifelse(nzchar(restored_source_map$db_name), restored_source_map$db_name, "import"),
+  schema = ifelse(nzchar(restored_source_map$schema), restored_source_map$schema, "public"),
+  canonical_resource_id = restored_source_map$canonical_resource_id,
+  resolver_type = restored_source_map$resolver_type,
+  load_status = ifelse(restored_is_fish, "skipped", ifelse(restored_is_danricht, "failed", "ok")),
+  n_rows = ifelse(restored_is_del2, "1909409", ifelse(restored_is_fish | restored_is_danricht, "", "1")),
+  n_cols = ifelse(restored_is_del2, "12", ifelse(restored_is_fish | restored_is_danricht, "", "1")),
+  resolution_status = ifelse(restored_is_fish | restored_is_danricht, "missing", "resolved"),
+  chosen_strategy = ifelse(nzchar(restored_source_map$load_strategy), restored_source_map$load_strategy, "db_aggregate"),
+  memory_status = "",
+  attempted_in_current_run = ifelse(restored_is_fish | restored_is_danricht, "FALSE", "TRUE"),
+  profiled_in_current_run = ifelse(restored_is_fish | restored_is_danricht, "FALSE", "TRUE"),
+  activation_status = ifelse(restored_is_fish, "embedded_fields", ifelse(restored_is_danricht, "special_manual", "profiled_current_run")),
+  schema_signature = "",
+  message = "",
+  stringsAsFactors = FALSE
+)
+restored_sources$schema_signature[resource_key(restored_sources$table_name) == resource_key("RKKP_CLL")] <- "Reg_FISH; del17p; trisomi12"
+
+restored_columns <- data.frame(
+  table_name = c("RKKP_CLL", "RKKP_DaMyDa"),
+  column_name = c("Reg_FISH", "Cyto_FishResultat_17p"),
+  stringsAsFactors = FALSE
+)
+restored_source_resolution <- data.frame(
+  table_name = restored_source_map$table_name,
+  source = restored_source_map$source,
+  table = restored_sources$table,
+  db_name = restored_sources$db_name,
+  schema = restored_sources$schema,
+  resolution_status = ifelse(restored_is_fish | restored_is_danricht, "missing", "resolved"),
+  row_count = restored_sources$n_rows,
+  message = "",
+  suggestion = "",
+  candidate_locations = "",
+  candidate_row_counts = "",
+  stringsAsFactors = FALSE
+)
+restored_checks <- data.frame(
+  table_name = c("FISH", "DANRICHT"),
+  check_id = c("source_skipped_risky_full_load", "source_load_failed"),
+  severity = c("warning", "error"),
+  message = c("Skipped FISH standalone table", "DANRICHT manual file not found"),
+  stringsAsFactors = FALSE
+)
+
+normalized <- normalize_special_manual_run_statuses(
+  source_map = restored_source_map,
+  sources = restored_sources,
+  source_resolution = restored_source_resolution,
+  checks = restored_checks,
+  columns = restored_columns
+)
+fish_source <- normalized$sources[restored_is_fish, , drop = FALSE]
+danricht_source <- normalized$sources[restored_is_danricht, , drop = FALSE]
+expect_true(nrow(fish_source) == 1L && fish_source$load_status[[1]] == "embedded_fields_represented", "FISH should be represented as embedded fields, not a skipped or failed DB source.")
+expect_true(nrow(danricht_source) == 1L && danricht_source$load_status[[1]] == "manual_file_not_available", "DANRICHT should be represented as a manual-file note, not a DB failure.")
+expect_true(all(normalized$checks$severity[normalized$checks$table_name == "FISH"] == "info"), "FISH embedded-field representation should be informational.")
+expect_true(all(normalized$checks$severity[normalized$checks$table_name == "DANRICHT"] == "manual_note"), "DANRICHT missing manual file should be a manual note.")
+
+profiled_rows <- normalized$sources[normalized$sources$load_status == "ok", , drop = FALSE]
+expect_false(any(profiled_rows$activation_status == "not_attempted_candidate"), "No resolved/profiled source row should retain not-attempted activation status.")
+expect_false(any(profiled_rows$profiled_in_current_run == "FALSE"), "No resolved/profiled source row should retain profiled_in_current_run = FALSE.")
+
+restored_attempts <- build_source_resolution_attempts(
+  project_root = root,
+  production_map = production_plan,
+  source_map = restored_source_map,
+  sources = normalized$sources,
+  source_resolution = normalized$source_resolution
+)
+fish_attempt <- restored_attempts[restored_attempts$expected_resource_id == "FISH", , drop = FALSE]
+danricht_attempt <- restored_attempts[restored_attempts$expected_resource_id == "DANRICHT", , drop = FALSE]
+expect_true(nrow(fish_attempt) == 1L && isTRUE(as.logical(fish_attempt$resolved[[1]])) && !isTRUE(as.logical(fish_attempt$attempted[[1]])), "FISH should be resolved through embedded fields without being a DB-attempted source.")
+expect_true(nrow(danricht_attempt) == 1L && !isTRUE(as.logical(danricht_attempt$resolved[[1]])) && !isTRUE(as.logical(danricht_attempt$attempted[[1]])), "DANRICHT absent manual files should not be counted as an attempted DB failure.")
+expect_false(grepl("DB", danricht_attempt$error_or_warning[[1]], ignore.case = TRUE), "DANRICHT warning should not describe an ordinary DB failure.")
+
+restored_resource_reconciliation <- build_atlas_resource_reconciliation(
+  project_root = root,
+  source_map = restored_source_map,
+  sources = normalized$sources,
+  source_resolution = normalized$source_resolution,
+  source_attempts = restored_attempts
+)
+restored_canonical_reconciliation <- build_canonical_resource_reconciliation_64(
+  project_root = root,
+  source_map = restored_source_map,
+  sources = normalized$sources,
+  source_resolution = normalized$source_resolution,
+  canonical = canonical,
+  resource_reconciliation = restored_resource_reconciliation
+)
+restored_crosswalk <- build_source_map_row_to_canonical_resource_crosswalk(
+  project_root = root,
+  source_map = restored_source_map,
+  sources = normalized$sources,
+  source_resolution = normalized$source_resolution,
+  canonical = canonical
+)
+restored_summary <- canonical_resource_summary_metrics(
+  canonical_reconciliation = restored_canonical_reconciliation,
+  crosswalk = restored_crosswalk,
+  legacy_reference = data.frame(stringsAsFactors = FALSE)
+)
+restored_values <- stats::setNames(restored_summary$value, restored_summary$metric)
+expect_equal(restored_values[["canonical_resources_total"]], "64", "Successful restored run summary should preserve exactly 64 canonical resources.")
+expect_equal(restored_values[["canonical_resources_accounted_for"]], "64", "Successful restored run summary should account for all canonical resources.")
+expect_equal(restored_values[["db_attemptable_canonical_resources"]], "62", "Successful restored run should classify 62 canonical resources as DB-attemptable.")
+expect_equal(restored_values[["db_attemptable_profiled_resources"]], "62", "Successful restored run should profile all DB-attemptable canonical resources.")
+expect_equal(restored_values[["special_manual_or_embedded_resources"]], "2", "Successful restored run should keep FISH and DANRICHT as the two special/manual resources.")
+expect_equal(restored_values[["embedded_field_resources"]], "1", "FISH should count as the embedded-field resource.")
+expect_equal(restored_values[["manual_special_not_loaded_resources"]], "1", "DANRICHT should count as the manual/special source not loaded.")
+expect_equal(restored_values[["unexpected_missing_canonical_resources"]], "0", "Successful restored run should have no unexpected missing canonical resources.")
+expect_equal(restored_values[["db_attemptable_failures"]], "0", "Successful restored run should have zero DB-attemptable failures.")
+expect_equal(restored_values[["source_map_rows_profiled_current_run"]], "71", "Successful restored run should profile 71 source-map rows when FISH and DANRICHT are special/manual.")
+
+special_rows <- restored_canonical_reconciliation[restored_canonical_reconciliation$canonical_resource_id %in% c("FISH", "DANRICHT"), , drop = FALSE]
+expect_equal(special_rows$current_status[special_rows$canonical_resource_id == "FISH"][[1]], "embedded_fields_represented", "Canonical FISH status should be embedded-fields represented.")
+expect_equal(special_rows$current_status[special_rows$canonical_resource_id == "DANRICHT"][[1]], "manual_file_not_available", "Canonical DANRICHT status should be manual-file not available.")
+restored_del2 <- restored_canonical_reconciliation[resource_key(restored_canonical_reconciliation$canonical_resource_id) %in% del2_keys, , drop = FALSE]
+expect_true(nrow(restored_del2) == 1L && restored_del2$current_status[[1]] == "legacy_unavailable_current_resolved", "Del2 should remain legacy-unavailable/current-resolved in the restored run summary.")

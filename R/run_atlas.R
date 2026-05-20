@@ -262,6 +262,16 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   access_checks <- access_report_checks(access_report)
   if (nrow(access_checks)) checks <- bind_rows_base(list(checks, access_checks))
   frequencies <- safe_read_output_csv(stream_paths$value_frequencies, bind_rows_base(frequency_rows))
+  normalized_special_status <- normalize_special_manual_run_statuses(
+    source_map = source_map,
+    sources = sources,
+    source_resolution = source_resolution,
+    checks = checks,
+    columns = columns
+  )
+  sources <- normalized_special_status$sources
+  source_resolution <- normalized_special_status$source_resolution
+  checks <- normalized_special_status$checks
   db_query_log <- bind_rows_base(db_query_log_rows)
   if (!nrow(db_query_log)) db_query_log <- empty_db_query_log()
   db_budget_actions <- bind_rows_base(db_budget_action_rows)
@@ -814,6 +824,9 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
     data.frame(metric = "checks", value = as.character(nrow(checks)), stringsAsFactors = FALSE),
     data.frame(metric = "warnings", value = as.character(sum(checks$severity == "warning", na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "errors", value = as.character(sum(checks$severity == "error", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "manual_special_notes", value = as.character(sum(checks$severity == "manual_note", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "informational_notes", value = as.character(sum(checks$severity == "info", na.rm = TRUE)), stringsAsFactors = FALSE),
+    data.frame(metric = "non_blocking_warnings", value = as.character(sum(checks$severity %in% c("warning", "manual_note", "info"), na.rm = TRUE)), stringsAsFactors = FALSE),
     data.frame(metric = "value_frequency_rows", value = as.character(nrow(frequencies)), stringsAsFactors = FALSE),
     data.frame(metric = "panel_rows", value = as.character(panel_rows), stringsAsFactors = FALSE),
     data.frame(metric = "db_aggregate_sources", value = as.character(sum(sources$chosen_strategy == "db_aggregate", na.rm = TRUE)), stringsAsFactors = FALSE),
@@ -823,6 +836,108 @@ atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns
     data.frame(metric = "min_cell_count", value = as.character(atlas_min_cell_count()), stringsAsFactors = FALSE)
   )
   bind_rows_base(rows)
+}
+
+fish_embedded_evidence_present <- function(sources, columns = NULL) {
+  column_hit <- FALSE
+  if (is.data.frame(columns) && nrow(columns) && all(c("table_name", "column_name") %in% names(columns))) {
+    source_key <- resource_key(columns$table_name)
+    column_key <- tolower(as.character(columns$column_name %||% ""))
+    fish_like <- grepl("fish|cyto|del17|del13|del11|trisomi|tp53", column_key)
+    registry_like <- source_key %in% resource_key(c("RKKP_CLL", "RKKP_DaMyDa"))
+    column_hit <- any(registry_like & fish_like, na.rm = TRUE)
+  }
+  if (isTRUE(column_hit)) return(TRUE)
+  if (is.data.frame(sources) && nrow(sources) && "schema_signature" %in% names(sources)) {
+    source_key <- resource_key(sources$table_name %||% "")
+    registry_like <- source_key %in% resource_key(c("RKKP_CLL", "RKKP_DaMyDa"))
+    signature <- tolower(as.character(sources$schema_signature %||% ""))
+    return(any(registry_like & grepl("fish|cyto|del17|del13|del11|trisomi|tp53", signature), na.rm = TRUE))
+  }
+  FALSE
+}
+
+normalize_special_manual_run_statuses <- function(source_map = NULL, sources = NULL, source_resolution = NULL,
+                                                  checks = NULL, columns = NULL) {
+  if (!is.data.frame(sources)) sources <- data.frame(stringsAsFactors = FALSE)
+  if (!is.data.frame(source_resolution)) source_resolution <- data.frame(stringsAsFactors = FALSE)
+  if (!is.data.frame(checks)) checks <- data.frame(stringsAsFactors = FALSE)
+  if (!nrow(sources)) {
+    return(list(sources = sources, source_resolution = source_resolution, checks = checks))
+  }
+
+  source_key <- resource_key(sources$table_name %||% "")
+  canonical_key <- resource_key(sources$canonical_resource_id %||% "")
+  resolver_type <- tolower(as.character(sources$resolver_type %||% ""))
+  resolved_profiled <- tolower(as.character(sources$load_status %||% "")) == "ok" |
+    (tolower(as.character(sources$resolution_status %||% "")) == "resolved" &
+       nzchar(as.character(sources$n_rows %||% "")))
+  special_source <- resolver_type %in% c("manual_file", "embedded_fields") |
+    canonical_key %in% resource_key(c("FISH", "DANRICHT"))
+  profile_ix <- which(resolved_profiled & !special_source)
+  for (nm in c("attempted_in_current_run", "profiled_in_current_run", "activation_status")) {
+    if (!nm %in% names(sources)) sources[[nm]] <- ""
+  }
+  if (length(profile_ix)) {
+    sources$attempted_in_current_run[profile_ix] <- "TRUE"
+    sources$profiled_in_current_run[profile_ix] <- "TRUE"
+    sources$activation_status[profile_ix] <- "profiled_current_run"
+  }
+
+  set_resolution_not_applicable <- function(df, table_key, message) {
+    if (!nrow(df) || !"table_name" %in% names(df)) return(df)
+    ix <- which(resource_key(df$table_name %||% "") == table_key |
+      resource_key(df$source %||% "") == table_key)
+    if (!length(ix)) return(df)
+    df$resolution_status[ix] <- "not_applicable"
+    if ("message" %in% names(df)) df$message[ix] <- message
+    if ("suggestion" %in% names(df)) df$suggestion[ix] <- ""
+    if ("candidate_locations" %in% names(df)) df$candidate_locations[ix] <- ""
+    if ("candidate_row_counts" %in% names(df)) df$candidate_row_counts[ix] <- ""
+    df
+  }
+
+  set_checks <- function(df, table_name, severity, check_id, message) {
+    if (!is.data.frame(df) || !nrow(df) || !"table_name" %in% names(df)) return(df)
+    ix <- which(resource_key(df$table_name %||% "") == resource_key(table_name))
+    if (!length(ix)) return(df)
+    df$severity[ix] <- severity
+    if ("check_id" %in% names(df)) df$check_id[ix] <- check_id
+    if ("message" %in% names(df)) df$message[ix] <- message
+    df
+  }
+
+  fish_ix <- which(canonical_key == resource_key("FISH") | source_key == resource_key("FISH"))
+  if (length(fish_ix) && fish_embedded_evidence_present(sources, columns)) {
+    msg <- "Represented through embedded FISH/cytogenetic fields in RKKP_CLL/RKKP_DaMyDa; no standalone FISH DB table is expected for this run."
+    sources$load_status[fish_ix] <- "embedded_fields_represented"
+    sources$message[fish_ix] <- msg
+    sources$resolution_status[fish_ix] <- "not_applicable"
+    sources$chosen_strategy[fish_ix] <- "embedded_fields"
+    sources$memory_status[fish_ix] <- "ok"
+    sources$attempted_in_current_run[fish_ix] <- "FALSE"
+    sources$profiled_in_current_run[fish_ix] <- "FALSE"
+    sources$activation_status[fish_ix] <- "embedded_fields_represented"
+    source_resolution <- set_resolution_not_applicable(source_resolution, resource_key("FISH"), msg)
+    checks <- set_checks(checks, "FISH", "info", "source_embedded_fields_represented", msg)
+  }
+
+  danricht_ix <- which(canonical_key == resource_key("DANRICHT") | source_key == resource_key("DANRICHT"))
+  if (length(danricht_ix)) {
+    msg <- "Manual/special source not loaded: DANRICHT requires on-disk project files such as danricht_clean.parquet or DANRICHT_20240412.csv; this is not a DB-attemptable source failure."
+    sources$load_status[danricht_ix] <- "manual_file_not_available"
+    sources$message[danricht_ix] <- msg
+    sources$resolution_status[danricht_ix] <- "not_applicable"
+    sources$chosen_strategy[danricht_ix] <- "manual_file"
+    sources$memory_status[danricht_ix] <- "ok"
+    sources$attempted_in_current_run[danricht_ix] <- "FALSE"
+    sources$profiled_in_current_run[danricht_ix] <- "FALSE"
+    sources$activation_status[danricht_ix] <- "manual_file_not_available"
+    source_resolution <- set_resolution_not_applicable(source_resolution, resource_key("DANRICHT"), msg)
+    checks <- set_checks(checks, "DANRICHT", "manual_note", "manual_file_not_available", msg)
+  }
+
+  list(sources = sources, source_resolution = source_resolution, checks = checks)
 }
 
 run_summary_log_message <- function(run_summary) {

@@ -422,7 +422,9 @@
     }
     .badge.ok { background: var(--green-soft); color: var(--green); }
     .badge.warning { background: var(--amber-soft); color: var(--amber); }
-    .badge.error, .badge.failed { background: var(--red-soft); color: var(--red); }
+    .badge.error, .badge.failed, .badge.unexpected_failure { background: var(--red-soft); color: var(--red); }
+    .badge.manual_note { background: var(--violet-soft); color: var(--violet); }
+    .badge.info { background: var(--blue-soft); color: var(--blue); }
     .badge.green { background: var(--green-soft); color: var(--green); }
     .badge.blue { background: var(--blue-soft); color: var(--blue); }
     .badge.amber { background: var(--amber-soft); color: var(--amber); }
@@ -548,6 +550,8 @@
     }
     .qa-item.error { border-left-color: var(--red); }
     .qa-item.warning { border-left-color: var(--amber); }
+    .qa-item.manual_note { border-left-color: var(--violet); }
+    .qa-item.info { border-left-color: var(--blue); }
     .qa-item.ok { border-left-color: var(--green); }
     .registry-card {
       display: grid;
@@ -1970,7 +1974,16 @@
           rows: "Profiled rows",
           columns: "Profiled columns",
           warnings: "QA warnings",
-          errors: "QA errors"
+          errors: "QA errors",
+          canonical_resources_accounted_for: "Canonical resources accounted for",
+          db_attemptable_profiled_resources: "DB-attemptable canonical resources profiled",
+          special_manual_or_embedded_resources: "Special/manual/embedded resources",
+          manual_special_not_loaded_resources: "Manual/special not loaded",
+          embedded_field_resources: "Embedded-field resources",
+          unexpected_missing_canonical_resources: "Unexpected missing resources",
+          db_attemptable_failures: "DB-attemptable failures",
+          non_blocking_warnings: "Non-blocking notes",
+          canonical_mapped_source_map_rows: "Canonical-mapped source-map rows"
         };
         return labels[metric] || text(metric || "").replace(/_/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
       }
@@ -2521,7 +2534,12 @@
       }
       function severityBadge(severity) {
         const s = text(severity || "ok").toLowerCase();
-        return `<span class="badge ${escapeHtml(s)}">${escapeHtml(s.toUpperCase())}</span>`;
+        const labels = {
+          manual_note: "MANUAL NOTE",
+          unexpected_failure: "UNEXPECTED FAILURE",
+          info: "INFO"
+        };
+        return `<span class="badge ${escapeHtml(s)}">${escapeHtml(labels[s] || s.toUpperCase())}</span>`;
       }
       function toneColor(tone) {
         const allowed = ["green", "blue", "amber", "plum", "violet", "red", "cyan"];
@@ -2546,24 +2564,42 @@
       }
       function renderRunStatusBanner() {
         const env = inferRunEnvironment();
+        const unexpectedMissing = numberValue(runMetricValue("unexpected_missing_canonical_resources", runMetricValue("canonical_current_missing_after_attempt_resources", 0)));
+        const dbFailures = numberValue(runMetricValue("db_attemptable_failures", 0));
         const errors = numberValue(runMetricValue("errors", payload.error_count || 0));
         const warnings = numberValue(runMetricValue("warnings", payload.warning_count || 0));
-        const qaLabel = errors ? `${formatNumber(errors)} QA errors` : warnings ? `${formatNumber(warnings)} QA warnings` : "QA clear";
+        const manualNotes = numberValue(runMetricValue("manual_special_not_loaded_resources", runMetricValue("manual_special_notes", 0)));
+        const qaLabel = (unexpectedMissing || dbFailures)
+          ? `${formatNumber(unexpectedMissing + dbFailures)} unexpected failures`
+          : manualNotes
+            ? `${formatNumber(manualNotes)} manual/special note`
+            : warnings
+              ? `${formatNumber(warnings)} non-blocking warnings`
+              : errors
+                ? `${formatNumber(errors)} QA notes`
+                : "QA clear";
         const generated = formatTimestamp(payload.generated_at || runSummaryValue("generated_at", ""));
         const runId = payload.run_id || runSummaryValue("run_id", "Not available");
+        const canonicalTotal = runMetricValue("canonical_resources_total", runMetricValue("canonical_expected_resources", ""));
+        const canonicalAccounted = runMetricValue("canonical_resources_accounted_for", canonicalTotal);
+        const dbTotal = runMetricValue("db_attemptable_canonical_resources", runMetricValue("db_attemptable_resources", ""));
+        const dbProfiled = runMetricValue("db_attemptable_profiled_resources", "");
+        const sourceRowsTotal = runMetricValue("source_map_rows_total", runMetricValue("mapped_sources", payload.source_count || ""));
+        const sourceRowsProfiled = runMetricValue("source_map_rows_profiled", runMetricValue("source_map_rows_profiled_current_run", ""));
         const fixtureContext = env.label === "Mock / fixture"
           ? `<p class="mini"><strong>Fixture context:</strong> Offline DB/access warnings are expected in a static mockup and do not by themselves indicate that the production atlas is broken.</p>`
           : "";
         return `<article class="card status-banner ${escapeHtml(env.tone)}">
           <div class="status-line">
             ${renderBadge(`Environment: ${env.label}`, env.tone)}
-            ${renderBadge(qaLabel, errors ? "red" : warnings ? "amber" : "green")}
+            ${renderBadge(qaLabel, (unexpectedMissing || dbFailures) ? "red" : warnings || manualNotes || errors ? "amber" : "green")}
           </div>
           <div class="kpi-row">
             <div class="kpi"><b title="${escapeHtml(generated.title)}">${escapeHtml(generated.display)}</b><span class="mini">Generated timestamp</span></div>
             <div class="kpi"><b title="${escapeHtml(runId)}">${escapeHtml(runId)}</b><span class="mini">Run ID / build identifier</span></div>
-            <div class="kpi"><b>${formatNumber(runMetricValue("mapped_sources", payload.source_count || "Not available"))}</b><span class="mini">Mapped sources</span></div>
-            <div class="kpi"><b>${formatNumber(runMetricValue("rows", "Not available"))}</b><span class="mini">Profiled rows</span></div>
+            <div class="kpi"><b>${formatNumber(canonicalAccounted)}${canonicalTotal ? ` / ${formatNumber(canonicalTotal)}` : ""}</b><span class="mini">Canonical resources accounted for</span></div>
+            <div class="kpi"><b>${formatNumber(dbProfiled)}${dbTotal ? ` / ${formatNumber(dbTotal)}` : ""}</b><span class="mini">DB-attemptable resources profiled</span></div>
+            <div class="kpi"><b>${formatNumber(sourceRowsProfiled)}${sourceRowsTotal ? ` / ${formatNumber(sourceRowsTotal)}` : ""}</b><span class="mini">Source-map rows profiled</span></div>
             <div class="kpi"><b>${formatNumber(runMetricValue("columns", payload.column_count || "Not available"))}</b><span class="mini">Profiled columns</span></div>
           </div>
           <p class="mini">${escapeHtml(env.warning)}</p>
@@ -2579,6 +2615,12 @@
           columns: "Profiled columns/raw fields.",
           warnings: "Generated QA warning rows.",
           errors: "Generated QA error rows.",
+          canonical_resources_accounted_for: "Canonical DALY-CARE resources accounted for by current profiling or special/manual representation.",
+          db_attemptable_profiled_resources: "DB-attemptable canonical resources profiled out of DB-attemptable canonical resources.",
+          special_manual_or_embedded_resources: "Canonical resources represented by manual files or embedded fields rather than standalone DB tables.",
+          unexpected_missing_canonical_resources: "DB-attemptable canonical resources attempted and unexpectedly missing.",
+          source_map_rows_profiled: "Profiled source-map rows; source-map rows include canonical resources plus derived/helper rows.",
+          non_blocking_warnings: "Warnings, manual notes, or info items that do not mean DB-attemptable canonical resource failure.",
           min_cell_count: "Minimum display cell count for suppression."
         };
         return (payload.hero_metrics || []).map(row => `
@@ -5683,9 +5725,20 @@
       function resourceStatusTone(row) {
         const status = text(row.current_status || row.status_category || row.current_run_status || row.load_status).toLowerCase();
         if (/legacy_unavailable_current_resolved|current_profiled|present_in_both|resolved current run|explored|resolved/.test(status)) return "ok";
-        if (/known_unavailable|legacy_unavailable_current_candidate|current candidate|not tested|not_tested|legacy_special_manual_or_embedded|special\/manual/.test(status)) return "warning";
+        if (/embedded_fields_represented|manual_file_not_available|known_unavailable|legacy_unavailable_current_candidate|current candidate|not tested|not_tested|legacy_special_manual_or_embedded|special\/manual|special_manual_or_embedded/.test(status)) return "info";
         if (/missing unexpectedly|current_missing_unexpectedly|legacy_profiled_current_missing|uncertain/.test(status)) return "error";
-        return "warning";
+        return "info";
+      }
+      function resourceStatusLabel(row) {
+        const status = text(row.current_status || row.status_category || row.current_run_status || row.load_status);
+        const normalized = status.toLowerCase();
+        if (normalized === "legacy_unavailable_current_resolved") return "Legacy unavailable; current resolved";
+        if (normalized === "current_profiled") return "Profiled this run";
+        if (normalized === "embedded_fields_represented") return "Embedded fields";
+        if (normalized === "manual_file_not_available") return "Manual file not loaded";
+        if (normalized === "special_manual_or_embedded") return "Manual/special";
+        if (/missing/.test(normalized)) return "Unexpected missing";
+        return status || "Not available";
       }
       function renderResourceReconciliationSummary() {
         const summaryRows = canonicalResourceRows.length ? canonicalResourceRows : resourceReconciliationRows;
@@ -5706,25 +5759,34 @@
         const specialManual = runSummaryValue("special_manual_or_embedded_resources", runSummaryValue("current_special_manual_resources", summaryRows.filter(row => row.current_status === "special_manual_or_embedded" || row.current_run_status === "Special/manual").length));
         const productionValidation = runSummaryValue("requires_production_validation_resources", sourceResolutionPlanRows.filter(row => row.requires_production_validation === "TRUE").length);
         const regressionCandidates = runSummaryValue("regression_candidate_resources", sourceResolutionPlanRows.filter(row => row.regression_candidate && row.regression_candidate !== "FALSE").length);
-        const missing = runSummaryValue("canonical_current_missing_after_attempt_resources", runSummaryValue("current_missing_unexpectedly_resources", resourceReconciliationRows.filter(row => row.current_run_status === "Missing unexpectedly").length));
+        const missing = runSummaryValue("unexpected_missing_canonical_resources", runSummaryValue("canonical_current_missing_after_attempt_resources", runSummaryValue("current_missing_unexpectedly_resources", resourceReconciliationRows.filter(row => row.current_run_status === "Missing unexpectedly").length)));
         const sourceMapRowsProfiled = runSummaryValue("source_map_rows_profiled_current_run", runSummaryValue("source_map_rows_profiled", catalogRows.length));
-        const sourceMapCanonical = runSummaryValue("source_map_rows_canonical", sourceMapCrosswalkRows.filter(row => row.is_canonical_resource === "TRUE").length);
+        const sourceMapCanonical = runSummaryValue("canonical_mapped_source_map_rows", runSummaryValue("source_map_rows_canonical", sourceMapCrosswalkRows.filter(row => row.is_canonical_resource === "TRUE").length));
         const sourceMapHelpers = runSummaryValue("source_map_rows_helpers", sourceMapCrosswalkRows.filter(row => row.is_helper_table === "TRUE").length);
         const derivedRows = runSummaryValue("source_map_rows_derived_views", runSummaryValue("derived_view_rows_profiled", sourceMapCrosswalkRows.filter(row => row.is_derived_view === "TRUE" && (row.is_current_profiled || row.current_profiled) === "TRUE").length));
         const legacyReferenceOnly = runSummaryValue("legacy_reference_only_resources", legacyReferenceVsCurrentRows.filter(row => row.evidence_freshness_status === "legacy_reference_only" || row.warning_needed === "TRUE").length);
         const del2Fixed = runSummaryValue("legacy_unavailable_current_resolved_resources", summaryRows.filter(row => row.current_status === "legacy_unavailable_current_resolved").length);
         const activationCandidates = runSummaryValue("remaining_activation_candidates", remainingActivationPlanRows.length || currentNotTested);
+        const canonicalAccounted = runSummaryValue("canonical_resources_accounted_for", expected);
+        const dbAttemptableTotal = runSummaryValue("db_attemptable_canonical_resources", dbAttemptable);
+        const dbAttemptableProfiled = runSummaryValue("db_attemptable_profiled_resources", currentResolved);
+        const dbFailures = runSummaryValue("db_attemptable_failures", missing);
+        const embeddedFields = runSummaryValue("embedded_field_resources", summaryRows.filter(row => row.current_status === "embedded_fields_represented").length);
+        const manualNotLoaded = runSummaryValue("manual_special_not_loaded_resources", summaryRows.filter(row => row.current_status === "manual_file_not_available").length);
         setHtml("resource-reconciliation-summary", [
-          ["Canonical resources", expected, "V033/DALY-CARE publication resource universe"],
-          ["Profiled canonical resources", currentResolved, "Canonical resources resolved/profiled in this production run"],
-          ["Activation candidates", activationCandidates, "Canonical resources represented but not attempted in this run"],
+          ["Canonical resources accounted for", `${formatNumber(canonicalAccounted)} / ${formatNumber(expected)}`, "V033/DALY-CARE publication resource universe"],
+          ["DB-attemptable profiled", `${formatNumber(dbAttemptableProfiled)} / ${formatNumber(dbAttemptableTotal)}`, "DB-attemptable canonical resources resolved/profiled in this production run"],
+          ["Special/manual/embedded", specialManual, "Canonical resources represented outside normal DB table profiling"],
+          ["Embedded-field resources", embeddedFields, "Special resources represented through fields in profiled registry sources"],
+          ["Manual files not loaded", manualNotLoaded, "Special manual/on-disk resources absent from this run"],
+          ["Unexpected missing", missing, "DB-attemptable canonical resources attempted but not resolved"],
           ["Source-map rows profiled", sourceMapRowsProfiled, "Rows in the current source map that were resolved/profiled"],
-          ["Canonical source-map rows", sourceMapCanonical, "Source-map rows explicitly mapped to canonical resources; roles may overlap"],
+          ["Canonical-mapped source-map rows", sourceMapCanonical, "Source-map rows mapped to canonical resources; this is not the number of canonical resources"],
           ["Legacy resolved/profiled", legacyResolved, "Final V33 plus legacy R scripts and generated cartography logs"],
           ["Legacy known unavailable", legacyUnavailable, "Expected resources explicitly absent from final legacy evidence"],
           ["Legacy unavailable now resolved", del2Fixed, "Resources absent in V033 but resolved by this current production run"],
           ["Resolver configured", resolverConfigured, "Production recovery plan rows with resolver, special/manual, or known-unavailable declarations"],
-          ["DB-attemptable candidates", dbAttemptable, "Resources with table/direct-SQL resolver candidates for production testing"],
+          ["DB-attemptable candidates", dbAttemptableTotal, "Resources with table/direct-SQL resolver candidates for production testing"],
           ["Current tested", currentTested, "Expected resources actually attempted by this refreshable run"],
           ["Current resolved", currentResolved, "Expected resources resolved/profiled in this run"],
           ["Current known unavailable", currentKnownUnavailable, "Resources proven unavailable by current production evidence"],
@@ -5732,10 +5794,9 @@
           ["Derived views", derivedRows, "Helpful atlas views; some also explicitly map to canonical resources"],
           ["Helper rows", sourceMapHelpers, "Lookup/helper source-map rows counted separately unless explicitly mapped"],
           ["Reference-only evidence", legacyReferenceOnly, "Semantic/reference evidence sources not refreshed in the current run"],
-          ["Special/manual", specialManual, "Expected resources represented by manual files or embedded fields rather than normal tables"],
           ["Needs production validation", productionValidation, "Resolver candidates that should be validated against the live DALY-CARE database"],
           ["Regression candidates", regressionCandidates, "Resources with legacy-current status tension or recovered current resolver candidates"],
-          ["Missing unexpectedly", missing, "Expected resources attempted but not resolved"]
+          ["DB-attemptable failures", dbFailures, "Unexpected DB-attemptable resource failures after production attempt"]
         ].map(card => `
           <article class="card">
             <div class="mini">${escapeHtml(card[2])}</div>
@@ -5753,9 +5814,9 @@
           </div>
         ` : `
           <div class="callout" style="margin-bottom:14px">
-            <strong>64-resource reconciliation is restored; 64-resource production profiling is not yet complete.</strong>
-            This run profiled ${formatNumber(currentResolved)} canonical resource(s), plus derived/helper source-map rows.
-            ${formatNumber(activationCandidates)} canonical resource(s) are resolver activation candidates for a future production run, and ${formatNumber(specialManual)} are special/manual/embedded.
+            <strong>Production profiling completed successfully for all ${formatNumber(dbAttemptableTotal)} DB-attemptable canonical DALY-CARE resources.</strong>
+            The atlas accounts for ${formatNumber(canonicalAccounted)} of ${formatNumber(expected)} canonical resources. The remaining ${formatNumber(specialManual)} canonical resource(s) are special/manual/embedded: FISH is represented through registry fields, and DANRICHT requires manual/on-disk files.
+            Source-map row counts include canonical resources plus derived/helper rows, so they are not the same as the 64 canonical resource count.
             ${referenceOnlyRows.length ? `${formatNumber(referenceOnlyRows.length)} semantic evidence source(s) are legacy/reference-only and were not refreshed in this run.` : ""}
           </div>
         `);
@@ -5789,7 +5850,7 @@
             <article class="catalog-row">
               <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.source_map_role || "")}</div></div>
               <div><strong>${escapeHtml(row.display_name || row.canonical_resource_id)}</strong><div class="mini">${escapeHtml(row.canonical_resource_id || "")}</div></div>
-              <div>${severityBadge(resourceStatusTone(row))}<div class="mini">${escapeHtml(row.current_status || "")}</div></div>
+              <div>${severityBadge(resourceStatusTone(row))}<div class="mini">${escapeHtml(resourceStatusLabel(row))}</div></div>
               <div><strong>${escapeHtml(row.current_resolved_table_or_view || "not profiled")}</strong><div class="mini">${escapeHtml(row.current_expected_strategy || "")}</div></div>
               <div><strong>${formatNumber(row.current_n_rows)}</strong><div class="mini">current rows</div><div class="mini">${escapeHtml(row.current_n_columns || "")} columns</div></div>
               <div><strong>${escapeHtml(row.legacy_status || "")}</strong><div class="mini">${escapeHtml(row.action_required || row.notes || "")}</div></div>
@@ -5811,7 +5872,7 @@
             <article class="catalog-row">
               <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.subdomain || "")}</div></div>
               <div><strong>${escapeHtml(row.table_name)}</strong><div class="mini">${escapeHtml(row.source_type)} - ${escapeHtml(row.source)}</div></div>
-              <div>${severityBadge(row.load_status === "failed" ? "error" : "ok")}</div>
+              <div>${severityBadge(resourceStatusTone(row))}<div class="mini">${escapeHtml(resourceStatusLabel(row))}</div></div>
               <div><strong>${formatNumber(row.n_rows)}</strong><div class="mini">rows</div></div>
               <div><strong>${formatNumber(row.n_cols)}</strong><div class="mini">${escapeHtml(row.date_range || "no date range")}</div></div>
             </article>
@@ -5821,7 +5882,7 @@
           <article class="catalog-row">
             <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.subdomain || "")}</div></div>
             <div><strong>${escapeHtml(row.table_name)}</strong><div class="mini">${escapeHtml(row.source_type)} - ${escapeHtml(row.source)}</div></div>
-            <div>${severityBadge(row.load_status === "failed" ? "error" : "ok")}</div>
+            <div>${severityBadge(resourceStatusTone(row))}<div class="mini">${escapeHtml(resourceStatusLabel(row))}</div></div>
             <div><strong>${formatNumber(row.n_rows)}</strong><div class="mini">current rows</div></div>
             <div><strong>${formatNumber(row.n_cols)}</strong><div class="mini">${escapeHtml(row.date_range || "no date range")}</div></div>
           </article>

@@ -209,6 +209,41 @@ atlas_run_action_items <- function(access_report = NULL,
     }
   }
 
+  if (is.data.frame(sources) &&
+    nrow(sources) > 0 &&
+    all(c("table_name", "load_status") %in% names(sources))) {
+    special <- sources[sources$load_status %in% c("embedded_fields_represented", "manual_file_not_available"), , drop = FALSE]
+    for (i in seq_len(nrow(special))) {
+      row <- special[i, , drop = FALSE]
+      table_name <- row$table_name[[1]] %||% ""
+      if (identical(row$load_status[[1]], "embedded_fields_represented")) {
+        add_item(action_item_row(
+          severity = "info",
+          category = "Special/manual source",
+          action_id = "embedded_fields_represented",
+          table_name = table_name,
+          sources = sources,
+          reason = row$message[[1]] %||% "Embedded-field evidence represented through another profiled source.",
+          current_behavior = "The atlas treats this as represented special/embedded evidence, not as a failed standalone DB table.",
+          recommended_action = "No action is required unless a standalone source becomes available.",
+          evidence = "resolver_type=embedded_fields"
+        ))
+      } else {
+        add_item(action_item_row(
+          severity = "manual_note",
+          category = "Special/manual source",
+          action_id = "manual_file_not_available",
+          table_name = table_name,
+          sources = sources,
+          reason = row$message[[1]] %||% "Manual/on-disk source files were not available to this run.",
+          current_behavior = "The atlas treats this as a manual/special note, not as a failed DB-attemptable canonical resource.",
+          recommended_action = "Provide the manual file path if DANRICHT should be profiled in a future run.",
+          evidence = "resolver_type=manual_file"
+        ))
+      }
+    }
+  }
+
   if (is.data.frame(memory_plan) &&
     nrow(memory_plan) > 0 &&
     "chosen_strategy" %in% names(memory_plan)) {
@@ -216,6 +251,14 @@ atlas_run_action_items <- function(access_report = NULL,
     for (i in seq_len(nrow(risky))) {
       row <- risky[i, , drop = FALSE]
       table_name <- if ("table_name" %in% names(row)) as.character(row$table_name[[1]]) else ""
+      source_hit <- if (is.data.frame(sources) && nrow(sources) && "table_name" %in% names(sources)) {
+        sources[sources$table_name == table_name, , drop = FALSE]
+      } else {
+        data.frame(stringsAsFactors = FALSE)
+      }
+      if (nrow(source_hit) && source_hit$load_status[[1]] %in% c("embedded_fields_represented", "manual_file_not_available")) {
+        next
+      }
       resolution_status <- if ("resolution_status" %in% names(row)) as.character(row$resolution_status[[1]]) else ""
       recommended <- switch(
         resolution_status,
@@ -308,7 +351,7 @@ atlas_run_action_items <- function(access_report = NULL,
     return(empty_run_action_items())
   }
   out <- bind_rows_base(items)
-  severity_rank <- c(error = 1L, warning = 2L, info = 3L, ok = 4L)
+  severity_rank <- c(error = 1L, unexpected_failure = 1L, warning = 2L, manual_note = 3L, info = 4L, ok = 5L)
   ranks <- severity_rank[out$severity]
   ranks[is.na(ranks)] <- 99L
   out[order(ranks, out$category, out$table_name, out$action_id), , drop = FALSE]
@@ -354,7 +397,7 @@ db_budget_actions_as_run_action_items <- function(db_budget_actions, sources = N
   })
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(empty_run_action_items())
-  severity_rank <- c(error = 1L, warning = 2L, info = 3L, ok = 4L)
+  severity_rank <- c(error = 1L, unexpected_failure = 1L, warning = 2L, manual_note = 3L, info = 4L, ok = 5L)
   ranks <- severity_rank[out$severity]
   ranks[is.na(ranks)] <- 99L
   out[order(ranks, out$category, out$table_name, out$action_id), , drop = FALSE]
@@ -374,7 +417,7 @@ action_item_summary <- function(action_items) {
     )
   })
   out <- bind_rows_base(out)
-  severity_rank <- c(error = 1L, warning = 2L, info = 3L, ok = 4L)
+  severity_rank <- c(error = 1L, unexpected_failure = 1L, warning = 2L, manual_note = 3L, info = 4L, ok = 5L)
   ranks <- severity_rank[out$severity]
   ranks[is.na(ranks)] <- 99L
   out[order(ranks, out$category), , drop = FALSE]
