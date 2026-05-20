@@ -434,6 +434,7 @@ const normalScreenshotCaptures = [
   { file: "mcl_triangle_ki67_desktop.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0], scrollSelector: "#mcl-ki67-readiness" },
   { file: "mcl_triangle_ki67_mobile_375.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1], scrollSelector: "#mcl-ki67-readiness" },
   { file: "global_search_ki67_desktop.png", name: "global_search_ki67", tab: "overview", sub: "overview-summary", search: "Ki-67", viewport: qaViewports[0], autoScroll: false },
+  { file: "global_search_aeki020_desktop.png", name: "global_search_aeki020", tab: "overview", sub: "overview-summary", search: "ÆKI020", viewport: qaViewports[0], autoScroll: false },
   { file: "global_search_mib1_desktop.png", name: "global_search_mib1", tab: "overview", sub: "overview-summary", search: "MIB-1", viewport: qaViewports[0], autoScroll: false },
   { file: "global_search_proliferationsindeks_desktop.png", name: "global_search_proliferationsindeks", tab: "overview", sub: "overview-summary", search: "proliferationsindeks", viewport: qaViewports[0], autoScroll: false }
 ];

@@ -559,6 +559,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     registry_field_candidates = safe_read_output_csv(output_paths$ki67_registry_field_candidates, ki67_discovery$registry_field_candidates),
     pathology_code_candidates = safe_read_output_csv(output_paths$ki67_pathology_code_candidates, ki67_discovery$pathology_code_candidates),
     text_pattern_candidates = safe_read_output_csv(output_paths$ki67_text_pattern_candidates, ki67_discovery$text_pattern_candidates),
+    channel_summary = safe_read_output_csv(output_paths$ki67_channel_summary, ki67_discovery$channel_summary),
+    aeki_validation_plan = safe_read_output_csv(output_paths$ki67_aeki_validation_plan, ki67_discovery$aeki_validation_plan),
+    aeki_code_counts = safe_read_output_csv(output_paths$ki67_aeki_code_counts, ki67_discovery$aeki_code_counts),
+    text_validation_plan = safe_read_output_csv(output_paths$ki67_text_validation_plan, ki67_discovery$text_validation_plan),
     summary = ki67_discovery$summary
   )
   payload_mcl_triangle_feasibility <- list(

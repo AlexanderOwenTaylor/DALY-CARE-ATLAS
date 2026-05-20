@@ -2083,6 +2083,8 @@
           }
         });
         ((ki67Discovery && ki67Discovery.search_inventory) || []).forEach(row => {
+          const displayAllowed = row.display_in_ui === undefined || mclBool(row.display_in_ui) || /strong_direct|moderate_direct/.test(row.evidence_strength || "");
+          if (!displayAllowed) return;
           const score = scoreSearchResult(row, q, {
             exact: ["matched_term", "matched_field_or_column"],
             title: ["matched_term", "evidence_strength", "evidence_type"],
@@ -5521,7 +5523,7 @@
         const s = text(status || "").toLowerCase();
         if (/ready|strongly|current_profiled|strong_structured/.test(s)) return "green";
         if (/proxy|feasible_with_mapping|biology gaps|moderate_text_extractable/.test(s)) return "blue";
-        if (/legacy|source_activation|manual|partial|weak_candidate|requires_manual_validation|not_tested_fixture/.test(s)) return "amber";
+        if (/legacy|source_activation|manual|partial|weak_candidate|requires_manual_validation|requires_production_validation|source_space_only|not_tested_fixture/.test(s)) return "amber";
         if (/not_found|not currently/.test(s)) return "red";
         return "plum";
       }
@@ -5581,20 +5583,33 @@
         const ki67Biology = (biology || []).find(row => row.marker === "Ki-67") || {};
         const summary = discovery.summary || [];
         const inventory = discovery.search_inventory || [];
-        const registry = discovery.registry_field_candidates || [];
-        const pathology = discovery.pathology_code_candidates || [];
-        const textPatterns = discovery.text_pattern_candidates || [];
+        const channelSummary = discovery.channel_summary || [];
         const metric = key => {
           const row = summary.find(item => item.metric === key) || {};
           return row.value || "0";
         };
         const status = ki67Matrix.readiness_status || ki67Biology.feasibility_status || "not_found";
-        const directHits = inventory.filter(row => /strong_direct|moderate_direct/.test(row.evidence_strength || "") && row.evidence_type !== "source_only_not_evidence");
-        const sourceOnly = inventory.filter(row => row.evidence_strength === "source_only" || row.evidence_type === "source_only_not_evidence");
-        const bestSources = uniqueValues(directHits.length ? directHits : sourceOnly, "file_or_table").slice(0, 5).join("; ");
+        const visibleSourceOnly = inventory.filter(row =>
+          (row.evidence_channel === "source_only_search_space" || row.evidence_strength === "source_only" || row.evidence_type === "source_only_not_evidence") &&
+          mclBool(row.display_in_ui)
+        ).slice(0, 6);
+        const sourceOnlySummary = uniqueValues(visibleSourceOnly, "ui_group").slice(0, 4).join("; ");
+        const channel = key => channelSummary.find(row => row.evidence_channel === key) || {};
+        const channelCard = (key, fallbackLabel, defaultStatus, fallbackAction) => {
+          const row = channel(key);
+          const st = row.status || defaultStatus;
+          return `<article class="clinical-card">
+            ${renderBadge(st, mclStatusTone(st))}
+            <h3>${escapeHtml(row.channel_label || fallbackLabel)}</h3>
+            <p class="mini"><strong>Confirmed:</strong> ${escapeHtml(row.confirmed_hits || "0")}; <strong>candidates:</strong> ${escapeHtml(row.candidate_hits || "0")}</p>
+            <p class="mini">${escapeHtml(row.next_validation_action || fallbackAction)}</p>
+            ${row.notes ? `<p class="mini">${escapeHtml(row.notes)}</p>` : ""}
+          </article>`;
+        };
         return `
           ${renderBadge(status, mclStatusTone(status))}
-          <p><strong>Ki-67 evidence status:</strong> ${escapeHtml(ki67Matrix.key_limitation || ki67Biology.notes || "Ki-67-specific evidence has not been found in current aggregate outputs.")}</p>
+          <p><strong>No confirmed structured Ki-67 percentage evidence in current aggregate atlas artifacts.</strong></p>
+          <p class="mini">${escapeHtml(ki67Matrix.key_limitation || ki67Biology.notes || "High-risk biology remains the limiting feasibility step. Ki-67 has candidate extraction routes through Danish Patobank AEKIxxx codes and pathology text patterns, but no confirmed aggregate Ki-67 values are exposed in the current atlas artifacts.")}</p>
           ${renderKpiStrip([
             { label: "direct metadata hits", value: metric("strong_direct_hits"), tone: Number(metric("strong_direct_hits")) ? "green" : "amber" },
             { label: "moderate hits", value: metric("moderate_direct_hits"), tone: Number(metric("moderate_direct_hits")) ? "blue" : "amber" },
@@ -5602,25 +5617,15 @@
             { label: "numeric % hits", value: metric("numeric_percent_like_hits"), tone: Number(metric("numeric_percent_like_hits")) ? "green" : "amber" }
           ], { tone: "amber" })}
           <div class="grid grid-3">
-            <article class="clinical-card">
-              ${renderBadge(registry.some(row => row.evidence_strength === "strong_direct") ? "structured candidate" : "not confirmed", registry.some(row => row.evidence_strength === "strong_direct") ? "green" : "amber")}
-              <h3>Structured registry fields</h3>
-              <p class="mini">${escapeHtml(registry.slice(0, 4).map(row => row.field_name || row.table_or_file).filter(Boolean).join("; ") || "No direct structured Ki-67 field confirmed.")}</p>
-            </article>
-            <article class="clinical-card">
-              ${renderBadge(pathology.some(row => row.evidence_strength === "strong_direct") ? "code candidate" : "anchor only", pathology.some(row => row.evidence_strength === "strong_direct") ? "green" : "blue")}
-              <h3>Pathology / SNOMED codes</h3>
-              <p class="mini">External SNOMED CT 1255078008 is a reference anchor; Danish Patobank coding requires codebook validation.</p>
-            </article>
-            <article class="clinical-card">
-              ${renderBadge(textPatterns.some(row => row.numeric_extraction_possible && row.false_positive_risk !== "high") ? "text pattern specified" : "needs validation", "blue")}
-              <h3>Text extraction readiness</h3>
-              <p class="mini">Synthetic patterns cover exact %, ranges, inequalities, qualitative mentions, and unknown/not-stated values. Raw report text is not emitted.</p>
-            </article>
+            ${channelCard("structured_registry_fields", "Structured registry fields", "not_found_in_current_artifacts", "Validate RKKP/LYFO field definitions before analytic use.")}
+            ${channelCard("danish_pathology_code_evidence", "Danish pathology code evidence / AEKIxxx", "requires_production_validation", "Parser ready; run aggregate-only AEKIxxx code counts in production.")}
+            ${channelCard("pathology_text_extraction_readiness", "Pathology text extraction readiness", "requires_production_validation", "Synthetic regex patterns are ready; production validation must be aggregate-only.")}
+            ${channelCard("source_only_search_space", "Source-only search space", "source_space_only", "Pathology/LYFO sources may exist, but source-only evidence is not Ki-67 evidence.")}
           </div>
-          <p class="mini"><strong>Best aggregate source/search space:</strong> ${escapeHtml(bestSources || "not available in current aggregate output")}</p>
-          <div class="callout warn"><strong>Interpretation caveat:</strong> Ki-67 should be represented as an observation/test concept with a numeric percent value. Source-only pathology, LYFO, <code>t_mikro</code>, or <code>t_konk</code> availability is search space, not direct Ki-67 evidence.</div>
-          <div class="callout"><strong>Danish Patobank code note:</strong> Danish Patobank may encode numeric Ki-67 index using <code>ÆKIxxx</code>, where <code>xxx</code> is the percentage. p16/Ki-67 double-stain cervix triage codes are tracked separately and are not treated as numeric MCL Ki-67 proliferation-index values.</div>
+          <p class="mini"><strong>Concise source-space examples:</strong> ${escapeHtml(sourceOnlySummary || "none displayed")}</p>
+          <div class="callout warn"><strong>Interpretation caveat:</strong> Ki-67 should be represented as an observation/test concept with a numeric percent value. Broad pathology or LYFO source availability is search space, not Ki-67 evidence. Source-only <code>t_mikro</code> or <code>t_konk</code> availability guides validation but is not direct Ki-67 evidence.</div>
+          <div class="callout"><strong>Danish Patobank code note:</strong> Danish Patobank may encode numeric Ki-67 index using <code>ÆKIxxx</code> / <code>AEKIxxx</code>, where <code>xxx</code> is the percentage. p16/Ki-67 double-stain cervix triage codes are tracked separately and are not treated as numeric MCL Ki-67 proliferation-index values.</div>
+          <div class="callout"><strong>Text-pattern note:</strong> Text patterns are readiness specifications tested on synthetic examples; no real pathology text extraction has been validated in the static atlas. Production validation should return aggregate counts only, with no snippets or identifiers.</div>
         `;
       }
       function renderMclTimingSection(matrix) {
