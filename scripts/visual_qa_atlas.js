@@ -382,6 +382,7 @@ const targets = [
   { name: "clinical_variables", tab: "variables", sub: "variables-concepts" },
   { name: "vitals", tab: "clinical", sub: "clinical-vitals" },
   { name: "social_history", tab: "clinical", sub: "clinical-social" },
+  { name: "mcl_triangle", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
   { name: "imaging", tab: "clinical", sub: "clinical-imaging" },
   { name: "damyda", tab: "registries", sub: "reg-damyda" },
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
@@ -427,7 +428,9 @@ const normalScreenshotCaptures = [
   { file: "clinical_variables_normal_mobile_375_height.png", name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height", viewport: normalViewports[1] },
   { file: "clinical_variables_normal_mobile.png", name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height", viewport: normalViewports[2] },
   { file: "treatment_normal_mobile_375_rituximab.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[1] },
-  { file: "treatment_normal_mobile.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[2] }
+  { file: "treatment_normal_mobile.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[2] },
+  { file: "mcl_triangle_desktop.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0] },
+  { file: "mcl_triangle_mobile.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[2] }
 ];
 
 const normalOverflowCaptures = [
@@ -483,6 +486,12 @@ async function main() {
         }
         if (target.name === "biobank") {
           report.biobankPanelPresent = /Biobank sample atlas/.test(overflowRender.dom) && /Biobank evidence layers/.test(overflowRender.dom) && /Sample sources/.test(overflowRender.dom) && /Raw names \/ data lineage/.test(overflowRender.dom);
+        }
+        if (target.name === "mcl_triangle") {
+          report.mclTrianglePanelPresent = /MCL \/ TRIANGLE feasibility/.test(overflowRender.dom) &&
+            /Study-readiness matrix/.test(overflowRender.dom) &&
+            /Treatment-timing feasibility/.test(overflowRender.dom) &&
+            /feasibility assessment only/.test(overflowRender.dom);
         }
         reports.push(report);
       }
@@ -552,7 +561,8 @@ async function main() {
       (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
       (report.target === "imaging" && !report.imagingPanelPresent) ||
       (report.target === "pathology" && !report.pathologyPanelPresent) ||
-      (report.target === "biobank" && !report.biobankPanelPresent)
+      (report.target === "biobank" && !report.biobankPanelPresent) ||
+      (report.target === "mcl_triangle" && !report.mclTrianglePanelPresent)
     );
     if (failures.length) {
       console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);

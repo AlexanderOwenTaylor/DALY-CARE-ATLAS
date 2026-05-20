@@ -48,6 +48,12 @@ expect_file(file.path(result$run_dir, "outputs", "canonical_resource_reconciliat
 expect_file(file.path(result$run_dir, "outputs", "source_map_row_to_canonical_resource_crosswalk.csv"))
 expect_file(file.path(result$run_dir, "outputs", "legacy_reference_vs_current_profiled_evidence.csv"))
 expect_file(file.path(result$run_dir, "outputs", "remaining_canonical_resources_activation_plan.csv"))
+expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_feasibility_summary.csv"))
+expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_variable_inventory.csv"))
+expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_treatment_inventory.csv"))
+expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_outcome_inventory.csv"))
+expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_biology_gap_analysis.csv"))
+expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_study_readiness_matrix.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "lab_npu_code_coverage.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "npu_dictionary_summary.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "npu_dictionary_vectors.csv"))
@@ -93,6 +99,7 @@ expect_true(grepl("tab-overview", html, fixed = TRUE), "HTML should include the 
 expect_true(grepl("tab-variables", html, fixed = TRUE), "HTML should include the Clinical Variables tab.")
 expect_true(grepl("tab-situation", html, fixed = TRUE), "HTML should include the Situation Report tab.")
 expect_true(grepl("tab-quickstart", html, fixed = TRUE), "HTML should include the Quick Start tab.")
+expect_true(grepl("tab-clinical-feasibility", html, fixed = TRUE), "HTML should include the Clinical Feasibility tab.")
 expect_true(grepl("tab-dictionary", html, fixed = TRUE), "HTML should include the Data Dictionary tab.")
 expect_true(grepl("tab-registries", html, fixed = TRUE), "HTML should include the Disease Registries tab.")
 expect_true(grepl("tab-clinical", html, fixed = TRUE), "HTML should include the Clinical Data tab.")
@@ -107,6 +114,7 @@ expect_true(grepl("mobile-tab-select", html, fixed = TRUE), "HTML should include
 expect_true(grepl("data-sub=\"situation-headlines\"", html, fixed = TRUE), "HTML should include Situation Report sub-tabs.")
 expect_true(grepl("data-sub=\"dictionary-lineage\"", html, fixed = TRUE), "HTML should include semantic dictionary sub-tabs.")
 expect_true(grepl("data-sub=\"reg-damyda\"", html, fixed = TRUE), "HTML should include DaMyDa registry sub-tabs.")
+expect_true(grepl("data-sub=\"mcl-triangle-feasibility\"", html, fixed = TRUE), "HTML should include the MCL/TRIANGLE feasibility sub-tab.")
 expect_true(grepl("data-sub=\"clinical-diagnoses\"", html, fixed = TRUE), "HTML should include clinical module sub-tabs.")
 expect_true(grepl("data-sub=\"clinical-microbiology\"", html, fixed = TRUE), "HTML should include Microbiology/Infection clinical sub-tab.")
 expect_true(grepl("data-sub=\"clinical-pathology\"", html, fixed = TRUE), "HTML should include Pathology/PATOBANK clinical sub-tab.")
@@ -135,9 +143,14 @@ for (needle in c("Height and weight / BMI", "Smoking status", "Alcohol use", "Di
   expect_true(grepl(needle, html, fixed = TRUE), paste("Clinical Variables priority list should include:", needle))
 }
 expect_true(grepl("What can I find in DALY-CARE?", html, fixed = TRUE), "Overview should include the clinician-facing entry section.")
-for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
+for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "MCL / TRIANGLE feasibility", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview entry cards should include:", needle))
 }
+expect_true(grepl("function renderMclTriangleFeasibilityPanel", html, fixed = TRUE), "HTML should include the MCL/TRIANGLE feasibility renderer.")
+expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
+expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
+expect_true(grepl("feasibility assessment only", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
+expect_true(grepl("clone-censor-weight target-trial emulation", html, fixed = TRUE), "MCL/TRIANGLE caution should mention future target-trial emulation design.")
 for (needle in c("Best for:", "Evidence/source type:", "Open panel", "run-status-banner", "Environment:", "Mock / fixture", "Pipeline status", "Profiled rows", "Profiled columns", "Run ID / build identifier")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview UX first pass should include:", needle))
 }
@@ -223,6 +236,7 @@ for (needle in c("remote-debugging-port=0", "Emulation.setDeviceMetricsOverride"
 for (needle in c(
   "{ name: \"overview\", tab: \"overview\", sub: \"overview-summary\" }",
   "{ name: \"clinical_variables\", tab: \"variables\", sub: \"variables-concepts\" }",
+  "{ name: \"mcl_triangle\", tab: \"clinical-feasibility\", sub: \"mcl-triangle-feasibility\" }",
   "{ name: \"vitals\", tab: \"clinical\", sub: \"clinical-vitals\" }",
   "{ name: \"social_history\", tab: \"clinical\", sub: \"clinical-social\" }",
   "{ name: \"damyda\", tab: \"registries\", sub: \"reg-damyda\" }",
@@ -242,6 +256,7 @@ expect_true(grepl("microbiologyAtGlancePresent", visual_qa_script, fixed = TRUE)
 expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Imaging panel.")
 expect_true(grepl("pathologyPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Pathology/PATOBANK panel.")
 expect_true(grepl("biobankPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Biobank panel.")
+expect_true(grepl("mclTrianglePanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the MCL/TRIANGLE feasibility panel.")
 expect_true(grepl("overviewConsolidationPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Overview consolidation section.")
 expect_true(grepl("normalScreenshotCaptures", visual_qa_script, fixed = TRUE), "Visual QA script should produce non-QA normal screenshots.")
 for (needle in c("overview_normal", "run_status_normal_desktop.png", "resource_catalog_normal_desktop.png", "scrollSelector", "data_dictionary_normal", "code_maps_normal", "clinical_variables_normal", "treatment_normal", "capture: false", "normalOverflowCaptures", "mobile_375", "normal_360", "normal_375", "normal_390", "normal_414", "normal_482", "overview_normal_mobile_360.png", "code_maps_normal_mobile_375_NPU02319.png")) {
@@ -528,6 +543,8 @@ expect_true(grepl("canonical_resource_reconciliation_rows", payload, fixed = TRU
 expect_true(grepl("source_map_crosswalk_rows", payload, fixed = TRUE), "Payload should include the source-map-to-canonical crosswalk.")
 expect_true(grepl("legacy_reference_vs_current_rows", payload, fixed = TRUE), "Payload should include legacy/reference versus current-profiled evidence rows.")
 expect_true(grepl("remaining_activation_plan_rows", payload, fixed = TRUE), "Payload should include the remaining canonical-resource activation plan.")
+expect_true(grepl("mcl_triangle_feasibility", payload, fixed = TRUE), "Payload should include the MCL/TRIANGLE feasibility view model.")
+expect_true(grepl("Feasible with biology gaps", payload, fixed = TRUE) || grepl("Partially feasible", payload, fixed = TRUE) || grepl("Not currently feasible", payload, fixed = TRUE), "Payload should include an MCL/TRIANGLE feasibility verdict.")
 expect_true(grepl("review_clinical_variables", payload, fixed = TRUE), "Payload should include the Clinical Variables view model.")
 expect_true(grepl("review_semantic_summary", payload, fixed = TRUE), "Payload should include semantic summary rows.")
 expect_true(grepl("Smoking status", payload, fixed = TRUE), "Payload should expose clinician-facing semantic variables.")
@@ -562,6 +579,7 @@ manifest <- utils::read.csv(file.path(result$run_dir, "outputs", "output_manifes
 expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "memory_plan", "db_query_log", "db_budget_actions", "action_items", "legacy_cartography_source_resolution_audit", "billeddiagnostik_del2_regression_audit", "source_resolution_plan_dry_run", "source_resolution_attempts", "source_resolution_delta_legacy_vs_current", "resource_reconciliation", "source_truth_evidence_matrix", "source_truth_summary", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "semantic_dictionary", "semantic_value_map", "semantic_code_map", "semantic_panel_links", "clinical_concepts", "domain_panels", "panel_kpis", "panel_distributions", "panel_raw_fields", "panel_parity", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
 expect_true(all(c("current_run_source_map_audit", "canonical_resource_reconciliation_64", "source_map_row_to_canonical_resource_crosswalk", "legacy_reference_vs_current_profiled_evidence") %in% manifest$artifact_id), "Manifest should list canonical source-recovery artifacts.")
 expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifact_id, "Manifest should list the remaining canonical-resource activation plan.")
+expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")
 expect_true(all(c("atlas_temporal_coverage", "atlas_temporal_coverage_years", "atlas_spatial_region_counts", "atlas_spatial_region_coverage", "atlas_dk_choropleth_regions") %in% manifest$artifact_id), "Manifest should list V33 coverage panel artifacts.")
 expect_true(all(c("atlas_temporal_date_quality", "atlas_streaming_progress_summary") %in% manifest$artifact_id), "Manifest should list date-quality and streaming-progress panel artifacts.")
