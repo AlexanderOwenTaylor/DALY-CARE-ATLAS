@@ -38,6 +38,12 @@ expect_true(nrow(outputs$search_inventory) > 0, "Ki-67 search inventory should b
 expect_true(nrow(outputs$registry_field_candidates) > 0, "Ki-67 registry field candidates should be generated.")
 expect_true(nrow(outputs$pathology_code_candidates) >= 2, "Ki-67 pathology code candidates should include external anchors.")
 expect_true(nrow(outputs$text_pattern_candidates) > 0, "Ki-67 text pattern candidates should be generated.")
+expect_true(all(c("display_in_ui", "ui_group", "ui_priority", "suppression_reason", "evidence_channel") %in% names(outputs$search_inventory)), "Ki-67 search inventory should carry UI display controls.")
+expect_true(nrow(outputs$channel_summary) == 4, "Ki-67 channel summary should report the four evidence channels.")
+expect_true(all(c("structured_registry_fields", "danish_pathology_code_evidence", "pathology_text_extraction_readiness", "source_only_search_space") %in% outputs$channel_summary$evidence_channel), "Ki-67 channel summary should include registry, pathology-code, text-readiness, and source-only channels.")
+expect_true(nrow(outputs$aeki_validation_plan) > 0, "AEKI/ÆKI production validation plan should be generated.")
+expect_true(nrow(outputs$aeki_code_counts) > 0, "AEKI/ÆKI code count placeholder should be generated.")
+expect_true(nrow(outputs$text_validation_plan) > 0, "Ki-67 text validation plan should be generated.")
 
 spec_path <- file.path(root, "clinical_questions", "ki67_extraction_spec.yml")
 expect_file(spec_path)
@@ -73,6 +79,8 @@ for (pattern in patterns) {
 examples <- c(
   "Ki-67 20%" = "exact_numeric_percent",
   "Ki67: 20 %" = "exact_numeric_percent",
+  "Ki67 ca. 20%" = "exact_numeric_percent",
+  "Ki-67 cirka 20 %" = "exact_numeric_percent",
   "MIB-1 index 35%" = "exact_numeric_percent",
   "proliferationsindeks på 15%" = "exact_numeric_percent",
   "Ki-67 < 10%" = "inequality_percent",
@@ -92,15 +100,18 @@ source_only_outputs <- build_ki67_discovery_outputs(
   project_root = root,
   include_reference_files = FALSE,
   sources = data.frame(
-    table_name = c("SDS_pato", "t_mikro", "RKKP_LYFO"),
-    source = c("pato", "t_mikro", "RKKP_LYFO"),
-    domain = c("Pathology", "Pathology", "Registry"),
+    table_name = c("SDS_pato_a", "SDS_pato_b", "SDS_pato_c", "SDS_pato_d", "SDS_pato_e", "SDS_pato_f", "t_mikro", "RKKP_LYFO"),
+    source = c("pato_a", "pato_b", "pato_c", "pato_d", "pato_e", "pato_f", "t_mikro", "RKKP_LYFO"),
+    domain = c("Pathology", "Pathology", "Pathology", "Pathology", "Pathology", "Pathology", "Pathology", "Registry"),
     load_status = "ok",
     stringsAsFactors = FALSE
   )
 )
 expect_true(any(source_only_outputs$search_inventory$evidence_strength == "source_only"), "Pathology/LYFO source availability should be represented as source-only search space.")
 expect_false(any(source_only_outputs$search_inventory$evidence_strength %in% c("strong_direct", "moderate_direct")), "Source-only hits must not count as direct Ki-67 evidence.")
+source_only_rows <- source_only_outputs$search_inventory[source_only_outputs$search_inventory$evidence_strength == "source_only", , drop = FALSE]
+expect_true(any(!source_only_rows$display_in_ui %in% TRUE), "Duplicate source-only rows should be suppressed from the concise UI.")
+expect_true(all(source_only_rows$evidence_channel == "source_only_search_space"), "Source-only rows should be assigned to the source-space evidence channel.")
 
 empty_inventory <- mcl_triangle_empty_variable_inventory()
 ki67_matrix <- mcl_triangle_build_readiness_matrix(empty_inventory, ki67_discovery = source_only_outputs)
@@ -108,3 +119,37 @@ ki67_row <- ki67_matrix[ki67_matrix$study_requirement == "Ki-67", , drop = FALSE
 expect_equal(ki67_row$readiness_status[[1]], "weak_candidate_only", "Source-only Ki-67 search space should remain weak candidate only.")
 expect_false(isTRUE(ki67_row$direct_variable_available[[1]]), "Source-only Ki-67 search space should not be direct evidence.")
 expect_false(isTRUE(ki67_row$proxy_available[[1]]), "Source-only Ki-67 search space should not be a proxy.")
+
+microbiology_only <- build_ki67_discovery_outputs(
+  project_root = root,
+  include_reference_files = FALSE,
+  sources = data.frame(
+    table_name = "microbiology_microscopy",
+    source = "PERSIMUNE_microbiology_microscopy",
+    domain = "Microbiology",
+    load_status = "ok",
+    stringsAsFactors = FALSE
+  )
+)
+expect_false(any(grepl("microbiology_microscopy", paste(microbiology_only$search_inventory$file_or_table, microbiology_only$search_inventory$resource_id), ignore.case = TRUE)), "Generic microbiology microscopy should not create Ki-67 evidence or source-space rows.")
+
+microbiology_direct <- build_ki67_discovery_outputs(
+  project_root = root,
+  include_reference_files = FALSE,
+  column_profiles = data.frame(
+    table_name = "microbiology_microscopy",
+    column_name = "Ki-67_result_note",
+    profile_kind = "text",
+    domain = "Microbiology",
+    stringsAsFactors = FALSE
+  )
+)
+expect_true(any(microbiology_direct$search_inventory$evidence_strength %in% c("strong_direct", "moderate_direct")), "A direct Ki-67 term should still be detected even if the source name would otherwise be excluded.")
+
+placeholder <- build_ki67_discovery_outputs(
+  project_root = root,
+  include_reference_files = FALSE,
+  sources = data.frame(table_name = "SDS_pato", source = "pato", domain = "Pathology", stringsAsFactors = FALSE)
+)
+expect_true(any(placeholder$aeki_code_counts$validation_status == "requires_production_validation"), "Fixture/static mode should emit a production-validation placeholder rather than fake AEKI counts.")
+expect_false(any(placeholder$pathology_code_candidates$code %in% c("FY5015", "FY5016", "M0901K", "M0901L") & placeholder$pathology_code_candidates$mcl_triangle_high_risk_ki67_numeric), "p16/Ki-67 dual-stain or test-quality codes must not upgrade numeric MCL Ki-67 readiness.")

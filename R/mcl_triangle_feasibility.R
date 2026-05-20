@@ -411,6 +411,7 @@ mcl_triangle_requirement_status <- function(rows, proxy_rows = NULL, preferred_s
 mcl_triangle_ki67_direct_rows <- function(ki67_discovery) {
   inventory <- ki67_discovery$search_inventory %||% ki67_empty_search_inventory()
   if (!is.data.frame(inventory) || !nrow(inventory)) return(ki67_empty_search_inventory())
+  inventory <- ki67_align_search_inventory(inventory)
   inventory[inventory$evidence_strength %in% c("strong_direct", "moderate_direct") &
     inventory$evidence_type != "source_only_not_evidence", , drop = FALSE]
 }
@@ -418,6 +419,7 @@ mcl_triangle_ki67_direct_rows <- function(ki67_discovery) {
 mcl_triangle_ki67_source_only_rows <- function(ki67_discovery) {
   inventory <- ki67_discovery$search_inventory %||% ki67_empty_search_inventory()
   if (!is.data.frame(inventory) || !nrow(inventory)) return(ki67_empty_search_inventory())
+  inventory <- ki67_align_search_inventory(inventory)
   inventory[inventory$evidence_strength == "source_only" | inventory$evidence_type == "source_only_not_evidence", , drop = FALSE]
 }
 
@@ -448,7 +450,9 @@ mcl_triangle_ki67_status <- function(ki67_discovery = NULL) {
   best <- if (nrow(direct)) {
     paste(unique(head(direct$file_or_table[nzchar(direct$file_or_table)], 4)), collapse = "; ")
   } else if (nrow(source_only)) {
-    paste(unique(head(source_only$file_or_table[nzchar(source_only$file_or_table)], 4)), collapse = "; ")
+    visible <- source_only[source_only$display_in_ui %in% TRUE, , drop = FALSE]
+    if (!nrow(visible)) visible <- head(source_only, 4)
+    paste(unique(head(visible$ui_group[nzchar(visible$ui_group)], 4)), collapse = "; ")
   } else {
     ""
   }

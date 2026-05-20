@@ -17,6 +17,11 @@ ki67_empty_search_inventory <- function() {
     requires_codebook_lookup = logical(),
     requires_manual_validation = logical(),
     privacy_safe_to_display = logical(),
+    display_in_ui = logical(),
+    ui_group = character(),
+    ui_priority = integer(),
+    suppression_reason = character(),
+    evidence_channel = character(),
     notes = character()
   )
 }
@@ -71,12 +76,74 @@ ki67_empty_text_pattern_candidates <- function() {
   )
 }
 
+ki67_empty_channel_summary <- function() {
+  empty_df(
+    evidence_channel = character(),
+    channel_label = character(),
+    confirmed_hits = integer(),
+    candidate_hits = integer(),
+    status = character(),
+    next_validation_action = character(),
+    notes = character()
+  )
+}
+
+ki67_empty_aeki_validation_plan <- function() {
+  empty_df(
+    validation_step = character(),
+    resource_id = character(),
+    candidate_table_or_source = character(),
+    candidate_code_field = character(),
+    candidate_value_field = character(),
+    pattern = character(),
+    safe_aggregate_output = character(),
+    privacy_risk = character(),
+    requires_db_access = logical(),
+    expected_result = character(),
+    notes = character()
+  )
+}
+
+ki67_empty_aeki_code_counts <- function() {
+  empty_df(
+    resource_id = character(),
+    source_table = character(),
+    code = character(),
+    parsed_percent = character(),
+    aggregate_count = character(),
+    distinct_patient_count_if_allowed = character(),
+    year_min_if_allowed = character(),
+    year_max_if_allowed = character(),
+    validation_status = character(),
+    notes = character()
+  )
+}
+
+ki67_empty_text_validation_plan <- function() {
+  empty_df(
+    validation_step = character(),
+    resource_id = character(),
+    candidate_text_field = character(),
+    pattern_name = character(),
+    regex_pattern = character(),
+    safe_aggregate_output = character(),
+    privacy_risk = character(),
+    requires_db_access = logical(),
+    expected_result = character(),
+    notes = character()
+  )
+}
+
 ki67_empty_payload <- function() {
   list(
     search_inventory = ki67_empty_search_inventory(),
     registry_field_candidates = ki67_empty_registry_field_candidates(),
     pathology_code_candidates = ki67_empty_pathology_code_candidates(),
     text_pattern_candidates = ki67_empty_text_pattern_candidates(),
+    channel_summary = ki67_empty_channel_summary(),
+    aeki_validation_plan = ki67_empty_aeki_validation_plan(),
+    aeki_code_counts = ki67_empty_aeki_code_counts(),
+    text_validation_plan = ki67_empty_text_validation_plan(),
     summary = empty_df(metric = character(), value = character(), notes = character())
   )
 }
@@ -128,7 +195,95 @@ ki67_context_terms <- function() {
 }
 
 ki67_source_only_terms <- function() {
-  c("pato", "patobank", "pathology", "patologi", "t_mikro", "t_konk", "mikro", "konk", "microscopy", "conclusion", "lyfo", "rkkp_lyfo", "mcl")
+  c("pato", "patobank", "pathology", "patologi", "t_mikro", "t_konk", "lyfo", "rkkp_lyfo")
+}
+
+ki67_false_positive_source_only <- function(text) {
+  norm <- ki67_normalize(text)
+  microbiology <- grepl("\\b(microbiology|microbiologi|persimune|miba|culture|resistance|bacteria|virus|fungus)\\b", norm, perl = TRUE)
+  microscopy <- grepl("\\b(microscopy|mikroskopi)\\b", norm, perl = TRUE)
+  microbiology && microscopy
+}
+
+ki67_align_search_inventory <- function(x) {
+  if (!is.data.frame(x) || !nrow(x)) return(ki67_empty_search_inventory())
+  template <- ki67_empty_search_inventory()
+  missing <- setdiff(names(template), names(x))
+  for (nm in missing) {
+    x[[nm]] <- template[[nm]]
+  }
+  x[names(template)]
+}
+
+ki67_evidence_channel <- function(row) {
+  text <- paste(row$artifact_or_source, row$file_or_table, row$resource_id, row$source_domain,
+    row$matched_term, row$matched_field_or_column, row$evidence_type, row$evidence_strength,
+    collapse = " "
+  )
+  norm <- ki67_normalize(text)
+  if ((row$evidence_strength %||% "") == "source_only" || (row$evidence_type %||% "") == "source_only_not_evidence") {
+    return("source_only_search_space")
+  }
+  if (grepl("aeki|fy5015|fy5016|m0901k|m0901l|snomed|patobank|pato|pathology|mikro|konk", norm, perl = TRUE) ||
+      (row$evidence_type %||% "") %in% c("pathology_code", "external_code_reference", "code", "code_label")) {
+    return("danish_pathology_code_evidence")
+  }
+  if (grepl("text|tekst|report|narrative|conclusion|konklusion|microscopy|mikroskopi", norm, perl = TRUE) ||
+      (row$evidence_type %||% "") %in% c("free_text_pattern", "pathology_text_field")) {
+    return("pathology_text_extraction_readiness")
+  }
+  if (grepl("lyfo|rkkp|registry|register", norm, perl = TRUE) ||
+      (row$evidence_type %||% "") %in% c("column_name", "raw_column_profile", "registry_field", "dictionary_label", "value_label")) {
+    return("structured_registry_fields")
+  }
+  "other_candidate"
+}
+
+ki67_apply_ui_metadata <- function(inventory, max_source_only_ui = 6L) {
+  inventory <- ki67_align_search_inventory(inventory)
+  if (!nrow(inventory)) return(inventory)
+
+  inventory$evidence_channel <- vapply(seq_len(nrow(inventory)), function(i) {
+    ki67_evidence_channel(inventory[i, , drop = FALSE])
+  }, character(1))
+  inventory$ui_group <- ifelse(nzchar(inventory$resource_id), inventory$resource_id,
+    ifelse(nzchar(inventory$file_or_table), inventory$file_or_table, inventory$artifact_or_source)
+  )
+  inventory$ui_group <- ifelse(nzchar(inventory$ui_group), inventory$ui_group, "unknown")
+  inventory$ui_priority <- ifelse(inventory$evidence_strength == "strong_direct", 10L,
+    ifelse(inventory$evidence_strength == "moderate_direct", 20L,
+      ifelse(inventory$evidence_strength == "weak_candidate", 40L,
+        ifelse(inventory$evidence_strength == "source_only", 80L, 100L)
+      )
+    )
+  )
+
+  inventory$display_in_ui <- TRUE
+  inventory$suppression_reason <- ""
+  source_only <- inventory$evidence_channel == "source_only_search_space" |
+    inventory$evidence_strength == "source_only" |
+    inventory$evidence_type == "source_only_not_evidence"
+
+  false_positive <- source_only & vapply(seq_len(nrow(inventory)), function(i) {
+    ki67_false_positive_source_only(paste(inventory[i, c("resource_id", "file_or_table", "source_domain", "matched_term", "matched_field_or_column")], collapse = " "))
+  }, logical(1))
+  inventory$display_in_ui[false_positive] <- FALSE
+  inventory$suppression_reason[false_positive] <- "false_positive_microbiology_microscopy"
+
+  source_key <- paste(inventory$evidence_channel, inventory$ui_group, inventory$matched_term, inventory$matched_field_or_column, sep = "\r")
+  dup <- source_only & duplicated(source_key)
+  inventory$display_in_ui[dup] <- FALSE
+  inventory$suppression_reason[dup] <- "duplicate_source_only_group"
+
+  source_visible <- which(source_only & inventory$display_in_ui)
+  if (length(source_visible) > max_source_only_ui) {
+    ord <- source_visible[order(inventory$ui_priority[source_visible], inventory$ui_group[source_visible], inventory$matched_term[source_visible])]
+    suppress <- setdiff(source_visible, head(ord, max_source_only_ui))
+    inventory$display_in_ui[suppress] <- FALSE
+    inventory$suppression_reason[suppress] <- "source_only_ui_limit"
+  }
+
+  ki67_align_search_inventory(inventory)
 }
 
 ki67_clean_code_text <- function(x) {
@@ -359,6 +514,11 @@ ki67_scan_frame <- function(df, artifact_or_source, file_or_table = artifact_or_
       requires_codebook_lookup = etype %in% c("code", "code_label", "external_code_reference"),
       requires_manual_validation = TRUE,
       privacy_safe_to_display = TRUE,
+      display_in_ui = TRUE,
+      ui_group = "",
+      ui_priority = 100L,
+      suppression_reason = "",
+      evidence_channel = "",
       notes = if (is.data.frame(dual_code) && nrow(dual_code)) "p16/Ki-67 dual-stain cervix triage code; not numeric MCL Ki-67 proliferation index." else if (nzchar(numeric_code$code)) paste0("Danish Patobank Ki-67 code parsed as ", numeric_code$percent, "%. Validate local codebook before use.") else if (strength == "source_only") "Broad source availability is not direct Ki-67 evidence." else "Aggregate metadata hit; validate source-specific meaning before extraction.",
       stringsAsFactors = FALSE
     )
@@ -402,10 +562,8 @@ ki67_scan_frame <- function(df, artifact_or_source, file_or_table = artifact_or_
       source_frame <- head(source_frame, max_hits)
       for (i in seq_len(nrow(source_frame))) {
         source_text <- paste(as.character(source_frame[i, , drop = TRUE]), collapse = " ")
-        if (ki67_has_source_only_term(source_text) && !ki67_has_direct_term(source_text)) {
-          row_idx <- i
-          if (row_idx > nrow(df)) row_idx <- 1L
-          rows[[length(rows) + 1L]] <- add_hit(df[row_idx, , drop = FALSE], source_text, "source/resource name", source_only = TRUE)
+        if (ki67_has_source_only_term(source_text) && !ki67_has_direct_term(source_text) && !ki67_false_positive_source_only(source_text)) {
+          rows[[length(rows) + 1L]] <- add_hit(source_frame[i, , drop = FALSE], source_text, "source/resource name", source_only = TRUE)
         }
         if (length(rows) >= max_hits) break
       }
@@ -414,7 +572,7 @@ ki67_scan_frame <- function(df, artifact_or_source, file_or_table = artifact_or_
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(ki67_empty_search_inventory())
   out <- out[!duplicated(paste(out$artifact_or_source, out$file_or_table, out$resource_id, out$matched_term, out$matched_field_or_column, out$evidence_type, sep = "\r")), , drop = FALSE]
-  out[names(ki67_empty_search_inventory())]
+  ki67_apply_ui_metadata(out)
 }
 
 ki67_collect_reference_files <- function(project_root = ".", max_files = 80L, max_bytes = 2 * 1024 * 1024) {
@@ -464,7 +622,7 @@ ki67_build_search_inventory <- function(frames = list(), project_root = ".", inc
   }
   out <- bind_rows_base(frame_hits)
   if (!nrow(out)) return(ki67_empty_search_inventory())
-  out[names(ki67_empty_search_inventory())]
+  ki67_apply_ui_metadata(out)
 }
 
 ki67_registry_candidates <- function(inventory) {
@@ -533,7 +691,7 @@ ki67_pathology_code_candidates <- function(inventory) {
   )
   if (is.data.frame(inventory) && nrow(inventory)) {
     path <- grepl("pato|patobank|pathology|t_mikro|t_konk|snomed|mikro|konk", paste(inventory$resource_id, inventory$file_or_table, inventory$source_domain), ignore.case = TRUE)
-    code <- inventory$evidence_type %in% c("code", "code_label", "pathology_code", "external_code_reference", "value_label", "source_only_not_evidence")
+    code <- inventory$evidence_type %in% c("code", "code_label", "pathology_code", "external_code_reference", "value_label")
     x <- inventory[path & code, , drop = FALSE]
     if (nrow(x)) {
       numeric_codes <- lapply(paste(x$matched_term, x$file_or_table, x$matched_field_or_column), ki67_patobank_numeric_code_match)
@@ -622,14 +780,171 @@ ki67_text_pattern_candidates <- function(inventory) {
   out[!duplicated(paste(out$resource_id, out$table_or_file, out$text_field, out$pattern_name, sep = "\r")), names(ki67_empty_text_pattern_candidates()), drop = FALSE]
 }
 
-ki67_discovery_summary <- function(inventory, registry, pathology, text_patterns) {
+ki67_channel_summary <- function(inventory, registry, pathology, text_patterns) {
+  inventory <- ki67_align_search_inventory(inventory)
+  source_only <- inventory[inventory$evidence_channel == "source_only_search_space" | inventory$evidence_strength == "source_only", , drop = FALSE]
+  direct_registry <- registry[registry$evidence_strength %in% c("strong_direct", "moderate_direct"), , drop = FALSE]
+  numeric_pathology <- pathology[pathology$mcl_triangle_high_risk_ki67_numeric %in% TRUE, , drop = FALSE]
+  direct_pathology <- pathology[pathology$evidence_strength %in% c("strong_direct", "moderate_direct"), , drop = FALSE]
+  text_direct <- inventory[inventory$evidence_channel == "pathology_text_extraction_readiness" &
+    inventory$evidence_strength %in% c("strong_direct", "moderate_direct", "weak_candidate"), , drop = FALSE]
+
+  channel_row <- function(channel, label, confirmed, candidate, status, action, notes) {
+    data.frame(
+      evidence_channel = channel,
+      channel_label = label,
+      confirmed_hits = as.integer(confirmed),
+      candidate_hits = as.integer(candidate),
+      status = status,
+      next_validation_action = action,
+      notes = notes,
+      stringsAsFactors = FALSE
+    )
+  }
+
+  bind_rows_base(list(
+    channel_row(
+      "structured_registry_fields",
+      "Structured registry fields",
+      nrow(direct_registry),
+      nrow(registry),
+      if (nrow(direct_registry)) "candidate_present" else "not_found_in_current_artifacts",
+      "Validate RKKP/LYFO field definitions and value semantics before analytic use.",
+      "Registry hits require codebook validation; source-only LYFO availability is not Ki-67 evidence."
+    ),
+    channel_row(
+      "danish_pathology_code_evidence",
+      "Danish pathology code evidence / AEKIxxx",
+      nrow(numeric_pathology),
+      max(0L, nrow(direct_pathology)),
+      if (nrow(numeric_pathology)) "confirmed_present" else "requires_production_validation",
+      "Run aggregate-only code counts for AEKIxxx / ÆKIxxx in pathology code fields.",
+      "AEKIxxx parser is ready; current static artifacts do not expose validated aggregate code counts unless confirmed hits are present."
+    ),
+    channel_row(
+      "pathology_text_extraction_readiness",
+      "Pathology text extraction readiness",
+      nrow(text_direct),
+      nrow(text_patterns),
+      "requires_production_validation",
+      "Run aggregate-only text pattern counts; no raw snippets or identifiers.",
+      "Regex patterns are readiness specifications tested on synthetic examples, not validated real-report extraction."
+    ),
+    channel_row(
+      "source_only_search_space",
+      "Source-only search space",
+      0L,
+      nrow(source_only),
+      if (nrow(source_only)) "source_space_only" else "not_found_in_current_artifacts",
+      "Use only as source activation guidance; do not treat as direct Ki-67 evidence.",
+      "Broad pathology or LYFO source availability is search space, not Ki-67 evidence."
+    )
+  ))[names(ki67_empty_channel_summary())]
+}
+
+ki67_aeki_validation_plan <- function() {
+  patterns <- c("^ÆKI([0-9]{3})$", "^AEKI([0-9]{3})$", "^Aeki([0-9]{3})$", "^aeki([0-9]{3})$", "^Ã†KI([0-9]{3})$")
+  resources <- data.frame(
+    resource_id = c("pato", "t_mikro", "t_konk"),
+    table = c("SDS_pato / Patobank code table", "SDS_t_mikro_ny / pathology microscopy", "SDS_t_konk_ny / pathology conclusion"),
+    fields = c("c_snomedkode; code; raw_code; snomedkode", "c_snomedkode; code; raw_code; snomedkode", "c_snomedkode; code; raw_code; snomedkode"),
+    stringsAsFactors = FALSE
+  )
+  rows <- list()
+  for (i in seq_len(nrow(resources))) {
+    for (pattern in patterns) {
+      rows[[length(rows) + 1L]] <- data.frame(
+        validation_step = "aggregate_aeki_code_count",
+        resource_id = resources$resource_id[[i]],
+        candidate_table_or_source = resources$table[[i]],
+        candidate_code_field = resources$fields[[i]],
+        candidate_value_field = "parsed_percent_from_code",
+        pattern = pattern,
+        safe_aggregate_output = "resource_id; source_table; code; parsed_percent; aggregate_count; distinct_patient_count_if_allowed; year_min_if_allowed; year_max_if_allowed",
+        privacy_risk = "low_if_aggregate_only",
+        requires_db_access = TRUE,
+        expected_result = "Aggregate counts by Ki-67 code only; no patient-level rows, identifiers, dates, or report snippets.",
+        notes = "Valid parsed_percent range is 0-100. Values above 100 are rejected. Validate Danish Patobank codebook before analytic use.",
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  bind_rows_base(rows)[names(ki67_empty_aeki_validation_plan())]
+}
+
+ki67_aeki_code_counts <- function(pathology) {
+  if (is.data.frame(pathology) && nrow(pathology)) {
+    x <- pathology[pathology$mcl_triangle_high_risk_ki67_numeric %in% TRUE, , drop = FALSE]
+    if (nrow(x)) {
+      pct <- vapply(x$code, function(code) {
+        parsed <- ki67_parse_patobank_numeric_percent(code)
+        if (is.na(parsed)) "" else as.character(parsed)
+      }, character(1))
+      return(data.frame(
+        resource_id = x$resource_id,
+        source_table = x$table_or_file,
+        code = x$code,
+        parsed_percent = pct,
+        aggregate_count = "",
+        distinct_patient_count_if_allowed = "",
+        year_min_if_allowed = "",
+        year_max_if_allowed = "",
+        validation_status = "candidate_found_in_aggregate_metadata_requires_validation",
+        notes = "Code observed in aggregate metadata, but production aggregate counts are still required before study use.",
+        stringsAsFactors = FALSE
+      )[names(ki67_empty_aeki_code_counts())])
+    }
+  }
+  data.frame(
+    resource_id = "",
+    source_table = "",
+    code = "",
+    parsed_percent = "",
+    aggregate_count = "",
+    distinct_patient_count_if_allowed = "",
+    year_min_if_allowed = "",
+    year_max_if_allowed = "",
+    validation_status = "requires_production_validation",
+    notes = "No fake positive counts in fixture/static mode. Run aggregate-only AEKIxxx code counts in production pathology code fields.",
+    stringsAsFactors = FALSE
+  )[names(ki67_empty_aeki_code_counts())]
+}
+
+ki67_text_validation_plan <- function(text_patterns) {
+  patterns <- ki67_percent_patterns()
+  rows <- list()
+  resources <- c("t_mikro", "t_konk", "pato")
+  fields <- c("microscopy/conclusion/report text", "conclusion/report text", "report/narrative text")
+  for (i in seq_along(resources)) {
+    for (nm in names(patterns)) {
+      rows[[length(rows) + 1L]] <- data.frame(
+        validation_step = "aggregate_text_pattern_count",
+        resource_id = resources[[i]],
+        candidate_text_field = fields[[i]],
+        pattern_name = nm,
+        regex_pattern = unname(patterns[[nm]]),
+        safe_aggregate_output = "resource_id; source_table; pattern_name; value_class; aggregate_report_count; distinct_patient_count_if_allowed; no snippets",
+        privacy_risk = "low_if_aggregate_only_no_snippets",
+        requires_db_access = TRUE,
+        expected_result = "Counts reports containing Ki-67/MIB-1/proliferationsindeks terms and exact/range/inequality/qualitative/unknown classes.",
+        notes = "Synthetic/readiness pattern only until aggregate production validation and clinical/pathology review.",
+        stringsAsFactors = FALSE
+      )
+    }
+  }
+  bind_rows_base(rows)[names(ki67_empty_text_validation_plan())]
+}
+
+ki67_discovery_summary <- function(inventory, registry, pathology, text_patterns, channel_summary = ki67_empty_channel_summary()) {
   strong <- sum(inventory$evidence_strength == "strong_direct", na.rm = TRUE)
   moderate <- sum(inventory$evidence_strength == "moderate_direct", na.rm = TRUE)
   source_only <- sum(inventory$evidence_strength == "source_only", na.rm = TRUE)
   numeric <- sum(inventory$candidate_numeric_value_available, na.rm = TRUE)
+  ui_display <- sum(inventory$display_in_ui %in% TRUE, na.rm = TRUE)
+  ui_suppressed <- sum(!inventory$display_in_ui %in% TRUE, na.rm = TRUE)
   data.frame(
-    metric = c("strong_direct_hits", "moderate_direct_hits", "source_only_hits", "numeric_percent_like_hits", "registry_candidates", "pathology_code_candidates", "text_pattern_candidates"),
-    value = as.character(c(strong, moderate, source_only, numeric, nrow(registry), nrow(pathology), nrow(text_patterns))),
+    metric = c("strong_direct_hits", "moderate_direct_hits", "source_only_hits", "numeric_percent_like_hits", "registry_candidates", "pathology_code_candidates", "text_pattern_candidates", "ui_display_hits", "ui_suppressed_hits", "evidence_channels"),
+    value = as.character(c(strong, moderate, source_only, numeric, nrow(registry), nrow(pathology), nrow(text_patterns), ui_display, ui_suppressed, nrow(channel_summary))),
     notes = c(
       "Direct Ki-67/MIB/proliferation-index aggregate metadata hits.",
       "Moderate direct aggregate metadata hits.",
@@ -637,7 +952,10 @@ ki67_discovery_summary <- function(inventory, registry, pathology, text_patterns
       "Aggregate metadata lines with Ki-67-like numeric percent classes; no patient text emitted.",
       "Structured registry field candidates.",
       "Pathology/code candidates, including external anchors.",
-      "Synthetic/metadata text-pattern extraction candidates."
+      "Synthetic/metadata text-pattern extraction candidates.",
+      "Rows intended for concise UI display after duplicate/source-only suppression.",
+      "Rows suppressed from UI because they are duplicates, low-priority source-only rows, or false-positive source-space hits.",
+      "Evidence channels summarized for the MCL/TRIANGLE Ki-67 panel."
     ),
     stringsAsFactors = FALSE
   )
@@ -650,12 +968,20 @@ build_ki67_discovery_outputs <- function(project_root = ".", include_reference_f
   registry <- ki67_registry_candidates(inventory)
   pathology <- ki67_pathology_code_candidates(inventory)
   text_patterns <- ki67_text_pattern_candidates(inventory)
+  channel_summary <- ki67_channel_summary(inventory, registry, pathology, text_patterns)
+  aeki_validation_plan <- ki67_aeki_validation_plan()
+  aeki_code_counts <- ki67_aeki_code_counts(pathology)
+  text_validation_plan <- ki67_text_validation_plan(text_patterns)
   list(
     search_inventory = inventory,
     registry_field_candidates = registry,
     pathology_code_candidates = pathology,
     text_pattern_candidates = text_patterns,
-    summary = ki67_discovery_summary(inventory, registry, pathology, text_patterns)
+    channel_summary = channel_summary,
+    aeki_validation_plan = aeki_validation_plan,
+    aeki_code_counts = aeki_code_counts,
+    text_validation_plan = text_validation_plan,
+    summary = ki67_discovery_summary(inventory, registry, pathology, text_patterns, channel_summary)
   )
 }
 
@@ -695,6 +1021,7 @@ ki67_write_extraction_spec <- function(path) {
     "pathology_code_strategy: Use external SNOMED CT codes as anchors only; discover Danish pathology codes separately.",
     "danish_patobank_numeric_code_strategy: Parse \u00c6KIxxx / AEKIxxx as local Ki-67 percent value codes when xxx is between 000 and 100; keep p16/Ki-67 dual-stain codes separate from MCL Ki-67 proliferation-index evidence.",
     "pathology_text_strategy: Apply proximity-bounded patterns to redacted/extraction outputs; never emit raw report text in the static atlas.",
+    "production_validation_strategy: Run aggregate-only \u00c6KIxxx code counts and aggregate-only text-pattern counts; do not return patient-level rows, identifiers, dates, requisition IDs, or raw pathology snippets.",
     "numeric_value_strategy: Capture exact percentages between 0 and 100 as observation values with unit percent.",
     "range_value_strategy: Capture ranges as lower and upper percent bounds; do not coerce to a single value without a study rule.",
     "inequality_value_strategy: Capture comparator and threshold separately.",
@@ -710,6 +1037,7 @@ ki67_write_extraction_spec <- function(path) {
     "  - unrelated percentages near report text",
     "  - source-only pathology availability mistaken for Ki-67 evidence",
     "  - external SNOMED CT anchors mistaken for Danish local codes",
+    "  - p16/Ki-67 dual-stain codes mistaken for numeric MCL Ki-67 proliferation index",
     "false_negative_risks:",
     "  - Danish local abbreviations not in the initial synonym list",
     "  - Ki-67 values embedded in unprofiled pathology text",
@@ -727,6 +1055,10 @@ ki67_write_outputs <- function(outputs, output_dir, project_root = ".") {
     registry_field_candidates = write_csv(outputs$registry_field_candidates, file.path(output_dir, "ki67_registry_field_candidates.csv")),
     pathology_code_candidates = write_csv(outputs$pathology_code_candidates, file.path(output_dir, "ki67_pathology_code_candidates.csv")),
     text_pattern_candidates = write_csv(outputs$text_pattern_candidates, file.path(output_dir, "ki67_text_pattern_candidates.csv")),
+    channel_summary = write_csv(outputs$channel_summary, file.path(output_dir, "ki67_channel_summary.csv")),
+    aeki_validation_plan = write_csv(outputs$aeki_validation_plan, file.path(output_dir, "ki67_aeki_validation_plan.csv")),
+    aeki_code_counts = write_csv(outputs$aeki_code_counts, file.path(output_dir, "ki67_aeki_code_counts.csv")),
+    text_validation_plan = write_csv(outputs$text_validation_plan, file.path(output_dir, "ki67_text_validation_plan.csv")),
     extraction_spec = ki67_write_extraction_spec(spec_path)
   )
 }

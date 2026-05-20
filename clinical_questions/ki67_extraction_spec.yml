@@ -32,6 +32,7 @@ structured_field_strategy: Search field names, labels, and value metadata for Ki
 pathology_code_strategy: Use external SNOMED CT codes as anchors only; discover Danish pathology codes separately.
 danish_patobank_numeric_code_strategy: Parse ÆKIxxx / AEKIxxx as local Ki-67 percent value codes when xxx is between 000 and 100; keep p16/Ki-67 dual-stain codes separate from MCL Ki-67 proliferation-index evidence.
 pathology_text_strategy: Apply proximity-bounded patterns to redacted/extraction outputs; never emit raw report text in the static atlas.
+production_validation_strategy: Run aggregate-only ÆKIxxx code counts and aggregate-only text-pattern counts; do not return patient-level rows, identifiers, dates, requisition IDs, or raw pathology snippets.
 numeric_value_strategy: Capture exact percentages between 0 and 100 as observation values with unit percent.
 range_value_strategy: Capture ranges as lower and upper percent bounds; do not coerce to a single value without a study rule.
 inequality_value_strategy: Capture comparator and threshold separately.
@@ -47,6 +48,7 @@ false_positive_risks:
   - unrelated percentages near report text
   - source-only pathology availability mistaken for Ki-67 evidence
   - external SNOMED CT anchors mistaken for Danish local codes
+  - p16/Ki-67 dual-stain codes mistaken for numeric MCL Ki-67 proliferation index
 false_negative_risks:
   - Danish local abbreviations not in the initial synonym list
   - Ki-67 values embedded in unprofiled pathology text
