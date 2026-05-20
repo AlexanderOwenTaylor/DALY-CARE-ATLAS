@@ -87,6 +87,7 @@ mcl_triangle_empty_payload <- function() {
     outcome_inventory = mcl_triangle_empty_outcome_inventory(),
     biology_gap_analysis = mcl_triangle_empty_biology_gap_analysis(),
     study_readiness_matrix = mcl_triangle_empty_study_readiness_matrix(),
+    ki67_discovery = ki67_empty_payload(),
     recommended_next_actions = mcl_triangle_empty_text_table(),
     caveats = mcl_triangle_empty_text_table(),
     verdict_metadata = mcl_triangle_empty_text_table()
@@ -407,7 +408,66 @@ mcl_triangle_requirement_status <- function(rows, proxy_rows = NULL, preferred_s
   )
 }
 
-mcl_triangle_build_readiness_matrix <- function(inventory) {
+mcl_triangle_ki67_direct_rows <- function(ki67_discovery) {
+  inventory <- ki67_discovery$search_inventory %||% ki67_empty_search_inventory()
+  if (!is.data.frame(inventory) || !nrow(inventory)) return(ki67_empty_search_inventory())
+  inventory[inventory$evidence_strength %in% c("strong_direct", "moderate_direct") &
+    inventory$evidence_type != "source_only_not_evidence", , drop = FALSE]
+}
+
+mcl_triangle_ki67_source_only_rows <- function(ki67_discovery) {
+  inventory <- ki67_discovery$search_inventory %||% ki67_empty_search_inventory()
+  if (!is.data.frame(inventory) || !nrow(inventory)) return(ki67_empty_search_inventory())
+  inventory[inventory$evidence_strength == "source_only" | inventory$evidence_type == "source_only_not_evidence", , drop = FALSE]
+}
+
+mcl_triangle_ki67_status <- function(ki67_discovery = NULL) {
+  if (is.null(ki67_discovery)) ki67_discovery <- ki67_empty_payload()
+  pathology <- ki67_discovery$pathology_code_candidates %||% ki67_empty_pathology_code_candidates()
+  text_patterns <- ki67_discovery$text_pattern_candidates %||% ki67_empty_text_pattern_candidates()
+  direct <- mcl_triangle_ki67_direct_rows(ki67_discovery)
+  source_only <- mcl_triangle_ki67_source_only_rows(ki67_discovery)
+  direct_current <- nrow(direct) && !all(grepl("legacy/reference", direct$artifact_or_source, ignore.case = TRUE))
+  numeric_direct <- nrow(direct) && any(direct$value_class %in% c("exact_numeric_percent", "range_percent", "inequality_percent") | direct$candidate_numeric_value_available, na.rm = TRUE)
+  coded_direct <- nrow(pathology) && any(pathology$evidence_strength == "strong_direct" & pathology$is_observation_code %in% c("true", "TRUE", TRUE), na.rm = TRUE)
+  text_direct <- nrow(direct) && any(grepl("text|mikro|konk|pathology|pato|conclusion|microscopy", paste(direct$file_or_table, direct$matched_field_or_column, direct$resource_id), ignore.case = TRUE), na.rm = TRUE)
+  text_extractable <- nrow(text_patterns) && any(text_patterns$numeric_extraction_possible & text_patterns$false_positive_risk != "high", na.rm = TRUE) && text_direct
+  status <- if (numeric_direct) {
+    "strong_structured_numeric"
+  } else if (coded_direct) {
+    "strong_structured_coded"
+  } else if (text_extractable) {
+    "moderate_text_extractable"
+  } else if (nrow(direct)) {
+    "requires_manual_validation"
+  } else if (nrow(source_only)) {
+    "weak_candidate_only"
+  } else {
+    "not_found"
+  }
+  best <- if (nrow(direct)) {
+    paste(unique(head(direct$file_or_table[nzchar(direct$file_or_table)], 4)), collapse = "; ")
+  } else if (nrow(source_only)) {
+    paste(unique(head(source_only$file_or_table[nzchar(source_only$file_or_table)], 4)), collapse = "; ")
+  } else {
+    ""
+  }
+  list(
+    status = status,
+    direct_rows = direct,
+    source_only_rows = source_only,
+    direct_current = isTRUE(direct_current),
+    numeric_direct = isTRUE(numeric_direct),
+    coded_direct = isTRUE(coded_direct),
+    text_extractable = isTRUE(text_extractable),
+    best_source = best,
+    evidence_count = nrow(direct),
+    source_only_count = nrow(source_only)
+  )
+}
+
+mcl_triangle_build_readiness_matrix <- function(inventory, ki67_discovery = NULL) {
+  ki67 <- mcl_triangle_ki67_status(ki67_discovery)
   reqs <- list(
     list("MCL cohort", mcl_triangle_filter_group(inventory, "Cohort", "mantle|MCL|LYFO"), NULL, "RKKP_LYFO"),
     list("younger/transplant-eligible proxy", mcl_triangle_filter_group(inventory, "Eligibility", "age|performance|stage|transplant"), NULL, "RKKP_LYFO; diagnosis and treatment date sources"),
@@ -419,12 +479,39 @@ mcl_triangle_build_readiness_matrix <- function(inventory) {
     list("relapse/progression/FFS proxy", mcl_triangle_filter_group(inventory, "Outcomes", "relapse|progression|failure|next treatment|response|follow-up"), NULL, "LYFO response/status and treatment-line sources"),
     list("blastoid morphology", mcl_triangle_filter_group(inventory, "High-risk biology", "blastoid"), mcl_triangle_filter_group(inventory, "High-risk biology", "morphology|pathology"), "LYFO WHO/histology, PATOBANK, t_mikro, t_konk"),
     list("TP53 / p53 / del17p", mcl_triangle_filter_group(inventory, "High-risk biology", "TP53|p53|del17p"), mcl_triangle_filter_group(inventory, "High-risk biology", "FISH|molecular|pathology"), "pathology text, molecular/FISH resources, RKKP fields"),
-    list("Ki-67", mcl_triangle_filter_group(inventory, "High-risk biology", "Ki-67|proliferation"), mcl_triangle_filter_group(inventory, "High-risk biology", "pathology|microscopy|conclusion"), "pathology text, microscopy/conclusion text, LYFO fields"),
+    list("Ki-67", mcl_triangle_filter_group(inventory, "High-risk biology", "Ki-67|proliferation"), NULL, "structured LYFO fields; Danish pathology/SNOMED codes; t_mikro/t_konk text extraction"),
     list("MIPI", mcl_triangle_filter_group(inventory, "High-risk biology", "^MIPI$|MIPI score"), mcl_triangle_filter_group(inventory, "High-risk biology|Eligibility", "age|performance|LDH|leukocyte"), "LYFO/RKKP fields or reconstruction inputs"),
     list("MIPI-c", mcl_triangle_filter_group(inventory, "High-risk biology", "MIPI-c"), mcl_triangle_filter_group(inventory, "High-risk biology|Eligibility", "MIPI|Ki-67|age|performance|LDH|leukocyte"), "MIPI components plus Ki-67"),
     list("toxicity proxies", mcl_triangle_filter_group(inventory, "Safety", "admission|ICU|infection|neutropenic|antibiotic|hospitalisation|transfusion"), NULL, "ADT/admission, microbiology, medication, transfusion sources")
   )
   rows <- lapply(reqs, function(req) {
+    if (identical(req[[1]], "Ki-67")) {
+      direct_available <- ki67$status %in% c("strong_structured_numeric", "strong_structured_coded")
+      proxy_available <- identical(ki67$status, "moderate_text_extractable")
+      key_limitation <- switch(
+        ki67$status,
+        strong_structured_numeric = "Direct structured Ki-67 percent evidence candidate found; validate source definition and units.",
+        strong_structured_coded = "Direct Ki-67 code evidence candidate found; validate Danish/local codebook mapping.",
+        moderate_text_extractable = "Ki-67 text extraction appears possible but requires validation and no raw report text is emitted.",
+        requires_manual_validation = "Ki-67 candidate evidence requires manual validation before study use.",
+        weak_candidate_only = "Only source/search-space evidence is present; source availability is not direct Ki-67 evidence.",
+        not_tested_fixture = "Ki-67 discovery was not tested in this fixture run.",
+        "No Ki-67-specific aggregate atlas evidence found."
+      )
+      return(data.frame(
+        study_requirement = "Ki-67",
+        readiness_status = ki67$status,
+        direct_variable_available = direct_available,
+        proxy_available = proxy_available,
+        current_profiled_evidence = isTRUE(ki67$direct_current) && (direct_available || proxy_available),
+        legacy_reference_only_evidence = FALSE,
+        preferred_source = "LYFO structured fields; Danish pathology/SNOMED; t_mikro/t_konk text",
+        candidate_fields_or_codes = ki67$best_source,
+        key_limitation = key_limitation,
+        recommended_next_action = if (direct_available) "Validate source-specific Ki-67 coding/value semantics." else "Run source-specific Ki-67 codebook lookup and validated text-extraction pilot.",
+        stringsAsFactors = FALSE
+      ))
+    }
     status <- mcl_triangle_requirement_status(
       rows = req[[2]],
       proxy_rows = req[[3]] %||% NULL,
@@ -454,9 +541,39 @@ mcl_triangle_biology_recovery_source <- function(marker) {
   "source-specific mapping"
 }
 
-mcl_triangle_build_biology_gap_analysis <- function(inventory) {
+mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = NULL) {
   markers <- c("blastoid morphology", "pleomorphic morphology", "TP53", "p53", "del17p", "Ki-67", "MIPI", "MIPI-c", "LDH", "leukocytes", "performance status", "age")
+  ki67 <- mcl_triangle_ki67_status(ki67_discovery)
   rows <- lapply(markers, function(marker) {
+    if (identical(marker, "Ki-67")) {
+      ready_status <- switch(
+        ki67$status,
+        strong_structured_numeric = "ready",
+        strong_structured_coded = "ready",
+        moderate_text_extractable = "feasible_with_mapping",
+        requires_manual_validation = "requires_manual_validation",
+        weak_candidate_only = "weak_candidate_only",
+        not_tested_fixture = "not_tested_fixture",
+        not_found = "not_found",
+        ki67$status
+      )
+      return(data.frame(
+        marker = marker,
+        direct_variable_found = ki67$status %in% c("strong_structured_numeric", "strong_structured_coded"),
+        indirect_proxy_found = identical(ki67$status, "moderate_text_extractable"),
+        current_profiled_source_available = isTRUE(ki67$direct_current),
+        legacy_reference_only = FALSE,
+        preferred_recovery_source = mcl_triangle_biology_recovery_source(marker),
+        action_required = if (ki67$status %in% c("strong_structured_numeric", "strong_structured_coded")) "Validate source-specific definition and coding before cohort extraction." else "Needs source activation, codebook lookup, or validated Ki-67 text extraction.",
+        feasibility_status = ready_status,
+        notes = paste(
+          "Ki-67 discovery status:", ki67$status,
+          "- source-only pathology/LYFO availability is not treated as Ki-67 evidence.",
+          if (nzchar(ki67$best_source)) paste("Best aggregate source:", ki67$best_source) else ""
+        ),
+        stringsAsFactors = FALSE
+      ))
+    }
     direct <- mcl_triangle_filter_group(inventory, "High-risk biology|Eligibility", marker)
     if (!nrow(direct) && identical(marker, "p53")) direct <- mcl_triangle_filter_group(inventory, "High-risk biology", "TP53|p53")
     if (!nrow(direct) && identical(marker, "del17p")) direct <- mcl_triangle_filter_group(inventory, "High-risk biology", "del17p|17p")
@@ -589,6 +706,9 @@ mcl_triangle_summary <- function(inventory, treatment, outcome, biology, matrix,
       stringsAsFactors = FALSE
     )
   }
+  ki67_row <- biology[biology$marker == "Ki-67", , drop = FALSE]
+  ki67_status <- if (nrow(ki67_row)) ki67_row$feasibility_status[[1]] else "not_found"
+  ki67_evidence_count <- if (nrow(ki67_row) && isTRUE(as.logical(ki67_row$direct_variable_found[[1]]))) 1L else 0L
   rows <- list(
     metric_row("overall_feasibility_rating", "Overall feasibility rating", verdict[["verdict"]], verdict[["verdict"]], verdict[["rationale"]]),
     metric_row("mcl_cohort_evidence_found", "MCL cohort evidence found", if (nrow(mcl_triangle_filter_group(inventory, "Cohort", "mantle|MCL"))) "found" else "not_found", mcl_triangle_filter_group(inventory, "Cohort", "mantle|MCL")),
@@ -602,7 +722,7 @@ mcl_triangle_summary <- function(inventory, treatment, outcome, biology, matrix,
     metric_row("ldh_evidence_found", "LDH evidence found", if (any(grepl("LDH", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("LDH", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
     metric_row("leukocyte_evidence_found", "Leukocyte evidence found", if (any(grepl("leukocyte", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("leukocyte", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
     metric_row("performance_status_evidence_found", "Performance-status evidence found", if (any(grepl("performance|ECOG", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("performance|ECOG", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
-    metric_row("ki67_evidence_found", "Ki-67 evidence found", if (any(grepl("Ki-67", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("Ki-67", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
+    metric_row("ki67_evidence_found", "Ki-67 evidence found", ki67_status, ki67_evidence_count, "Ki-67 status is driven by dedicated discovery outputs; source-only pathology/LYFO availability is not direct evidence."),
     metric_row("tp53_evidence_found", "TP53/p53/del17p evidence found", if (any(grepl("TP53|p53|del17p", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("TP53|p53|del17p", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
     metric_row("blastoid_morphology_evidence_found", "Blastoid morphology evidence found", if (any(grepl("blastoid", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("blastoid", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
     metric_row("mipi_direct_evidence_found", "MIPI/MIPI-c direct evidence found", if (any(grepl("MIPI", inventory$concept_name, ignore.case = TRUE))) "found" else "not_found", inventory[grepl("MIPI", inventory$concept_name, ignore.case = TRUE), , drop = FALSE]),
@@ -625,6 +745,7 @@ mcl_triangle_recommended_actions <- function(matrix, biology) {
     "Activate pathology text sources t_mikro and t_konk for morphology/Ki-67/TP53 term mapping.",
     "Map blastoid and pleomorphic morphology terms in LYFO/PATOBANK/pathology aggregate evidence.",
     "Search TP53, p53, del17p, FISH, and molecular resources after source activation.",
+    "Run Ki-67 source-specific codebook lookup and validated text-extraction pilot; do not treat pathology-source availability as Ki-67 evidence.",
     "Verify MIPI/MIPI-c reconstructability from age, ECOG/performance status, LDH, leukocytes, and Ki-67.",
     "Define ASCT/HDT exposure windows and ibrutinib exposure timing before any target-trial emulation.",
     "Define relapse/progression/FFS proxy using response, next-treatment, and follow-up disease-status sources."
@@ -657,7 +778,8 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
                                                    panel_kpis = NULL,
                                                    sources = NULL,
                                                    canonical_reconciliation = NULL,
-                                                   legacy_reference_vs_current = NULL) {
+                                                   legacy_reference_vs_current = NULL,
+                                                   ki67_discovery = NULL) {
   concepts <- mcl_triangle_read_concepts(project_root)
   prepared <- mcl_triangle_prepare_sources(
     semantic_dictionary = semantic_dictionary,
@@ -673,10 +795,26 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
   })
   variable_inventory <- bind_rows_base(inventory_parts)
   if (!nrow(variable_inventory)) variable_inventory <- mcl_triangle_empty_variable_inventory()
+  if (is.null(ki67_discovery)) {
+    ki67_discovery <- build_ki67_discovery_outputs(
+      project_root = project_root,
+      include_reference_files = FALSE,
+      semantic_dictionary = semantic_dictionary,
+      semantic_value_map = semantic_value_map,
+      semantic_code_map = semantic_code_map,
+      semantic_panel_links = semantic_panel_links,
+      panel_raw_fields = panel_raw_fields,
+      panel_distributions = panel_distributions,
+      panel_kpis = panel_kpis,
+      sources = sources,
+      canonical_reconciliation = canonical_reconciliation,
+      legacy_reference_vs_current = legacy_reference_vs_current
+    )
+  }
   treatment_inventory <- mcl_triangle_treatment_inventory(variable_inventory)
   outcome_inventory <- mcl_triangle_outcome_inventory(variable_inventory)
-  biology_gap_analysis <- mcl_triangle_build_biology_gap_analysis(variable_inventory)
-  study_readiness_matrix <- mcl_triangle_build_readiness_matrix(variable_inventory)
+  biology_gap_analysis <- mcl_triangle_build_biology_gap_analysis(variable_inventory, ki67_discovery = ki67_discovery)
+  study_readiness_matrix <- mcl_triangle_build_readiness_matrix(variable_inventory, ki67_discovery = ki67_discovery)
   verdict <- mcl_triangle_verdict(study_readiness_matrix, biology_gap_analysis)
   feasibility_summary <- mcl_triangle_summary(
     inventory = variable_inventory,
@@ -693,6 +831,7 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
     outcome_inventory = outcome_inventory,
     biology_gap_analysis = biology_gap_analysis,
     study_readiness_matrix = study_readiness_matrix,
+    ki67_discovery = ki67_discovery,
     recommended_next_actions = mcl_triangle_recommended_actions(study_readiness_matrix, biology_gap_analysis),
     caveats = mcl_triangle_caveats(),
     verdict_metadata = data.frame(kind = c("verdict", "rationale"), text = unname(verdict), stringsAsFactors = FALSE)
