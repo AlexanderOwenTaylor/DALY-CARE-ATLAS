@@ -105,6 +105,12 @@ if (!length(source_files)) stop("Could not find outputs/atlas_sources.csv inside
 output_dir <- dirname(source_files[[1]])
 run_dir <- dirname(output_dir)
 panel_dir <- file.path(output_dir, "panels")
+source_map_files <- list.files(temp_root, pattern = "^source-map[.]dalycare[.]tsv$", recursive = TRUE, full.names = TRUE)
+source_map <- if (length(source_map_files)) {
+  read_source_map(source_map_files[[1]], project_root = project_root)
+} else {
+  data.frame(stringsAsFactors = FALSE)
+}
 
 mock_dir <- file.path(dirname(output_zip), sub("[.]zip$", "", basename(output_zip), ignore.case = TRUE))
 copy_dir_contents(run_dir, mock_dir)
@@ -195,6 +201,116 @@ write_csv(product_outputs$panel_distributions, file.path(mock_output_dir, "atlas
 write_csv(product_outputs$panel_raw_fields, file.path(mock_output_dir, "atlas_panel_raw_fields.csv"))
 write_csv(product_outputs$panel_parity, file.path(mock_output_dir, "atlas_panel_parity.csv"))
 
+legacy_resource_audit <- build_legacy_cartography_source_resolution_audit(project_root)
+production_source_map <- read_production_source_recovery_map(project_root)
+source_resolution_plan_dry_run <- build_source_resolution_plan_dry_run(
+  project_root = project_root,
+  production_map = production_source_map
+)
+source_resolution_attempts <- build_source_resolution_attempts(
+  project_root = project_root,
+  production_map = production_source_map,
+  sources = sources,
+  source_resolution = source_resolution
+)
+source_resolution_delta <- build_source_resolution_delta_legacy_vs_current(
+  project_root = project_root,
+  source_map = source_map,
+  sources = sources,
+  source_resolution = source_resolution,
+  legacy_audit = legacy_resource_audit,
+  source_attempts = source_resolution_attempts
+)
+resource_reconciliation <- build_atlas_resource_reconciliation(
+  project_root = project_root,
+  source_map = source_map,
+  sources = sources,
+  source_resolution = source_resolution,
+  legacy_audit = legacy_resource_audit,
+  source_attempts = source_resolution_attempts
+)
+source_truth_evidence <- build_source_truth_evidence_matrix(
+  project_root = project_root,
+  legacy_audit = legacy_resource_audit,
+  delta = source_resolution_delta,
+  reconciliation = resource_reconciliation
+)
+source_truth_metrics <- source_truth_summary(source_truth_evidence)
+canonical_resources <- read_canonical_dalycare_resources(project_root)
+source_map_crosswalk <- build_source_map_row_to_canonical_resource_crosswalk(
+  project_root = project_root,
+  source_map = source_map,
+  sources = sources,
+  source_resolution = source_resolution,
+  canonical = canonical_resources
+)
+current_run_source_map_audit <- build_current_run_source_map_audit(
+  project_root = project_root,
+  source_map = source_map,
+  sources = sources,
+  source_resolution = source_resolution,
+  canonical = canonical_resources
+)
+canonical_reconciliation <- build_canonical_resource_reconciliation_64(
+  project_root = project_root,
+  source_map = source_map,
+  sources = sources,
+  source_resolution = source_resolution,
+  canonical = canonical_resources,
+  resource_reconciliation = resource_reconciliation
+)
+billeddiagnostik_del2_audit <- build_billeddiagnostik_del2_regression_audit(
+  project_root = project_root,
+  sources = sources,
+  source_resolution = source_resolution,
+  canonical_reconciliation = canonical_reconciliation,
+  crosswalk = source_map_crosswalk
+)
+remaining_activation_plan <- build_remaining_canonical_resources_activation_plan(
+  project_root = project_root,
+  canonical_reconciliation = canonical_reconciliation,
+  production_map = production_source_map,
+  canonical = canonical_resources
+)
+legacy_reference_vs_current <- build_legacy_reference_vs_current_profiled_evidence(
+  project_root = project_root,
+  semantic_dictionary = semantic_outputs$dictionary,
+  semantic_code_map = semantic_outputs$code_map,
+  semantic_value_map = semantic_outputs$value_map,
+  canonical_reconciliation = canonical_reconciliation,
+  sources = sources,
+  canonical = canonical_resources
+)
+write_csv(legacy_resource_audit, file.path(mock_output_dir, "legacy_cartography_source_resolution_audit.csv"))
+write_csv(billeddiagnostik_del2_audit, file.path(mock_output_dir, "billeddiagnostik_del2_regression_audit.csv"))
+write_csv(source_resolution_plan_dry_run, file.path(mock_output_dir, "source_resolution_plan_dry_run.csv"))
+write_csv(source_resolution_attempts, file.path(mock_output_dir, "source_resolution_attempts.csv"))
+write_csv(source_resolution_delta, file.path(mock_output_dir, "source_resolution_delta_legacy_vs_current.csv"))
+write_csv(resource_reconciliation, file.path(mock_output_dir, "atlas_resource_reconciliation.csv"))
+write_csv(source_truth_evidence, file.path(mock_output_dir, "source_truth_evidence_matrix.csv"))
+write_csv(source_truth_metrics, file.path(mock_output_dir, "source_truth_summary.csv"))
+write_csv(current_run_source_map_audit, file.path(mock_output_dir, "current_run_source_map_audit.csv"))
+write_csv(canonical_reconciliation, file.path(mock_output_dir, "canonical_resource_reconciliation_64.csv"))
+write_csv(source_map_crosswalk, file.path(mock_output_dir, "source_map_row_to_canonical_resource_crosswalk.csv"))
+write_csv(legacy_reference_vs_current, file.path(mock_output_dir, "legacy_reference_vs_current_profiled_evidence.csv"))
+write_csv(remaining_activation_plan, file.path(mock_output_dir, "remaining_canonical_resources_activation_plan.csv"))
+
+if (nrow(run_summary) && all(c("metric", "value") %in% names(run_summary))) {
+  source_recovery_metrics <- source_recovery_run_summary_metrics(
+    plan = production_source_map,
+    dry_run = source_resolution_plan_dry_run,
+    attempts = source_resolution_attempts
+  )
+  canonical_metrics <- canonical_resource_summary_metrics(
+    canonical_reconciliation = canonical_reconciliation,
+    crosswalk = source_map_crosswalk,
+    legacy_reference = legacy_reference_vs_current
+  )
+  run_summary <- run_summary[!run_summary$metric %in% c(source_recovery_metrics$metric, canonical_metrics$metric), , drop = FALSE]
+  run_summary <- bind_rows_base(list(run_summary, source_recovery_metrics, canonical_metrics))
+  write_csv(run_summary, file.path(mock_output_dir, "atlas_run_summary.csv"))
+}
+
 action_items <- atlas_run_action_items(
   access_report = access_report,
   source_resolution = source_resolution,
@@ -235,7 +351,20 @@ payload <- atlas_payload(
   panel_kpis_product = product_outputs$panel_kpis,
   panel_distributions = product_outputs$panel_distributions,
   panel_raw_fields = product_outputs$panel_raw_fields,
-  panel_parity = product_outputs$panel_parity
+  panel_parity = product_outputs$panel_parity,
+  legacy_resource_audit = legacy_resource_audit,
+  billeddiagnostik_del2_regression_audit = billeddiagnostik_del2_audit,
+  source_resolution_plan_dry_run = source_resolution_plan_dry_run,
+  source_resolution_attempts = source_resolution_attempts,
+  source_resolution_delta = source_resolution_delta,
+  resource_reconciliation = resource_reconciliation,
+  source_truth_evidence = source_truth_evidence,
+  source_truth_summary = source_truth_metrics,
+  current_run_source_map_audit = current_run_source_map_audit,
+  canonical_resource_reconciliation = canonical_reconciliation,
+  source_map_crosswalk = source_map_crosswalk,
+  legacy_reference_vs_current = legacy_reference_vs_current,
+  remaining_activation_plan = remaining_activation_plan
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 

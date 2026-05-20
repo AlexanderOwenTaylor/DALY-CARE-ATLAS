@@ -35,6 +35,19 @@ expect_file(file.path(result$run_dir, "outputs", "atlas_panel_raw_fields.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_panel_parity.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_run_summary.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_run_action_items.csv"))
+expect_file(file.path(result$run_dir, "outputs", "legacy_cartography_source_resolution_audit.csv"))
+expect_file(file.path(result$run_dir, "outputs", "billeddiagnostik_del2_regression_audit.csv"))
+expect_file(file.path(result$run_dir, "outputs", "source_resolution_plan_dry_run.csv"))
+expect_file(file.path(result$run_dir, "outputs", "source_resolution_attempts.csv"))
+expect_file(file.path(result$run_dir, "outputs", "source_resolution_delta_legacy_vs_current.csv"))
+expect_file(file.path(result$run_dir, "outputs", "atlas_resource_reconciliation.csv"))
+expect_file(file.path(result$run_dir, "outputs", "source_truth_evidence_matrix.csv"))
+expect_file(file.path(result$run_dir, "outputs", "source_truth_summary.csv"))
+expect_file(file.path(result$run_dir, "outputs", "current_run_source_map_audit.csv"))
+expect_file(file.path(result$run_dir, "outputs", "canonical_resource_reconciliation_64.csv"))
+expect_file(file.path(result$run_dir, "outputs", "source_map_row_to_canonical_resource_crosswalk.csv"))
+expect_file(file.path(result$run_dir, "outputs", "legacy_reference_vs_current_profiled_evidence.csv"))
+expect_file(file.path(result$run_dir, "outputs", "remaining_canonical_resources_activation_plan.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "lab_npu_code_coverage.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "npu_dictionary_summary.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "npu_dictionary_vectors.csv"))
@@ -89,6 +102,8 @@ expect_true(grepl("tab-ehr", html, fixed = TRUE), "HTML should include the EHR M
 expect_true(grepl("tab-infrastructure", html, fixed = TRUE), "HTML should include the Infrastructure tab.")
 expect_true(grepl("data-sub=\"overview-temporal\"", html, fixed = TRUE), "HTML should include temporal coverage sub-tabs.")
 expect_true(grepl("data-sub=\"overview-spatial\"", html, fixed = TRUE), "HTML should include regional coverage sub-tabs.")
+expect_true(grepl("data-sub=\"overview-summary\">Start here</button>", html, fixed = TRUE), "Overview landing sub-tab should be user-facing.")
+expect_true(grepl("mobile-tab-select", html, fixed = TRUE), "HTML should include a compact mobile section selector.")
 expect_true(grepl("data-sub=\"situation-headlines\"", html, fixed = TRUE), "HTML should include Situation Report sub-tabs.")
 expect_true(grepl("data-sub=\"dictionary-lineage\"", html, fixed = TRUE), "HTML should include semantic dictionary sub-tabs.")
 expect_true(grepl("data-sub=\"reg-damyda\"", html, fixed = TRUE), "HTML should include DaMyDa registry sub-tabs.")
@@ -105,6 +120,9 @@ expect_true(grepl("catalog-search", html, fixed = TRUE), "HTML should include so
 expect_true(grepl("catalog-domain-filter", html, fixed = TRUE), "HTML should include domain filtering controls.")
 expect_true(grepl("catalog-status-filter", html, fixed = TRUE), "HTML should include status filtering controls.")
 expect_true(grepl("catalog-role-filter", html, fixed = TRUE), "HTML should include role filtering controls.")
+expect_true(grepl("resource-reconciliation-summary", html, fixed = TRUE), "Resource Catalog should include the expected-resource reconciliation summary.")
+expect_true(grepl("resource-reconciliation-warning", html, fixed = TRUE), "Resource Catalog should include legacy-current discrepancy warnings.")
+expect_true(grepl("Current source-map rows", html, fixed = TRUE), "Resource Catalog should keep current source-map details available underneath expected-resource rows.")
 expect_true(grepl("column-search", html, fixed = TRUE), "HTML should include column search.")
 expect_true(grepl("column-dataset-filter", html, fixed = TRUE), "HTML should include column dataset filtering.")
 expect_true(grepl("column-domain-filter", html, fixed = TRUE), "HTML should include column domain filtering.")
@@ -120,6 +138,37 @@ expect_true(grepl("What can I find in DALY-CARE?", html, fixed = TRUE), "Overvie
 for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview entry cards should include:", needle))
 }
+for (needle in c("Best for:", "Evidence/source type:", "Open panel", "run-status-banner", "Environment:", "Mock / fixture", "Pipeline status", "Profiled rows", "Profiled columns", "Run ID / build identifier")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Overview UX first pass should include:", needle))
+}
+for (needle in c("global-atlas-search", "Search concept, raw column, code, value, source, panel, Danish/English term", "function buildGlobalSearchResults", "Clinical concepts", "Raw columns / lineage", "Codes", "Values", "Panels", "Sources", "QA / caveats")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Global atlas search should include:", needle))
+}
+for (needle in c("function normalizeSearchText", "atlasSearchSynonyms", "function expandSearchTerms", "function scoreSearchResult", "Show all results", "Collapse results", "search-highlight")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Global atlas search pass 3 should include:", needle))
+}
+for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank")) {
+  expect_true(grepl(needle, tolower(html), fixed = TRUE), paste("Search synonym support should include:", needle))
+}
+for (needle in c("data-search-open", "data-copy-value", "data-copy-share-link", "data-export-view", "function downloadCsv", "function rowsToCsv", "clinical-concepts", "semantic-lineage", "semantic-values", "semantic-codes", "semantic-panels")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Analyst utility actions should include:", needle))
+}
+for (needle in c("Copied", "No rows to export", "Exported ${rows.length} rows", "fallbackCopyText", "flashButton")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Copy/export feedback should include:", needle))
+}
+for (needle in c("clinicalFilterActive", "semanticFilterActive", "semanticValueFilterActive", "semanticCodeFilterActive", "semanticPanelFilterActive")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Zero-row export state should track:", needle))
+}
+for (needle in c("dedupeSearchResults", "isGenericCodeValue", "Show all results (${hiddenCount} more)", "Opened result. Filtered by")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("UX fourth pass search stabilization should include:", needle))
+}
+for (needle in c("function formatTimestamp", "Fixture context:", "Offline DB/access warnings are expected", "humanMetricLabel", "Semantic rows", "Value mappings", "Code mappings")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Run-status and metric labels should include:", needle))
+}
+for (needle in c("Copy semantic ID", "Copy concept name", "Copy source", "Copy raw column", "Copy table.column", "Best source / raw field", "Evidence counts")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Data Dictionary detail should include:", needle))
+}
+expect_true(grepl("function codeSearchValue", html, fixed = TRUE) && grepl("[\"raw_code\", \"code\", \"code_name\", \"clinical_variable\"]", html, fixed = TRUE), "Code-map global search should use robust code fallbacks.")
 expect_true(grepl("Atlas restoration status", html, fixed = TRUE), "Overview should include a restoration status dashboard.")
 expect_true(grepl("source-context QA passed", html, fixed = TRUE), "Treatment status should describe source-context QA.")
 expect_true(grepl("lab-vs-treatment cleanup passed", html, fixed = TRUE), "Laboratory/NPU status should describe lab-vs-treatment cleanup.")
@@ -133,6 +182,11 @@ for (needle in c("All panels are aggregate-only.", "Counts may be row/code/sourc
 expect_true(grepl("Common cross-panel routes", html, fixed = TRUE), "Overview should include common cross-panel routes.")
 expect_true(grepl("function jumpToPanel", html, fixed = TRUE), "HTML should include a shared panel jump helper.")
 expect_true(grepl("data-jump-sub", html, fixed = TRUE), "Overview links should support subtab jumps.")
+expect_true(grepl("function updateShareUrl", html, fixed = TRUE), "HTML should update shareable tab/subtab URLs.")
+expect_true(grepl("function parseHashRoute", html, fixed = TRUE), "HTML should parse hash routes on load.")
+expect_true(grepl("query.set(\"q\"", html, fixed = TRUE), "Hash routes should preserve shareable search queries.")
+expect_true(grepl("query.set(\"item\"", html, fixed = TRUE), "Hash routes should preserve shareable selected item identifiers.")
+expect_true(grepl("window.addEventListener(\"popstate\"", html, fixed = TRUE), "HTML should support browser back/forward for shared URLs.")
 expect_true(grepl("clinical-variable-global-caveat", html, fixed = TRUE), "Clinical Variables landing should include the global caveat container.")
 expect_true(grepl("renderDomainPanel", html, fixed = TRUE), "HTML should include the product-layer domain panel renderer.")
 expect_true(grepl("function renderVitalsPanel()", html, fixed = TRUE), "HTML should include the dedicated Vitals renderer.")
@@ -163,6 +217,9 @@ expect_file(file.path(root, "scripts", "visual_qa_atlas.js"))
 visual_qa_script <- paste(readLines(file.path(root, "scripts", "visual_qa_atlas.js"), warn = FALSE), collapse = "\n")
 expect_true(grepl("overflow_desktop.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a desktop overflow report.")
 expect_true(grepl("overflow_mobile.json", visual_qa_script, fixed = TRUE), "Visual QA script should write a mobile overflow report.")
+for (needle in c("remote-debugging-port=0", "Emulation.setDeviceMetricsOverride", "windowInnerWidth", "documentElementClientWidth", "screenshotWidth", "viewport mismatch")) {
+  expect_true(grepl(needle, visual_qa_script, fixed = TRUE), paste("Visual QA script should verify true viewport widths:", needle))
+}
 for (needle in c(
   "{ name: \"overview\", tab: \"overview\", sub: \"overview-summary\" }",
   "{ name: \"clinical_variables\", tab: \"variables\", sub: \"variables-concepts\" }",
@@ -186,8 +243,47 @@ expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visua
 expect_true(grepl("pathologyPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Pathology/PATOBANK panel.")
 expect_true(grepl("biobankPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Biobank panel.")
 expect_true(grepl("overviewConsolidationPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Overview consolidation section.")
+expect_true(grepl("normalScreenshotCaptures", visual_qa_script, fixed = TRUE), "Visual QA script should produce non-QA normal screenshots.")
+for (needle in c("overview_normal", "run_status_normal_desktop.png", "resource_catalog_normal_desktop.png", "scrollSelector", "data_dictionary_normal", "code_maps_normal", "clinical_variables_normal", "treatment_normal", "capture: false", "normalOverflowCaptures", "mobile_375", "normal_360", "normal_375", "normal_390", "normal_414", "normal_482", "overview_normal_mobile_360.png", "code_maps_normal_mobile_375_NPU02319.png")) {
+  expect_true(grepl(needle, visual_qa_script, fixed = TRUE), paste("Visual QA normal capture should include:", needle))
+}
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
+expect_file(file.path(root, "UX_FIRST_PASS_NOTES.md"))
+ux_notes <- paste(readLines(file.path(root, "UX_FIRST_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
+for (needle in c("What changed", "Files modified", "Assumptions", "Known limitations", "How to test locally", "Screenshots generated")) {
+  expect_true(grepl(needle, ux_notes, fixed = TRUE), paste("UX first pass notes should include:", needle))
+}
+expect_file(file.path(root, "UX_SECOND_PASS_NOTES.md"))
+ux2_notes <- paste(readLines(file.path(root, "UX_SECOND_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
+for (needle in c("What changed", "Files modified", "Search implementation notes", "Deep-link format", "Copy/export behavior", "Mobile changes", "QA screenshots generated", "Known limitations", "How to test locally")) {
+  expect_true(grepl(needle, ux2_notes, fixed = TRUE), paste("UX second pass notes should include:", needle))
+}
+expect_file(file.path(root, "UX_THIRD_PASS_NOTES.md"))
+ux3_notes <- paste(readLines(file.path(root, "UX_THIRD_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
+for (needle in c("What changed", "Files modified", "Mobile clipping fixes", "Search normalization / synonym logic", "Ranking logic", "Code-map routing fix", "Copy/export feedback behavior", "QA screenshots generated", "Known limitations", "How to test locally")) {
+  expect_true(grepl(needle, ux3_notes, fixed = TRUE), paste("UX third pass notes should include:", needle))
+}
+expect_file(file.path(root, "UX_FOURTH_PASS_NOTES.md"))
+ux4_notes <- paste(readLines(file.path(root, "UX_FOURTH_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
+for (needle in c("What changed", "Files modified", "Root cause of the viewport/screenshot bug", "Mobile clipping fixes", "Deep-link preservation fix", "CSV export zero-row fix", "Global search collapse/dedup/ranking fixes", "QA screenshots generated", "Known limitations", "How to test locally")) {
+  expect_true(grepl(needle, ux4_notes, fixed = TRUE), paste("UX fourth pass notes should include:", needle))
+}
+expect_file(file.path(root, "SOURCE_RECONCILIATION_FROM_LEGACY_R_SCRIPTS.md"))
+source_reconciliation_notes <- paste(readLines(file.path(root, "SOURCE_RECONCILIATION_FROM_LEGACY_R_SCRIPTS.md"), warn = FALSE), collapse = "\n")
+for (needle in c("Legacy R Scripts Inspected", "Expected 64 Resources", "63 resources", "1 resource", "Ported Resolver Logic", "Current Delta Categories", "Known Limitations")) {
+  expect_true(grepl(needle, source_reconciliation_notes, fixed = TRUE), paste("Source reconciliation notes should include:", needle))
+}
+expect_file(file.path(root, "SOURCE_TRUTH_CORRECTION_NOTES.md"))
+source_truth_notes <- paste(readLines(file.path(root, "SOURCE_TRUTH_CORRECTION_NOTES.md"), warn = FALSE), collapse = "\n")
+for (needle in c("Corrected Historical Accounting", "`t_tumor`", "`DANRICHT`", "`FISH`", "`BilleddiagnostikeUndersøgelser_Del2`", "Authority Order", "Current Run Definitions")) {
+  expect_true(grepl(needle, source_truth_notes, fixed = TRUE), paste("Source truth correction notes should include:", needle))
+}
+expect_file(file.path(root, "UX_SOURCE_RECONCILIATION_NOTES.md"))
+ux_source_notes <- paste(readLines(file.path(root, "UX_SOURCE_RECONCILIATION_NOTES.md"), warn = FALSE), collapse = "\n")
+for (needle in c("What Changed", "Files Modified", "Assumptions", "Known Limitations", "How To Test Locally", "Screenshots Generated")) {
+  expect_true(grepl(needle, ux_source_notes, fixed = TRUE), paste("UX source reconciliation notes should include:", needle))
+}
 readme_text <- paste(readLines(file.path(root, "README.md"), warn = FALSE), collapse = "\n")
 readme_flat <- gsub("\\s+", " ", readme_text)
 expect_true(grepl("A separate full-output visual QA run is required before final visual acceptance of production-scale data.", readme_flat, fixed = TRUE), "README should clarify fixture visual QA is not production-scale visual acceptance.")
@@ -419,6 +515,19 @@ expect_true(grepl("panel_kpi_rows", payload, fixed = TRUE), "Payload should incl
 expect_true(grepl("panel_distribution_rows", payload, fixed = TRUE), "Payload should include product-layer distribution rows.")
 expect_true(grepl("panel_raw_field_rows", payload, fixed = TRUE), "Payload should include product-layer raw field rows.")
 expect_true(grepl("panel_parity_rows", payload, fixed = TRUE), "Payload should include V33 panel parity rows.")
+expect_true(grepl("legacy_cartography_audit_rows", payload, fixed = TRUE), "Payload should include the legacy cartography source-resolution audit.")
+expect_true(grepl("billeddiagnostik_del2_regression_audit_rows", payload, fixed = TRUE), "Payload should include the Del2 regression audit rows.")
+expect_true(grepl("source_resolution_plan_dry_run_rows", payload, fixed = TRUE), "Payload should include the production source-recovery dry-run plan.")
+expect_true(grepl("source_resolution_attempt_rows", payload, fixed = TRUE), "Payload should include source-recovery attempt rows.")
+expect_true(grepl("source_resolution_delta_rows", payload, fixed = TRUE), "Payload should include legacy-versus-current source-resolution deltas.")
+expect_true(grepl("resource_reconciliation_rows", payload, fixed = TRUE), "Payload should include expected-resource reconciliation rows.")
+expect_true(grepl("source_truth_evidence_rows", payload, fixed = TRUE), "Payload should include source-truth evidence rows.")
+expect_true(grepl("source_truth_summary_rows", payload, fixed = TRUE), "Payload should include source-truth summary rows.")
+expect_true(grepl("current_run_source_map_audit_rows", payload, fixed = TRUE), "Payload should include the current source-map audit rows.")
+expect_true(grepl("canonical_resource_reconciliation_rows", payload, fixed = TRUE), "Payload should include canonical 64-resource reconciliation rows.")
+expect_true(grepl("source_map_crosswalk_rows", payload, fixed = TRUE), "Payload should include the source-map-to-canonical crosswalk.")
+expect_true(grepl("legacy_reference_vs_current_rows", payload, fixed = TRUE), "Payload should include legacy/reference versus current-profiled evidence rows.")
+expect_true(grepl("remaining_activation_plan_rows", payload, fixed = TRUE), "Payload should include the remaining canonical-resource activation plan.")
 expect_true(grepl("review_clinical_variables", payload, fixed = TRUE), "Payload should include the Clinical Variables view model.")
 expect_true(grepl("review_semantic_summary", payload, fixed = TRUE), "Payload should include semantic summary rows.")
 expect_true(grepl("Smoking status", payload, fixed = TRUE), "Payload should expose clinician-facing semantic variables.")
@@ -450,7 +559,9 @@ freq <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_value_freque
 expect_false(any(freq$column_name == "patientid"), "Public value frequencies must not expose patient IDs.")
 
 manifest <- utils::read.csv(file.path(result$run_dir, "outputs", "output_manifest.csv"), stringsAsFactors = FALSE)
-expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "memory_plan", "db_query_log", "db_budget_actions", "action_items", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "semantic_dictionary", "semantic_value_map", "semantic_code_map", "semantic_panel_links", "clinical_concepts", "domain_panels", "panel_kpis", "panel_distributions", "panel_raw_fields", "panel_parity", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
+expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "memory_plan", "db_query_log", "db_budget_actions", "action_items", "legacy_cartography_source_resolution_audit", "billeddiagnostik_del2_regression_audit", "source_resolution_plan_dry_run", "source_resolution_attempts", "source_resolution_delta_legacy_vs_current", "resource_reconciliation", "source_truth_evidence_matrix", "source_truth_summary", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "semantic_dictionary", "semantic_value_map", "semantic_code_map", "semantic_panel_links", "clinical_concepts", "domain_panels", "panel_kpis", "panel_distributions", "panel_raw_fields", "panel_parity", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
+expect_true(all(c("current_run_source_map_audit", "canonical_resource_reconciliation_64", "source_map_row_to_canonical_resource_crosswalk", "legacy_reference_vs_current_profiled_evidence") %in% manifest$artifact_id), "Manifest should list canonical source-recovery artifacts.")
+expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifact_id, "Manifest should list the remaining canonical-resource activation plan.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")
 expect_true(all(c("atlas_temporal_coverage", "atlas_temporal_coverage_years", "atlas_spatial_region_counts", "atlas_spatial_region_coverage", "atlas_dk_choropleth_regions") %in% manifest$artifact_id), "Manifest should list V33 coverage panel artifacts.")
 expect_true(all(c("atlas_temporal_date_quality", "atlas_streaming_progress_summary") %in% manifest$artifact_id), "Manifest should list date-quality and streaming-progress panel artifacts.")
@@ -476,6 +587,76 @@ expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(column_profile
 
 catalog <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_resource_catalog.csv"), stringsAsFactors = FALSE)
 expect_true(all(c("domain", "subdomain", "atlas_role") %in% names(catalog)), "Source metadata should be preserved in the resource catalog.")
+
+expected_resources <- utils::read.delim(file.path(root, "config", "expected_dalycare_resources_64.tsv"), stringsAsFactors = FALSE, check.names = FALSE)
+expect_equal(nrow(expected_resources), 64L, "Expected-resource config should carry the V033 64-resource universe.")
+production_source_map <- utils::read.delim(file.path(root, "config", "source-map.dalycare64.production.tsv"), stringsAsFactors = FALSE, check.names = FALSE)
+expect_equal(nrow(production_source_map), 64L, "Production source recovery map should carry exactly 64 expected DALY-CARE resources.")
+expect_equal(sum(production_source_map$legacy_known_unavailable == "TRUE"), 1L, "Production source recovery map should carry exactly one legacy-known-unavailable resource.")
+expect_equal(sum(production_source_map$current_known_unavailable == "TRUE"), 0L, "Production source recovery map should not mark resources current-unavailable without production evidence.")
+expect_true(any(grepl("^Billeddiagnostike.*Del2$", production_source_map$expected_resource_id) & production_source_map$legacy_known_unavailable == "TRUE" & production_source_map$resolver_type == "direct_sql"), "SP imaging Del2 should be legacy-unavailable but current-resolver configured.")
+expect_equal(sum(production_source_map$resolver_type %in% c("standard_table", "alias_table", "schema_qualified_table", "direct_sql")), 62L, "Production source recovery map should distinguish DB-attemptable resolver candidates.")
+expect_equal(sum(production_source_map$resolver_type %in% c("manual_file", "embedded_fields")), 2L, "Production source recovery map should distinguish special/manual resources.")
+expect_false(any(!nzchar(production_source_map$resolver_type)), "No expected production resource may lack a resolver strategy.")
+for (resource_id in critical_expected_resources <- c(
+  "t_mikro", "t_konk", "t_doedsaarsag", "t_tumor", "procedure_kirurgi", "procedure_andre",
+  "SP_Administreret_Medicin", "SP_ADT_Haendelser", "Aktive_Problemliste_Diagnoser",
+  "Behandlingskontakter_diagnoser", "Behandlingsplaner_del1", "Behandlingsplaner_del2",
+  "Journalnotater_del1", "Journalnotater_del2",
+  "FISH", "MM_TREAT_DARA", "DANRICHT"
+)) {
+  expect_true(any(production_source_map$expected_resource_id == resource_id & nzchar(production_source_map$resolver_type)), paste("Late-cartography resource should have a production resolver strategy:", resource_id))
+}
+expect_true(any(grepl("^Billeddiagnostike.*Del1$", production_source_map$expected_resource_id) & nzchar(production_source_map$resolver_type)), "BilleddiagnostikeUndersøgelser_Del1 should have a production resolver strategy.")
+expect_false(any(production_source_map$expected_resource_id == "t_tumor" & production_source_map$resolver_type == "known_unavailable"), "t_tumor must not be marked unavailable in the production source map.")
+expect_true(any(production_source_map$expected_resource_id == "DANRICHT" & production_source_map$resolver_type == "manual_file"), "DANRICHT should be configured as manual_file, not unavailable.")
+expect_true(any(production_source_map$expected_resource_id == "FISH" & production_source_map$resolver_type == "embedded_fields"), "FISH should be configured as embedded_fields, not unavailable.")
+dry_run <- utils::read.csv(file.path(result$run_dir, "outputs", "source_resolution_plan_dry_run.csv"), stringsAsFactors = FALSE)
+attempts <- utils::read.csv(file.path(result$run_dir, "outputs", "source_resolution_attempts.csv"), stringsAsFactors = FALSE)
+del2_audit <- utils::read.csv(file.path(result$run_dir, "outputs", "billeddiagnostik_del2_regression_audit.csv"), stringsAsFactors = FALSE)
+expect_equal(nrow(dry_run), 64L, "Dry-run production source resolution plan should list all expected resources.")
+expect_equal(sum(dry_run$dry_run_status == "legacy_unavailable_current_candidate"), 1L, "Dry run should flag Del2 as legacy-unavailable current candidate.")
+expect_equal(sum(dry_run$dry_run_status %in% c("would_attempt_in_production", "requires_manual_file", "requires_embedded_field_mapping", "legacy_unavailable_current_candidate", "current_known_unavailable_declared")), 64L, "Dry run should configure every expected resource without pretending to be a production attempt.")
+expect_equal(nrow(attempts), 64L, "Source-resolution attempt report should list all expected resources.")
+expect_true(any(attempts$expected_resource_id == "FISH" & attempts$error_or_warning == "Special/manual configured"), "FISH should be reported as special/manual in fixture mode.")
+expect_true(any(attempts$expected_resource_id == "DANRICHT" & attempts$error_or_warning == "Special/manual configured"), "DANRICHT should be reported as special/manual in fixture mode.")
+expect_true(any(grepl("^Billeddiagnostike.*Del2$", attempts$expected_resource_id) & attempts$error_or_warning == "Legacy unavailable current candidate"), "Del2 should be reported as a legacy-unavailable current candidate in fixture mode.")
+expect_true(nrow(del2_audit) > 0, "Del2 regression audit should include evidence rows.")
+expect_true(any(del2_audit$inferred_status == "current_resolver_candidate" | del2_audit$inferred_status == "legacy_unavailable_current_candidate"), "Del2 regression audit should capture current resolver candidate evidence.")
+legacy_audit <- utils::read.csv(file.path(result$run_dir, "outputs", "legacy_cartography_source_resolution_audit.csv"), stringsAsFactors = FALSE)
+expect_equal(nrow(legacy_audit), 64L, "Legacy cartography audit should account for all 64 expected resources.")
+expect_equal(sum(as.logical(legacy_audit$resolved_by_legacy_script)), 63L, "Final V33 source truth should preserve the 63 resolved/profiled resources.")
+expect_equal(sum(legacy_audit$legacy_status == "known_unavailable"), 1L, "Final V33 source truth should preserve the one known unavailable resource.")
+expect_true(any(legacy_audit$expected_resource_id == "t_mikro" & legacy_audit$legacy_resolution_method == "direct_sql_alias_or_table_pattern" & grepl("SDS_t_mikro_ny", legacy_audit$legacy_query_or_table_pattern, fixed = TRUE)), "Legacy audit should document the t_mikro direct PostgreSQL alias.")
+expect_true(any(legacy_audit$expected_resource_id == "FISH" & legacy_audit$legacy_status == "special_manual_embedded"), "Legacy audit should account for FISH as special/manual/embedded evidence.")
+expect_true(any(legacy_audit$expected_resource_id == "DANRICHT" & legacy_audit$legacy_status == "special_manual_embedded"), "Legacy audit should account for DANRICHT as special/manual/embedded evidence.")
+
+source_delta <- utils::read.csv(file.path(result$run_dir, "outputs", "source_resolution_delta_legacy_vs_current.csv"), stringsAsFactors = FALSE)
+expect_equal(nrow(source_delta), 64L, "Legacy/current source-resolution delta should account for all expected resources.")
+resource_reconciliation <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_resource_reconciliation.csv"), stringsAsFactors = FALSE)
+expect_equal(nrow(resource_reconciliation), 64L, "Resource reconciliation should list all expected DALY-CARE resources.")
+expect_true(all(nzchar(resource_reconciliation$status_category)), "Every expected resource should have an explicit reconciliation status.")
+source_truth <- utils::read.csv(file.path(result$run_dir, "outputs", "source_truth_evidence_matrix.csv"), stringsAsFactors = FALSE)
+source_truth_summary_rows <- utils::read.csv(file.path(result$run_dir, "outputs", "source_truth_summary.csv"), stringsAsFactors = FALSE)
+expect_equal(nrow(source_truth), 64L, "Source truth evidence matrix should list all expected DALY-CARE resources.")
+expect_true(all(nzchar(source_truth$final_legacy_classification)), "Every expected resource should have a final legacy classification.")
+expect_true(all(nzchar(source_truth$current_run_status)), "Every expected resource should have a current run status.")
+critical_expected_resources <- c(
+  "t_mikro", "t_konk", "t_doedsaarsag", "procedure_kirurgi", "procedure_andre",
+  "SP_Administreret_Medicin", "SP_ADT_Haendelser", "Aktive_Problemliste_Diagnoser",
+  "Behandlingskontakter_diagnoser", "Behandlingsplaner_del1", "Behandlingsplaner_del2",
+  "Journalnotater_del1", "Journalnotater_del2",
+  "FISH", "MM_TREAT_DARA", "DANRICHT"
+)
+critical_rows <- resource_reconciliation[resource_reconciliation$expected_resource_id %in% critical_expected_resources, , drop = FALSE]
+expect_equal(nrow(critical_rows), length(critical_expected_resources), "Critical late-cartography resources should all be represented in reconciliation.")
+expect_true(any(grepl("^Billeddiagnostike.*Del1$", resource_reconciliation$expected_resource_id)), "BilleddiagnostikeUndersøgelser_Del1 should be represented in reconciliation.")
+expect_false(any(!nzchar(critical_rows$status_category)), "Critical late-cartography resources must not silently disappear without status.")
+expect_true(any(grepl("^Billeddiagnostike.*Del2$", resource_reconciliation$expected_resource_id) & resource_reconciliation$status_category == "legacy_known_unavailable_current_candidate"), "SP imaging Del2 should be marked legacy-unavailable with a current resolver candidate.")
+expect_true(any(source_truth$expected_resource_id == "t_tumor" & source_truth$final_legacy_classification == "legacy_profiled" & grepl("106316", source_truth$v033_catalog_rows, fixed = TRUE)), "t_tumor should be profiled through the final V33 tumor evidence.")
+expect_true(any(source_truth$expected_resource_id == "FISH" & source_truth$final_legacy_classification == "legacy_special_manual_or_embedded"), "FISH should be classified as special/manual/embedded V33 evidence.")
+expect_true(any(source_truth$expected_resource_id == "DANRICHT" & source_truth$final_legacy_classification == "legacy_special_manual_or_embedded"), "DANRICHT should be classified as special/manual/embedded V33 evidence.")
+expect_true(any(grepl("^Billeddiagnostike.*Del2$", source_truth$expected_resource_id) & source_truth$final_legacy_classification == "legacy_known_unavailable"), "SP imaging Del2 should be the evidence-backed known-unavailable resource.")
 
 damyda_clinical <- utils::read.csv(file.path(result$run_dir, "outputs", "panels", "damyda_clinical_profile.csv"), stringsAsFactors = FALSE)
 expect_true(any(damyda_clinical$facet == "stage"), "Run output should include DaMyDa stage summary.")
@@ -524,6 +705,22 @@ expect_false(any(dk_regions$region_code == "1099" & as.logical(dk_regions$map_in
 
 run_summary <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_run_summary.csv"), stringsAsFactors = FALSE)
 expect_true(all(c("builder_credit", "mapped_sources", "loaded_sources", "skipped_sources", "panel_rows", "min_cell_count", "db_aggregate_sources", "dataset_full_load_fallback_sources") %in% run_summary$metric), "Run summary should include compact run, credit, and memory metrics.")
+expect_true(all(c("expected_resources", "legacy_profiled_resources", "legacy_resolved_resources", "legacy_accounted_resources", "legacy_known_unavailable_resources", "legacy_special_manual_or_embedded_resources", "current_tested_resources", "current_resolved_resources", "current_not_tested_resources", "current_known_unavailable_resources", "current_special_manual_resources", "current_missing_unexpectedly_resources", "uncertain_resources_requiring_manual_review", "explored_resources_this_run", "standard_resolved_resources", "direct_sql_resolved_resources", "special_or_manual_resources", "known_unavailable_resources", "unexpectedly_missing_resources", "current_missing_but_legacy_resolved_resources", "current_untested_resources", "production_source_map_resources", "current_resolver_configured_resources", "legacy_available_or_resolved_resources", "db_attemptable_resources", "special_manual_or_embedded_resources", "known_unavailable_legacy_resources", "requires_production_validation_resources", "regression_candidate_resources", "source_recovery_special_manual_resources", "source_resolution_attempted_resources", "source_resolution_resolved_current_resources", "source_resolution_not_tested_current_resources") %in% run_summary$metric), "Run summary should include corrected source-truth and production source-recovery metrics.")
+expect_true(all(c("canonical_expected_resources", "canonical_current_attempted_resources", "canonical_current_profiled_resources", "canonical_current_not_attempted_resources", "canonical_current_missing_after_attempt_resources", "derived_view_rows_profiled", "helper_table_rows_profiled", "source_map_rows_total", "source_map_rows_profiled", "legacy_reference_only_resources", "legacy_unavailable_current_resolved_resources") %in% run_summary$metric), "Run summary should include canonical-resource versus source-map-row metrics.")
+expect_true(all(c("canonical_profiled_current_run", "canonical_not_attempted_current_run", "canonical_special_manual_or_embedded", "canonical_missing_after_attempt", "source_map_rows_profiled_current_run", "source_map_rows_canonical", "source_map_rows_derived_views", "source_map_rows_helpers", "remaining_activation_candidates") %in% run_summary$metric), "Run summary should include non-mutually-exclusive source-map role and activation metrics.")
+expect_true("64" %in% run_summary$value[run_summary$metric == "expected_resources"], "Run summary should record the V033 64-resource universe.")
+expect_true("63" %in% run_summary$value[run_summary$metric == "legacy_resolved_resources"], "Run summary should record the corrected 63 legacy-resolved/profiled resources.")
+expect_true("1" %in% run_summary$value[run_summary$metric == "legacy_known_unavailable_resources"], "Run summary should record the corrected one legacy-known unavailable resource.")
+expect_equal(
+  run_summary$value[run_summary$metric == "current_not_tested_resources"][[1]],
+  as.character(sum(resource_reconciliation$current_run_status == "Not tested in current run")),
+  "current_not_tested_resources should equal row-level current-run statuses."
+)
+expect_equal(
+  as.character(source_truth_summary_rows$value[source_truth_summary_rows$metric == "legacy_accounted_resources"][[1]]),
+  "64",
+  "Source truth summary should account for all expected resources."
+)
 expect_true("Built by Alexander Owen Taylor" %in% run_summary$value[run_summary$metric == "builder_credit"], "Run summary should record the generated-atlas credit.")
 expect_true("1" %in% run_summary$value[run_summary$metric == "min_cell_count"], "Run summary should record the active minimum cell count.")
 

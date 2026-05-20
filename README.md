@@ -33,22 +33,23 @@ From RStudio Console:
 
 ```r
 source("scripts/run_atlas.R")
-result <- run_atlas_from_source(source_map_path = "config/source-map.dalycare.tsv")
+result <- run_atlas_from_source(source_map_path = "config/source-map.dalycare64.production.tsv")
 ```
 
 From a terminal:
 
 ```sh
 Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS
-Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare.tsv atlas_runs report
+Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare64.production.tsv atlas_runs report
 ```
 
-The preflight script checks the source map, bootstrap, NGC `db_access.R`, DB
-connection availability, and DB catalog resolution without loading patient-level
-rows. Database credentials remain controlled by
-`/ngc/people/<user>/db_access.R`; the atlas reports symbol presence/classes only
-and never writes credential values. If a DALY source map resolves zero live
-sources, the run now stops before writing the HTML artifact unless
+The preflight script checks required project files, the 64-resource expected
+list, the production source-map candidate, and the source-recovery dry-run
+without requiring production DB credentials. Database credentials remain
+controlled by `/ngc/people/<user>/db_access.R`; the atlas reports
+symbol presence/classes only and never writes credential values. If a DALY
+source map resolves zero live sources, the run now stops before writing the HTML
+artifact unless
 `DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN=TRUE` is set for a deliberate dry run.
 
 By default, public aggregate counts below 5 are suppressed in value-frequency
@@ -84,11 +85,23 @@ Dataset-backed sources first try DB aggregate profiling. `load_dataset()` remain
 available for small fixtures and explicit fallback cases, including both
 return-value and side-effect loader contracts.
 
-`config/source-map.dalycare.tsv` is the curated DALY-CARE preset. It covers the
+`config/source-map.dalycare.tsv` is the curated compatibility DALY-CARE preset.
+It covers the
 canonical source universe from upstream `load_all_data()`: `patient`, RKKP
 registries (`RKKP_CLL`, `RKKP_LYFO`, `RKKP_DaMyDa`), SP operational tables,
 SDS/LPR/LPR3 tables, `t_dalycare_diagnoses`, and documented DALY diagnosis and
 survival views where available.
+
+`config/source-map.dalycare64.production.tsv` is the production recovery
+candidate for the V033 64-resource universe. It preserves the one
+legacy-known-unavailable resource separately from current resolver status,
+carries manual/embedded resources explicitly, and adds late-cartography
+aliases/direct-SQL table patterns so production runs can validate the full
+expected resource universe. Validate it without database access with:
+
+```sh
+Rscript scripts/source_recovery_dry_run.R . config/source-map.dalycare64.production.tsv source_recovery_dry_run
+```
 
 Source maps may also include optional `domain`, `subdomain`, and `atlas_role`
 columns. The atlas preserves these in `atlas_sources.csv`, the resource catalog,
@@ -125,6 +138,11 @@ Each run writes `atlas_runs/<run_id>/` with:
 - `outputs/atlas_semantic_panel_links.csv`
 - `outputs/atlas_run_summary.csv`
 - `outputs/panels/*.csv`
+- `outputs/legacy_cartography_source_resolution_audit.csv`
+- `outputs/source_resolution_plan_dry_run.csv`
+- `outputs/source_resolution_attempts.csv`
+- `outputs/source_resolution_delta_legacy_vs_current.csv`
+- `outputs/atlas_resource_reconciliation.csv`
 - `outputs/output_manifest.csv`
 - `logs/atlas_execution_log.tsv`
 - `logs/atlas_memory_log.tsv`

@@ -7,6 +7,7 @@
 - Pathology mapping rule: distinguish coded pathology records, SNOMED code rows, specimen/material fields, institution/source fields, tumor-coded evidence, and report/free-text availability. Never emit raw pathology report text or examples in the static atlas.
 - Biobank mapping rule: distinguish sample source, sample type/material, sample availability, and translational/cohort source labels. Do not infer assay availability, molecular data, sequencing, immune profiling, or biomarker results from sample presence alone.
 - Atlas product rule: the clinician journey starts with questions and restored panels, not raw source tables. Use source tables and semantic rows as evidence underneath Overview entry cards, concept cards, and domain panels.
+- Source reconciliation rule: distinguish expected V033 resources, legacy-script resolved/accounted resources, current-run explored resources, known unavailable resources, and not-tested resources. Never use legacy row counts as current counts.
 
 ## Visual QA Rule
 

@@ -37,7 +37,7 @@
       --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     }
     * { box-sizing: border-box; }
-    html, body { max-width: 100%; overflow-x: hidden; }
+    html, body { width: 100%; max-width: 100%; min-width: 0; }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -59,6 +59,7 @@
       border-bottom: 4px solid #0f4637;
     }
     .hero-inner, .nav-inner, main { max-width: 1440px; width: 100%; min-width: 0; margin: 0 auto; }
+    .hero-inner { overflow-wrap: anywhere; }
     .kicker {
       margin: 0 0 6px;
       font-size: 12px;
@@ -91,6 +92,145 @@
       font-size: 12px;
     }
     .hero-meta span { min-width: 0; overflow-wrap: anywhere; }
+    .global-search-shell {
+      margin-top: 18px;
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 8px;
+      background: rgba(255,255,255,.1);
+      padding: 14px;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: visible;
+    }
+    .global-search-shell label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.82);
+    }
+    .global-search-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 8px;
+      align-items: center;
+      min-width: 0;
+    }
+    .global-search-row > * { min-width: 0; max-width: 100%; }
+    .global-search-row input[type="search"] {
+      width: 100%;
+      min-width: 0;
+      border-color: rgba(255,255,255,.35);
+      background: #fff;
+    }
+    .global-search-results {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+      min-width: 0;
+    }
+    .global-search-group {
+      border: 1px solid rgba(255,255,255,.22);
+      border-radius: 8px;
+      background: rgba(255,255,255,.08);
+      padding: 10px;
+    }
+    .global-search-group h3 {
+      margin: 0 0 8px;
+      font-size: 14px;
+      color: #fff;
+    }
+    .global-result-list { display: grid; gap: 7px; }
+    .global-result {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: start;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      padding: 10px;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .global-result strong, .global-result .mini { display: block; overflow-wrap: anywhere; word-break: break-word; }
+    .global-result-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-end;
+    }
+    .utility-button, .export-button, .copy-button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--blue);
+      cursor: pointer;
+      padding: 7px 9px;
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+    .global-search-shell .utility-button {
+      border-color: rgba(255,255,255,.35);
+      background: rgba(255,255,255,.14);
+      color: #fff;
+    }
+    .global-search-shell .utility-button.primary {
+      background: #fff;
+      color: var(--green);
+      border-color: #fff;
+    }
+    .global-result.is-extra-result { display: none; }
+    .global-search-results.expanded .global-result.is-extra-result { display: grid; }
+    .global-search-toggle-row {
+      display: flex;
+      justify-content: flex-start;
+      margin-top: 8px;
+    }
+    .filter-message {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      padding: 8px 10px;
+      margin: 8px 0 10px;
+      font-size: 12px;
+      font-weight: 750;
+      overflow-wrap: anywhere;
+    }
+    .search-highlight {
+      outline: 3px solid rgba(154,101,0,.52);
+      box-shadow: 0 0 0 5px rgba(255,241,214,.9);
+      transition: outline-color .3s ease, box-shadow .3s ease;
+    }
+    .utility-button:hover, .export-button:hover, .copy-button:hover {
+      border-color: var(--blue);
+      color: var(--green);
+    }
+    .dictionary-utility-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+    .semantic-detail-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 10px 0 12px;
+    }
+    .back-to-top {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 30;
+      box-shadow: var(--shadow);
+    }
     .hero-metrics {
       margin-top: 20px;
       display: grid;
@@ -134,6 +274,7 @@
       overflow-x: auto;
       padding: 0 20px;
     }
+    .mobile-tab-label, .mobile-tab-select { display: none; }
     .tab-button {
       border: 0;
       border-bottom: 3px solid transparent;
@@ -152,11 +293,15 @@
     }
     main {
       padding: 22px 24px 44px;
+      max-width: 100%;
+      min-width: 0;
     }
     .tab-page { display: none; }
     .tab-page.active {
       display: grid;
       gap: 16px;
+      min-width: 0;
+      max-width: 100%;
     }
     .sub-nav {
       display: flex;
@@ -167,6 +312,8 @@
       border-radius: 8px;
       background: var(--surface);
       box-shadow: var(--shadow);
+      max-width: 100%;
+      min-width: 0;
     }
     .sub-tab {
       border: 1px solid var(--line);
@@ -188,6 +335,8 @@
     .sub-pane.active {
       display: grid;
       gap: 16px;
+      min-width: 0;
+      max-width: 100%;
     }
     .review-lead {
       display: grid;
@@ -208,6 +357,8 @@
       border-radius: 8px;
       box-shadow: var(--shadow);
       overflow: hidden;
+      min-width: 0;
+      max-width: 100%;
     }
     .panel-head {
       padding: 18px 20px 8px;
@@ -243,6 +394,21 @@
       margin: 0 0 8px;
       font-size: 16px;
     }
+    .status-banner {
+      border-left: 5px solid var(--blue);
+      background: linear-gradient(90deg, rgba(29, 78, 122, .08), #fff 55%);
+    }
+    .status-banner.amber { border-left-color: var(--amber); background: linear-gradient(90deg, rgba(160, 98, 0, .1), #fff 55%); }
+    .status-banner.green { border-left-color: var(--green); background: linear-gradient(90deg, rgba(20, 92, 71, .08), #fff 55%); }
+    .status-banner .status-line {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .overview-entry-card p { margin: 6px 0; }
+    .overview-entry-card .sub-tab, .cross-panel-route-card .sub-tab { margin-top: 8px; }
     .muted { color: var(--muted); }
     .badge {
       display: inline-flex;
@@ -787,8 +953,38 @@
     body.qa-capture .hero, body.qa-capture .nav, body.qa-capture .site-footer { display: none; }
     body.qa-capture main { padding-top: 16px; }
     @media (max-width: 820px) {
-      .hero { padding: 24px 18px 20px; }
+      .hero { padding: 22px 14px 18px; }
       main { padding: 16px 14px 34px; }
+      .nav-inner { padding: 8px 12px; gap: 8px; align-items: center; }
+      .nav-inner .tab-button { display: none; }
+      .mobile-tab-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--muted);
+        text-transform: uppercase;
+      }
+      .mobile-tab-select {
+        display: block;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        background: #fff;
+        color: var(--ink);
+        font-weight: 700;
+      }
+      .sub-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 8px;
+        position: sticky;
+        top: 48px;
+        z-index: 18;
+        box-shadow: inset -18px 0 18px -22px rgba(24,33,42,.45), var(--shadow);
+      }
       .catalog-row, .column-row, .semantic-row { grid-template-columns: 1fr; }
       .semantic-kv-row { grid-template-columns: 1fr; gap: 3px; }
       .bar-row { grid-template-columns: 1fr; }
@@ -796,13 +992,32 @@
       .dk-shell { grid-template-columns: 1fr; }
       .stat-grid, .value-row { grid-template-columns: 1fr; }
       .toolbar label, input[type="search"], select { width: 100%; }
+      .hero-meta { display: grid; grid-template-columns: 1fr; gap: 6px; }
+      .hero-meta span, .hero-meta .badge { width: fit-content; max-width: 100%; }
+      .global-search-shell { padding: 12px; margin-top: 16px; }
+      .global-search-row { grid-template-columns: 1fr; }
+      .global-search-row .utility-button { width: 100%; }
+      .global-result { grid-template-columns: 1fr; }
+      .global-result-actions { justify-content: flex-start; }
+      .global-result-actions .utility-button, .global-result-actions .copy-button { width: auto; max-width: 100%; }
+      .global-search-group { padding: 9px; }
       .h-bar { grid-template-columns: minmax(0, 1fr); }
       .h-bar .val { text-align: left; }
       .hero-metrics, .kpi-strip { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
-      .source-shape, .grid, .value-map-grid, .hero-metrics, .kpi-strip { grid-template-columns: 1fr; }
-      body.qa-capture main, body.qa-capture .sub-nav { max-width: 390px; margin-left: 0; margin-right: auto; }
+      h1 { font-size: 30px; }
+      .panel-title { font-size: 20px; line-height: 1.16; }
+      .hero-copy { font-size: 14px; }
+      .source-shape, .grid, .value-map-grid, .hero-metrics, .kpi-strip { grid-template-columns: minmax(0, 1fr); }
+      main { padding-left: 10px; padding-right: 10px; }
+      .panel-body { padding: 14px 12px 16px; }
+      body.qa-capture main, body.qa-capture .sub-nav { max-width: 100%; margin-left: 0; margin-right: auto; }
+    }
+    @media (max-width: 380px) {
+      .hero { padding-left: 10px; padding-right: 10px; }
+      .global-search-shell { padding: 10px; }
+      .utility-button, .export-button, .copy-button { padding-left: 8px; padding-right: 8px; }
     }
   </style>
   <script src="DALYCARE_atlas_payload.js"></script>
@@ -819,12 +1034,35 @@
         <span id="builder-credit">Built by Alexander Owen Taylor</span>
         <span id="qa-badge" class="badge">QA pending</span>
       </div>
+      <div class="global-search-shell" role="search" aria-label="Global atlas search">
+        <label for="global-atlas-search">Search the atlas</label>
+        <div class="global-search-row">
+          <input id="global-atlas-search" type="search" placeholder="Search concept, raw column, code, value, source, panel, Danish/English term..." autocomplete="off">
+          <button class="utility-button primary" id="global-search-button" type="button">Search</button>
+          <button class="utility-button" type="button" data-copy-share-link="true">Copy link</button>
+        </div>
+        <div id="global-search-results" class="global-search-results" aria-live="polite"></div>
+      </div>
       <div id="hero-metrics" class="hero-metrics"></div>
     </div>
   </header>
 
   <nav class="nav">
     <div class="nav-inner">
+      <label class="mobile-tab-label" for="mobile-tab-select">Section</label>
+      <select id="mobile-tab-select" class="mobile-tab-select" aria-label="Choose atlas section">
+        <option value="overview">Overview</option>
+        <option value="variables">Clinical Variables</option>
+        <option value="situation">Situation Report</option>
+        <option value="quickstart">Quick Start</option>
+        <option value="registries">Disease Registries</option>
+        <option value="clinical">Clinical Data</option>
+        <option value="treatment">Treatment</option>
+        <option value="laboratory">Laboratory</option>
+        <option value="dictionary">Data Dictionary</option>
+        <option value="ehr">EHR Modules</option>
+        <option value="infrastructure">Infrastructure</option>
+      </select>
       <button class="tab-button active" data-tab="overview">Overview</button>
       <button class="tab-button" data-tab="variables">Clinical Variables</button>
       <button class="tab-button" data-tab="situation">Situation Report</button>
@@ -842,7 +1080,7 @@
   <main>
     <section class="tab-page active" id="tab-overview">
       <div class="sub-nav" aria-label="Overview sections">
-        <button class="sub-tab active" data-sub="overview-summary">Run Metrics</button>
+        <button class="sub-tab active" data-sub="overview-summary">Start here</button>
         <button class="sub-tab" data-sub="overview-coverage">Coverage</button>
         <button class="sub-tab" data-sub="overview-temporal">Temporal Coverage</button>
         <button class="sub-tab" data-sub="overview-spatial">Regional Coverage</button>
@@ -856,6 +1094,8 @@
             <p class="panel-sub">Choose the restored panel that matches your question. These links are navigation aids over aggregate evidence; they do not create analytic definitions or patient-level completeness claims.</p>
           </div>
           <div class="panel-body">
+            <div id="run-status-banner"></div>
+            <div style="height:14px"></div>
             <div id="overview-entry-cards" class="grid"></div>
             <div style="height:14px"></div>
             <div id="overview-global-caveat"></div>
@@ -877,6 +1117,16 @@
               <p class="panel-sub">Shortcuts for common review paths. They are navigation prompts, not evidence of analytic linkage.</p>
             </div>
             <div class="panel-body"><div id="overview-cross-panel-routes" class="grid"></div></div>
+          </div>
+        </div>
+        <div class="panel" id="overview-run-status">
+          <div class="panel-head">
+            <p class="section-kicker">Run status</p>
+            <h2 class="panel-title">Pipeline status</h2>
+            <p class="panel-sub">Refreshable run metadata from the generated payload. Counts below describe mapped sources, profiled rows, profiled columns, and QA rows, not patient-level completeness.</p>
+          </div>
+          <div class="panel-body">
+            <div id="overview-pipeline-status" class="grid"></div>
           </div>
         </div>
         <div class="panel">
@@ -997,6 +1247,8 @@
               <label>Search <input id="clinical-variable-search" type="search" placeholder="height, weight, BMI, smoking, ryger, drikker, LDH, NPU02319, PET, CT, blood culture, IGHV"></label>
               <label>Group <select id="clinical-variable-group-filter"><option value="">All groups</option></select></label>
               <label>Status <select id="clinical-variable-status-filter"><option value="">All statuses</option></select></label>
+              <button class="export-button" type="button" data-export-view="clinical-concepts">Export filtered CSV</button>
+              <button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button>
             </div>
             <div id="clinical-variable-count" class="mini"></div>
             <div id="clinical-variable-cards" class="grid"></div>
@@ -1090,7 +1342,7 @@
             <p class="panel-sub">The command-line interface stays unchanged for reproducible scheduled or scripted runs.</p>
           </div>
           <div class="panel-body">
-            <pre class="code-block"><code>Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare.tsv atlas_runs report</code></pre>
+            <pre class="code-block"><code>Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare64.production.tsv atlas_runs report</code></pre>
           </div>
         </div>
       </div>
@@ -1099,7 +1351,7 @@
           <div class="panel-head">
             <p class="section-kicker">Access check</p>
             <h2 class="panel-title">Preflight Without Patient Rows</h2>
-            <p class="panel-sub">Validate bootstrap, db_access.R, DB catalog resolution, and source-map coverage without writing patient-level data.</p>
+            <p class="panel-sub">Validate required files, the 64-resource production source map, and the resolver dry-run without writing patient-level data.</p>
           </div>
           <div class="panel-body">
             <pre class="code-block"><code>Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS</code></pre>
@@ -1124,7 +1376,6 @@
             <p class="panel-sub">Search clinical concepts, raw column names, descriptors, codes, values, panels, caveats, and evidence files from the cartography reference.</p>
           </div>
           <div class="panel-body">
-            <div id="semantic-summary" class="grid" style="margin-bottom:14px"></div>
             <div class="toolbar">
               <label>Search <input id="semantic-search" type="search" placeholder="smoking, ryger, height, Vægt, LDH, NPU02319, PET, blood culture, IGHV"></label>
               <label>Group <select id="semantic-group-filter"><option value="">All groups</option></select></label>
@@ -1133,7 +1384,13 @@
               <label>Type <select id="semantic-type-filter"><option value="">All types</option></select></label>
               <label>Code system <select id="semantic-code-filter"><option value="">All systems</option></select></label>
               <label>Panel <select id="semantic-panel-filter"><option value="">All panels</option></select></label>
+              <button class="export-button" type="button" data-export-view="semantic-lineage">Export filtered CSV</button>
+              <button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button>
             </div>
+            <details class="lineage-block">
+              <summary>Semantic summary</summary>
+              <div id="semantic-summary" class="grid" style="margin-top:12px;margin-bottom:14px"></div>
+            </details>
             <div id="semantic-count" class="mini"></div>
             <div class="review-lead">
               <div><div id="semantic-list" class="catalog-list"></div></div>
@@ -1143,13 +1400,13 @@
         </div>
       </div>
       <div class="sub-pane" id="dictionary-values">
-        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Value Map</h2><p class="panel-sub">Raw categorical values mapped to display values and clinical interpretation, with small cells suppressed.</p></div><div class="panel-body"><div id="semantic-value-map"></div></div></div>
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Value Map</h2><p class="panel-sub">Raw categorical values mapped to display values and clinical interpretation, with small cells suppressed.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-value-search" type="search" placeholder="raw value, display value, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-values">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-value-map"></div></div></div>
       </div>
       <div class="sub-pane" id="dictionary-codes">
-        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div id="semantic-code-map"></div></div></div>
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-code-search" type="search" placeholder="code, system, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-codes">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-code-map"></div></div></div>
       </div>
       <div class="sub-pane" id="dictionary-panels">
-        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Panel Links</h2><p class="panel-sub">Many-to-many links between raw variables, clinical concepts, and user-facing atlas panels.</p></div><div class="panel-body"><div id="semantic-panel-links"></div></div></div>
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Panel Links</h2><p class="panel-sub">Many-to-many links between raw variables, clinical concepts, and user-facing atlas panels.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-panel-search" type="search" placeholder="panel, concept, semantic id"></label><button class="export-button" type="button" data-export-view="semantic-panels">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-panel-links"></div></div></div>
       </div>
     </section>
 
@@ -1261,9 +1518,11 @@
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-title">Resource Catalog</h2>
-            <p class="panel-sub">Search and filter mapped sources by DALY domain, load status, and atlas role.</p>
+            <p class="panel-sub">Search expected V033 DALY-CARE resources, legacy resolver status, and current-run coverage. Current counts remain refreshable and are never replaced by legacy counts.</p>
           </div>
           <div class="panel-body">
+            <div id="resource-reconciliation-summary" class="grid" style="margin-bottom:14px"></div>
+            <div id="resource-reconciliation-warning"></div>
             <div class="toolbar">
               <label>Search <input id="catalog-search" type="search" placeholder="Search source, domain, role, or message"></label>
               <label>Domain <select id="catalog-domain-filter"><option value="">All domains</option></select></label>
@@ -1272,6 +1531,10 @@
             </div>
             <div id="catalog-count" class="mini"></div>
             <div id="catalog-list" class="catalog-list"></div>
+            <details class="lineage-block">
+              <summary>Current source-map rows</summary>
+              <div id="current-source-catalog-list" class="catalog-list" style="margin-top:12px"></div>
+            </details>
           </div>
         </div>
       </div>
@@ -1340,6 +1603,7 @@
   <footer class="site-footer">
     <div class="credit" id="footer-credit">Built by Alexander Owen Taylor</div>
   </footer>
+  <button class="utility-button back-to-top" type="button" data-back-to-top="true">Back to top</button>
 
   <script>
     (function () {
@@ -1347,6 +1611,17 @@
       const panels = payload.panels || {};
       const panelGroups = payload.panel_groups || [];
       const catalogRows = payload.catalog_rows || [];
+      const resourceReconciliationRows = payload.resource_reconciliation_rows || [];
+      const sourceResolutionDeltaRows = payload.source_resolution_delta_rows || [];
+      const legacyCartographyAuditRows = payload.legacy_cartography_audit_rows || [];
+      const sourceResolutionPlanRows = payload.source_resolution_plan_dry_run_rows || [];
+      const sourceResolutionAttemptRows = payload.source_resolution_attempt_rows || [];
+      const sourceTruthEvidenceRows = payload.source_truth_evidence_rows || [];
+      const sourceTruthSummaryRows = payload.source_truth_summary_rows || [];
+      const canonicalResourceRows = payload.canonical_resource_reconciliation_rows || [];
+      const sourceMapCrosswalkRows = payload.source_map_crosswalk_rows || [];
+      const legacyReferenceVsCurrentRows = payload.legacy_reference_vs_current_rows || [];
+      const remainingActivationPlanRows = payload.remaining_activation_plan_rows || [];
       const columnRows = payload.column_profile_rows || [];
       const columnTopValues = payload.column_top_value_rows || [];
       const columnSummary = payload.column_profile_summary || [];
@@ -1395,18 +1670,35 @@
         "Free text and patient-level rows are not emitted.",
         "Clinical use requires source-specific study definitions."
       ];
+      const appState = {
+        clinicalFilteredRows: [],
+        semanticFilteredRows: [],
+        semanticValueFilteredRows: [],
+        semanticCodeFilteredRows: [],
+        semanticPanelFilteredRows: [],
+        clinicalFilterActive: false,
+        semanticFilterActive: false,
+        semanticValueFilterActive: false,
+        semanticCodeFilterActive: false,
+        semanticPanelFilterActive: false,
+        selectedSemanticId: "",
+        globalResultsExpanded: false,
+        lastGlobalQuery: ""
+      };
+      const globalSearchPlaceholderFull = "Search concept, raw column, code, value, source, panel, Danish/English term...";
+      const globalSearchPlaceholderMobile = "Search concept, column, code, source...";
       const overviewEntryCards = [
-        { title: "Find clinical variables", status: "restored", tone: "green", purpose: "Search clinician-facing concepts, source-scoped raw names, and related panels.", examples: ["height", "LDH", "treatment exposure"], tab: "variables", sub: "variables-concepts", search: "" },
-        { title: "Vitals and anthropometrics", status: "restored", tone: "green", purpose: "Weight, height, BMI, and vital-sign descriptor evidence.", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
-        { title: "Smoking and alcohol", status: "restored", tone: "green", purpose: "Social-history smoking and alcohol categories from EHR evidence.", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
-        { title: "Disease registries", status: "restored", tone: "green", purpose: "DaMyDa, LYFO, and CLL registry review panels.", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
-        { title: "Treatment evidence", status: "restored", tone: "green", purpose: "Compare registry, SP, ATC, SKS, SMR, and prescription treatment evidence layers.", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
-        { title: "Laboratory / NPU", status: "restored", tone: "green", purpose: "Find lab concepts, NPU/DNK codes, and source coverage.", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
-        { title: "Microbiology / infection", status: "restored", tone: "green", purpose: "Culture, resistance, sample material, organism/domain, and result-class evidence.", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "clinical", sub: "clinical-microbiology" },
-        { title: "Imaging", status: "restored", tone: "green", purpose: "Procedure-code imaging, SP metadata, radiotherapy, and registry modality fields.", examples: ["CT", "UXZ11", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
-        { title: "Pathology / PATOBANK", status: "restored", tone: "green", purpose: "SNOMED, specimen/material, institution, report-text availability, and tumor-coded evidence.", examples: ["c_snomedkode", "c_mattype", "SDS_pato"], tab: "clinical", sub: "clinical-pathology" },
-        { title: "Biobank samples", status: "restored", tone: "green", purpose: "Sample source/type, availability, and translational source labels with identifier/date safeguards.", examples: ["Sample_source", "PLASMA", "CLL_BIOBANK"], tab: "laboratory", sub: "lab-biobank" },
-        { title: "Raw names / Data Dictionary", status: "restored", tone: "green", purpose: "Find exact table, column, code, descriptor, and value names for analyst lineage.", examples: ["Reg_LDH", "NPU02319", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
+        { title: "Find clinical variables", status: "Concept index", tone: "blue", bestFor: "Checking whether a clinical concept exists before reading raw lineage.", evidence: "Semantic concepts, raw fields, value rows, code signals", examples: ["height", "LDH", "treatment exposure"], tab: "variables", sub: "variables-concepts", search: "" },
+        { title: "Vitals and anthropometrics", status: "EHR evidence", tone: "blue", bestFor: "Finding height, weight, BMI, and vital-sign source fields.", evidence: "EHR vital-sign descriptors and numeric summaries", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
+        { title: "Smoking and alcohol", status: "EHR evidence", tone: "blue", bestFor: "Reviewing social-history smoking and alcohol evidence.", evidence: "EHR social-history categories", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
+        { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
+        { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
+        { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
+        { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "clinical", sub: "clinical-microbiology" },
+        { title: "Imaging", status: "Procedure/metadata evidence", tone: "blue", bestFor: "Finding procedure-code imaging, SP metadata, radiotherapy, and registry modality fields.", evidence: "SKS/procedure rows, SP metadata, DaMyDa registry fields", examples: ["CT", "UXZ11", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
+        { title: "Pathology / PATOBANK", status: "SNOMED evidence", tone: "plum", bestFor: "Reviewing SNOMED, specimen/material, institution, report-text availability, and tumor-coded evidence.", evidence: "PATOBANK/SDS coded pathology and text-availability rows", examples: ["c_snomedkode", "c_mattype", "SDS_pato"], tab: "clinical", sub: "clinical-pathology" },
+        { title: "Biobank samples", status: "Sample evidence", tone: "green", bestFor: "Checking aggregate sample source, sample type, and translational source labels.", evidence: "Biobank sample-source/type distributions and lineage rows", examples: ["Sample_source", "PLASMA", "CLL_BIOBANK"], tab: "laboratory", sub: "lab-biobank" },
+        { title: "Raw names / Data Dictionary", status: "Raw lineage", tone: "blue", bestFor: "Finding exact table, column, code, descriptor, and value names for analyst lineage.", evidence: "Semantic data dictionary, value map, code map, panel links", examples: ["Reg_LDH", "NPU02319", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
       ];
       const atlasRestorationStatus = [
         { panel: "Vitals", status: "restored", note: "dedicated renderer and visual QA target", tone: "green" },
@@ -1453,11 +1745,533 @@
       function metric(id) {
         return (payload.hero_metrics || []).find(row => row.metric === id) || {};
       }
+      function runSummaryValue(metricName, fallback) {
+        const row = (payload.run_summary || []).find(item => item.metric === metricName);
+        return row && text(row.value).trim() ? row.value : (fallback === undefined ? "" : fallback);
+      }
+      function runMetricValue(metricName, fallback) {
+        const row = metric(metricName);
+        return row && text(row.value).trim() ? row.value : runSummaryValue(metricName, fallback);
+      }
+      function inferRunEnvironment() {
+        const sources = payload.sources || [];
+        const sourceText = sources.map(row => [row.table_name, row.source, row.atlas_role, row.source_type, row.resolution_status].map(text).join(" ")).join(" ");
+        const fixtureish = /tests[\\\/]fixtures|fixture|example_/i.test(sourceText);
+        const dbSignals = numberValue(runSummaryValue("db_aggregate_sources", 0)) +
+          numberValue(runSummaryValue("db_chunked_sources", 0));
+        if (fixtureish) {
+          return {
+            label: "Mock / fixture",
+            tone: "amber",
+            warning: "This package is a static mockup generated from fixture/example inputs. Use it to review structure, navigation, and QA behavior, not production-scale coverage."
+          };
+        }
+        if (dbSignals > 0 || /db|postgres|database/i.test(sourceText)) {
+          return {
+            label: "Production-like aggregate",
+            tone: "green",
+            warning: "This run uses refreshable aggregate source evidence. Counts still describe generated aggregate/profile outputs unless explicitly labelled as patient counts."
+          };
+        }
+        return {
+          label: "Local/static run",
+          tone: "blue",
+          warning: "Environment could not be classified from payload metadata. Treat counts as generated aggregate evidence, not patient-level completeness."
+        };
+      }
+      function formatTimestamp(value) {
+        const raw = text(value || "").trim();
+        if (!raw) return { display: "Not available", title: "" };
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return { display: raw, title: raw };
+        const parts = new Intl.DateTimeFormat("en-GB", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+          timeZoneName: "shortOffset"
+        }).formatToParts(date);
+        const get = type => (parts.find(part => part.type === type) || {}).value || "";
+        const display = `${get("day")} ${get("month")} ${get("year")}, ${get("hour")}:${get("minute")} ${get("timeZoneName")}`.replace(/\s+/g, " ").trim();
+        return { display, title: raw };
+      }
+      function normalizeSearchText(value) {
+        return text(value || "")
+          .toLowerCase()
+          .replace(/æ/g, "ae")
+          .replace(/ø/g, "oe")
+          .replace(/å/g, "aa")
+          .replace(/ü/g, "u")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+      const atlasSearchSynonyms = {
+        height: ["højde", "hoejde", "hjde"],
+        hoejde: ["height", "højde"],
+        weight: ["vægt", "vaegt", "vgt"],
+        vaegt: ["weight", "vægt"],
+        smoking: ["ryger", "tobacco"],
+        ryger: ["smoking", "tobacco"],
+        alcohol: ["drikker"],
+        drikker: ["alcohol"],
+        ldh: ["lactate dehydrogenase", "lactatdehydrogenase"],
+        "lactate dehydrogenase": ["LDH", "lactatdehydrogenase"],
+        haemoglobin: ["hemoglobin", "hæmoglobin", "haemoglobin"],
+        hemoglobin: ["haemoglobin", "hæmoglobin"],
+        creatinine: ["kreatinin"],
+        kreatinin: ["creatinine"],
+        rituximab: ["MabThera", "mabthera"],
+        mabthera: ["rituximab"],
+        myeloma: ["myelomatose", "DaMyDa"],
+        myelomatose: ["myeloma", "DaMyDa"],
+        damyda: ["myeloma", "myelomatose"],
+        lymphoma: ["lymfom", "LYFO"],
+        lymfom: ["lymphoma", "LYFO"],
+        lyfo: ["lymphoma", "lymfom"],
+        pathology: ["patobank", "SNOMED"],
+        patobank: ["pathology", "SNOMED"],
+        snomed: ["pathology", "PATOBANK"],
+        biobank: ["sample", "plasma"],
+        sample: ["biobank", "plasma"],
+        plasma: ["biobank", "sample"]
+      };
+      function expandSearchTerms(query) {
+        const raw = text(query || "").trim();
+        const normalized = normalizeSearchText(raw);
+        const terms = new Set([normalized]);
+        Object.entries(atlasSearchSynonyms).forEach(([key, values]) => {
+          const nKey = normalizeSearchText(key);
+          if (normalized === nKey || normalized.includes(nKey)) {
+            values.forEach(value => terms.add(normalizeSearchText(value)));
+          }
+          values.forEach(value => {
+            const nValue = normalizeSearchText(value);
+            if (normalized === nValue || normalized.includes(nValue)) terms.add(nKey);
+          });
+        });
+        normalized.split(" ").filter(Boolean).forEach(part => terms.add(part));
+        return Array.from(terms).filter(Boolean);
+      }
+      function rowHay(row) {
+        return Object.values(row || {}).map(text).join(" ");
+      }
+      function rowMatchesQuery(row, query) {
+        const terms = expandSearchTerms(query);
+        if (!terms.length) return true;
+        const hay = normalizeSearchText(rowHay(row));
+        return terms.some(term => hay.includes(term));
+      }
+      function textMatchesQuery(value, query) {
+        const terms = expandSearchTerms(query);
+        if (!terms.length) return true;
+        const hay = normalizeSearchText(value);
+        return terms.some(term => hay.includes(term));
+      }
+      function firstNonEmpty(row, keys) {
+        for (const key of keys || []) {
+          const value = text(row && row[key]).trim();
+          if (value) return value;
+        }
+        return "";
+      }
+      function codeSearchValue(row) {
+        return firstNonEmpty(row, ["raw_code", "code", "code_name", "clinical_variable"]);
+      }
+      function isGenericCodeValue(value) {
+        return /^(?:\.|0|00|01|1|2|3|4|5|6|7|8|9|y|n|yes|no|unknown|unk|na|n\/a)$/i.test(text(value || "").trim());
+      }
+      function scoreSearchResult(row, query, fieldGroups) {
+        const terms = expandSearchTerms(query);
+        if (!terms.length) return 0;
+        const groups = fieldGroups || {};
+        const exactFields = (groups.exact || []).map(key => normalizeSearchText(firstNonEmpty(row, [key]))).filter(Boolean);
+        const titleFields = (groups.title || []).map(key => normalizeSearchText(firstNonEmpty(row, [key]))).filter(Boolean);
+        const sourceFields = (groups.source || []).map(key => normalizeSearchText(firstNonEmpty(row, [key]))).filter(Boolean);
+        const bodyFields = (groups.body || []).map(key => normalizeSearchText(firstNonEmpty(row, [key]))).filter(Boolean);
+        const all = normalizeSearchText(rowHay(row));
+        let score = 0;
+        terms.forEach(term => {
+          if (!term) return;
+          if (exactFields.some(value => value === term)) score = Math.max(score, 1000);
+          if (exactFields.some(value => value.includes(term))) score = Math.max(score, 900);
+          if (titleFields.some(value => value === term)) score = Math.max(score, 820);
+          if (titleFields.some(value => value.includes(term))) score = Math.max(score, 720);
+          if (sourceFields.some(value => value === term)) score = Math.max(score, 620);
+          if (sourceFields.some(value => value.includes(term))) score = Math.max(score, 520);
+          if (bodyFields.some(value => value.includes(term))) score = Math.max(score, 360);
+          if (all.includes(term)) score = Math.max(score, 220);
+        });
+        return score;
+      }
+      function dedupeSearchResults(rows) {
+        const seen = new Set();
+        return (rows || []).filter(result => {
+          const key = [
+            normalizeSearchText(result.title),
+            normalizeSearchText(result.description),
+            result.tab || "",
+            result.sub || "",
+            normalizeSearchText(result.query)
+          ].join("|");
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+      }
+      function humanMetricLabel(metric) {
+        const labels = {
+          semantic_variables: "Semantic rows",
+          value_mappings: "Value mappings",
+          code_mappings: "Code mappings",
+          candidate_rows: "Candidate rows",
+          confirmed_rows: "Confirmed rows",
+          mapped_sources: "Mapped sources",
+          loaded_sources: "Loaded sources",
+          failed_sources: "Failed sources",
+          rows: "Profiled rows",
+          columns: "Profiled columns",
+          warnings: "QA warnings",
+          errors: "QA errors"
+        };
+        return labels[metric] || text(metric || "").replace(/_/g, " ").replace(/\b\w/g, ch => ch.toUpperCase());
+      }
+      function valuePresent(value) {
+        return text(value || "").trim() && text(value || "").trim().toLowerCase() !== "not available";
+      }
+      function fieldCopyValue(row, keys, joiner) {
+        return (keys || []).map(key => text(row && row[key]).trim()).filter(Boolean).join(joiner || ".");
+      }
+      function panelRoute(panelId) {
+        const id = text(panelId || "").toLowerCase();
+        if (/damyda/.test(id)) return { tab: "registries", sub: "reg-damyda" };
+        if (/lyfo/.test(id)) return { tab: "registries", sub: "reg-lyfo" };
+        if (/\bcll\b|reg_cll/.test(id)) return { tab: "registries", sub: "reg-cll" };
+        if (/social|lifestyle/.test(id)) return { tab: "clinical", sub: "clinical-social" };
+        if (/vital|anthrop/.test(id)) return { tab: "clinical", sub: "clinical-vitals" };
+        if (/micro|infection|blood.?culture/.test(id)) return { tab: "clinical", sub: "clinical-microbiology" };
+        if (/imaging|radiotherapy/.test(id)) return { tab: "clinical", sub: "clinical-imaging" };
+        if (/pathology|pato|snomed/.test(id)) return { tab: "clinical", sub: "clinical-pathology" };
+        if (/biobank/.test(id)) return { tab: "laboratory", sub: "lab-biobank" };
+        if (/laboratory|lab|npu/.test(id)) return { tab: "laboratory", sub: "lab-npu" };
+        if (/treatment/.test(id)) return { tab: "treatment", sub: "treatment-dashboard" };
+        return { tab: "variables", sub: "variables-panels" };
+      }
+      function makeSearchResult(group, title, description, row, route, options) {
+        const opts = options || {};
+        return {
+          group,
+          title: title || "Untitled result",
+          description: description || "",
+          row: row || {},
+          tab: route && route.tab || "overview",
+          sub: route && route.sub || "",
+          query: opts.query || title || "",
+          item: opts.item || "",
+          badge: opts.badge || group,
+          status: opts.status || "",
+          copy: opts.copy || title || "",
+          score: opts.score || 0
+        };
+      }
+      function buildGlobalSearchResults(query) {
+        const q = text(query || "").trim().toLowerCase();
+        if (!q) return {};
+        const grouped = {
+          "Clinical concepts": [],
+          "Raw columns / lineage": [],
+          "Codes": [],
+          "Values": [],
+          "Panels": [],
+          "Sources": [],
+          "QA / caveats": []
+        };
+        clinicalConceptRows.forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["clinical_concept_id", "clinical_variable"],
+            title: ["clinical_variable", "clinical_group", "clinical_subgroup"],
+            source: ["best_source", "primary_sources"],
+            body: ["purpose", "use_cases", "caveats", "evidence_files", "search_terms"]
+          });
+          if (score > 0) {
+            grouped["Clinical concepts"].push(makeSearchResult(
+              "Clinical concepts",
+              row.clinical_variable || row.clinical_concept_id,
+              [row.clinical_group, row.clinical_subgroup, row.purpose || row.best_source].filter(Boolean).join(" - "),
+              row,
+              { tab: "variables", sub: "variables-concepts" },
+              { query: row.clinical_variable || row.clinical_concept_id, item: row.clinical_concept_id, status: row.concept_status, copy: row.clinical_concept_id || row.clinical_variable, score }
+            ));
+          }
+        });
+        semanticRows.forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["semantic_id", "raw_column", "raw_code", "clinical_concept_id"],
+            title: ["clinical_variable", "semantic_meaning", "raw_descriptor"],
+            source: ["source_name", "object_name", "table_name"],
+            body: ["evidence_file", "clinical_caveat", "privacy_note"]
+          });
+          if (score > 0) {
+            grouped["Raw columns / lineage"].push(makeSearchResult(
+              "Raw columns / lineage",
+              semanticRawName(row) || row.semantic_id,
+              [row.clinical_variable, row.source_name, row.mapping_status].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-lineage" },
+              { query: row.raw_column || row.clinical_variable || row.semantic_id, item: row.semantic_id, status: row.mapping_confidence || row.mapping_status, copy: fieldCopyValue(row, ["source_name", "raw_column"], ".") || row.semantic_id, score }
+            ));
+          }
+        });
+        semanticCodeRows.forEach(row => {
+          const codeValue = codeSearchValue(row);
+          const score = scoreSearchResult(row, q, {
+            exact: ["raw_code", "code", "code_name", "semantic_id", "clinical_concept_id"],
+            title: ["code_name", "clinical_variable", "code_system"],
+            source: ["source_name", "object_name", "table_name"],
+            body: ["semantic_meaning", "evidence_file", "clinical_caveat"]
+          });
+          const normalizedQuery = normalizeSearchText(q);
+          if (isGenericCodeValue(codeValue) && normalizeSearchText(codeValue) !== normalizedQuery) return;
+          if (score > 0) {
+            grouped["Codes"].push(makeSearchResult(
+              "Codes",
+              codeValue,
+              [row.code_system, row.clinical_variable, row.source_name].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-codes" },
+              { query: codeValue, item: row.semantic_id || codeValue, status: row.mapping_status, copy: codeValue, score }
+            ));
+          }
+        });
+        semanticValueRows.forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["raw_value", "display_value", "semantic_id", "clinical_concept_id"],
+            title: ["display_value", "raw_value", "clinical_variable"],
+            source: ["source_name", "object_name", "table_name"],
+            body: ["value_class", "semantic_meaning", "evidence_file"]
+          });
+          if (score > 0) {
+            grouped["Values"].push(makeSearchResult(
+              "Values",
+              row.display_value || row.raw_value || row.clinical_variable,
+              [row.raw_value, row.clinical_variable, row.source_name].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-values" },
+              { query: row.raw_value || row.display_value || row.clinical_variable, item: row.semantic_id, status: row.mapping_status, copy: row.raw_value || row.display_value || "", score }
+            ));
+          }
+        });
+        domainPanelRows.concat(semanticPanelLinks).forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["panel_id", "semantic_id", "clinical_concept_id"],
+            title: ["panel_title", "clinical_variable"],
+            source: ["source_name"],
+            body: ["clinical_purpose", "use_cases", "caveats"]
+          });
+          if (score > 0) {
+            const route = panelRoute(row.panel_id || row.related_panel_ids || row.panel_title);
+            grouped["Panels"].push(makeSearchResult(
+              "Panels",
+              row.panel_title || row.panel_id || row.clinical_variable,
+              [row.panel_id, row.clinical_purpose || row.clinical_variable].filter(Boolean).join(" - "),
+              row,
+              route,
+              { query: row.panel_title || row.panel_id || row.clinical_variable, item: row.panel_id, status: row.panel_status, copy: row.panel_id || row.panel_title || "", score }
+            ));
+          }
+        });
+        resourceReconciliationRows.concat(catalogRows, payload.sources || []).forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["expected_resource_id", "table_name", "source_name", "source", "current_table_name"],
+            title: ["display_name", "table_name", "source_name"],
+            source: ["domain", "subdomain", "atlas_role", "expected_role"],
+            body: ["source_type", "status", "load_status", "resolution_status", "current_run_status", "legacy_status", "action_required", "notes"]
+          });
+          if (score > 0) {
+            grouped["Sources"].push(makeSearchResult(
+              "Sources",
+              row.display_name || row.expected_resource_id || row.table_name || row.source_name || row.source || "Source",
+              [row.domain, row.subdomain || row.expected_role, row.atlas_role, row.current_run_status || row.status || row.load_status].filter(Boolean).join(" - "),
+              row,
+              { tab: "infrastructure", sub: "infra-catalog" },
+              { query: row.expected_resource_id || row.table_name || row.source_name || "", status: row.current_run_status || row.status || row.load_status, copy: row.expected_resource_id || row.table_name || row.source_name || "", score }
+            ));
+          }
+        });
+        qaItems.concat(actionItems).forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["check_id", "action_id", "category"],
+            title: ["check_id", "action_id", "category"],
+            source: ["table_name"],
+            body: ["message", "reason", "recommended_action", "severity"]
+          });
+          if (score > 0) {
+            grouped["QA / caveats"].push(makeSearchResult(
+              "QA / caveats",
+              row.check_id || row.action_id || row.category || "QA item",
+              row.message || row.reason || row.recommended_action || "",
+              row,
+              { tab: "infrastructure", sub: "infra-qa" },
+              { query: row.check_id || row.message || "", status: row.severity, copy: row.message || row.recommended_action || "", score }
+            ));
+          }
+        });
+        Object.keys(grouped).forEach(key => {
+          grouped[key] = dedupeSearchResults(grouped[key])
+            .sort((a, b) => (b.score - a.score) || text(a.title).localeCompare(text(b.title)))
+            .slice(0, 12);
+        });
+        return grouped;
+      }
+      function syncGlobalSearchPlaceholder() {
+        const search = document.getElementById("global-atlas-search");
+        if (!search) return;
+        const isMobile = window.matchMedia && window.matchMedia("(max-width: 520px)").matches;
+        search.placeholder = isMobile ? globalSearchPlaceholderMobile : globalSearchPlaceholderFull;
+      }
+      function renderGlobalSearch(query) {
+        const q = text(query || "").trim();
+        const container = document.getElementById("global-search-results");
+        if (!container) return;
+        appState.lastGlobalQuery = q;
+        if (!q) {
+          appState.globalResultsExpanded = false;
+          container.classList.remove("expanded");
+          container.innerHTML = `<div class="mini">Try searches like <code>smoking</code>, <code>ryger</code>, <code>LDH</code>, <code>NPU02319</code>, <code>rituximab</code>, <code>DaMyDa</code>, <code>LYFO</code>, or <code>PATOBANK</code>.</div>`;
+          return;
+        }
+        const grouped = buildGlobalSearchResults(q);
+        const groupOrder = ["Clinical concepts", "Codes", "Raw columns / lineage", "Values", "Panels", "Sources", "QA / caveats"];
+        const groups = Object.entries(grouped)
+          .filter(([, rows]) => rows.length)
+          .sort((a, b) => (Math.max(...b[1].map(row => row.score || 0)) - Math.max(...a[1].map(row => row.score || 0))) || (groupOrder.indexOf(a[0]) - groupOrder.indexOf(b[0])));
+        const isMobile = window.matchMedia && window.matchMedia("(max-width: 820px)").matches;
+        const collapsedMobile = isMobile && !appState.globalResultsExpanded;
+        const totalResults = groups.reduce((sum, [, rows]) => sum + rows.length, 0);
+        let remainingVisible = collapsedMobile ? 4 : Infinity;
+        let hiddenCount = 0;
+        const renderGroups = groups.map(([group, rows]) => {
+          const take = Math.max(0, remainingVisible);
+          const visibleRows = collapsedMobile ? rows.slice(0, take) : rows;
+          hiddenCount += collapsedMobile ? Math.max(0, rows.length - visibleRows.length) : 0;
+          remainingVisible -= visibleRows.length;
+          return [group, visibleRows];
+        }).filter(([, rows]) => rows.length);
+        hiddenCount = isMobile ? Math.max(0, totalResults - 4) : 0;
+        container.classList.toggle("expanded", !collapsedMobile);
+        container.innerHTML = renderGroups.length ? renderGroups.map(([group, rows]) => `
+          <section class="global-search-group">
+            <h3>${escapeHtml(group)}</h3>
+            <div class="global-result-list">${rows.map(result => `
+              <article class="global-result">
+                <div>
+                  <div>${renderBadge(result.badge, "blue")} ${result.status ? renderBadge(result.status, "amber") : ""}</div>
+                  <strong>${escapeHtml(result.title)}</strong>
+                  <p class="mini">${escapeHtml(result.description)}</p>
+                </div>
+                <div class="global-result-actions">
+                  <button class="utility-button" type="button" data-search-open="true" data-search-tab="${escapeHtml(result.tab)}" data-search-sub="${escapeHtml(result.sub)}" data-search-query="${escapeHtml(result.query)}" data-search-item="${escapeHtml(result.item || "")}">Open</button>
+                  ${result.copy ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(result.copy)}">Copy</button>` : ""}
+                </div>
+              </article>
+            `).join("")}</div>
+          </section>
+        `).join("") + (() => {
+          return isMobile && hiddenCount > 0 ? `<div class="global-search-toggle-row"><button class="utility-button" type="button" data-toggle-global-results="true">${collapsedMobile ? `Show all results (${hiddenCount} more)` : "Collapse results"}</button></div>` : "";
+        })() : `<div class="global-search-group"><h3>No results</h3><p class="mini">No atlas rows matched <code>${escapeHtml(q)}</code>. Try a raw column, source, code, or Danish/English clinical term.</p></div>`;
+      }
+      function filteredRowsForExport(viewName) {
+        const map = {
+          "clinical-concepts": appState.clinicalFilterActive ? appState.clinicalFilteredRows : clinicalConceptRows,
+          "semantic-lineage": appState.semanticFilterActive ? appState.semanticFilteredRows : semanticRows,
+          "semantic-values": appState.semanticValueFilterActive ? appState.semanticValueFilteredRows : semanticValueRows,
+          "semantic-codes": appState.semanticCodeFilterActive ? appState.semanticCodeFilteredRows : semanticCodeRows,
+          "semantic-panels": appState.semanticPanelFilterActive ? appState.semanticPanelFilteredRows : semanticPanelLinks
+        };
+        return map[viewName] || [];
+      }
+      function rowsToCsv(rows) {
+        if (!rows.length) return "";
+        const cols = Array.from(rows.reduce((set, row) => {
+          Object.keys(row || {}).forEach(key => set.add(key));
+          return set;
+        }, new Set()));
+        const csvCell = value => `"${text(value).replace(/"/g, "\"\"")}"`;
+        return [cols.map(csvCell).join(",")].concat(rows.map(row => cols.map(col => csvCell(row[col])).join(","))).join("\n");
+      }
+      function downloadCsv(viewName, button) {
+        const rows = filteredRowsForExport(viewName);
+        if (!rows.length) {
+          flashButton(button, "No rows to export");
+          return;
+        }
+        const blob = new Blob([rowsToCsv(rows)], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${viewName || "atlas"}_filtered.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        flashButton(button, `Exported ${rows.length} rows`);
+      }
+      function copyText(value) {
+        const textValue = text(value || "");
+        if (!textValue) return false;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textValue).catch(() => {
+            fallbackCopyText(textValue);
+          });
+        } else {
+          fallbackCopyText(textValue);
+        }
+        return true;
+      }
+      function fallbackCopyText(textValue) {
+        const el = document.createElement("textarea");
+        el.value = textValue;
+        el.style.position = "fixed";
+        el.style.left = "-9999px";
+        document.body.appendChild(el);
+        el.select();
+        try { document.execCommand("copy"); } catch (error) {}
+        document.body.removeChild(el);
+      }
+      function flashButton(button, message) {
+        if (!button) return;
+        const original = button.textContent;
+        button.textContent = message;
+        button.disabled = true;
+        window.setTimeout(() => {
+          button.textContent = original;
+          button.disabled = false;
+        }, 1400);
+      }
+      function highlightElement(element) {
+        if (!element) return false;
+        element.classList.add("search-highlight");
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        window.setTimeout(() => element.classList.remove("search-highlight"), 2400);
+        return true;
+      }
+      function highlightBestMatch(selector, query, item) {
+        const elements = Array.from(document.querySelectorAll(selector));
+        const normalizedItem = normalizeSearchText(item || "");
+        const normalizedQuery = normalizeSearchText(query || "");
+        const hit = elements.find(el => normalizedItem && normalizeSearchText(el.dataset.semanticId || el.dataset.conceptId || el.dataset.panelId || "").includes(normalizedItem)) ||
+          elements.find(el => normalizedQuery && normalizeSearchText(el.dataset.rowSearchKey || el.textContent || "").includes(normalizedQuery));
+        return highlightElement(hit);
+      }
       function rowsForTable(rows, maxRows) {
         if (!rows || !rows.length) return `<div class="empty">No rows available.</div>`;
         const shown = rows.slice(0, maxRows || 100);
         const cols = Object.keys(shown[0] || {});
-        return `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${shown.map(row => `<tr>${cols.map(c => `<td>${escapeHtml(row[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+        return `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead><tbody>${shown.map(row => `<tr data-row-search-key="${escapeHtml(rowHay(row))}" data-semantic-id="${escapeHtml(row.semantic_id || "")}" data-concept-id="${escapeHtml(row.clinical_concept_id || "")}" data-panel-id="${escapeHtml(row.panel_id || "")}">${cols.map(c => `<td>${escapeHtml(row[c])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
       }
       function sourceTiles(rows, emptyMessage) {
         if (!rows || !rows.length) return `<div class="empty">${escapeHtml(emptyMessage || "No matching sources were available.")}</div>`;
@@ -1656,12 +2470,58 @@
           <ul>${globalAtlasCaveats.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>
         </article>`;
       }
+      function renderRunStatusBanner() {
+        const env = inferRunEnvironment();
+        const errors = numberValue(runMetricValue("errors", payload.error_count || 0));
+        const warnings = numberValue(runMetricValue("warnings", payload.warning_count || 0));
+        const qaLabel = errors ? `${formatNumber(errors)} QA errors` : warnings ? `${formatNumber(warnings)} QA warnings` : "QA clear";
+        const generated = formatTimestamp(payload.generated_at || runSummaryValue("generated_at", ""));
+        const runId = payload.run_id || runSummaryValue("run_id", "Not available");
+        const fixtureContext = env.label === "Mock / fixture"
+          ? `<p class="mini"><strong>Fixture context:</strong> Offline DB/access warnings are expected in a static mockup and do not by themselves indicate that the production atlas is broken.</p>`
+          : "";
+        return `<article class="card status-banner ${escapeHtml(env.tone)}">
+          <div class="status-line">
+            ${renderBadge(`Environment: ${env.label}`, env.tone)}
+            ${renderBadge(qaLabel, errors ? "red" : warnings ? "amber" : "green")}
+          </div>
+          <div class="kpi-row">
+            <div class="kpi"><b title="${escapeHtml(generated.title)}">${escapeHtml(generated.display)}</b><span class="mini">Generated timestamp</span></div>
+            <div class="kpi"><b title="${escapeHtml(runId)}">${escapeHtml(runId)}</b><span class="mini">Run ID / build identifier</span></div>
+            <div class="kpi"><b>${formatNumber(runMetricValue("mapped_sources", payload.source_count || "Not available"))}</b><span class="mini">Mapped sources</span></div>
+            <div class="kpi"><b>${formatNumber(runMetricValue("rows", "Not available"))}</b><span class="mini">Profiled rows</span></div>
+            <div class="kpi"><b>${formatNumber(runMetricValue("columns", payload.column_count || "Not available"))}</b><span class="mini">Profiled columns</span></div>
+          </div>
+          <p class="mini">${escapeHtml(env.warning)}</p>
+          ${fixtureContext}
+        </article>`;
+      }
+      function renderPipelineStatusCards() {
+        const metricHelp = {
+          mapped_sources: "Mapped sources in the source map.",
+          loaded_sources: "Loaded/resolved sources in this run.",
+          failed_sources: "Sources that failed profiling.",
+          rows: "Profiled rows across loaded sources.",
+          columns: "Profiled columns/raw fields.",
+          warnings: "Generated QA warning rows.",
+          errors: "Generated QA error rows.",
+          min_cell_count: "Minimum display cell count for suppression."
+        };
+        return (payload.hero_metrics || []).map(row => `
+          <article class="card">
+            <div>${renderBadge(humanMetricLabel(row.metric || row.label || "metric"), row.tone === "bad" ? "red" : row.tone === "warn" ? "amber" : row.tone === "good" ? "green" : "blue")}</div>
+            <h3>${formatNumber(row.value)}</h3>
+            <p class="mini">${escapeHtml(metricHelp[row.metric] || "Refreshable run metric from the generated payload.")}</p>
+          </article>
+        `).join("") || `<div class="empty">Run status metrics are not available in the current payload.</div>`;
+      }
       function renderOverviewEntryCards() {
         return overviewEntryCards.map(card => `
           <article class="card overview-entry-card">
             <div>${renderBadge(card.status, card.tone)}</div>
             <h3>${escapeHtml(card.title)}</h3>
-            <p>${escapeHtml(card.purpose)}</p>
+            <p><strong>Best for:</strong> ${escapeHtml(card.bestFor)}</p>
+            <p class="mini"><strong>Evidence/source type:</strong> ${escapeHtml(card.evidence)}</p>
             <p class="mini"><strong>Examples:</strong> ${card.examples.map(example => `<code>${escapeHtml(example)}</code>`).join(" ")}</p>
             <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(card.tab)}" data-jump-sub="${escapeHtml(card.sub)}"${card.search ? ` data-jump-search="${escapeHtml(card.search)}"` : ""}>Open panel</button>
           </article>
@@ -1886,7 +2746,7 @@
       function renderConceptCard(concept) {
         const related = rowsForConcept(concept);
         const status = concept.concept_status || "available";
-        return `<article class="clinical-card concept-card">
+        return `<article class="clinical-card concept-card" data-concept-id="${escapeHtml(concept.clinical_concept_id || "")}" data-row-search-key="${escapeHtml(conceptHay(concept))}">
           <div>${renderBadge(status, status === "available" ? "green" : "amber")} ${renderBadge(concept.clinical_group || "Clinical", "blue")}</div>
           <h3>${escapeHtml(concept.clinical_variable || "Clinical variable")}</h3>
           <p>${escapeHtml(concept.purpose || "")}</p>
@@ -1946,14 +2806,16 @@
         const q = document.getElementById("clinical-variable-search").value.trim().toLowerCase();
         const group = document.getElementById("clinical-variable-group-filter").value;
         const status = document.getElementById("clinical-variable-status-filter").value;
+        appState.clinicalFilterActive = Boolean(q || group || status);
         const filtered = clinicalConceptRows.filter(row => {
-          return (!q || conceptHay(row).includes(q)) &&
+          return (!q || textMatchesQuery(conceptHay(row), q)) &&
             (!group || row.clinical_group === group) &&
             (!status || row.concept_status === status);
         });
         const ordered = stableClinicalConceptSort(filtered);
+        appState.clinicalFilteredRows = filtered;
         const visible = ordered.slice(0, 36);
-        document.getElementById("clinical-variable-count").textContent = `Showing ${visible.length} of ${filtered.length} matching clinical concepts. Total concepts: ${clinicalConceptRows.length}.`;
+        document.getElementById("clinical-variable-count").innerHTML = `${q ? `<div class="filter-message">Filtered by: <code>${escapeHtml(q)}</code></div>` : ""}Showing ${visible.length} of ${filtered.length} matching clinical concepts. Total concepts: ${clinicalConceptRows.length}.`;
         setHtml("clinical-variable-cards", visible.map(renderConceptCard).join("") + (filtered.length > visible.length ? `<div class="empty">Showing ${visible.length} priority concept cards. Refine search or filters to narrow ${filtered.length - visible.length} additional matches.</div>` : "") || `<div class="empty">No clinical concept cards match the current filters.</div>`);
         const ids = new Set(filtered.map(row => row.clinical_concept_id));
         setHtml("clinical-variable-raw-fields", rowsForTable(panelRawFieldRows.filter(row => ids.has(row.clinical_concept_id)).slice(0, 500), 500));
@@ -2758,9 +3620,11 @@
         </div>`;
       }
 
-      document.getElementById("hero-copy").textContent = `Aggregate-only atlas generated from ${payload.source_count || 0} mapped sources. CSV evidence files remain in outputs/; this viewer loads only DALYCARE_atlas_payload.js.`;
+      document.getElementById("hero-copy").textContent = "Explore refreshable, aggregate-only clinical data evidence across registries, treatment, labs, infection, imaging, pathology, and biobank samples.";
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
-      document.getElementById("generated-at").textContent = `Generated ${payload.generated_at || "unknown"}`;
+      const heroGeneratedAt = formatTimestamp(payload.generated_at || runSummaryValue("generated_at", ""));
+      document.getElementById("generated-at").textContent = `Generated ${heroGeneratedAt.display}`;
+      document.getElementById("generated-at").title = heroGeneratedAt.title;
       document.getElementById("builder-credit").textContent = builderCredit;
       document.getElementById("footer-credit").textContent = builderCredit;
       const errors = numberValue(metric("errors").value);
@@ -2768,46 +3632,134 @@
       const qaBadge = document.getElementById("qa-badge");
       qaBadge.className = `badge ${errors ? "error" : warnings ? "warning" : "ok"}`;
       qaBadge.textContent = errors ? `${errors} errors` : warnings ? `${warnings} warnings` : "QA clear";
-      setHtml("hero-metrics", (payload.hero_metrics || []).map(row => `
-        <div class="metric-card ${escapeHtml(row.tone || "neutral")}">
-          <span class="metric-value">${formatNumber(row.value)}</span>
-          <span class="metric-label">${escapeHtml(row.label)}</span>
-        </div>
-      `).join(""));
+      setHtml("hero-metrics", "");
 
-      function activateTab(tabId) {
-        document.querySelectorAll(".tab-button").forEach(b => b.classList.toggle("active", b.dataset.tab === tabId));
-        document.querySelectorAll(".tab-page").forEach(page => page.classList.toggle("active", page.id === `tab-${tabId}`));
+      function isQaRoute() {
+        const params = new URLSearchParams(window.location.search);
+        return params.has("qaTab") || params.has("qaCapture") || params.has("qaOverflow");
       }
-      function activateSubPane(tabId, subId) {
+      function activeSubForTab(tabId) {
+        const page = document.getElementById(`tab-${tabId}`);
+        const active = page ? page.querySelector(".sub-pane.active") : null;
+        return active ? active.id : "";
+      }
+      function updateShareUrl(tabId, subId, replace, params) {
+        if (isQaRoute()) return;
+        const query = new URLSearchParams();
+        const routeParams = params || {};
+        if (routeParams.q) query.set("q", routeParams.q);
+        if (routeParams.item) query.set("item", routeParams.item);
+        const hash = `#${encodeURIComponent(tabId || "overview")}${subId ? "/" + encodeURIComponent(subId) : ""}${query.toString() ? "?" + query.toString() : ""}`;
+        if (window.location.hash === hash) return;
+        if (replace) {
+          window.history.replaceState({ tabId, subId, params: routeParams }, "", hash);
+        } else {
+          window.history.pushState({ tabId, subId, params: routeParams }, "", hash);
+        }
+      }
+      function parseHashRoute() {
+        const rawHash = decodeURIComponent((window.location.hash || "").replace(/^#/, "")).trim();
+        const [raw, queryString] = rawHash.split("?");
+        const query = new URLSearchParams(queryString || "");
+        if (!raw) return {};
+        const bits = raw.split("/").filter(Boolean);
+        return { tabId: bits[0] || "", subId: bits[1] || "", q: query.get("q") || "", item: query.get("item") || "" };
+      }
+      function activateTab(tabId, options) {
+        const opts = options || {};
+        const tab = document.getElementById(`tab-${tabId}`) ? tabId : "overview";
+        document.querySelectorAll(".tab-button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+        document.querySelectorAll(".tab-page").forEach(page => page.classList.toggle("active", page.id === `tab-${tab}`));
+        const mobileSelect = document.getElementById("mobile-tab-select");
+        if (mobileSelect && mobileSelect.value !== tab) mobileSelect.value = tab;
+        if (!opts.silent) updateShareUrl(tab, activeSubForTab(tab), opts.replace);
+      }
+      function activateSubPane(tabId, subId, options) {
+        const opts = options || {};
         if (!subId) return;
         const page = document.getElementById(`tab-${tabId}`);
         if (!page) return;
-        page.querySelectorAll(".sub-tab").forEach(button => button.classList.toggle("active", button.dataset.sub === subId));
-        page.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === subId));
+        const pane = document.getElementById(subId);
+        const targetSub = pane && pane.closest(".tab-page") === page ? subId : activeSubForTab(tabId);
+        if (!targetSub) return;
+        page.querySelectorAll(".sub-tab").forEach(button => button.classList.toggle("active", button.dataset.sub === targetSub));
+        page.querySelectorAll(".sub-pane").forEach(p => p.classList.toggle("active", p.id === targetSub));
+        if (!opts.silent) updateShareUrl(tabId, targetSub, opts.replace);
+      }
+      function applyLocalSearch(tabId, subId, query, item) {
+        const q = text(query || "");
+        const globalSearch = document.getElementById("global-atlas-search");
+        if (globalSearch && q) {
+          globalSearch.value = q;
+          renderGlobalSearch(q);
+        }
+        if (tabId === "variables") {
+          const search = document.getElementById("clinical-variable-search");
+          if (search) {
+            search.value = q;
+            renderClinicalVariables();
+            window.setTimeout(() => {
+              if (!highlightBestMatch("#clinical-variable-cards .concept-card", q, item)) {
+                const count = document.getElementById("clinical-variable-count");
+                if (count && q) count.insertAdjacentHTML("afterbegin", `<div class="filter-message">Filtered by: <code>${escapeHtml(q)}</code></div>`);
+              }
+            }, 80);
+          }
+        }
+        if (tabId === "dictionary") {
+          if (subId === "dictionary-lineage") {
+            const search = document.getElementById("semantic-search");
+            if (search) {
+              search.value = q;
+              renderSemanticExplorer(item || "");
+              window.setTimeout(() => highlightBestMatch("#semantic-list .semantic-row", q, item), 80);
+            }
+          }
+          if (subId === "dictionary-values") {
+            const search = document.getElementById("semantic-value-search");
+            if (search) {
+              search.value = q;
+              renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500);
+              window.setTimeout(() => highlightBestMatch("#semantic-value-map tr", q, item), 80);
+            }
+          }
+          if (subId === "dictionary-codes") {
+            const search = document.getElementById("semantic-code-search");
+            if (search) {
+              search.value = q;
+              renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500);
+              window.setTimeout(() => highlightBestMatch("#semantic-code-map tr", q, item), 80);
+            }
+          }
+          if (subId === "dictionary-panels") {
+            const search = document.getElementById("semantic-panel-search");
+            if (search) {
+              search.value = q;
+              renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500);
+              window.setTimeout(() => highlightBestMatch("#semantic-panel-links tr", q, item), 80);
+            }
+          }
+        }
       }
       function jumpToPanel(tabId, subId, options) {
         const opts = options || {};
-        const tab = tabId || "overview";
-        activateTab(tab);
-        activateSubPane(tab, subId);
-        if (tab === "variables" && Object.prototype.hasOwnProperty.call(opts, "search")) {
-          const search = document.getElementById("clinical-variable-search");
-          if (search) {
-            search.value = opts.search || "";
-            search.dispatchEvent(new Event("input", { bubbles: true }));
-          } else {
-            renderClinicalVariables();
-          }
-        }
+        const tab = document.getElementById(`tab-${tabId || ""}`) ? tabId : "overview";
+        activateTab(tab, { silent: true });
+        activateSubPane(tab, subId, { silent: true });
+        if (Object.prototype.hasOwnProperty.call(opts, "search")) applyLocalSearch(tab, subId, opts.search || "", opts.item || "");
+        updateShareUrl(tab, subId || activeSubForTab(tab), Boolean(opts.replace), { q: opts.search || "", item: opts.item || "" });
         const target = (opts.scrollId && document.getElementById(opts.scrollId)) ||
           (subId && document.getElementById(subId)) ||
           document.getElementById(`tab-${tab}`);
-        if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (target && opts.scroll !== false) target.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       document.querySelectorAll(".tab-button").forEach(button => {
-        button.addEventListener("click", () => activateTab(button.dataset.tab));
+        button.addEventListener("click", () => jumpToPanel(button.dataset.tab, activeSubForTab(button.dataset.tab), { scroll: false }));
       });
+      const mobileTabSelect = document.getElementById("mobile-tab-select");
+      if (mobileTabSelect) {
+        mobileTabSelect.addEventListener("change", event => jumpToPanel(event.target.value, activeSubForTab(event.target.value), { scroll: false }));
+      }
       document.addEventListener("keydown", event => {
         if (event.altKey || event.ctrlKey || event.metaKey || event.target.matches("input, select, textarea")) return;
         const tabs = Array.from(document.querySelectorAll(".tab-button"));
@@ -2817,10 +3769,9 @@
       document.querySelectorAll(".sub-nav").forEach(nav => {
         nav.querySelectorAll(".sub-tab").forEach(button => {
           button.addEventListener("click", () => {
-            nav.querySelectorAll(".sub-tab").forEach(b => b.classList.remove("active"));
-            button.classList.add("active");
             const page = nav.closest(".tab-page");
-            page.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === button.dataset.sub));
+            const tab = page ? page.id.replace(/^tab-/, "") : "overview";
+            jumpToPanel(tab, button.dataset.sub, { scroll: false });
           });
         });
       });
@@ -2837,12 +3788,69 @@
           scrollId: button.dataset.jumpScroll || ""
         });
       });
+      const globalAtlasSearch = document.getElementById("global-atlas-search");
+      const globalSearchButton = document.getElementById("global-search-button");
+      if (globalAtlasSearch) {
+        syncGlobalSearchPlaceholder();
+        window.addEventListener("resize", syncGlobalSearchPlaceholder);
+        renderGlobalSearch("");
+        globalAtlasSearch.addEventListener("input", () => {
+          const q = globalAtlasSearch.value.trim();
+          appState.globalResultsExpanded = false;
+          renderGlobalSearch(q);
+          const route = parseHashRoute();
+          updateShareUrl(route.tabId || "overview", route.subId || activeSubForTab(route.tabId || "overview"), true, { q });
+        });
+        globalAtlasSearch.addEventListener("keydown", event => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            renderGlobalSearch(globalAtlasSearch.value.trim());
+          }
+        });
+      }
+      if (globalSearchButton) {
+        globalSearchButton.addEventListener("click", () => renderGlobalSearch(globalAtlasSearch ? globalAtlasSearch.value.trim() : ""));
+      }
+      document.addEventListener("click", event => {
+        const open = event.target.closest("[data-search-open]");
+        if (!open) return;
+        jumpToPanel(open.dataset.searchTab || "overview", open.dataset.searchSub || "", {
+          search: open.dataset.searchQuery || "",
+          item: open.dataset.searchItem || "",
+          scroll: true
+        });
+        if (window.matchMedia && window.matchMedia("(max-width: 820px)").matches) {
+          appState.globalResultsExpanded = false;
+          const results = document.getElementById("global-search-results");
+          if (results) {
+            results.classList.remove("expanded");
+            results.innerHTML = `<div class="global-search-group"><p class="mini">Opened result. Filtered by <code>${escapeHtml(open.dataset.searchQuery || "")}</code>.</p><button class="utility-button" type="button" data-toggle-global-results="true">Show results</button></div>`;
+          }
+        }
+      });
+      document.addEventListener("click", event => {
+        const toggle = event.target.closest("[data-toggle-global-results]");
+        if (toggle) {
+          appState.globalResultsExpanded = !appState.globalResultsExpanded;
+          renderGlobalSearch(appState.lastGlobalQuery || (globalAtlasSearch ? globalAtlasSearch.value.trim() : ""));
+        }
+        const copy = event.target.closest("[data-copy-value]");
+        if (copy && copyText(copy.dataset.copyValue || "")) flashButton(copy, "Copied");
+        const share = event.target.closest("[data-copy-share-link]");
+        if (share && copyText(window.location.href)) flashButton(share, "Copied");
+        const exportButton = event.target.closest("[data-export-view]");
+        if (exportButton) downloadCsv(exportButton.dataset.exportView, exportButton);
+        const top = event.target.closest("[data-back-to-top]");
+        if (top) window.scrollTo({ top: 0, behavior: "smooth" });
+      });
 
+      setHtml("run-status-banner", renderRunStatusBanner());
       setHtml("overview-entry-cards", renderOverviewEntryCards());
       setHtml("atlas-restoration-status", renderAtlasRestorationStatus());
       setHtml("overview-cross-panel-routes", renderOverviewCrossPanelRoutes());
       setHtml("overview-global-caveat", renderGlobalAtlasCaveat());
       setHtml("clinical-variable-global-caveat", renderGlobalAtlasCaveat());
+      setHtml("overview-pipeline-status", renderPipelineStatusCards());
       setHtml("scope-notes", reviewScopeNotes.map(row => `
         <article class="card">
           <h3>${escapeHtml(row.note || "Note")}</h3>
@@ -4461,40 +5469,172 @@
         setHtml("infrastructure-db-query-log", rowsForTable(reviewInfrastructure.db_query_log || [], 300));
       }
 
-      fillSelect("catalog-domain-filter", uniqueValues(catalogRows, "domain"));
-      fillSelect("catalog-status-filter", uniqueValues(catalogRows, "load_status"));
-      fillSelect("catalog-role-filter", uniqueValues(catalogRows, "atlas_role"));
+      const catalogDisplayRows = canonicalResourceRows.length ? canonicalResourceRows : (resourceReconciliationRows.length ? resourceReconciliationRows : catalogRows);
+      function resourceStatusTone(row) {
+        const status = text(row.current_status || row.status_category || row.current_run_status || row.load_status).toLowerCase();
+        if (/legacy_unavailable_current_resolved|current_profiled|present_in_both|resolved current run|explored|resolved/.test(status)) return "ok";
+        if (/known_unavailable|legacy_unavailable_current_candidate|current candidate|not tested|not_tested|legacy_special_manual_or_embedded|special\/manual/.test(status)) return "warning";
+        if (/missing unexpectedly|current_missing_unexpectedly|legacy_profiled_current_missing|uncertain/.test(status)) return "error";
+        return "warning";
+      }
+      function renderResourceReconciliationSummary() {
+        const summaryRows = canonicalResourceRows.length ? canonicalResourceRows : resourceReconciliationRows;
+        if (!summaryRows.length) {
+          setHtml("resource-reconciliation-summary", `<div class="empty">Legacy 64-resource reconciliation is not available in this run.</div>`);
+          setHtml("resource-reconciliation-warning", "");
+          return;
+        }
+        const expected = runSummaryValue("canonical_expected_resources", runSummaryValue("expected_resources", summaryRows.length));
+        const legacyResolved = runSummaryValue("legacy_resolved_resources", legacyCartographyAuditRows.filter(row => row.resolved_by_legacy_script === true || row.resolved_by_legacy_script === "TRUE").length);
+        const legacyUnavailable = runSummaryValue("legacy_known_unavailable_resources", resourceReconciliationRows.filter(row => /^legacy_known_unavailable/.test(row.status_category || "")).length);
+        const resolverConfigured = runSummaryValue("current_resolver_configured_resources", sourceResolutionPlanRows.filter(row => ["would_attempt_in_production", "requires_manual_file", "requires_embedded_field_mapping", "legacy_unavailable_current_candidate", "current_known_unavailable_declared"].includes(row.dry_run_status)).length);
+        const dbAttemptable = runSummaryValue("db_attemptable_resources", sourceResolutionPlanRows.filter(row => ["standard_table", "alias_table", "schema_qualified_table", "direct_sql"].includes(row.resolver_type) && row.current_known_unavailable !== "TRUE").length);
+        const currentTested = runSummaryValue("canonical_current_attempted_resources", runSummaryValue("current_tested_resources", resourceReconciliationRows.filter(row => ["Resolved current run", "Resolved by alias", "Resolved by direct SQL", "Missing unexpectedly"].includes(row.current_run_status)).length));
+        const currentResolved = runSummaryValue("canonical_current_profiled_resources", runSummaryValue("current_resolved_resources", resourceReconciliationRows.filter(row => ["Resolved current run", "Resolved by alias", "Resolved by direct SQL"].includes(row.current_run_status)).length));
+        const currentNotTested = runSummaryValue("canonical_current_not_attempted_resources", runSummaryValue("current_not_tested_resources", resourceReconciliationRows.filter(row => row.current_run_status === "Not tested in current run").length));
+        const currentKnownUnavailable = runSummaryValue("current_known_unavailable_resources", resourceReconciliationRows.filter(row => row.current_run_status === "Current known unavailable").length);
+        const specialManual = runSummaryValue("special_manual_or_embedded_resources", runSummaryValue("current_special_manual_resources", summaryRows.filter(row => row.current_status === "special_manual_or_embedded" || row.current_run_status === "Special/manual").length));
+        const productionValidation = runSummaryValue("requires_production_validation_resources", sourceResolutionPlanRows.filter(row => row.requires_production_validation === "TRUE").length);
+        const regressionCandidates = runSummaryValue("regression_candidate_resources", sourceResolutionPlanRows.filter(row => row.regression_candidate && row.regression_candidate !== "FALSE").length);
+        const missing = runSummaryValue("canonical_current_missing_after_attempt_resources", runSummaryValue("current_missing_unexpectedly_resources", resourceReconciliationRows.filter(row => row.current_run_status === "Missing unexpectedly").length));
+        const sourceMapRowsProfiled = runSummaryValue("source_map_rows_profiled_current_run", runSummaryValue("source_map_rows_profiled", catalogRows.length));
+        const sourceMapCanonical = runSummaryValue("source_map_rows_canonical", sourceMapCrosswalkRows.filter(row => row.is_canonical_resource === "TRUE").length);
+        const sourceMapHelpers = runSummaryValue("source_map_rows_helpers", sourceMapCrosswalkRows.filter(row => row.is_helper_table === "TRUE").length);
+        const derivedRows = runSummaryValue("source_map_rows_derived_views", runSummaryValue("derived_view_rows_profiled", sourceMapCrosswalkRows.filter(row => row.is_derived_view === "TRUE" && (row.is_current_profiled || row.current_profiled) === "TRUE").length));
+        const legacyReferenceOnly = runSummaryValue("legacy_reference_only_resources", legacyReferenceVsCurrentRows.filter(row => row.evidence_freshness_status === "legacy_reference_only" || row.warning_needed === "TRUE").length);
+        const del2Fixed = runSummaryValue("legacy_unavailable_current_resolved_resources", summaryRows.filter(row => row.current_status === "legacy_unavailable_current_resolved").length);
+        const activationCandidates = runSummaryValue("remaining_activation_candidates", remainingActivationPlanRows.length || currentNotTested);
+        setHtml("resource-reconciliation-summary", [
+          ["Canonical resources", expected, "V033/DALY-CARE publication resource universe"],
+          ["Profiled canonical resources", currentResolved, "Canonical resources resolved/profiled in this production run"],
+          ["Activation candidates", activationCandidates, "Canonical resources represented but not attempted in this run"],
+          ["Source-map rows profiled", sourceMapRowsProfiled, "Rows in the current source map that were resolved/profiled"],
+          ["Canonical source-map rows", sourceMapCanonical, "Source-map rows explicitly mapped to canonical resources; roles may overlap"],
+          ["Legacy resolved/profiled", legacyResolved, "Final V33 plus legacy R scripts and generated cartography logs"],
+          ["Legacy known unavailable", legacyUnavailable, "Expected resources explicitly absent from final legacy evidence"],
+          ["Legacy unavailable now resolved", del2Fixed, "Resources absent in V033 but resolved by this current production run"],
+          ["Resolver configured", resolverConfigured, "Production recovery plan rows with resolver, special/manual, or known-unavailable declarations"],
+          ["DB-attemptable candidates", dbAttemptable, "Resources with table/direct-SQL resolver candidates for production testing"],
+          ["Current tested", currentTested, "Expected resources actually attempted by this refreshable run"],
+          ["Current resolved", currentResolved, "Expected resources resolved/profiled in this run"],
+          ["Current known unavailable", currentKnownUnavailable, "Resources proven unavailable by current production evidence"],
+          ["Current not tested", currentNotTested, "Expected resources outside the current fixture/source-map run"],
+          ["Derived views", derivedRows, "Helpful atlas views; some also explicitly map to canonical resources"],
+          ["Helper rows", sourceMapHelpers, "Lookup/helper source-map rows counted separately unless explicitly mapped"],
+          ["Reference-only evidence", legacyReferenceOnly, "Semantic/reference evidence sources not refreshed in the current run"],
+          ["Special/manual", specialManual, "Expected resources represented by manual files or embedded fields rather than normal tables"],
+          ["Needs production validation", productionValidation, "Resolver candidates that should be validated against the live DALY-CARE database"],
+          ["Regression candidates", regressionCandidates, "Resources with legacy-current status tension or recovered current resolver candidates"],
+          ["Missing unexpectedly", missing, "Expected resources attempted but not resolved"]
+        ].map(card => `
+          <article class="card">
+            <div class="mini">${escapeHtml(card[2])}</div>
+            <h3>${escapeHtml(card[0])}</h3>
+            <div class="big">${formatNumber(card[1])}</div>
+          </article>
+        `).join(""));
+        const missingRows = summaryRows.filter(row => ["current_missing_after_attempt", "legacy_profiled_current_missing", "current_missing_unexpectedly", "uncertain_manual_review"].includes(row.current_status || row.status_category));
+        const notTestedRows = summaryRows.filter(row => row.current_status === "current_not_attempted" || row.current_run_status === "Not tested in current run");
+        const referenceOnlyRows = legacyReferenceVsCurrentRows.filter(row => row.evidence_freshness_status === "legacy_reference_only" || row.warning_needed === "TRUE");
+        setHtml("resource-reconciliation-warning", missingRows.length ? `
+          <div class="callout warn" style="margin-bottom:14px">
+            <strong>${formatNumber(missingRows.length)} expected resource(s) need manual review.</strong>
+            These were attempted or classified inconsistently by current reconciliation. Legacy row counts are historical reference only.
+          </div>
+        ` : `
+          <div class="callout" style="margin-bottom:14px">
+            <strong>64-resource reconciliation is restored; 64-resource production profiling is not yet complete.</strong>
+            This run profiled ${formatNumber(currentResolved)} canonical resource(s), plus derived/helper source-map rows.
+            ${formatNumber(activationCandidates)} canonical resource(s) are resolver activation candidates for a future production run, and ${formatNumber(specialManual)} are special/manual/embedded.
+            ${referenceOnlyRows.length ? `${formatNumber(referenceOnlyRows.length)} semantic evidence source(s) are legacy/reference-only and were not refreshed in this run.` : ""}
+          </div>
+        `);
+      }
+      fillSelect("catalog-domain-filter", uniqueValues(catalogDisplayRows, "domain"));
+      fillSelect("catalog-status-filter", uniqueValues(catalogDisplayRows, canonicalResourceRows.length ? "current_status" : (resourceReconciliationRows.length ? "current_run_status" : "load_status")).concat(uniqueValues(catalogDisplayRows, "status_category")));
+      fillSelect("catalog-role-filter", uniqueValues(catalogDisplayRows, canonicalResourceRows.length ? "source_map_role" : (resourceReconciliationRows.length ? "expected_role" : "atlas_role")));
       function renderCatalog() {
         const q = document.getElementById("catalog-search").value.trim().toLowerCase();
         const domain = document.getElementById("catalog-domain-filter").value;
         const status = document.getElementById("catalog-status-filter").value;
         const role = document.getElementById("catalog-role-filter").value;
-        const filtered = catalogRows.filter(row => {
-          const hay = [row.table_name, row.source, row.domain, row.subdomain, row.atlas_role, row.message].join(" ").toLowerCase();
-          return (!q || hay.includes(q)) && (!domain || row.domain === domain) && (!status || row.load_status === status) && (!role || row.atlas_role === role);
+        const filtered = catalogDisplayRows.filter(row => {
+          const hay = [
+            row.canonical_resource_id, row.expected_resource_id, row.display_name, row.table_name, row.source, row.domain,
+            row.expected_role, row.atlas_role, row.current_run_status, row.status_category,
+            row.current_status, row.source_map_role, row.legacy_status, row.current_table_name,
+            row.current_resolved_table_or_view, row.current_db_schema, row.action_required,
+            row.notes, row.message
+          ].join(" ").toLowerCase();
+          const rowStatus = canonicalResourceRows.length ? [row.current_status] : (resourceReconciliationRows.length ? [row.current_run_status, row.status_category] : [row.load_status]);
+          const rowRole = canonicalResourceRows.length ? row.source_map_role : (resourceReconciliationRows.length ? row.expected_role : row.atlas_role);
+          return (!q || hay.includes(q)) &&
+            (!domain || row.domain === domain) &&
+            (!status || rowStatus.includes(status)) &&
+            (!role || rowRole === role);
         });
-        document.getElementById("catalog-count").textContent = `${filtered.length} of ${catalogRows.length} sources shown`;
-        setHtml("catalog-list", filtered.map(row => `
+        document.getElementById("catalog-count").textContent = `${filtered.length} of ${catalogDisplayRows.length} expected/current resources shown`;
+        if (canonicalResourceRows.length) {
+          setHtml("catalog-list", filtered.map(row => `
+            <article class="catalog-row">
+              <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.source_map_role || "")}</div></div>
+              <div><strong>${escapeHtml(row.display_name || row.canonical_resource_id)}</strong><div class="mini">${escapeHtml(row.canonical_resource_id || "")}</div></div>
+              <div>${severityBadge(resourceStatusTone(row))}<div class="mini">${escapeHtml(row.current_status || "")}</div></div>
+              <div><strong>${escapeHtml(row.current_resolved_table_or_view || "not profiled")}</strong><div class="mini">${escapeHtml(row.current_expected_strategy || "")}</div></div>
+              <div><strong>${formatNumber(row.current_n_rows)}</strong><div class="mini">current rows</div><div class="mini">${escapeHtml(row.current_n_columns || "")} columns</div></div>
+              <div><strong>${escapeHtml(row.legacy_status || "")}</strong><div class="mini">${escapeHtml(row.action_required || row.notes || "")}</div></div>
+            </article>
+          `).join("") || `<div class="empty">No canonical resources match the current filters.</div>`);
+        } else if (resourceReconciliationRows.length) {
+          setHtml("catalog-list", filtered.map(row => `
+            <article class="catalog-row">
+              <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.expected_role || "")}</div></div>
+              <div><strong>${escapeHtml(row.display_name || row.expected_resource_id)}</strong><div class="mini">${escapeHtml(row.expected_resource_id || "")}</div></div>
+              <div>${severityBadge(resourceStatusTone(row))}<div class="mini">${escapeHtml(row.current_run_status || row.status_category || "")}</div></div>
+              <div><strong>${escapeHtml(row.current_table_name || "not explored")}</strong><div class="mini">${escapeHtml(row.current_resolution_strategy || "")}</div></div>
+              <div><strong>${formatNumber(row.current_n_rows)}</strong><div class="mini">current rows</div><div class="mini">legacy: ${formatNumber(row.legacy_n_rows)}</div></div>
+              <div><strong>${escapeHtml(row.status_category || "")}</strong><div class="mini">${escapeHtml(row.action_required || row.notes || "")}</div></div>
+            </article>
+          `).join("") || `<div class="empty">No expected resources match the current filters.</div>`);
+        } else {
+          setHtml("catalog-list", filtered.map(row => `
+            <article class="catalog-row">
+              <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.subdomain || "")}</div></div>
+              <div><strong>${escapeHtml(row.table_name)}</strong><div class="mini">${escapeHtml(row.source_type)} - ${escapeHtml(row.source)}</div></div>
+              <div>${severityBadge(row.load_status === "failed" ? "error" : "ok")}</div>
+              <div><strong>${formatNumber(row.n_rows)}</strong><div class="mini">rows</div></div>
+              <div><strong>${formatNumber(row.n_cols)}</strong><div class="mini">${escapeHtml(row.date_range || "no date range")}</div></div>
+            </article>
+          `).join("") || `<div class="empty">No sources match the current filters.</div>`);
+        }
+        setHtml("current-source-catalog-list", catalogRows.slice(0, 300).map(row => `
           <article class="catalog-row">
             <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span><div class="mini">${escapeHtml(row.subdomain || "")}</div></div>
             <div><strong>${escapeHtml(row.table_name)}</strong><div class="mini">${escapeHtml(row.source_type)} - ${escapeHtml(row.source)}</div></div>
             <div>${severityBadge(row.load_status === "failed" ? "error" : "ok")}</div>
-            <div><strong>${formatNumber(row.n_rows)}</strong><div class="mini">rows</div></div>
+            <div><strong>${formatNumber(row.n_rows)}</strong><div class="mini">current rows</div></div>
             <div><strong>${formatNumber(row.n_cols)}</strong><div class="mini">${escapeHtml(row.date_range || "no date range")}</div></div>
           </article>
-        `).join("") || `<div class="empty">No sources match the current filters.</div>`);
+        `).join("") || `<div class="empty">No current source-map rows are available.</div>`);
       }
       ["catalog-search", "catalog-domain-filter", "catalog-status-filter", "catalog-role-filter"].forEach(id => {
         document.getElementById(id).addEventListener("input", renderCatalog);
         document.getElementById(id).addEventListener("change", renderCatalog);
       });
+      renderResourceReconciliationSummary();
       renderCatalog();
 
       fillSelect("clinical-variable-group-filter", uniqueValues(clinicalConceptRows, "clinical_group"));
       fillSelect("clinical-variable-status-filter", uniqueValues(clinicalConceptRows, "concept_status"));
+      function renderClinicalVariablesAndRoute() {
+        renderClinicalVariables();
+        const active = document.getElementById("tab-variables").classList.contains("active");
+        const search = document.getElementById("clinical-variable-search");
+        if (active && search) updateShareUrl("variables", activeSubForTab("variables"), true, { q: search.value.trim() });
+      }
       ["clinical-variable-search", "clinical-variable-group-filter", "clinical-variable-status-filter"].forEach(id => {
-        document.getElementById(id).addEventListener("input", renderClinicalVariables);
-        document.getElementById(id).addEventListener("change", renderClinicalVariables);
+        document.getElementById(id).addEventListener("input", renderClinicalVariablesAndRoute);
+        document.getElementById(id).addEventListener("change", renderClinicalVariablesAndRoute);
       });
       renderClinicalVariables();
 
@@ -4639,18 +5779,42 @@
           setHtml("semantic-detail", `<h3>Raw names / data lineage</h3><p class="mini">Select a semantic row to inspect full lineage, value maps, code maps, related panels, caveats, and evidence filters.</p>`);
           return;
         }
+        appState.selectedSemanticId = row.semantic_id || "";
         const values = semanticValueRows.filter(item => item.semantic_id === row.semantic_id);
         const codes = semanticCodeRows.filter(item => item.semantic_id === row.semantic_id || item.clinical_concept_id === row.clinical_concept_id);
         const links = semanticPanelLinks.filter(item => item.semantic_id === row.semantic_id || item.clinical_concept_id === row.clinical_concept_id);
+        const bestLocation = fieldCopyValue(row, ["source_name", "raw_column"], ".") || fieldCopyValue(row, ["table_name", "raw_column"], ".") || row.source_name || row.raw_column || "";
+        const kpis = [
+          { label: "Status", value: row.mapping_status },
+          { label: "Confidence", value: row.mapping_confidence },
+          { label: "Aggregate rows", value: row.n_rows },
+          { label: "Patients", value: row.n_patients }
+        ].filter(item => valuePresent(item.value));
         setHtml("semantic-detail", `
           <h3>${escapeHtml(row.clinical_variable || "Clinical variable")}</h3>
           <p>${escapeHtml(row.semantic_meaning || "")}</p>
-          <div class="kpi-row">
-            <div class="kpi"><b>${escapeHtml(row.mapping_status || "")}</b><span class="mini">status</span></div>
-            <div class="kpi"><b>${escapeHtml(row.mapping_confidence || "")}</b><span class="mini">confidence</span></div>
-            <div class="kpi"><b>${formatNumber(row.n_rows)}</b><span class="mini">rows</span></div>
-            <div class="kpi"><b>${formatNumber(row.n_patients)}</b><span class="mini">patients</span></div>
+          <div class="semantic-detail-actions">
+            ${row.semantic_id ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(row.semantic_id)}">Copy semantic ID</button>` : ""}
+            ${row.clinical_variable ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(row.clinical_variable)}">Copy concept name</button>` : ""}
+            ${row.source_name ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(row.source_name)}">Copy source</button>` : ""}
+            ${row.raw_column ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(row.raw_column)}">Copy raw column</button>` : ""}
+            ${bestLocation ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(bestLocation)}">Copy table.column</button>` : ""}
+            ${row.evidence_file ? `<button class="copy-button" type="button" data-copy-value="${escapeHtml(row.evidence_file)}">Copy evidence file</button>` : ""}
           </div>
+          <div class="lineage-block">
+            <h3>Clinical meaning</h3>
+            <p class="mini">${escapeHtml(row.clinical_group || "")}${row.clinical_subgroup ? " / " + escapeHtml(row.clinical_subgroup) : ""}</p>
+            <p>${escapeHtml(row.semantic_meaning || row.clinical_caveat || "No additional clinical meaning text was generated for this row.")}</p>
+          </div>
+          <div class="lineage-block">
+            <h3>Best source / raw field</h3>
+            <div class="semantic-kv-list">
+              ${semanticKvRow("Source/table", fieldCopyValue(row, ["source_name", "object_name"], " / ") || row.table_name, { mono: true })}
+              ${semanticKvRow("Raw field", row.raw_column, { mono: true })}
+              ${semanticKvRow("Descriptor", row.raw_descriptor, { mono: true })}
+            </div>
+          </div>
+          ${kpis.length ? `<div class="lineage-block"><h3>Evidence counts</h3><div class="kpi-row">${kpis.map(item => `<div class="kpi"><b>${formatNumber(item.value)}</b><span class="mini">${escapeHtml(item.label)}</span></div>`).join("")}</div></div>` : ""}
           <div class="lineage-block semantic-full-lineage">
             <h3>Full lineage</h3>
             ${renderSemanticLineageKeyValues(row)}
@@ -4671,7 +5835,7 @@
           </div>
         `);
       }
-      function renderSemanticExplorer() {
+      function renderSemanticExplorer(preferredSemanticId) {
         const q = document.getElementById("semantic-search").value.trim().toLowerCase();
         const group = document.getElementById("semantic-group-filter").value;
         const source = document.getElementById("semantic-source-filter").value;
@@ -4679,9 +5843,10 @@
         const type = document.getElementById("semantic-type-filter").value;
         const system = document.getElementById("semantic-code-filter").value;
         const panel = document.getElementById("semantic-panel-filter").value;
+        appState.semanticFilterActive = Boolean(q || group || source || status || type || system || panel);
         const filtered = semanticRows.filter(row => {
           const linkedPanel = semanticPanelFor(row);
-          return (!q || semanticHay(row).includes(q)) &&
+          return (!q || textMatchesQuery(semanticHay(row), q)) &&
             (!group || row.clinical_group === group) &&
             (!source || row.source_name === source) &&
             (!status || row.mapping_status === status) &&
@@ -4689,11 +5854,12 @@
             (!system || row.code_system === system) &&
             (!panel || linkedPanel === panel);
         });
+        appState.semanticFilteredRows = filtered;
         const semanticVisibleLimit = 80;
         const visible = filtered.slice(0, semanticVisibleLimit);
-        document.getElementById("semantic-count").textContent = `Showing ${visible.length} of ${filtered.length} matching semantic rows. Total rows: ${semanticRows.length}.`;
+        document.getElementById("semantic-count").innerHTML = `${q ? `<div class="filter-message">Filtered by: <code>${escapeHtml(q)}</code></div>` : ""}Showing ${visible.length} of ${filtered.length} matching semantic rows. Total rows: ${semanticRows.length}.`;
         setHtml("semantic-list", visible.map((row, index) => `
-          <article class="semantic-row" data-semantic-index="${index}">
+          <article class="semantic-row" data-semantic-index="${index}" data-semantic-id="${escapeHtml(row.semantic_id || "")}" data-row-search-key="${escapeHtml(semanticHay(row))}">
             <div>${renderBadge(row.clinical_group || "Unassigned", row.clinical_group === "Laboratory" ? "cyan" : row.clinical_group === "Treatment" ? "green" : row.clinical_group === "Registry" ? "plum" : "blue")}<div class="mini">${escapeHtml(row.clinical_subgroup || "")}</div></div>
             <div><strong>${escapeHtml(row.clinical_variable || "")}</strong><div class="mini">${escapeHtml(row.semantic_meaning || "")}</div></div>
             <div><strong>${escapeHtml(row.source_name || "")}</strong><div class="mini">${escapeHtml(row.object_name || row.table_name || "")}</div></div>
@@ -4704,7 +5870,18 @@
         document.querySelectorAll("#semantic-list .semantic-row").forEach(node => {
           node.addEventListener("click", () => renderSemanticDetail(visible[Number(node.dataset.semanticIndex)]));
         });
-        renderSemanticDetail(filtered[0]);
+        const preferred = preferredSemanticId ? filtered.find(row => row.semantic_id === preferredSemanticId) : null;
+        renderSemanticDetail(preferred || filtered[0]);
+      }
+      function renderFilteredSemanticTable(targetId, rows, stateKey, inputId, limit) {
+        const input = document.getElementById(inputId);
+        const q = input ? input.value.trim().toLowerCase() : "";
+        const filtered = (rows || []).filter(row => rowMatchesQuery(row, q));
+        appState[stateKey] = filtered;
+        const activeKey = stateKey.replace(/FilteredRows$/, "FilterActive");
+        appState[activeKey] = Boolean(q);
+        const message = q ? `<div class="filter-message">Filtered by: <code>${escapeHtml(q)}</code> (${formatNumber(filtered.length)} matching rows)</div>` : "";
+        setHtml(targetId, message + rowsForTable(filtered.slice(0, limit || 500), limit || 500));
       }
       function renderSemanticLineageBlocks() {
         const block = (id, predicate, limit) => {
@@ -4728,16 +5905,24 @@
       fillSelect("semantic-code-filter", uniqueValues(semanticRows, "code_system"));
       fillSelect("semantic-panel-filter", uniqueValues(semanticPanelLinks, "panel_id"));
       setHtml("semantic-summary", semanticSummary.map(row => `
-        <article class="card"><div class="mini">${escapeHtml(row.metric || "")}</div><h3>${escapeHtml(row.label || "")}</h3><div class="big">${formatNumber(row.value)}</div></article>
+        <article class="card"><div class="mini">${escapeHtml(humanMetricLabel(row.metric || row.label || ""))}</div><h3>${escapeHtml(row.label || humanMetricLabel(row.metric || ""))}</h3><div class="big">${formatNumber(row.value)}</div></article>
       `).join("") || `<div class="empty">No semantic summary rows were generated.</div>`);
       ["semantic-search", "semantic-group-filter", "semantic-source-filter", "semantic-status-filter", "semantic-type-filter", "semantic-code-filter", "semantic-panel-filter"].forEach(id => {
-        document.getElementById(id).addEventListener("input", renderSemanticExplorer);
-        document.getElementById(id).addEventListener("change", renderSemanticExplorer);
+        document.getElementById(id).addEventListener("input", () => renderSemanticExplorer());
+        document.getElementById(id).addEventListener("change", () => renderSemanticExplorer());
       });
       renderSemanticExplorer();
-      setHtml("semantic-value-map", rowsForTable(semanticValueRows, 120));
-      setHtml("semantic-code-map", rowsForTable(semanticCodeRows, 120));
-      setHtml("semantic-panel-links", rowsForTable(semanticPanelLinks, 120));
+      renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500);
+      renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500);
+      renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500);
+      [
+        ["semantic-value-search", () => renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500)],
+        ["semantic-code-search", () => renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500)],
+        ["semantic-panel-search", () => renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500)]
+      ].forEach(([id, fn]) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", fn);
+      });
 
       function bars(rows, valueKey, labelKey) {
         if (!rows || !rows.length) return `<div class="empty">No aggregate rows available.</div>`;
@@ -4796,36 +5981,36 @@
       document.getElementById("panel-group-filter").addEventListener("change", renderPanels);
       renderPanels();
 
-      function activateSubPane(tabId, subId) {
-        if (!subId) return;
-        const page = document.getElementById(`tab-${tabId}`);
-        if (!page) return;
-        page.querySelectorAll(".sub-tab").forEach(button => button.classList.toggle("active", button.dataset.sub === subId));
-        page.querySelectorAll(".sub-pane").forEach(pane => pane.classList.toggle("active", pane.id === subId));
-      }
       function applyQaRoute() {
         const params = new URLSearchParams(window.location.search);
-        if (params.get("qaCapture") === "1") document.body.classList.add("qa-capture");
-        const tabId = params.get("qaTab") || params.get("tab");
-        const subId = params.get("qaSub") || params.get("sub");
-        if (tabId) activateTab(tabId);
-        if (tabId && subId) activateSubPane(tabId, subId);
-        const conceptSearch = params.get("qaSearch");
-        if (conceptSearch) {
-          const search = document.getElementById("clinical-variable-search");
-          if (search) {
-            search.value = conceptSearch;
-            renderClinicalVariables();
-          }
-        }
+        document.body.classList.toggle("qa-capture", params.get("qaCapture") === "1");
+        const hashRoute = parseHashRoute();
+        const tabId = params.get("qaTab") || params.get("tab") || hashRoute.tabId;
+        const subId = params.get("qaSub") || params.get("sub") || hashRoute.subId;
+        if (tabId) activateTab(tabId, { silent: true });
+        if (tabId && subId) activateSubPane(tabId, subId, { silent: true });
+        const routedSearch = params.get("qaSearch") || hashRoute.q;
+        if (routedSearch) applyLocalSearch(tabId || "overview", subId || activeSubForTab(tabId || "overview"), routedSearch, hashRoute.item);
         if (params.get("qaScroll") === "1") {
           const target = document.getElementById(subId) || (tabId ? document.getElementById(`tab-${tabId}`) : null);
           if (target) target.scrollIntoView({ block: "start" });
         }
+        if (!isQaRoute() && tabId) updateShareUrl(tabId, subId || activeSubForTab(tabId), true, { q: hashRoute.q, item: hashRoute.item });
       }
+      window.addEventListener("popstate", () => {
+        const route = parseHashRoute();
+        if (route.tabId) {
+          activateTab(route.tabId, { silent: true });
+          activateSubPane(route.tabId, route.subId, { silent: true });
+          if (route.q) applyLocalSearch(route.tabId, route.subId, route.q, route.item);
+        } else {
+          activateTab("overview", { silent: true });
+          activateSubPane("overview", "overview-summary", { silent: true });
+        }
+      });
       function overflowReport() {
         const bodyOverflow = document.body.scrollWidth > document.documentElement.clientWidth + 2;
-        const targets = ".card, .clinical-card, .raw-lineage-card, .value-map-card, .panel-section, .stat-card, .source-fact, .kpi, .lineage-item, .value-row, .semantic-row, .catalog-row, .column-row, .h-bar, .panel-title, .panel-sub, code, pre";
+        const targets = ".hero, .hero-meta, .global-search-shell, .global-search-row, .global-search-group, .global-result, .card, .clinical-card, .raw-lineage-card, .value-map-card, .panel-section, .stat-card, .source-fact, .kpi, .lineage-item, .value-row, .semantic-row, .catalog-row, .column-row, .h-bar, .panel-title, .panel-sub, code, pre";
         const overflowing = Array.from(document.querySelectorAll(targets))
           .filter(el => {
             const r = el.getBoundingClientRect();
@@ -4847,7 +6032,10 @@
           }));
         return {
           href: window.location.href,
+          qaViewport: new URLSearchParams(window.location.search).get("qaViewport") || "",
           viewport: { width: window.innerWidth, height: window.innerHeight },
+          windowInnerWidth: window.innerWidth,
+          documentElementClientWidth: document.documentElement.clientWidth,
           bodyScrollWidth: document.body.scrollWidth,
           documentClientWidth: document.documentElement.clientWidth,
           bodyOverflow,
@@ -4857,7 +6045,7 @@
       function publishOverflowReport() {
         const pre = document.createElement("pre");
         pre.id = "qa-overflow-report";
-        pre.style.cssText = "position:fixed;left:0;top:0;z-index:99999;max-width:100vw;max-height:40vh;overflow:auto;background:#fff;color:#111;padding:8px;border:2px solid #111;font:12px monospace";
+        pre.style.cssText = "position:fixed;left:0;top:0;z-index:99999;width:calc(100vw - 4px);max-width:calc(100vw - 4px);max-height:40vh;overflow:auto;background:#fff;color:#111;padding:8px;border:2px solid #111;box-sizing:border-box;font:12px monospace";
         pre.textContent = JSON.stringify(overflowReport(), null, 2);
         document.body.prepend(pre);
       }

@@ -104,7 +104,16 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           semantic_code_map = NULL, semantic_panel_links = NULL,
                           clinical_concepts = NULL, domain_panels = NULL,
                           panel_kpis_product = NULL, panel_distributions = NULL,
-                          panel_raw_fields = NULL, panel_parity = NULL) {
+                          panel_raw_fields = NULL, panel_parity = NULL,
+                          legacy_resource_audit = NULL, billeddiagnostik_del2_regression_audit = NULL,
+                          source_resolution_plan_dry_run = NULL,
+                          source_resolution_attempts = NULL, source_resolution_delta = NULL,
+                          resource_reconciliation = NULL, source_truth_evidence = NULL,
+                          source_truth_summary = NULL, current_run_source_map_audit = NULL,
+                          canonical_resource_reconciliation = NULL,
+                          source_map_crosswalk = NULL,
+                          legacy_reference_vs_current = NULL,
+                          remaining_activation_plan = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -118,6 +127,19 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(panel_distributions)) panel_distributions <- empty_panel_distributions()
   if (is.null(panel_raw_fields)) panel_raw_fields <- empty_panel_raw_fields()
   if (is.null(panel_parity)) panel_parity <- empty_panel_parity()
+  if (is.null(legacy_resource_audit)) legacy_resource_audit <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(billeddiagnostik_del2_regression_audit)) billeddiagnostik_del2_regression_audit <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(source_resolution_plan_dry_run)) source_resolution_plan_dry_run <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(source_resolution_attempts)) source_resolution_attempts <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(source_resolution_delta)) source_resolution_delta <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(resource_reconciliation)) resource_reconciliation <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(source_truth_evidence)) source_truth_evidence <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(source_truth_summary)) source_truth_summary <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(current_run_source_map_audit)) current_run_source_map_audit <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(canonical_resource_reconciliation)) canonical_resource_reconciliation <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(source_map_crosswalk)) source_map_crosswalk <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(legacy_reference_vs_current)) legacy_reference_vs_current <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(remaining_activation_plan)) remaining_activation_plan <- data.frame(stringsAsFactors = FALSE)
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
   public_column_profiles <- public_column_profile_rows(column_profiles)
@@ -135,6 +157,19 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_panel_distributions <- sanitize_public_frame(panel_distributions)
   public_panel_raw_fields <- sanitize_public_frame(panel_raw_fields)
   public_panel_parity <- sanitize_public_frame(panel_parity)
+  public_legacy_resource_audit <- sanitize_public_frame(legacy_resource_audit)
+  public_billeddiagnostik_del2_regression_audit <- sanitize_public_frame(billeddiagnostik_del2_regression_audit)
+  public_source_resolution_plan_dry_run <- sanitize_public_frame(source_resolution_plan_dry_run)
+  public_source_resolution_attempts <- sanitize_public_frame(source_resolution_attempts)
+  public_source_resolution_delta <- sanitize_public_frame(source_resolution_delta)
+  public_resource_reconciliation <- sanitize_public_frame(resource_reconciliation)
+  public_source_truth_evidence <- sanitize_public_frame(source_truth_evidence)
+  public_source_truth_summary <- sanitize_public_frame(source_truth_summary)
+  public_current_run_source_map_audit <- sanitize_public_frame(current_run_source_map_audit)
+  public_canonical_resource_reconciliation <- sanitize_public_frame(canonical_resource_reconciliation)
+  public_source_map_crosswalk <- sanitize_public_frame(source_map_crosswalk)
+  public_legacy_reference_vs_current <- sanitize_public_frame(legacy_reference_vs_current)
+  public_remaining_activation_plan <- sanitize_public_frame(remaining_activation_plan)
   module_readiness <- panel_or_empty(panels, "atlas_module_readiness")
   list(
     run_id = run_id,
@@ -191,7 +226,14 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
       source_resolution = source_resolution,
       memory_plan = memory_plan,
       db_query_log = db_query_log,
-      db_budget_actions = db_budget_actions
+      db_budget_actions = db_budget_actions,
+      legacy_resource_audit = legacy_resource_audit,
+      source_resolution_delta = source_resolution_delta,
+      resource_reconciliation = resource_reconciliation,
+      canonical_resource_reconciliation = canonical_resource_reconciliation,
+      current_run_source_map_audit = current_run_source_map_audit,
+      source_map_crosswalk = source_map_crosswalk,
+      legacy_reference_vs_current = legacy_reference_vs_current
     ),
     registry_cards = registry_cards(panels),
     panel_groups = public_rows(panel_groups(panels), max_rows = 100),
@@ -208,6 +250,19 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     panel_distribution_rows = public_rows(public_panel_distributions, max_rows = 5000),
     panel_raw_field_rows = public_rows(public_panel_raw_fields, max_rows = 5000),
     panel_parity_rows = public_rows(public_panel_parity, max_rows = 500),
+    legacy_cartography_audit_rows = public_rows(public_legacy_resource_audit, max_rows = 1000),
+    billeddiagnostik_del2_regression_audit_rows = public_rows(public_billeddiagnostik_del2_regression_audit, max_rows = 1000),
+    source_resolution_plan_dry_run_rows = public_rows(public_source_resolution_plan_dry_run, max_rows = 1000),
+    source_resolution_attempt_rows = public_rows(public_source_resolution_attempts, max_rows = 1000),
+    source_resolution_delta_rows = public_rows(public_source_resolution_delta, max_rows = 1000),
+    resource_reconciliation_rows = public_rows(public_resource_reconciliation, max_rows = 1000),
+    source_truth_evidence_rows = public_rows(public_source_truth_evidence, max_rows = 1000),
+    source_truth_summary_rows = public_rows(public_source_truth_summary, max_rows = 100),
+    current_run_source_map_audit_rows = public_rows(public_current_run_source_map_audit, max_rows = 1000),
+    canonical_resource_reconciliation_rows = public_rows(public_canonical_resource_reconciliation, max_rows = 1000),
+    source_map_crosswalk_rows = public_rows(public_source_map_crosswalk, max_rows = 1000),
+    legacy_reference_vs_current_rows = public_rows(public_legacy_reference_vs_current, max_rows = 1000),
+    remaining_activation_plan_rows = public_rows(public_remaining_activation_plan, max_rows = 1000),
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
@@ -464,7 +519,14 @@ review_dk_choropleth <- function(panels) {
 review_infrastructure_sections <- function(sources, checks, panels, column_profiles, run_summary = NULL,
                                         action_items = NULL,
                                         source_resolution = NULL, memory_plan = NULL,
-                                        db_query_log = NULL, db_budget_actions = NULL) {
+                                        db_query_log = NULL, db_budget_actions = NULL,
+                                        legacy_resource_audit = NULL,
+                                        source_resolution_delta = NULL,
+                                        resource_reconciliation = NULL,
+                                        canonical_resource_reconciliation = NULL,
+                                        current_run_source_map_audit = NULL,
+                                        source_map_crosswalk = NULL,
+                                        legacy_reference_vs_current = NULL) {
   safe_sources <- public_sources(sources)
   list(
     action_items = public_rows(sanitize_public_frame(action_items), max_rows = 1000),
@@ -474,6 +536,13 @@ review_infrastructure_sections <- function(sources, checks, panels, column_profi
     db_budget_actions = public_rows(public_db_diagnostics(db_budget_actions), max_rows = 1000),
     db_query_log = public_rows(public_db_diagnostics(db_query_log), max_rows = 3000),
     catalog = public_rows(catalog_rows(sources), max_rows = 1000),
+    resource_reconciliation = public_rows(sanitize_public_frame(resource_reconciliation), max_rows = 1000),
+    canonical_resource_reconciliation = public_rows(sanitize_public_frame(canonical_resource_reconciliation), max_rows = 1000),
+    current_run_source_map_audit = public_rows(sanitize_public_frame(current_run_source_map_audit), max_rows = 1000),
+    source_map_crosswalk = public_rows(sanitize_public_frame(source_map_crosswalk), max_rows = 1000),
+    legacy_reference_vs_current = public_rows(sanitize_public_frame(legacy_reference_vs_current), max_rows = 1000),
+    source_resolution_delta = public_rows(sanitize_public_frame(source_resolution_delta), max_rows = 1000),
+    legacy_resource_audit = public_rows(sanitize_public_frame(legacy_resource_audit), max_rows = 1000),
     columns = public_rows(public_column_profile_rows(column_profiles), max_rows = 3000),
     column_summary = public_rows(column_profile_summary(column_profiles), max_rows = 200),
     resolution = public_rows(sanitize_public_frame(source_resolution), max_rows = 500),

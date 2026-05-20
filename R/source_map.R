@@ -49,7 +49,17 @@ valid_profile_modes <- function() {
 source_map_optional_metadata <- function() {
   c(
     "domain", "subdomain", "atlas_role",
-    "load_strategy", "db_name", "schema", "table", "chunk_size", "allow_full_load"
+    "load_strategy", "db_name", "schema", "table", "chunk_size", "allow_full_load",
+    "expected_resource_id", "display_name", "current_source_key", "preferred_schema",
+    "preferred_table", "known_aliases", "resolver_type", "resolution_priority",
+    "expected_availability", "legacy_resolution_method", "requires_direct_sql",
+    "requires_manual_file", "requires_special_handling", "known_unavailable",
+    "legacy_known_unavailable", "current_known_unavailable", "current_resolver_configured",
+    "requires_production_validation", "regression_candidate",
+    "source_key", "source_label", "canonical_resource_id", "source_map_role",
+    "source_map_role_primary", "source_map_role_secondary", "table_or_view",
+    "expected_in_current_run", "attempted_in_current_run", "profiled_in_current_run",
+    "activation_status", "activation_priority"
   )
 }
 

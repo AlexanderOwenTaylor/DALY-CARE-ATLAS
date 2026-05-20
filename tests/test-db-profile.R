@@ -108,6 +108,50 @@ alias_tables <- data.frame(
 alias_resolution <- resolve_dalycare_sources(alias_map, db_adapter = list(list_tables = function() alias_tables, table_row_count = function(...) 1L))
 expect_true(all(alias_resolution$resolution_status == "resolved"), "Resolver should match ASCII-folded and known spelling aliases.")
 
+late_legacy_map <- data.frame(
+  table_name = c(
+    "SDS_t_mikro", "SDS_t_konk", "SDS_t_doedsaarsag",
+    "SDS_procedure_kirurgi", "SDS_procedure_andre",
+    "SP_Administreret_Medicin", "SP_ADT_Haendelser",
+    "SP_Aktive_Problemliste_Diagnoser", "SP_Behandlingskontakter_diagnoser",
+    "SP_Behandlingsplaner_del1", "SP_Behandlingsplaner_del2",
+    "SP_Journalnotater_del1", "SP_Journalnotater_del2",
+    "SP_BilleddiagnostikeUndersoegelser_Del1", "MM_TREAT_DARA"
+  ),
+  source_type = "dataset",
+  source = c(
+    "SDS_t_mikro", "SDS_t_konk", "SDS_t_doedsaarsag",
+    "SDS_procedure_kirurgi", "SDS_procedure_andre",
+    "SP_Administreret_Medicin", "SP_ADT_Haendelser",
+    "SP_Aktive_Problemliste_Diagnoser", "SP_Behandlingskontakter_diagnoser",
+    "SP_Behandlingsplaner_del1", "SP_Behandlingsplaner_del2",
+    "SP_Journalnotater_del1", "SP_Journalnotater_del2",
+    "SP_BilleddiagnostikeUndersoegelser_Del1", "MM_TREAT_DARA"
+  ),
+  priority = seq_len(15),
+  profile_mode = "schema",
+  stringsAsFactors = FALSE
+)
+late_legacy_tables <- data.frame(
+  db_name = c(rep("import", 14), "core"),
+  schema = c(rep("public", 14), "curated"),
+  table = c(
+    "SDS_t_mikro_ny", "SDS_t_konk_ny", "SDS_t_dodsaarsag_2",
+    "SDS_procedurer_kirurgi", "SDS_procedurer_andre",
+    "SP_AdministreretMedicin", "SP_ADT_haendelser",
+    "SP_AktiveProblemlisteDiagnoser", "SP_BehandlingskontakterOgDiagnoser",
+    "SP_Behandlingsplaner_Del1", "SP_Behandlingsplaner_Del2",
+    "SP_Journalnotater_Del1", "SP_Journalnotater_Del2",
+    "SP_BilleddiagnostiskeUndersoegelser_Del1", "REQUIRE_PERMISSION_MM_TREAT_DARA"
+  ),
+  stringsAsFactors = FALSE
+)
+late_legacy_resolution <- resolve_dalycare_sources(
+  late_legacy_map,
+  db_adapter = list(list_tables = function() late_legacy_tables, table_row_count = function(...) 1L)
+)
+expect_true(all(late_legacy_resolution$resolution_status == "resolved"), "Late-cartography legacy resources should resolve through explicit alias/direct-table mappings.")
+
 fake_db_access <- tempfile(fileext = ".R")
 writeLines(c("pw <- 'not-secret-in-report'", "ignored <- 123"), fake_db_access)
 Sys.setenv(DALYCARE_DB_ACCESS_PATH = fake_db_access)

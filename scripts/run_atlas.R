@@ -22,7 +22,7 @@ usage <- paste(
   "",
   "Examples:",
   "  Rscript scripts/run_atlas.R . config/source-map.example.tsv atlas_runs report",
-  "  Rscript scripts/run_atlas.R config/source-map.dalycare.tsv atlas_runs report",
+  "  Rscript scripts/run_atlas.R config/source-map.dalycare64.production.tsv atlas_runs report",
   "  Rscript scripts/run_atlas.R .",
   sep = "\n"
 )
@@ -70,6 +70,7 @@ load_atlas_runtime <- function(project_root = find_project_root()) {
   source(file.path(project_root, "R", "coverage.R"))
   source(file.path(project_root, "R", "profiler.R"))
   source(file.path(project_root, "R", "db_profile.R"))
+  source(file.path(project_root, "R", "source_reconciliation.R"))
   source(file.path(project_root, "R", "situation_report.R"))
   source(file.path(project_root, "R", "action_items.R"))
   source(file.path(project_root, "R", "semantic_dictionary.R"))
@@ -107,7 +108,7 @@ run_atlas_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
     cat(usage, "\n")
     cat("\nNo source map was provided. In R/RStudio, run:\n")
     cat("  source(\"scripts/run_atlas.R\")\n")
-    cat("  result <- run_atlas_from_source(source_map_path = \"config/source-map.dalycare.tsv\")\n")
+    cat("  result <- run_atlas_from_source(source_map_path = \"config/source-map.dalycare64.production.tsv\")\n")
     return(invisible(NULL))
   }
 
@@ -143,9 +144,9 @@ run_atlas_cli <- function(args = commandArgs(trailingOnly = TRUE)) {
 run_atlas_source_message <- function() {
   cat("DALY-CARE atlas runner loaded.\n")
   cat("Run from this R session with:\n")
-  cat("  result <- run_atlas_from_source(source_map_path = \"config/source-map.dalycare.tsv\")\n")
+  cat("  result <- run_atlas_from_source(source_map_path = \"config/source-map.dalycare64.production.tsv\")\n")
   cat("Or from a terminal with:\n")
-  cat("  Rscript scripts/run_atlas.R config/source-map.dalycare.tsv atlas_runs report\n")
+  cat("  Rscript scripts/run_atlas.R config/source-map.dalycare64.production.tsv atlas_runs report\n")
   invisible(NULL)
 }
 
