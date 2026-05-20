@@ -2,12 +2,48 @@ root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
 source(file.path(root, "tests", "helper.R"))
 source_test_runtime(root)
 
-entrypoint <- file.path(root, "RUN_DALYCARE_ATLAS.R")
-expect_file(entrypoint)
+runner_specs <- data.frame(
+  file = c(
+    "RUN_DALYCARE_ATLAS.R",
+    "RUN_DALYCARE_ATLAS_48_SOURCE.R",
+    "RUN_DALYCARE_ATLAS_64_SOURCE.R"
+  ),
+  default_source_map = c(
+    "config/source-map.dalycare.tsv",
+    "config/source-map.dalycare.tsv",
+    "config/source-map.dalycare64.restored.tsv"
+  ),
+  stringsAsFactors = FALSE
+)
 
-entry_text <- paste(readLines(entrypoint, warn = FALSE), collapse = "\n")
-expect_false(grepl("\\bquit\\s*\\(", entry_text), "RStudio entrypoint must not call quit().")
-expect_false(grepl("\\bq\\s*\\(", entry_text), "RStudio entrypoint must not call q().")
+for (i in seq_len(nrow(runner_specs))) {
+  runner_file <- runner_specs$file[[i]]
+  runner_path <- file.path(root, runner_file)
+  expect_file(runner_path)
+  runner_text <- paste(readLines(runner_path, warn = FALSE), collapse = "\n")
+  expect_false(grepl("\\bquit\\s*\\(", runner_text), paste(runner_file, "must not call quit()."))
+  expect_false(grepl("\\bq\\s*\\(", runner_text), paste(runner_file, "must not call q()."))
+  expect_true(
+    grepl(paste0('candidate <- file.path(getwd(), "', runner_file, '")'), runner_text, fixed = TRUE),
+    paste(runner_file, "should discover its own file name.")
+  )
+  expect_true(
+    grepl(paste0('basename(if (is.na(.dalycare_entry_path)) "" else .dalycare_entry_path), "', runner_file, '"'), runner_text, fixed = TRUE),
+    paste(runner_file, "should guard against redirects using its own file name.")
+  )
+  expect_true(
+    grepl(paste0('Sys.getenv("DALYCARE_ATLAS_SOURCE_MAP", unset = "', runner_specs$default_source_map[[i]], '")'), runner_text, fixed = TRUE),
+    paste(runner_file, "should default to the expected source map.")
+  )
+  if (!identical(runner_file, "RUN_DALYCARE_ATLAS.R")) {
+    expect_false(
+      grepl('file.path(getwd(), "RUN_DALYCARE_ATLAS.R")', runner_text, fixed = TRUE),
+      paste(runner_file, "must not redirect back to the default one-click runner.")
+    )
+  }
+}
+
+entrypoint <- file.path(root, "RUN_DALYCARE_ATLAS.R")
 
 old_source_map <- Sys.getenv("DALYCARE_ATLAS_SOURCE_MAP", unset = NA)
 old_output_root <- Sys.getenv("DALYCARE_ATLAS_OUTPUT_ROOT", unset = NA)

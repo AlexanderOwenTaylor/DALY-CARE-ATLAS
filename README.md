@@ -43,6 +43,23 @@ Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS
 Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare64.production.tsv atlas_runs report
 ```
 
+For one-click RStudio runs, use the explicit runner matching the validation
+goal:
+
+```r
+# 48-source compatibility run
+source("RUN_DALYCARE_ATLAS_48_SOURCE.R")
+
+# 64-resource restored validation run. The restored map may include more than
+# 64 source-map rows because canonical resources, derived views, and helper rows
+# are represented separately.
+source("RUN_DALYCARE_ATLAS_64_SOURCE.R")
+```
+
+`RUN_DALYCARE_ATLAS.R` remains the backwards-compatible default and uses
+`config/source-map.dalycare.tsv` unless `DALYCARE_ATLAS_SOURCE_MAP` is set.
+All one-click runners still respect `DALYCARE_ATLAS_SOURCE_MAP` overrides.
+
 The preflight script checks required project files, the 64-resource expected
 list, the production source-map candidate, and the source-recovery dry-run
 without requiring production DB credentials. Database credentials remain
