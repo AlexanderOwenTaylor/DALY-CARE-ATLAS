@@ -516,6 +516,40 @@ source_row_profiled <- function(row) {
   TRUE
 }
 
+canonical_special_status <- function(row, sources = NULL, columns = NULL) {
+  id <- resource_key(resource_first_nonblank(
+    if ("canonical_resource_id" %in% names(row)) row$canonical_resource_id[[1]] else "",
+    if ("expected_resource_id" %in% names(row)) row$expected_resource_id[[1]] else ""
+  ))
+  strategy <- resource_first_nonblank(
+    if ("current_expected_strategy" %in% names(row)) row$current_expected_strategy[[1]] else "",
+    if ("resolver_type" %in% names(row)) row$resolver_type[[1]] else ""
+  )
+  if (identical(id, resource_key("FISH")) || identical(strategy, "embedded_fields")) {
+    fish_source <- if (is.data.frame(sources) && nrow(sources)) {
+      sources[resource_key(sources$canonical_resource_id %||% sources$table_name %||% "") == resource_key("FISH"), , drop = FALSE]
+    } else {
+      data.frame(stringsAsFactors = FALSE)
+    }
+    if (nrow(fish_source) && any(fish_source$load_status == "embedded_fields_represented", na.rm = TRUE)) {
+      return("embedded_fields_represented")
+    }
+    return("special_manual_or_embedded")
+  }
+  if (identical(id, resource_key("DANRICHT")) || identical(strategy, "manual_file")) {
+    danricht_source <- if (is.data.frame(sources) && nrow(sources)) {
+      sources[resource_key(sources$canonical_resource_id %||% sources$table_name %||% "") == resource_key("DANRICHT"), , drop = FALSE]
+    } else {
+      data.frame(stringsAsFactors = FALSE)
+    }
+    if (nrow(danricht_source) && any(danricht_source$load_status == "manual_file_not_available", na.rm = TRUE)) {
+      return("manual_file_not_available")
+    }
+    return("special_manual_or_embedded")
+  }
+  ""
+}
+
 source_map_row_role_flags <- function(row) {
   hay <- tolower(paste(row$table_name[[1]] %||% "", row$source[[1]] %||% "", row$domain[[1]] %||% "", row$atlas_role[[1]] %||% ""))
   explicit_role <- row$source_map_role[[1]] %||% ""
@@ -764,12 +798,15 @@ build_canonical_resource_reconciliation_64 <- function(project_root = ".", sourc
       resource_key("BilleddiagnostikeUndersoegelser_Del2"),
       resource_key("BilleddiagnostikeUndersogelser_Del2")
     )
+    special_status <- canonical_special_status(row, sources = sources)
     current_status <- if (resource_key(id) %in% del2_keys && isTRUE(profiled)) {
       "legacy_unavailable_current_resolved"
     } else if (isTRUE(profiled)) {
       "current_profiled"
     } else if (nrow(rec) && identical(rec$current_run_status[[1]], "Missing unexpectedly")) {
       "current_missing_after_attempt"
+    } else if (nzchar(special_status)) {
+      special_status
     } else if (identical(row$source_map_role[[1]] %||% "", "special_manual_or_embedded")) {
       "special_manual_or_embedded"
     } else {
@@ -795,6 +832,10 @@ build_canonical_resource_reconciliation_64 <- function(project_root = ".", sourc
       "Preserve the current resolver; V033 legacy absence has been superseded by production evidence."
     } else if (identical(current_status, "current_profiled")) {
       "No action."
+    } else if (identical(current_status, "embedded_fields_represented")) {
+      "Represented through embedded fields in profiled registry resources; no standalone DB table required."
+    } else if (identical(current_status, "manual_file_not_available")) {
+      "Manual/on-disk source not loaded; provide the manual file if this special source should be profiled."
     } else if (identical(current_status, "special_manual_or_embedded")) {
       "Represented as special/manual or embedded evidence; add a normal source only if access allows."
     } else if (identical(current_status, "current_missing_after_attempt")) {
@@ -885,7 +926,7 @@ build_legacy_reference_vs_current_profiled_evidence <- function(project_root = "
     current_profiled <- (nrow(rec) && isTRUE(as.logical(rec$current_profiled[[1]]))) || source_row_profiled(current_hit)
     legacy_reference <- grepl("cartography|reference|legacy", row$evidence_file[[1]] %||% "", ignore.case = TRUE) || !isTRUE(current_profiled)
     warning_needed <- isTRUE(legacy_reference) && !isTRUE(current_profiled)
-    freshness <- if (nrow(rec) && identical(rec$current_status[[1]], "special_manual_or_embedded")) {
+    freshness <- if (nrow(rec) && rec$current_status[[1]] %in% c("special_manual_or_embedded", "embedded_fields_represented", "manual_file_not_available")) {
       "special_manual"
     } else if (isTRUE(current_profiled) && isTRUE(legacy_reference)) {
       "current_profiled_and_legacy_reference"
@@ -992,6 +1033,10 @@ canonical_resource_summary_metrics <- function(canonical_reconciliation = NULL, 
   if (!is.data.frame(crosswalk)) crosswalk <- data.frame(stringsAsFactors = FALSE)
   if (!is.data.frame(legacy_reference)) legacy_reference <- data.frame(stringsAsFactors = FALSE)
   current_status <- canonical_reconciliation$current_status %||% character()
+  special_status <- current_status %in% c("special_manual_or_embedded", "embedded_fields_represented", "manual_file_not_available")
+  db_attemptable <- if (nrow(canonical_reconciliation)) !special_status else logical()
+  db_profiled <- current_status %in% c("current_profiled", "legacy_unavailable_current_resolved")
+  source_map_canonical_rows <- if (nrow(crosswalk)) sum(as.logical(crosswalk$is_canonical_resource %||% FALSE), na.rm = TRUE) else 0L
   data.frame(
     metric = c(
       "canonical_expected_resources",
@@ -1014,7 +1059,16 @@ canonical_resource_summary_metrics <- function(canonical_reconciliation = NULL, 
       "source_map_rows_canonical",
       "source_map_rows_derived_views",
       "source_map_rows_helpers",
-      "remaining_activation_candidates"
+      "remaining_activation_candidates",
+      "canonical_resources_total",
+      "canonical_resources_accounted_for",
+      "db_attemptable_canonical_resources",
+      "db_attemptable_profiled_resources",
+      "manual_special_not_loaded_resources",
+      "embedded_field_resources",
+      "unexpected_missing_canonical_resources",
+      "db_attemptable_failures",
+      "canonical_mapped_source_map_rows"
     ),
     value = as.character(c(
       nrow(canonical_reconciliation),
@@ -1028,16 +1082,25 @@ canonical_resource_summary_metrics <- function(canonical_reconciliation = NULL, 
       if (nrow(crosswalk)) sum(as.logical(crosswalk$current_profiled %||% FALSE), na.rm = TRUE) else 0L,
       if (nrow(legacy_reference)) length(unique(legacy_reference$canonical_resource_id[as.logical(legacy_reference$warning_needed %||% FALSE) & nzchar(legacy_reference$canonical_resource_id %||% "")])) else 0L,
       if (length(current_status)) sum(current_status == "legacy_unavailable_current_resolved", na.rm = TRUE) else 0L,
-      if (length(current_status)) sum(current_status == "special_manual_or_embedded", na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(special_status, na.rm = TRUE) else 0L,
       if (nrow(canonical_reconciliation)) sum(as.logical(canonical_reconciliation$current_profiled %||% FALSE), na.rm = TRUE) else 0L,
       if (length(current_status)) sum(current_status == "current_not_attempted", na.rm = TRUE) else 0L,
-      if (length(current_status)) sum(current_status == "special_manual_or_embedded", na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(special_status, na.rm = TRUE) else 0L,
       if (length(current_status)) sum(current_status == "current_missing_after_attempt", na.rm = TRUE) else 0L,
       if (nrow(crosswalk)) sum(as.logical(crosswalk$is_current_profiled %||% crosswalk$current_profiled %||% FALSE), na.rm = TRUE) else 0L,
       if (nrow(crosswalk)) sum(as.logical(crosswalk$is_canonical_resource %||% FALSE), na.rm = TRUE) else 0L,
       if (nrow(crosswalk)) sum(as.logical(crosswalk$is_derived_view %||% FALSE), na.rm = TRUE) else 0L,
       if (nrow(crosswalk)) sum(as.logical(crosswalk$is_helper_table %||% FALSE), na.rm = TRUE) else 0L,
-      if (length(current_status)) sum(current_status == "current_not_attempted", na.rm = TRUE) else 0L
+      if (length(current_status)) sum(current_status == "current_not_attempted", na.rm = TRUE) else 0L,
+      nrow(canonical_reconciliation),
+      if (length(current_status)) sum(current_status %in% c("current_profiled", "legacy_unavailable_current_resolved", "special_manual_or_embedded", "embedded_fields_represented", "manual_file_not_available"), na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(db_attemptable, na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(db_attemptable & db_profiled, na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(current_status == "manual_file_not_available", na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(current_status == "embedded_fields_represented", na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(current_status == "current_missing_after_attempt", na.rm = TRUE) else 0L,
+      if (length(current_status)) sum(db_attemptable & current_status == "current_missing_after_attempt", na.rm = TRUE) else 0L,
+      source_map_canonical_rows
     )),
     stringsAsFactors = FALSE
   )
@@ -1559,10 +1622,14 @@ build_source_resolution_attempts <- function(project_root = ".", production_map 
     special_manual <- row$resolver_type[[1]] %in% c("manual_file", "embedded_fields")
     attempted <- !current_known_unavailable && !special_manual && (nrow(current_source) > 0 || nrow(current_resolution) > 0 || nrow(current_map) > 0)
     resolved <- FALSE
-    if (nrow(current_source)) {
+    if (special_manual && identical(row$resolver_type[[1]], "embedded_fields")) {
+      resolved <- nrow(current_source) && any(current_source$load_status %in% c("ok", "embedded_fields_represented"), na.rm = TRUE)
+    } else if (special_manual && identical(row$resolver_type[[1]], "manual_file")) {
+      resolved <- nrow(current_source) && any(tolower(current_source$load_status %||% "") == "ok", na.rm = TRUE)
+    } else if (nrow(current_source)) {
       resolved <- any(tolower(current_source$load_status %||% "") == "ok", na.rm = TRUE)
     }
-    if (!resolved && nrow(current_resolution)) {
+    if (!resolved && !special_manual && nrow(current_resolution)) {
       resolved <- any(current_resolution$resolution_status %in% c("resolved", "not_applicable"), na.rm = TRUE)
     }
     resolver <- row$resolver_type[[1]]
@@ -1590,6 +1657,10 @@ build_source_resolution_attempts <- function(project_root = ".", production_map 
     resolved_by_alias <- isTRUE(resolved) && !resolved_by_direct && resolver %in% c("alias_table", "schema_qualified_table")
     warning <- if (current_known_unavailable) {
       "Current known unavailable"
+    } else if (identical(row$resolver_type[[1]], "embedded_fields") && resolved) {
+      ""
+    } else if (identical(row$resolver_type[[1]], "manual_file") && !resolved) {
+      "Manual/special source not loaded"
     } else if (special_manual && !resolved) {
       "Special/manual configured"
     } else if (legacy_known_unavailable && !attempted && source_recovery_truthy(row$requires_production_validation[[1]])) {
@@ -1603,6 +1674,10 @@ build_source_resolution_attempts <- function(project_root = ".", production_map 
     }
     action <- if (current_known_unavailable) {
       "No current attempt expected unless the resource is imported later."
+    } else if (identical(row$resolver_type[[1]], "embedded_fields") && resolved) {
+      "Represented through embedded registry fields; no standalone DB table is required."
+    } else if (identical(row$resolver_type[[1]], "manual_file") && !resolved) {
+      "Manual/on-disk files were not available; provide them only if this special source should be profiled."
     } else if (special_manual && !resolved) {
       "Represented by manual/special evidence; add a source-specific loader if this should be profiled as a normal table."
     } else if (legacy_known_unavailable && !attempted && source_recovery_truthy(row$requires_production_validation[[1]])) {

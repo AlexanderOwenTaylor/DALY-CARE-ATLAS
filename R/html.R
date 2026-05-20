@@ -826,6 +826,40 @@ hero_metrics <- function(sources, columns, checks, run_summary = NULL) {
   n_rows_total <- sum(suppressWarnings(as.numeric(sources$n_rows)), na.rm = TRUE)
   n_rows_value <- named_value(run_values, "total_rows", as.character(n_rows_total))
   min_cell_count <- named_value(run_values, "min_cell_count", as.character(atlas_min_cell_count()))
+  if ("canonical_resources_total" %in% names(run_values) || "canonical_expected_resources" %in% names(run_values)) {
+    total <- named_value(run_values, "canonical_resources_total", named_value(run_values, "canonical_expected_resources", "64"))
+    accounted <- named_value(run_values, "canonical_resources_accounted_for", total)
+    db_total <- named_value(run_values, "db_attemptable_canonical_resources", "")
+    db_profiled <- named_value(run_values, "db_attemptable_profiled_resources", "")
+    db_value <- if (nzchar(db_total) && nzchar(db_profiled)) paste0(db_profiled, " / ", db_total) else db_profiled
+    source_total <- named_value(run_values, "source_map_rows_total", as.character(nrow(sources)))
+    source_profiled <- named_value(run_values, "source_map_rows_profiled", as.character(sum(sources$load_status == "ok", na.rm = TRUE)))
+    source_value <- if (nzchar(source_total) && nzchar(source_profiled)) paste0(source_profiled, " / ", source_total) else source_profiled
+    return(data.frame(
+      metric = c(
+        "canonical_resources_accounted_for", "db_attemptable_profiled_resources",
+        "special_manual_or_embedded_resources", "unexpected_missing_canonical_resources",
+        "source_map_rows_profiled", "columns", "non_blocking_warnings", "min_cell_count"
+      ),
+      label = c(
+        "Canonical resources accounted for", "DB-attemptable canonical resources profiled",
+        "Special/manual/embedded resources", "Unexpected missing resources",
+        "Source-map rows profiled", "Columns profiled", "Non-blocking notes", "Minimum cell count"
+      ),
+      value = c(
+        paste0(accounted, " / ", total),
+        db_value,
+        named_value(run_values, "special_manual_or_embedded_resources", "0"),
+        named_value(run_values, "unexpected_missing_canonical_resources", named_value(run_values, "canonical_current_missing_after_attempt_resources", "0")),
+        source_value,
+        nrow(columns),
+        named_value(run_values, "non_blocking_warnings", as.character(sum(checks$severity %in% c("warning", "manual_note", "info"), na.rm = TRUE))),
+        min_cell_count
+      ),
+      tone = c("good", "good", "neutral", "good", "neutral", "neutral", "warn", "neutral"),
+      stringsAsFactors = FALSE
+    ))
+  }
   data.frame(
     metric = c(
       "mapped_sources", "loaded_sources", "failed_sources", "rows",
@@ -1278,8 +1312,11 @@ severity_rank <- function(severity) {
   severity <- tolower(as.character(severity))
   out <- rep(9L, length(severity))
   out[severity == "error"] <- 1L
+  out[severity == "unexpected_failure"] <- 1L
   out[severity == "warning"] <- 2L
-  out[severity == "ok"] <- 3L
+  out[severity == "manual_note"] <- 3L
+  out[severity == "info"] <- 4L
+  out[severity == "ok"] <- 5L
   out
 }
 
