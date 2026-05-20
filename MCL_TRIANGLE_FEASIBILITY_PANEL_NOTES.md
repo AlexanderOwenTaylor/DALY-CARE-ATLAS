@@ -62,12 +62,12 @@ Treatment matching includes medication names, ATC/SKS codes, registry treatment/
 
 ## Verdict Logic
 
-- `Strongly feasible` requires MCL cohort, ASCT/HDT, ibrutinib, CIT/regimen, at least one outcome, and most high-risk biology markers to be current-profiled direct/proxy evidence.
+- `Strongly feasible` requires MCL cohort, ASCT/HDT, ibrutinib, CIT/regimen, at least one outcome, and core high-risk biology markers such as blastoid morphology, TP53, and Ki-67 to have current-profiled direct evidence.
 - `Feasible with biology gaps` means cohort plus key treatment and outcome evidence exist, but high-risk biology is incomplete, proxy-only, or legacy/reference-only.
 - `Partially feasible` means cohort evidence exists, but treatment or outcome evidence is incomplete.
 - `Not currently feasible` means MCL cohort evidence is absent or unusable.
 
-The generator blocks `Strongly feasible` when blastoid morphology, TP53/p53/del17p, or Ki-67 are missing or only legacy/reference evidence.
+The generator blocks `Strongly feasible` when blastoid morphology, TP53/p53/del17p, or Ki-67 are missing, proxy-only, or only legacy/reference evidence.
 
 ## High-Risk Biology Limitations
 

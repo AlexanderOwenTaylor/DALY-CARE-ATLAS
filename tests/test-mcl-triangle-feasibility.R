@@ -149,6 +149,30 @@ for (marker in c("blastoid morphology", "pleomorphic morphology", "TP53", "p53",
 }
 verdict <- outputs$summary$status[outputs$summary$metric == "overall_feasibility_rating"][[1]]
 expect_false(identical(verdict, "Strongly feasible"), "Panel must not become Strongly feasible while high-risk biology is missing or legacy/reference-only.")
+
+overclaim_matrix <- data.frame(
+  study_requirement = required_requirements,
+  readiness_status = c(
+    "ready", "ready", "ready", "ready", "ready", "ready", "ready", "ready",
+    "ready", "ready", "proxy_available", "ready", "proxy_available", "ready"
+  ),
+  stringsAsFactors = FALSE
+)
+overclaim_biology <- data.frame(
+  marker = c("blastoid morphology", "TP53", "p53", "del17p", "Ki-67", "MIPI-c"),
+  direct_variable_found = c(TRUE, TRUE, TRUE, TRUE, FALSE, FALSE),
+  indirect_proxy_found = c(FALSE, FALSE, FALSE, FALSE, TRUE, TRUE),
+  current_profiled_source_available = TRUE,
+  legacy_reference_only = FALSE,
+  feasibility_status = c("ready", "ready", "ready", "ready", "proxy_available", "proxy_available"),
+  stringsAsFactors = FALSE
+)
+overclaim_verdict <- mcl_triangle_verdict(overclaim_matrix, overclaim_biology)
+expect_equal(
+  overclaim_verdict[["verdict"]],
+  "Feasible with biology gaps",
+  "Panel must not become Strongly feasible when Ki-67 is proxy-only rather than directly current-profiled."
+)
 expect_true(any(outputs$variable_inventory$current_profiled_this_run), "Inventory should label current-profiled evidence.")
 expect_true(any(outputs$variable_inventory$legacy_reference_only), "Inventory should label legacy/reference-only evidence.")
 expect_false(any(grepl("patientid|cpr|pnr", paste(outputs$variable_inventory$raw_field, outputs$variable_inventory$code_or_value), ignore.case = TRUE)), "MCL/TRIANGLE outputs must not emit patient identifiers.")

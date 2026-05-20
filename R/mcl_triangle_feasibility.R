@@ -544,6 +544,13 @@ mcl_triangle_verdict <- function(matrix, biology) {
     hit <- matrix[matrix$study_requirement == req, , drop = FALSE]
     if (nrow(hit)) hit$readiness_status[[1]] else "not_found"
   }
+  biology_direct_current <- function(marker) {
+    hit <- biology[biology$marker == marker, , drop = FALSE]
+    if (!nrow(hit)) return(FALSE)
+    isTRUE(as.logical(hit$direct_variable_found[[1]])) &&
+      isTRUE(as.logical(hit$current_profiled_source_available[[1]])) &&
+      !isTRUE(as.logical(hit$legacy_reference_only[[1]]))
+  }
   readyish <- function(status) status %in% c("ready", "proxy_available", "feasible_with_mapping")
   core <- c(
     status_for("MCL cohort"),
@@ -554,12 +561,14 @@ mcl_triangle_verdict <- function(matrix, biology) {
   )
   biology_core <- biology[biology$marker %in% c("blastoid morphology", "TP53", "p53", "del17p", "Ki-67", "MIPI-c"), , drop = FALSE]
   biology_ready_count <- sum(biology_core$feasibility_status %in% c("ready", "proxy_available"), na.rm = TRUE)
-  essential_biology_ready <- all(c("blastoid morphology", "TP53", "Ki-67") %in% biology$marker[biology$feasibility_status %in% c("ready", "proxy_available")])
+  essential_biology_ready <- all(c("blastoid morphology", "TP53", "Ki-67") %in% biology$marker[biology$feasibility_status == "ready"]) &&
+    all(vapply(c("blastoid morphology", "TP53", "Ki-67"), biology_direct_current, logical(1))) &&
+    status_for("Ki-67") == "ready"
   if (!readyish(status_for("MCL cohort"))) {
     return(c(verdict = "Not currently feasible", rationale = "MCL cohort evidence is absent or unusable in the aggregate atlas outputs."))
   }
   if (all(readyish(core)) && essential_biology_ready && biology_ready_count >= 4L) {
-    return(c(verdict = "Strongly feasible", rationale = "Cohort, key treatments, outcomes, and most high-risk biology markers have current-profiled direct/proxy evidence."))
+    return(c(verdict = "Strongly feasible", rationale = "Cohort, key treatments, outcomes, and core high-risk biology markers have current-profiled direct evidence."))
   }
   if (all(readyish(core))) {
     return(c(verdict = "Feasible with biology gaps", rationale = "Cohort, key treatment, and outcome evidence exist, but high-risk biology is incomplete, proxy-only, or legacy/reference-only."))
