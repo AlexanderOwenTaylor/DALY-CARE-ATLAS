@@ -11,6 +11,7 @@ usage <- paste(
   "",
   "Builds aggregate-only Ki-67 discovery outputs from existing atlas CSV outputs.",
   "cached_outputs and standalone_zip do not connect to the database or run the atlas profiler.",
+  "targeted_production_validation is currently a plan-only mode: it validates/emits aggregate-only AEKI/text validation plans and does not query production databases.",
   sep = "\n"
 )
 
@@ -51,6 +52,10 @@ parse_cli <- function(args) {
 opts <- parse_cli(args)
 if (!opts$mode %in% c("cached_outputs", "standalone_zip", "targeted_production_validation")) {
   stop("Unsupported --mode: ", opts$mode)
+}
+
+if (identical(opts$mode, "targeted_production_validation")) {
+  cat("Ki-67 targeted production validation is plan-only in this package: no DB connection is opened, no source profiling is run, and only aggregate validation-plan outputs are validated or written.\n")
 }
 
 project_root <- normalizePath(opts$project_root, winslash = "/", mustWork = TRUE)

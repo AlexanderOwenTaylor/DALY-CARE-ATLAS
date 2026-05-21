@@ -82,6 +82,7 @@ ki67_empty_channel_summary <- function() {
     channel_label = character(),
     confirmed_hits = integer(),
     candidate_hits = integer(),
+    source_space_hits = integer(),
     status = character(),
     next_validation_action = character(),
     notes = character()
@@ -784,17 +785,25 @@ ki67_channel_summary <- function(inventory, registry, pathology, text_patterns) 
   inventory <- ki67_align_search_inventory(inventory)
   source_only <- inventory[inventory$evidence_channel == "source_only_search_space" | inventory$evidence_strength == "source_only", , drop = FALSE]
   direct_registry <- registry[registry$evidence_strength %in% c("strong_direct", "moderate_direct"), , drop = FALSE]
+  candidate_registry <- registry[registry$evidence_strength %in% c("strong_direct", "moderate_direct", "weak_candidate"), , drop = FALSE]
+  source_space_registry <- registry[registry$evidence_strength == "source_only", , drop = FALSE]
   numeric_pathology <- pathology[pathology$mcl_triangle_high_risk_ki67_numeric %in% TRUE, , drop = FALSE]
   direct_pathology <- pathology[pathology$evidence_strength %in% c("strong_direct", "moderate_direct"), , drop = FALSE]
+  source_space_pathology <- pathology[pathology$evidence_strength == "source_only", , drop = FALSE]
   text_direct <- inventory[inventory$evidence_channel == "pathology_text_extraction_readiness" &
     inventory$evidence_strength %in% c("strong_direct", "moderate_direct", "weak_candidate"), , drop = FALSE]
+  text_candidates <- inventory[inventory$evidence_channel == "pathology_text_extraction_readiness" &
+    inventory$evidence_strength %in% c("strong_direct", "moderate_direct", "weak_candidate"), , drop = FALSE]
+  source_space_text <- text_patterns[text_patterns$value_class == "uncertain" |
+    grepl("search space only|source activation", text_patterns$notes, ignore.case = TRUE), , drop = FALSE]
 
-  channel_row <- function(channel, label, confirmed, candidate, status, action, notes) {
+  channel_row <- function(channel, label, confirmed, candidate, source_space, status, action, notes) {
     data.frame(
       evidence_channel = channel,
       channel_label = label,
       confirmed_hits = as.integer(confirmed),
       candidate_hits = as.integer(candidate),
+      source_space_hits = as.integer(source_space),
       status = status,
       next_validation_action = action,
       notes = notes,
@@ -807,7 +816,8 @@ ki67_channel_summary <- function(inventory, registry, pathology, text_patterns) 
       "structured_registry_fields",
       "Structured registry fields",
       nrow(direct_registry),
-      nrow(registry),
+      nrow(candidate_registry),
+      nrow(source_space_registry),
       if (nrow(direct_registry)) "candidate_present" else "not_found_in_current_artifacts",
       "Validate RKKP/LYFO field definitions and value semantics before analytic use.",
       "Registry hits require codebook validation; source-only LYFO availability is not Ki-67 evidence."
@@ -817,6 +827,7 @@ ki67_channel_summary <- function(inventory, registry, pathology, text_patterns) 
       "Danish pathology code evidence / AEKIxxx",
       nrow(numeric_pathology),
       max(0L, nrow(direct_pathology)),
+      nrow(source_space_pathology),
       if (nrow(numeric_pathology)) "confirmed_present" else "requires_production_validation",
       "Run aggregate-only code counts for AEKIxxx / ÆKIxxx in pathology code fields.",
       "AEKIxxx parser is ready; current static artifacts do not expose validated aggregate code counts unless confirmed hits are present."
@@ -825,7 +836,8 @@ ki67_channel_summary <- function(inventory, registry, pathology, text_patterns) 
       "pathology_text_extraction_readiness",
       "Pathology text extraction readiness",
       nrow(text_direct),
-      nrow(text_patterns),
+      nrow(text_candidates),
+      nrow(source_space_text),
       "requires_production_validation",
       "Run aggregate-only text pattern counts; no raw snippets or identifiers.",
       "Regex patterns are readiness specifications tested on synthetic examples, not validated real-report extraction."
@@ -833,6 +845,7 @@ ki67_channel_summary <- function(inventory, registry, pathology, text_patterns) 
     channel_row(
       "source_only_search_space",
       "Source-only search space",
+      0L,
       0L,
       nrow(source_only),
       if (nrow(source_only)) "source_space_only" else "not_found_in_current_artifacts",

@@ -25,6 +25,18 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
   invisible(TRUE)
 }
 
+source_ki67_test_runtime <- function(root = normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)) {
+  files <- c(
+    "R/utils.R",
+    "R/ki67_discovery.R",
+    "R/mcl_triangle_feasibility.R"
+  )
+  for (file in files) {
+    source(file.path(root, file))
+  }
+  invisible(TRUE)
+}
+
 expect_true <- function(x, message = "Expected TRUE") {
   if (!isTRUE(x)) stop(message, call. = FALSE)
 }
