@@ -29,7 +29,10 @@ source_ki67_test_runtime <- function(root = normalizePath(file.path(getwd()), wi
   files <- c(
     "R/utils.R",
     "R/ki67_discovery.R",
-    "R/mcl_triangle_feasibility.R"
+    "R/mcl_triangle_feasibility.R",
+    "R/source_map.R",
+    "R/db_profile.R",
+    "R/ki67_production_finder.R"
   )
   for (file in files) {
     source(file.path(root, file))
