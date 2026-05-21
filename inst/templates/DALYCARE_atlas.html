@@ -5601,7 +5601,7 @@
           return `<article class="clinical-card">
             ${renderBadge(st, mclStatusTone(st))}
             <h3>${escapeHtml(row.channel_label || fallbackLabel)}</h3>
-            <p class="mini"><strong>Confirmed:</strong> ${escapeHtml(row.confirmed_hits || "0")}; <strong>candidates:</strong> ${escapeHtml(row.candidate_hits || "0")}</p>
+            <p class="mini"><strong>Confirmed:</strong> ${escapeHtml(row.confirmed_hits || "0")}; <strong>candidates:</strong> ${escapeHtml(row.candidate_hits || "0")}; <strong>source space:</strong> ${escapeHtml(row.source_space_hits || "0")}</p>
             <p class="mini">${escapeHtml(row.next_validation_action || fallbackAction)}</p>
             ${row.notes ? `<p class="mini">${escapeHtml(row.notes)}</p>` : ""}
           </article>`;

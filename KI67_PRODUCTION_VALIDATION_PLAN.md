@@ -14,6 +14,8 @@ The Ki-67 cleanup adds three validation-planning outputs:
 
 In fixture/static mode, `ki67_aeki_code_counts.csv` contains a placeholder row with `requires_production_validation`; it must not fabricate positive counts.
 
+`targeted_production_validation` is a planned validation mode in this package. It validates or emits the aggregate-only `Ã†KIxxx` and text-pattern validation plans described below, but it does not open a database connection or query production tables until explicit site-approved DB hooks are added.
+
 ## Danish Patobank `ÆKIxxx` Strategy
 
 Candidate code patterns:
@@ -104,3 +106,11 @@ Rscript scripts/build_ki67_discovery.R --mode cached_outputs --project-root . --
 ```
 
 Targeted production validation should be implemented as an aggregate-only DB routine using the output specifications above, not by rerunning the full source-profiling loop.
+
+Current behavior:
+
+```bash
+Rscript scripts/build_ki67_discovery.R --mode targeted_production_validation --project-root . --outputs-dir outputs --validate-only true
+```
+
+This command checks the Ki-67 discovery/validation-plan machinery and reports that targeted production validation is plan-only. It does not perform production DB access.

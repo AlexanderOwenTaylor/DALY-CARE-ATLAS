@@ -23,6 +23,15 @@ Generic microscopy is no longer a standalone Ki-67 trigger. In particular, `micr
 
 Broad pathology or LYFO source availability remains useful for planning source activation, but it is search space, not Ki-67 evidence. Source-only evidence cannot raise Ki-67 readiness above `weak_candidate_only`.
 
+## Channel Count Semantics
+
+`outputs/ki67_channel_summary.csv` separates actual candidates from search space:
+
+- `candidate_hits` counts non-source-only candidate evidence only.
+- `source_space_hits` counts source-only/search-space rows.
+
+This means a channel such as structured registry fields should show `candidate_hits = 0` when the only rows are LYFO or RKKP source-name hits. Those source-name rows remain useful activation targets, but they are not Ki-67 evidence.
+
 ## Danish Patobank Codes
 
 Danish Patobank may encode numeric Ki-67 index using `ÆKIxxx`, where `xxx` is the percentage.
@@ -96,3 +105,13 @@ The current aggregate atlas artifacts do not expose confirmed structured Ki-67 p
 3. Run aggregate-only `ÆKIxxx` code counts in candidate pathology code fields.
 4. Run a privacy-preserving pathology text pattern count pilot without emitting raw report snippets.
 5. Clinically validate value handling for exact, range, inequality, qualitative, and unknown Ki-67 representations before any cohort extraction.
+
+## Local Cached-Output Check
+
+The Ki-67 package is intended to be runnable from an unpacked ZIP for cached-output validation without the full atlas runner:
+
+```powershell
+Rscript scripts/build_ki67_discovery.R --mode cached_outputs --project-root . --outputs-dir outputs --validate-only true
+```
+
+The ZIP must include the Ki-67 helpers and focused tests needed by this command, including `R/utils.R`, `R/ki67_discovery.R`, `R/mcl_triangle_feasibility.R`, `scripts/build_ki67_discovery.R`, `scripts/run_tests.R`, `tests/helper.R`, and `tests/test-ki67-discovery.R`.

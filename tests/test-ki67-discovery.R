@@ -1,6 +1,6 @@
 root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
 source(file.path(root, "tests", "helper.R"))
-source_test_runtime(root)
+source_ki67_test_runtime(root)
 
 outputs <- build_ki67_discovery_outputs(
   project_root = root,
@@ -44,6 +44,7 @@ expect_true(all(c("structured_registry_fields", "danish_pathology_code_evidence"
 expect_true(nrow(outputs$aeki_validation_plan) > 0, "AEKI/ÆKI production validation plan should be generated.")
 expect_true(nrow(outputs$aeki_code_counts) > 0, "AEKI/ÆKI code count placeholder should be generated.")
 expect_true(nrow(outputs$text_validation_plan) > 0, "Ki-67 text validation plan should be generated.")
+expect_true("source_space_hits" %in% names(outputs$channel_summary), "Ki-67 channel summary should report source-space hits separately from candidate hits.")
 
 spec_path <- file.path(root, "clinical_questions", "ki67_extraction_spec.yml")
 expect_file(spec_path)
@@ -112,6 +113,12 @@ expect_false(any(source_only_outputs$search_inventory$evidence_strength %in% c("
 source_only_rows <- source_only_outputs$search_inventory[source_only_outputs$search_inventory$evidence_strength == "source_only", , drop = FALSE]
 expect_true(any(!source_only_rows$display_in_ui %in% TRUE), "Duplicate source-only rows should be suppressed from the concise UI.")
 expect_true(all(source_only_rows$evidence_channel == "source_only_search_space"), "Source-only rows should be assigned to the source-space evidence channel.")
+source_only_channel <- source_only_outputs$channel_summary[source_only_outputs$channel_summary$evidence_channel == "source_only_search_space", , drop = FALSE]
+expect_equal(source_only_channel$candidate_hits[[1]], 0L, "Source-only search-space rows must not be counted as candidate evidence.")
+expect_true(source_only_channel$source_space_hits[[1]] > 0L, "Source-only search-space rows should be counted in source_space_hits.")
+registry_channel <- source_only_outputs$channel_summary[source_only_outputs$channel_summary$evidence_channel == "structured_registry_fields", , drop = FALSE]
+expect_equal(registry_channel$candidate_hits[[1]], 0L, "Structured registry source-only rows should not be counted as candidate evidence.")
+expect_true(registry_channel$source_space_hits[[1]] > 0L, "Structured registry source-only rows should be counted as source-space hits.")
 
 empty_inventory <- mcl_triangle_empty_variable_inventory()
 ki67_matrix <- mcl_triangle_build_readiness_matrix(empty_inventory, ki67_discovery = source_only_outputs)
@@ -153,3 +160,45 @@ placeholder <- build_ki67_discovery_outputs(
 )
 expect_true(any(placeholder$aeki_code_counts$validation_status == "requires_production_validation"), "Fixture/static mode should emit a production-validation placeholder rather than fake AEKI counts.")
 expect_false(any(placeholder$pathology_code_candidates$code %in% c("FY5015", "FY5016", "M0901K", "M0901L") & placeholder$pathology_code_candidates$mcl_triangle_high_risk_ki67_numeric), "p16/Ki-67 dual-stain or test-quality codes must not upgrade numeric MCL Ki-67 readiness.")
+
+zip_root <- file.path(tempdir(), paste0("ki67_zip_shape_", Sys.getpid()))
+unlink(zip_root, recursive = TRUE, force = TRUE)
+dir_create(file.path(zip_root, "R"))
+dir_create(file.path(zip_root, "scripts"))
+dir_create(file.path(zip_root, "tests"))
+dir_create(file.path(zip_root, "outputs"))
+dir_create(file.path(zip_root, "clinical_questions"))
+for (path in c(
+  "R/utils.R",
+  "R/ki67_discovery.R",
+  "R/mcl_triangle_feasibility.R",
+  "scripts/build_ki67_discovery.R",
+  "scripts/run_tests.R",
+  "tests/helper.R",
+  "tests/test-ki67-discovery.R",
+  "clinical_questions/ki67_extraction_spec.yml"
+)) {
+  expect_true(file.copy(file.path(root, path), file.path(zip_root, path), overwrite = TRUE), paste("Failed to copy ZIP-shaped package file:", path))
+}
+expect_false(file.exists(file.path(zip_root, "R", "run_atlas.R")), "ZIP-shaped Ki-67 package test should not include the full atlas runner.")
+rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
+oldwd <- setwd(zip_root)
+on.exit(setwd(oldwd), add = TRUE)
+cached_result <- system2(
+  rscript,
+  c("scripts/build_ki67_discovery.R", "--mode", "cached_outputs", "--project-root", ".", "--outputs-dir", "outputs", "--validate-only", "true"),
+  stdout = TRUE,
+  stderr = TRUE
+)
+cached_status <- attr(cached_result, "status") %||% 0L
+expect_equal(as.integer(cached_status), 0L, paste(c("Cached-output validate-only command should run from the unpacked ZIP shape.", cached_result), collapse = "\n"))
+expect_true(any(grepl("without running source profiling or DB access", cached_result, fixed = TRUE)), "Cached-output validate-only command should state that it does not run source profiling or DB access.")
+targeted_result <- system2(
+  rscript,
+  c("scripts/build_ki67_discovery.R", "--mode", "targeted_production_validation", "--project-root", ".", "--outputs-dir", "outputs", "--validate-only", "true"),
+  stdout = TRUE,
+  stderr = TRUE
+)
+targeted_status <- attr(targeted_result, "status") %||% 0L
+expect_equal(as.integer(targeted_status), 0L, paste(c("Targeted production validation validate-only command should run as plan-only mode.", targeted_result), collapse = "\n"))
+expect_true(any(grepl("plan-only", targeted_result, fixed = TRUE)), "Targeted production validation mode should clearly report plan-only behavior.")
