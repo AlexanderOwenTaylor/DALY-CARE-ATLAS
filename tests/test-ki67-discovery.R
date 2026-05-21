@@ -193,9 +193,24 @@ cached_result <- system2(
 cached_status <- attr(cached_result, "status") %||% 0L
 expect_equal(as.integer(cached_status), 0L, paste(c("Cached-output validate-only command should run from the unpacked ZIP shape.", cached_result), collapse = "\n"))
 expect_true(any(grepl("without running source profiling or DB access", cached_result, fixed = TRUE)), "Cached-output validate-only command should state that it does not run source profiling or DB access.")
+setwd(tempdir())
+outside_cached_result <- system2(
+  rscript,
+  c(
+    file.path(zip_root, "scripts", "build_ki67_discovery.R"),
+    "--mode", "cached_outputs",
+    "--project-root", zip_root,
+    "--outputs-dir", "outputs",
+    "--validate-only", "true"
+  ),
+  stdout = TRUE,
+  stderr = TRUE
+)
+outside_cached_status <- attr(outside_cached_result, "status") %||% 0L
+expect_equal(as.integer(outside_cached_status), 0L, paste(c("Relative --outputs-dir should resolve under --project-root, not the caller working directory.", outside_cached_result), collapse = "\n"))
 targeted_result <- system2(
   rscript,
-  c("scripts/build_ki67_discovery.R", "--mode", "targeted_production_validation", "--project-root", ".", "--outputs-dir", "outputs", "--validate-only", "true"),
+  c(file.path(zip_root, "scripts", "build_ki67_discovery.R"), "--mode", "targeted_production_validation", "--project-root", zip_root, "--outputs-dir", "outputs", "--validate-only", "true"),
   stdout = TRUE,
   stderr = TRUE
 )

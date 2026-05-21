@@ -58,8 +58,25 @@ if (identical(opts$mode, "targeted_production_validation")) {
   cat("Ki-67 targeted production validation is plan-only in this package: no DB connection is opened, no source profiling is run, and only aggregate validation-plan outputs are validated or written.\n")
 }
 
+is_absolute_path <- function(path) {
+  grepl("^([A-Za-z]:[\\\\/]|[\\\\/])", path)
+}
+
+resolve_outputs_dir <- function(outputs_dir, project_root) {
+  outputs_dir <- as.character(outputs_dir)
+  if (!length(outputs_dir) || is.na(outputs_dir[[1]]) || !nzchar(outputs_dir[[1]])) {
+    stop("--outputs-dir cannot be empty.", call. = FALSE)
+  }
+  outputs_dir <- path.expand(outputs_dir[[1]])
+  if (is_absolute_path(outputs_dir[[1]])) {
+    outputs_dir[[1]]
+  } else {
+    file.path(project_root, outputs_dir[[1]])
+  }
+}
+
 project_root <- normalizePath(opts$project_root, winslash = "/", mustWork = TRUE)
-output_dir <- normalizePath(opts$outputs_dir, winslash = "/", mustWork = TRUE)
+output_dir <- normalizePath(resolve_outputs_dir(opts$outputs_dir, project_root), winslash = "/", mustWork = TRUE)
 
 source_required <- function(path) {
   if (!file.exists(path)) stop("Required helper file is missing: ", path)

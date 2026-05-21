@@ -67,30 +67,55 @@ copy_dir_contents <- function(from, to) {
   invisible(to)
 }
 
+zip_dir_with_powershell_dotnet <- function(from, zipfile) {
+  ps <- Sys.which("powershell")
+  if (!nzchar(ps)) ps <- Sys.which("pwsh")
+  if (!nzchar(ps)) {
+    stop("Could not create ZIP: neither utils::zip nor PowerShell is available.", call. = FALSE)
+  }
+  ps_script <- c(
+    "param([string]$SourceDir, [string]$ZipPath)",
+    "Add-Type -AssemblyName System.IO.Compression",
+    "Add-Type -AssemblyName System.IO.Compression.FileSystem",
+    "if (Test-Path -LiteralPath $ZipPath) { Remove-Item -LiteralPath $ZipPath -Force }",
+    "$root = (Resolve-Path -LiteralPath $SourceDir).Path",
+    "$zip = [System.IO.Compression.ZipFile]::Open($ZipPath, [System.IO.Compression.ZipArchiveMode]::Create)",
+    "try {",
+    "  Get-ChildItem -LiteralPath $root -Recurse -File -Force | ForEach-Object {",
+    "    $rel = $_.FullName.Substring($root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)",
+    "    $entryName = $rel -replace '\\\\','/'",
+    "    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null",
+    "  }",
+    "} finally {",
+    "  $zip.Dispose()",
+    "}"
+  )
+  ps_file <- tempfile("portable_zip_", fileext = ".ps1")
+  writeLines(ps_script, ps_file, useBytes = TRUE)
+  on.exit(unlink(ps_file, force = TRUE), add = TRUE)
+  status <- system2(
+    ps,
+    c("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps_file, from, zipfile)
+  )
+  if (!identical(status, 0L) || !file.exists(zipfile)) {
+    stop("Portable PowerShell ZIP creation failed.", call. = FALSE)
+  }
+  invisible(zipfile)
+}
+
 zip_dir <- function(from, zipfile) {
+  from <- normalizePath(from, winslash = "/", mustWork = TRUE)
+  zipfile <- normalizePath(zipfile, winslash = "/", mustWork = FALSE)
   if (file.exists(zipfile)) unlink(zipfile, force = TRUE)
   old <- setwd(from)
   on.exit(setwd(old), add = TRUE)
-  files <- list.files(".", all.files = TRUE, no.. = TRUE, recursive = TRUE)
+  files <- gsub("\\\\", "/", list.files(".", all.files = TRUE, no.. = TRUE, recursive = TRUE))
   ok <- tryCatch({
     utils::zip(zipfile = zipfile, files = files)
     file.exists(zipfile)
   }, error = function(e) FALSE)
   if (!isTRUE(ok)) {
-    ps <- Sys.which("powershell")
-    if (!nzchar(ps)) ps <- Sys.which("pwsh")
-    if (!nzchar(ps)) stop("Could not create ZIP: neither utils::zip nor PowerShell is available.", call. = FALSE)
-    cmd <- paste0(
-      "Compress-Archive -Path ",
-      shQuote(file.path(from, "*"), type = "cmd"),
-      " -DestinationPath ",
-      shQuote(zipfile, type = "cmd"),
-      " -Force"
-    )
-    status <- system2(ps, c("-NoProfile", "-Command", cmd))
-    if (!identical(status, 0L) || !file.exists(zipfile)) {
-      stop("PowerShell Compress-Archive failed.", call. = FALSE)
-    }
+    zip_dir_with_powershell_dotnet(from, zipfile)
   }
   zipfile
 }
