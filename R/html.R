@@ -113,7 +113,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           canonical_resource_reconciliation = NULL,
                           source_map_crosswalk = NULL,
                           legacy_reference_vs_current = NULL,
-                          remaining_activation_plan = NULL) {
+                          remaining_activation_plan = NULL,
+                          ki67_discovery = NULL,
+                          mcl_triangle_feasibility = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -140,6 +142,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(source_map_crosswalk)) source_map_crosswalk <- data.frame(stringsAsFactors = FALSE)
   if (is.null(legacy_reference_vs_current)) legacy_reference_vs_current <- data.frame(stringsAsFactors = FALSE)
   if (is.null(remaining_activation_plan)) remaining_activation_plan <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(ki67_discovery)) ki67_discovery <- ki67_empty_payload()
+  if (is.null(mcl_triangle_feasibility)) mcl_triangle_feasibility <- mcl_triangle_empty_payload()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
   public_column_profiles <- public_column_profile_rows(column_profiles)
@@ -170,6 +174,18 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_source_map_crosswalk <- sanitize_public_frame(source_map_crosswalk)
   public_legacy_reference_vs_current <- sanitize_public_frame(legacy_reference_vs_current)
   public_remaining_activation_plan <- sanitize_public_frame(remaining_activation_plan)
+  public_ki67_discovery <- lapply(ki67_discovery, function(x) {
+    if (is.data.frame(x)) public_rows(sanitize_public_frame(x), max_rows = 2000) else x
+  })
+  public_mcl_triangle_feasibility <- lapply(mcl_triangle_feasibility, function(x) {
+    if (is.data.frame(x)) return(public_rows(sanitize_public_frame(x), max_rows = 2000))
+    if (is.list(x)) {
+      return(lapply(x, function(y) {
+        if (is.data.frame(y)) public_rows(sanitize_public_frame(y), max_rows = 2000) else y
+      }))
+    }
+    x
+  })
   module_readiness <- panel_or_empty(panels, "atlas_module_readiness")
   list(
     run_id = run_id,
@@ -263,6 +279,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     source_map_crosswalk_rows = public_rows(public_source_map_crosswalk, max_rows = 1000),
     legacy_reference_vs_current_rows = public_rows(public_legacy_reference_vs_current, max_rows = 1000),
     remaining_activation_plan_rows = public_rows(public_remaining_activation_plan, max_rows = 1000),
+    ki67_discovery = public_ki67_discovery,
+    mcl_triangle_feasibility = public_mcl_triangle_feasibility,
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
@@ -300,6 +318,11 @@ review_nav <- function() {
       id = "quickstart",
       label = "Quick Start",
       sub_tabs = c("RStudio", "Terminal", "Preflight")
+    ),
+    list(
+      id = "clinical-feasibility",
+      label = "Clinical Feasibility",
+      sub_tabs = c("MCL / TRIANGLE")
     ),
     list(
       id = "dictionary",

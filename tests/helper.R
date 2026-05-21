@@ -14,8 +14,22 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/action_items.R",
     "R/semantic_dictionary.R",
     "R/product_layer.R",
+    "R/ki67_discovery.R",
+    "R/mcl_triangle_feasibility.R",
     "R/html.R",
     "R/run_atlas.R"
+  )
+  for (file in files) {
+    source(file.path(root, file))
+  }
+  invisible(TRUE)
+}
+
+source_ki67_test_runtime <- function(root = normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)) {
+  files <- c(
+    "R/utils.R",
+    "R/ki67_discovery.R",
+    "R/mcl_triangle_feasibility.R"
   )
   for (file in files) {
     source(file.path(root, file))

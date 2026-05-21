@@ -281,6 +281,40 @@ legacy_reference_vs_current <- build_legacy_reference_vs_current_profiled_eviden
   sources = sources,
   canonical = canonical_resources
 )
+ki67_discovery <- build_ki67_discovery_outputs(
+  project_root = project_root,
+  include_reference_files = TRUE,
+  semantic_dictionary = semantic_outputs$dictionary,
+  semantic_value_map = semantic_outputs$value_map,
+  semantic_code_map = semantic_outputs$code_map,
+  semantic_panel_links = semantic_outputs$panel_links,
+  clinical_concepts = product_outputs$clinical_concepts,
+  domain_panels = product_outputs$domain_panels,
+  panel_kpis = product_outputs$panel_kpis,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  sources = sources,
+  columns = columns,
+  column_profiles = column_profiles,
+  column_top_values = column_top_values,
+  source_resolution = source_resolution,
+  canonical_reconciliation = canonical_reconciliation,
+  legacy_reference_vs_current = legacy_reference_vs_current
+)
+mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
+  project_root = project_root,
+  semantic_dictionary = semantic_outputs$dictionary,
+  semantic_value_map = semantic_outputs$value_map,
+  semantic_code_map = semantic_outputs$code_map,
+  semantic_panel_links = semantic_outputs$panel_links,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_kpis = product_outputs$panel_kpis,
+  sources = sources,
+  canonical_reconciliation = canonical_reconciliation,
+  legacy_reference_vs_current = legacy_reference_vs_current,
+  ki67_discovery = ki67_discovery
+)
 write_csv(legacy_resource_audit, file.path(mock_output_dir, "legacy_cartography_source_resolution_audit.csv"))
 write_csv(billeddiagnostik_del2_audit, file.path(mock_output_dir, "billeddiagnostik_del2_regression_audit.csv"))
 write_csv(source_resolution_plan_dry_run, file.path(mock_output_dir, "source_resolution_plan_dry_run.csv"))
@@ -294,6 +328,8 @@ write_csv(canonical_reconciliation, file.path(mock_output_dir, "canonical_resour
 write_csv(source_map_crosswalk, file.path(mock_output_dir, "source_map_row_to_canonical_resource_crosswalk.csv"))
 write_csv(legacy_reference_vs_current, file.path(mock_output_dir, "legacy_reference_vs_current_profiled_evidence.csv"))
 write_csv(remaining_activation_plan, file.path(mock_output_dir, "remaining_canonical_resources_activation_plan.csv"))
+ki67_write_outputs(ki67_discovery, output_dir = mock_output_dir, project_root = project_root)
+mcl_triangle_write_outputs(mcl_triangle_feasibility, mock_output_dir)
 
 if (nrow(run_summary) && all(c("metric", "value") %in% names(run_summary))) {
   source_recovery_metrics <- source_recovery_run_summary_metrics(
@@ -364,7 +400,9 @@ payload <- atlas_payload(
   canonical_resource_reconciliation = canonical_reconciliation,
   source_map_crosswalk = source_map_crosswalk,
   legacy_reference_vs_current = legacy_reference_vs_current,
-  remaining_activation_plan = remaining_activation_plan
+  remaining_activation_plan = remaining_activation_plan,
+  ki67_discovery = ki67_discovery,
+  mcl_triangle_feasibility = mcl_triangle_feasibility
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 

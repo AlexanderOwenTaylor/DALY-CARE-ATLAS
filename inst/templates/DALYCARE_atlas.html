@@ -1059,6 +1059,7 @@
         <option value="variables">Clinical Variables</option>
         <option value="situation">Situation Report</option>
         <option value="quickstart">Quick Start</option>
+        <option value="clinical-feasibility">Clinical Feasibility</option>
         <option value="registries">Disease Registries</option>
         <option value="clinical">Clinical Data</option>
         <option value="treatment">Treatment</option>
@@ -1071,6 +1072,7 @@
       <button class="tab-button" data-tab="variables">Clinical Variables</button>
       <button class="tab-button" data-tab="situation">Situation Report</button>
       <button class="tab-button" data-tab="quickstart">Quick Start</button>
+      <button class="tab-button" data-tab="clinical-feasibility">Clinical Feasibility</button>
       <button class="tab-button" data-tab="registries">Disease Registries</button>
       <button class="tab-button" data-tab="clinical">Clinical Data</button>
       <button class="tab-button" data-tab="treatment">Treatment</button>
@@ -1414,6 +1416,22 @@
       </div>
     </section>
 
+    <section class="tab-page" id="tab-clinical-feasibility">
+      <div class="sub-nav" aria-label="Clinical Feasibility sections">
+        <button class="sub-tab active" data-sub="mcl-triangle-feasibility">MCL / TRIANGLE</button>
+      </div>
+      <div class="sub-pane active" id="mcl-triangle-feasibility">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Feasibility / study planning</p>
+            <h2 class="panel-title">MCL / TRIANGLE feasibility</h2>
+            <p class="panel-sub">Aggregate-only feasibility review for younger mantle cell lymphoma, first-line immunochemotherapy, ASCT/HDT, ibrutinib, outcomes, timing, and high-risk biology readiness.</p>
+          </div>
+          <div class="panel-body"><div id="mcl-triangle-feasibility-dashboard"></div></div>
+        </div>
+      </div>
+    </section>
+
     <section class="tab-page" id="tab-registries">
       <div class="sub-nav" aria-label="Disease Registry sections">
         <button class="sub-tab active" data-sub="reg-overview">Overview</button>
@@ -1626,6 +1644,8 @@
       const sourceMapCrosswalkRows = payload.source_map_crosswalk_rows || [];
       const legacyReferenceVsCurrentRows = payload.legacy_reference_vs_current_rows || [];
       const remainingActivationPlanRows = payload.remaining_activation_plan_rows || [];
+      const ki67Discovery = payload.ki67_discovery || {};
+      const mclTriangleFeasibility = payload.mcl_triangle_feasibility || {};
       const columnRows = payload.column_profile_rows || [];
       const columnTopValues = payload.column_top_value_rows || [];
       const columnSummary = payload.column_profile_summary || [];
@@ -1696,6 +1716,7 @@
         { title: "Vitals and anthropometrics", status: "EHR evidence", tone: "blue", bestFor: "Finding height, weight, BMI, and vital-sign source fields.", evidence: "EHR vital-sign descriptors and numeric summaries", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
         { title: "Smoking and alcohol", status: "EHR evidence", tone: "blue", bestFor: "Reviewing social-history smoking and alcohol evidence.", evidence: "EHR social-history categories", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
         { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
+        { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Checking whether MCL, first-line treatment, ASCT/HDT, ibrutinib, outcomes, timing, and high-risk biology evidence are study-ready.", evidence: "Aggregate current-profiled and legacy/reference feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
         { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "clinical", sub: "clinical-microbiology" },
@@ -1716,11 +1737,13 @@
         { panel: "Imaging", status: "restored", note: "DaMyDa imaging follow-up included", tone: "green" },
         { panel: "Pathology/PATOBANK", status: "restored", note: "SNOMED cleanup passed", tone: "green" },
         { panel: "Biobank", status: "restored", note: "identifier/date and low-count safeguards in place", tone: "green" },
+        { panel: "MCL / TRIANGLE feasibility", status: "added", note: "aggregate feasibility panel; no causal or treatment recommendation claims", tone: "violet" },
         { panel: "Clinical Variables", status: "restored", note: "clinician-first concept ordering", tone: "green" },
         { panel: "Data Dictionary", status: "restored", note: "stacked raw-lineage detail pane", tone: "green" }
       ];
       const overviewCrossPanelRoutes = [
         { title: "Registry to treatment evidence", from: "DaMyDa / LYFO / CLL", to: "Treatment", examples: ["Bortezomib", "R-CHOP", "Ibrutinib"], tab: "treatment", sub: "treatment-dashboard" },
+        { title: "MCL feasibility to source activation", from: "LYFO / Treatment / Pathology", to: "MCL / TRIANGLE", examples: ["MCL", "TP53", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
         { title: "Registry to labs and NPU codes", from: "Disease registries", to: "Laboratory / NPU", examples: ["LDH", "Creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "clinical", sub: "clinical-microbiology" },
         { title: "Myeloma bone disease to imaging", from: "DaMyDa", to: "Imaging", examples: ["PET/CT", "Reg_Knogleforandringer", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
@@ -1842,7 +1865,23 @@
         snomed: ["pathology", "PATOBANK"],
         biobank: ["sample", "plasma"],
         sample: ["biobank", "plasma"],
-        plasma: ["biobank", "sample"]
+        plasma: ["biobank", "sample"],
+        mcl: ["mantle cell lymphoma", "LYFO", "TRIANGLE"],
+        "mantle cell lymphoma": ["MCL", "LYFO", "TRIANGLE"],
+        triangle: ["MCL", "ASCT", "ibrutinib"],
+        asct: ["HDT", "autologous", "stem cell transplant"],
+        hdt: ["ASCT", "high dose therapy", "autologous stem cell"],
+        ibrutinib: ["Imbruvica", "L01XE27", "BTK inhibitor", "BWHA169"],
+        imbruvica: ["ibrutinib", "L01XE27"],
+        tp53: ["p53", "del17p"],
+        ki67: ["Ki-67", "MIB-1", "proliferation index", "proliferationsindeks"],
+        "ki 67": ["Ki-67", "MIB-1", "proliferation index", "proliferationsindeks"],
+        "ki-67": ["Ki67", "MIB-1", "proliferation index", "proliferationsindeks"],
+        "mib-1": ["Ki-67", "Ki67", "proliferation index"],
+        mib1: ["Ki-67", "Ki67", "proliferation index"],
+        proliferationsindeks: ["Ki-67", "Ki67", "MIB-1"],
+        mipi: ["MIPI-c", "LDH", "ECOG"],
+        "mipi c": ["MIPI", "Ki-67"]
       };
       function expandSearchTerms(query) {
         const raw = text(query || "").trim();
@@ -1961,6 +2000,7 @@
       }
       function panelRoute(panelId) {
         const id = text(panelId || "").toLowerCase();
+        if (/mcl|triangle|mantle|feasibility/.test(id)) return { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" };
         if (/damyda/.test(id)) return { tab: "registries", sub: "reg-damyda" };
         if (/lyfo/.test(id)) return { tab: "registries", sub: "reg-lyfo" };
         if (/\bcll\b|reg_cll/.test(id)) return { tab: "registries", sub: "reg-cll" };
@@ -2003,6 +2043,65 @@
           "Sources": [],
           "QA / caveats": []
         };
+        const mclPanelSearchRow = {
+          panel_id: "mcl_triangle_feasibility",
+          panel_title: "MCL / TRIANGLE feasibility",
+          clinical_purpose: "Feasibility review for MCL cohort, ASCT/HDT, ibrutinib, treatment timing, outcomes, and high-risk biology gaps.",
+          search_terms: "MCL mantle cell lymphoma TRIANGLE ASCT HDT autologous ibrutinib Imbruvica L01XE27 BWHA169 blastoid pleomorphic TP53 p53 del17p Ki-67 MIPI MIPI-c R-DHAP R-CHOP cytarabine rituximab"
+        };
+        const mclPanelScore = scoreSearchResult(mclPanelSearchRow, q, {
+          exact: ["panel_id", "panel_title"],
+          title: ["panel_title"],
+          body: ["clinical_purpose", "search_terms"]
+        });
+        if (mclPanelScore > 0) {
+          grouped["Panels"].push(makeSearchResult(
+            "Panels",
+            "MCL / TRIANGLE feasibility",
+            "Aggregate study-planning panel; feasibility only, not causal inference.",
+            mclPanelSearchRow,
+            { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+            { query: q, item: "mcl_triangle_feasibility", status: "Feasibility panel", copy: "#clinical-feasibility/mcl-triangle-feasibility", score: mclPanelScore + 100 }
+          ));
+        }
+        (mclTriangleFeasibility.study_readiness_matrix || []).forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["study_requirement"],
+            title: ["study_requirement", "readiness_status"],
+            source: ["preferred_source"],
+            body: ["candidate_fields_or_codes", "key_limitation", "recommended_next_action"]
+          });
+          if (score > 0) {
+            grouped["Panels"].push(makeSearchResult(
+              "Panels",
+              `MCL feasibility: ${row.study_requirement || "study requirement"}`,
+              [row.readiness_status, row.preferred_source, row.key_limitation].filter(Boolean).join(" - "),
+              row,
+              { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+              { query: row.study_requirement || q, item: row.study_requirement || "", status: row.readiness_status, copy: row.study_requirement || "", score }
+            ));
+          }
+        });
+        ((ki67Discovery && ki67Discovery.search_inventory) || []).forEach(row => {
+          const displayAllowed = row.display_in_ui === undefined || mclBool(row.display_in_ui) || /strong_direct|moderate_direct/.test(row.evidence_strength || "");
+          if (!displayAllowed) return;
+          const score = scoreSearchResult(row, q, {
+            exact: ["matched_term", "matched_field_or_column"],
+            title: ["matched_term", "evidence_strength", "evidence_type"],
+            source: ["resource_id", "file_or_table", "source_domain"],
+            body: ["concept_interpretation", "notes", "value_class"]
+          });
+          if (score > 0) {
+            grouped["Panels"].push(makeSearchResult(
+              "Panels",
+              `Ki-67 discovery: ${row.matched_term || "candidate"}`,
+              [row.evidence_strength, row.evidence_type, row.concept_interpretation].filter(Boolean).join(" - "),
+              row,
+              { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+              { query: row.matched_term || q, item: "ki67_discovery", status: row.evidence_strength, copy: row.matched_term || "Ki-67", score: score + 20 }
+            ));
+          }
+        });
         clinicalConceptRows.forEach(row => {
           const score = scoreSearchResult(row, q, {
             exact: ["clinical_concept_id", "clinical_variable"],
@@ -5414,6 +5513,193 @@
           </div>`;
       }
 
+      function mclRows(name) {
+        return (mclTriangleFeasibility && mclTriangleFeasibility[name]) || [];
+      }
+      function mclBool(value) {
+        return String(value || "").toLowerCase() === "true" || value === true;
+      }
+      function mclStatusTone(status) {
+        const s = text(status || "").toLowerCase();
+        if (/ready|strongly|current_profiled|strong_structured/.test(s)) return "green";
+        if (/proxy|feasible_with_mapping|biology gaps|moderate_text_extractable/.test(s)) return "blue";
+        if (/legacy|source_activation|manual|partial|weak_candidate|requires_manual_validation|requires_production_validation|source_space_only|not_tested_fixture/.test(s)) return "amber";
+        if (/not_found|not currently/.test(s)) return "red";
+        return "plum";
+      }
+      function mclCountLabel(row) {
+        const count = text(row.count_or_rows_if_available || row.evidence_count_or_rows || "").trim();
+        const countType = text(row.count_type || "").trim();
+        if (!count) return "Evidence found; count not available in atlas aggregate outputs.";
+        return `${escapeHtml(formatNumber(count))} ${escapeHtml(countType || "aggregate evidence rows")}`;
+      }
+      function renderMclReadinessMatrix(rows) {
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return `<div class="table-wrap"><table>
+          <thead><tr><th>Study requirement</th><th>Readiness</th><th>Evidence</th><th>Preferred source</th><th>Next action</th></tr></thead>
+          <tbody>${rows.map(row => `
+            <tr>
+              <td><strong>${escapeHtml(row.study_requirement || "")}</strong><div class="mini">${escapeHtml(row.candidate_fields_or_codes || "No candidate fields/codes listed")}</div></td>
+              <td>${renderBadge(row.readiness_status || "manual_review_needed", mclStatusTone(row.readiness_status))}</td>
+              <td><span class="mini">${mclBool(row.current_profiled_evidence) ? "current-profiled evidence" : mclBool(row.legacy_reference_only_evidence) ? "legacy/reference-only evidence" : "not refreshed or not found"}</span><br><span class="mini">${escapeHtml(row.key_limitation || "")}</span></td>
+              <td>${escapeHtml(row.preferred_source || "")}</td>
+              <td>${escapeHtml(row.recommended_next_action || "")}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table></div>`;
+      }
+      function renderMclEvidenceCards(rows, titleKey, limit) {
+        const visible = (rows || []).slice(0, limit || 12);
+        if (!visible.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return `<div class="grid grid-3">${visible.map(row => `
+          <article class="clinical-card">
+            ${renderBadge(mclBool(row.current_profiled_this_run) ? "current-profiled" : mclBool(row.legacy_reference_only) ? "legacy/reference-only" : "aggregate candidate", mclBool(row.current_profiled_this_run) ? "green" : "amber")}
+            <h3>${escapeHtml(row[titleKey] || row.concept_name || row.exposure_name || row.outcome_name || "Evidence row")}</h3>
+            <p class="mini">${escapeHtml([row.source, row.table_or_source, row.raw_field].filter(Boolean).join(" - "))}</p>
+            <p><strong>Evidence:</strong> ${escapeHtml(row.evidence_type || row.feasibility_role || row.exposure_group || "")}</p>
+            <p class="mini">${mclCountLabel(row)}</p>
+            <p class="mini">${escapeHtml(row.notes || "")}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderMclBiologyTable(rows) {
+        if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
+        return `<div class="table-wrap"><table>
+          <thead><tr><th>Marker</th><th>Status</th><th>Evidence</th><th>Recovery source</th><th>Action</th></tr></thead>
+          <tbody>${rows.map(row => `
+            <tr>
+              <td><strong>${escapeHtml(row.marker || "")}</strong></td>
+              <td>${renderBadge(row.feasibility_status || "manual_review_needed", mclStatusTone(row.feasibility_status))}</td>
+              <td class="mini">${mclBool(row.direct_variable_found) ? "direct variable found" : mclBool(row.indirect_proxy_found) ? "indirect proxy found" : "not found in current aggregate outputs"}; ${mclBool(row.current_profiled_source_available) ? "current-profiled source available" : mclBool(row.legacy_reference_only) ? "legacy/reference only" : "needs mapping"}</td>
+              <td>${escapeHtml(row.preferred_recovery_source || "")}</td>
+              <td>${escapeHtml(row.action_required || "")}</td>
+            </tr>
+          `).join("")}</tbody>
+        </table></div>`;
+      }
+      function renderMclKi67Readiness(matrix, biology) {
+        const discovery = (mclTriangleFeasibility && mclTriangleFeasibility.ki67_discovery) || ki67Discovery || {};
+        const ki67Matrix = (matrix || []).find(row => row.study_requirement === "Ki-67") || {};
+        const ki67Biology = (biology || []).find(row => row.marker === "Ki-67") || {};
+        const summary = discovery.summary || [];
+        const inventory = discovery.search_inventory || [];
+        const channelSummary = discovery.channel_summary || [];
+        const metric = key => {
+          const row = summary.find(item => item.metric === key) || {};
+          return row.value || "0";
+        };
+        const status = ki67Matrix.readiness_status || ki67Biology.feasibility_status || "not_found";
+        const visibleSourceOnly = inventory.filter(row =>
+          (row.evidence_channel === "source_only_search_space" || row.evidence_strength === "source_only" || row.evidence_type === "source_only_not_evidence") &&
+          mclBool(row.display_in_ui)
+        ).slice(0, 6);
+        const sourceOnlySummary = uniqueValues(visibleSourceOnly, "ui_group").slice(0, 4).join("; ");
+        const channel = key => channelSummary.find(row => row.evidence_channel === key) || {};
+        const channelCard = (key, fallbackLabel, defaultStatus, fallbackAction) => {
+          const row = channel(key);
+          const st = row.status || defaultStatus;
+          return `<article class="clinical-card">
+            ${renderBadge(st, mclStatusTone(st))}
+            <h3>${escapeHtml(row.channel_label || fallbackLabel)}</h3>
+            <p class="mini"><strong>Confirmed:</strong> ${escapeHtml(row.confirmed_hits || "0")}; <strong>candidates:</strong> ${escapeHtml(row.candidate_hits || "0")}; <strong>source space:</strong> ${escapeHtml(row.source_space_hits || "0")}</p>
+            <p class="mini">${escapeHtml(row.next_validation_action || fallbackAction)}</p>
+            ${row.notes ? `<p class="mini">${escapeHtml(row.notes)}</p>` : ""}
+          </article>`;
+        };
+        return `
+          ${renderBadge(status, mclStatusTone(status))}
+          <p><strong>No confirmed structured Ki-67 percentage evidence in current aggregate atlas artifacts.</strong></p>
+          <p class="mini">${escapeHtml(ki67Matrix.key_limitation || ki67Biology.notes || "High-risk biology remains the limiting feasibility step. Ki-67 has candidate extraction routes through Danish Patobank AEKIxxx codes and pathology text patterns, but no confirmed aggregate Ki-67 values are exposed in the current atlas artifacts.")}</p>
+          ${renderKpiStrip([
+            { label: "direct metadata hits", value: metric("strong_direct_hits"), tone: Number(metric("strong_direct_hits")) ? "green" : "amber" },
+            { label: "moderate hits", value: metric("moderate_direct_hits"), tone: Number(metric("moderate_direct_hits")) ? "blue" : "amber" },
+            { label: "source-only hits", value: metric("source_only_hits"), tone: Number(metric("source_only_hits")) ? "amber" : "blue" },
+            { label: "numeric % hits", value: metric("numeric_percent_like_hits"), tone: Number(metric("numeric_percent_like_hits")) ? "green" : "amber" }
+          ], { tone: "amber" })}
+          <div class="grid grid-3">
+            ${channelCard("structured_registry_fields", "Structured registry fields", "not_found_in_current_artifacts", "Validate RKKP/LYFO field definitions before analytic use.")}
+            ${channelCard("danish_pathology_code_evidence", "Danish pathology code evidence / AEKIxxx", "requires_production_validation", "Parser ready; run aggregate-only AEKIxxx code counts in production.")}
+            ${channelCard("pathology_text_extraction_readiness", "Pathology text extraction readiness", "requires_production_validation", "Synthetic regex patterns are ready; production validation must be aggregate-only.")}
+            ${channelCard("source_only_search_space", "Source-only search space", "source_space_only", "Pathology/LYFO sources may exist, but source-only evidence is not Ki-67 evidence.")}
+          </div>
+          <p class="mini"><strong>Concise source-space examples:</strong> ${escapeHtml(sourceOnlySummary || "none displayed")}</p>
+          <div class="callout warn"><strong>Interpretation caveat:</strong> Ki-67 should be represented as an observation/test concept with a numeric percent value. Broad pathology or LYFO source availability is search space, not Ki-67 evidence. Source-only <code>t_mikro</code> or <code>t_konk</code> availability guides validation but is not direct Ki-67 evidence.</div>
+          <div class="callout"><strong>Danish Patobank code note:</strong> Danish Patobank may encode numeric Ki-67 index using <code>ÆKIxxx</code> / <code>AEKIxxx</code>, where <code>xxx</code> is the percentage. p16/Ki-67 double-stain cervix triage codes are tracked separately and are not treated as numeric MCL Ki-67 proliferation-index values.</div>
+          <div class="callout"><strong>Text-pattern note:</strong> Text patterns are readiness specifications tested on synthetic examples; no real pathology text extraction has been validated in the static atlas. Production validation should return aggregate counts only, with no snippets or identifiers.</div>
+        `;
+      }
+      function renderMclTimingSection(matrix) {
+        const timing = (matrix || []).find(row => row.study_requirement === "first-line treatment timing") || {};
+        return `
+          ${renderBadge(timing.readiness_status || "manual_review_needed", mclStatusTone(timing.readiness_status))}
+          <p><strong>Can first-line treatment timing be reconstructed?</strong> ${escapeHtml(timing.key_limitation || "Timing evidence is not available in current aggregate outputs.")}</p>
+          <p class="mini"><strong>Candidate timing inputs:</strong> ${escapeHtml(timing.candidate_fields_or_codes || "diagnosis date; first treatment date; regimen start date; ASCT/stem-cell infusion date; ibrutinib exposure date; relapse/progression date; death/follow-up date")}</p>
+          <p class="mini"><strong>Next action:</strong> ${escapeHtml(timing.recommended_next_action || "Map timing fields and validate source-specific windows before any target-trial emulation.")}</p>
+        `;
+      }
+      function renderMclTriangleFeasibilityPanel() {
+        const summary = mclRows("summary");
+        const matrix = mclRows("study_readiness_matrix");
+        const variableInventory = mclRows("variable_inventory");
+        const treatment = mclRows("treatment_inventory");
+        const outcomes = mclRows("outcome_inventory");
+        const biology = mclRows("biology_gap_analysis");
+        const actions = mclRows("recommended_next_actions");
+        const caveats = mclRows("caveats");
+        const verdictRow = summary.find(row => row.metric === "overall_feasibility_rating") || {};
+        const verdict = verdictRow.status || verdictRow.value || "Not currently feasible";
+        const currentRows = variableInventory.filter(row => mclBool(row.current_profiled_this_run)).length;
+        const legacyRows = variableInventory.filter(row => mclBool(row.legacy_reference_only)).length;
+        const cohortRows = variableInventory.filter(row => /cohort/i.test(row.concept_group || "")).slice(0, 9);
+        return `
+          <div class="dashboard-grid mcl-triangle-dashboard">
+            ${renderSectionCard("Clinical question", `
+              <p><strong>Can DALY-CARE support a feasibility study of first-line ibrutinib-containing immunochemotherapy with or without ASCT/HDT in younger mantle cell lymphoma patients, particularly when stratified by high-risk biology?</strong></p>
+              <p class="mini">This is a feasibility / study-planning panel. It does not make treatment recommendations, does not estimate causal effects, and does not expose patient-level rows.</p>
+            `, "violet")}
+            ${renderKpiStrip([
+              { label: "feasibility verdict", value: verdict, tone: mclStatusTone(verdict) },
+              { label: "study requirements", value: matrix.length || "not available", tone: "blue" },
+              { label: "current-profiled evidence rows", value: currentRows || "not available", tone: "green" },
+              { label: "legacy/reference-only rows", value: legacyRows || "not available", tone: "amber" }
+            ], { tone: "violet" })}
+            ${renderSectionCard("Feasibility verdict", `
+              ${renderBadge(verdict, mclStatusTone(verdict))}
+              <p>${escapeHtml(verdictRow.notes || "Verdict is derived from aggregate evidence availability across cohort, treatment, outcomes, timing, and high-risk biology readiness.")}</p>
+              <p class="mini">Strongly feasible is blocked when blastoid morphology, TP53/p53/del17p, or Ki-67 are missing or only legacy/reference evidence.</p>
+            `, "violet")}
+            ${renderSectionCard("Study-readiness matrix", renderMclReadinessMatrix(matrix), "blue")}
+            ${renderSectionCard("Cohort evidence", renderMclEvidenceCards(cohortRows, "concept_name", 9), "plum")}
+            ${renderSectionCard("Treatment exposure evidence", renderMclEvidenceCards(treatment, "exposure_name", 12), "green")}
+            ${renderSectionCard("Treatment-timing feasibility", renderMclTimingSection(matrix), "cyan")}
+            ${renderSectionCard("Outcome evidence", renderMclEvidenceCards(outcomes, "outcome_name", 10), "blue")}
+            <div id="mcl-ki67-readiness">${renderSectionCard("Ki-67 discovery readiness", renderMclKi67Readiness(matrix, biology), "amber")}</div>
+            ${renderSectionCard("High-risk biology readiness", renderMclBiologyTable(biology), "amber")}
+            ${renderSectionCard("Current-profiled vs legacy/reference-only evidence", `
+              ${renderKpiStrip([
+                { label: "current-profiled rows", value: currentRows || "not available", tone: "green" },
+                { label: "legacy/reference-only rows", value: legacyRows || "not available", tone: "amber" },
+                { label: "raw patient rows emitted", value: "0", tone: "red" }
+              ], { tone: "blue" })}
+              <div class="callout warn"><strong>Reference-status warning:</strong> Some evidence may come from legacy/reference cartography and was not refreshed in this run. Keep those rows visible for planning, but do not treat them as refreshed production evidence until the source is activated.</div>
+            `, "blue")}
+            ${renderSectionCard("Study-design caution", `
+              <ul>
+                <li>This panel supports feasibility assessment only and does not recommend ASCT/HDT, ibrutinib, or any treatment strategy.</li>
+                <li>Avoid naive ever/never ASCT comparisons because of immortal-time bias, confounding by indication, treatment eligibility, and response-dependent selection.</li>
+                <li>Future analyses should consider induction-completion landmark analysis or clone-censor-weight target-trial emulation with careful eligibility and timing definitions.</li>
+              </ul>
+            `, "red")}
+            ${renderSectionCard("Recommended next actions", `
+              <ul>${(actions.length ? actions : [{ text: "Validate source-specific definitions and source activation before cohort extraction." }]).slice(0, 12).map(row => `<li>${escapeHtml(row.text || row.recommended_next_action || "")}</li>`).join("")}</ul>
+            `, "green")}
+            ${renderSectionCard("Caveats", `
+              <ul>${(caveats.length ? caveats : [{ text: "All rows are aggregate-only and count types must be read literally." }]).map(row => `<li>${escapeHtml(row.text || "")}</li>`).join("")}</ul>
+            `, "amber")}
+          </div>
+        `;
+      }
+
       function renderCodeDiscoveryCards() {
         const detectiveObserved = detectiveCards.observed_codes || [];
         const detectiveCandidates = detectiveCards.candidate_codes || [];
@@ -5449,6 +5735,7 @@
         setHtml("registry-lyfo", renderLYFOPanel());
         setHtml("registry-cll", renderCLLPanel());
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
+        setHtml("mcl-triangle-feasibility-dashboard", renderMclTriangleFeasibilityPanel());
 
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
