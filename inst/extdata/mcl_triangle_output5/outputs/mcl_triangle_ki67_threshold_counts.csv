@@ -1,0 +1,5 @@
+"denominator","threshold_percent","metric","distinct_person_count_display","percent_of_denominator_display","validation_status","count_status","notes"
+"all_lyfo_mcl",30,"ki67_aeki_known","37","2.6%","coded_aeki_numeric_percent_count_available","production_aggregate_count_available","Aggregate AEKI threshold/knownness count; source-specific validation still required."
+"all_lyfo_mcl",30,"ki67_aeki_ge_threshold","20","1.4%","coded_aeki_threshold_count_available","production_aggregate_count_available","Aggregate AEKI threshold/knownness count; source-specific validation still required."
+"all_lyfo_mcl",30,"ki67_aeki_ge_50","13","0.9%","coded_aeki_numeric_percent_count_available","production_aggregate_count_available","Aggregate AEKI threshold/knownness count; source-specific validation still required."
+"all_lyfo_mcl",30,"ki67_aeki_missing_not_found","1,380","97.4%","coded_aeki_numeric_percent_count_available","production_aggregate_count_available","Missing Ki-67 must not be interpreted as standard risk."

@@ -413,6 +413,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     semantic_value_map = semantic_outputs$value_map,
     semantic_code_map = semantic_outputs$code_map,
     semantic_panel_links = semantic_outputs$panel_links,
+    columns = columns,
+    column_profiles = column_profiles,
     panel_raw_fields = product_outputs$panel_raw_fields,
     panel_distributions = product_outputs$panel_distributions,
     panel_kpis = product_outputs$panel_kpis,
@@ -469,6 +471,17 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   mcl_triangle_paths <- mcl_triangle_write_outputs(mcl_triangle_feasibility, output_dir)
   names(mcl_triangle_paths) <- paste0("mcl_triangle_", names(mcl_triangle_paths))
   output_paths <- c(output_paths, mcl_triangle_paths)
+  if (exists("mcl_count_build_outputs", mode = "function")) {
+    mcl_triangle_count_outputs <- mcl_count_build_outputs(
+      project_root = project_root,
+      outputs_dir = output_dir,
+      mode = "plan",
+      min_cell_count = atlas_min_cell_count()
+    )
+    mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
+    names(mcl_triangle_count_paths) <- paste0("mcl_triangle_count_", names(mcl_triangle_count_paths))
+    output_paths <- c(output_paths, mcl_triangle_count_paths)
+  }
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
   output_paths$columns <- write_csv(columns, file.path(output_dir, "atlas_columns.csv"))
@@ -563,8 +576,25 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     aeki_validation_plan = safe_read_output_csv(output_paths$ki67_aeki_validation_plan, ki67_discovery$aeki_validation_plan),
     aeki_code_counts = safe_read_output_csv(output_paths$ki67_aeki_code_counts, ki67_discovery$aeki_code_counts),
     text_validation_plan = safe_read_output_csv(output_paths$ki67_text_validation_plan, ki67_discovery$text_validation_plan),
+    db_summary = safe_read_output_csv(file.path(output_dir, "ki67_db_summary.csv"), data.frame(stringsAsFactors = FALSE)),
+    db_found_locations = safe_read_output_csv(file.path(output_dir, "ki67_found_locations.csv"), data.frame(stringsAsFactors = FALSE)),
+    db_aeki_code_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_aeki_code_counts.csv"), data.frame(stringsAsFactors = FALSE)),
+    db_p16_dual_stain_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_p16_dual_stain_counts.csv"), data.frame(stringsAsFactors = FALSE)),
+    db_text_pattern_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_text_pattern_counts.csv"), data.frame(stringsAsFactors = FALSE)),
+    db_registry_field_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_registry_field_counts.csv"), data.frame(stringsAsFactors = FALSE)),
     summary = ki67_discovery$summary
   )
+  mcl_triangle_count_source <- if (exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
+    mcl_count_resolve_standalone_output_source(project_root = project_root, outputs_dir = output_dir)
+  } else {
+    list(outputs_dir = "", metadata = mcl_triangle_empty_standalone_output_source())
+  }
+  payload_mcl_triangle_counts <- if (exists("mcl_count_read_outputs", mode = "function") &&
+                                      nzchar(mcl_triangle_count_source$outputs_dir %||% "")) {
+    mcl_count_read_outputs(mcl_triangle_count_source$outputs_dir)
+  } else {
+    list()
+  }
   payload_mcl_triangle_feasibility <- list(
     summary = safe_read_output_csv(output_paths$mcl_triangle_summary, mcl_triangle_feasibility$summary),
     variable_inventory = safe_read_output_csv(output_paths$mcl_triangle_variable_inventory, mcl_triangle_feasibility$variable_inventory),
@@ -572,6 +602,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     outcome_inventory = safe_read_output_csv(output_paths$mcl_triangle_outcome_inventory, mcl_triangle_feasibility$outcome_inventory),
     biology_gap_analysis = safe_read_output_csv(output_paths$mcl_triangle_biology_gap_analysis, mcl_triangle_feasibility$biology_gap_analysis),
     study_readiness_matrix = safe_read_output_csv(output_paths$mcl_triangle_study_readiness_matrix, mcl_triangle_feasibility$study_readiness_matrix),
+    false_positive_exclusions = safe_read_output_csv(output_paths$mcl_triangle_false_positive_exclusions, mcl_triangle_feasibility$false_positive_exclusions),
+    cohort_counts = payload_mcl_triangle_counts,
+    standalone_output_source = mcl_triangle_count_source$metadata,
+    pathology_ki67_signpost = mcl_triangle_pathology_ki67_signpost(payload_mcl_triangle_counts),
     ki67_discovery = payload_ki67_discovery,
     recommended_next_actions = mcl_triangle_feasibility$recommended_next_actions,
     caveats = mcl_triangle_feasibility$caveats,
