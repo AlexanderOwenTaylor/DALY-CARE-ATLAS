@@ -34,6 +34,8 @@ mcl_triangle_empty_variable_inventory <- function() {
     canonical_resource_id = character(), current_profiled_this_run = logical(),
     legacy_reference_only = logical(), table_or_source = character(), raw_field = character(),
     semantic_id = character(), code_or_value = character(), evidence_type = character(),
+    matched_term = character(), matched_field = character(), match_reason = character(),
+    evidence_category = character(),
     count_or_rows_if_available = character(), count_type = character(), patient_count_if_available = character(),
     confidence = character(), notes = character()
   )
@@ -43,6 +45,8 @@ mcl_triangle_empty_treatment_inventory <- function() {
   empty_df(
     exposure_name = character(), exposure_group = character(), source = character(),
     code_system = character(), code = character(), raw_value = character(), table_or_source = character(),
+    raw_field = character(), matched_term = character(), matched_field = character(),
+    match_reason = character(), evidence_category = character(),
     current_profiled_this_run = logical(), evidence_count_or_rows = character(), count_type = character(),
     notes = character()
   )
@@ -51,8 +55,17 @@ mcl_triangle_empty_treatment_inventory <- function() {
 mcl_triangle_empty_outcome_inventory <- function() {
   empty_df(
     outcome_name = character(), source = character(), table_or_source = character(), raw_field = character(),
+    matched_term = character(), matched_field = character(), match_reason = character(),
+    evidence_category = character(),
     current_profiled_this_run = logical(), legacy_reference_only = logical(), feasibility_role = character(),
     count_or_rows_if_available = character(), count_type = character(), notes = character()
+  )
+}
+
+mcl_triangle_empty_false_positive_exclusions <- function() {
+  empty_df(
+    concept_name = character(), source = character(), field = character(), value = character(),
+    reason = character(), exclusion_type = character(), notes = character()
   )
 }
 
@@ -79,6 +92,39 @@ mcl_triangle_empty_text_table <- function(kind = character(), text = character()
   empty_df(kind = kind, text = text)
 }
 
+mcl_triangle_empty_standalone_output_source <- function() {
+  empty_df(
+    source_type = character(),
+    source_path = character(),
+    selected_outputs_dir = character(),
+    selected = logical(),
+    mode = character(),
+    acceptance_status = character(),
+    failed_queries = integer(),
+    production_aggregate_succeeded = logical(),
+    notes = character()
+  )
+}
+
+mcl_triangle_empty_pathology_ki67_signpost <- function() {
+  empty_df(
+    title = character(),
+    source_resource = character(),
+    table_name = character(),
+    column_name = character(),
+    code_family = character(),
+    interpretation = character(),
+    evidence_type = character(),
+    current_use_status = character(),
+    mcl_aeki_known = character(),
+    mcl_aeki_ge30 = character(),
+    mcl_aeki_ge50 = character(),
+    text_recovery_route = character(),
+    caveat = character(),
+    search_terms = character()
+  )
+}
+
 mcl_triangle_empty_payload <- function() {
   list(
     summary = mcl_triangle_empty_summary(),
@@ -87,7 +133,10 @@ mcl_triangle_empty_payload <- function() {
     outcome_inventory = mcl_triangle_empty_outcome_inventory(),
     biology_gap_analysis = mcl_triangle_empty_biology_gap_analysis(),
     study_readiness_matrix = mcl_triangle_empty_study_readiness_matrix(),
+    false_positive_exclusions = mcl_triangle_empty_false_positive_exclusions(),
     ki67_discovery = ki67_empty_payload(),
+    standalone_output_source = mcl_triangle_empty_standalone_output_source(),
+    pathology_ki67_signpost = mcl_triangle_empty_pathology_ki67_signpost(),
     recommended_next_actions = mcl_triangle_empty_text_table(),
     caveats = mcl_triangle_empty_text_table(),
     verdict_metadata = mcl_triangle_empty_text_table()
@@ -107,7 +156,7 @@ mcl_triangle_norm <- function(x) {
 
 mcl_triangle_terms <- function(x) {
   x <- paste(as.character(x %||% ""), collapse = "|")
-  parts <- unlist(strsplit(x, "\\|", fixed = FALSE), use.names = FALSE)
+  parts <- unlist(strsplit(x, "[|;]", fixed = FALSE), use.names = FALSE)
   parts <- trimws(parts)
   parts <- parts[nzchar(parts)]
   unique(parts)
@@ -117,7 +166,8 @@ mcl_triangle_terms_pattern <- function(terms) {
   terms <- unique(mcl_triangle_norm(terms))
   terms <- terms[nzchar(terms)]
   if (!length(terms)) return("")
-  paste(gsub("([\\W])", "\\\\\\1", terms, perl = TRUE), collapse = "|")
+  escaped <- gsub("([\\W])", "\\\\\\1", terms, perl = TRUE)
+  paste0("(^| )(", paste(escaped, collapse = "|"), ")( |$)")
 }
 
 mcl_triangle_pick_col <- function(df, candidates) {
@@ -146,6 +196,120 @@ mcl_triangle_match_rows <- function(df, search_text, terms, max_rows = 60L) {
   head(df[idx, , drop = FALSE], max_rows)
 }
 
+mcl_triangle_match_info <- function(df, columns, terms, max_rows = 60L) {
+  if (!is.data.frame(df) || !nrow(df)) return(df[0, , drop = FALSE])
+  columns <- intersect(columns, names(df))
+  terms <- unique(mcl_triangle_terms(terms))
+  terms <- terms[nzchar(terms)]
+  if (!length(columns) || !length(terms)) return(df[0, , drop = FALSE])
+  pattern <- mcl_triangle_terms_pattern(terms)
+  if (!nzchar(pattern)) return(df[0, , drop = FALSE])
+  search_text <- mcl_triangle_text_for_frame(df, columns)
+  idx <- which(grepl(pattern, search_text, perl = TRUE))
+  if (!length(idx)) return(df[0, , drop = FALSE])
+  idx <- head(idx, max_rows)
+  out <- list()
+  for (i in idx) {
+    matched <- NULL
+    for (column in columns) {
+      value <- as.character(df[[column]][[i]] %||% "")
+      if (!nzchar(value)) next
+      for (term in terms) {
+        if (mcl_triangle_has_terms(value, term)) {
+          matched <- list(term = term, field = column)
+          break
+        }
+      }
+      if (!is.null(matched)) break
+    }
+    if (is.null(matched)) next
+    row <- df[i, , drop = FALSE]
+    row$.matched_term <- matched$term
+    row$.matched_field <- matched$field
+    out[[length(out) + 1L]] <- row
+  }
+  bind_rows_base(out)
+}
+
+mcl_triangle_concept_search_terms <- function(concept) {
+  name <- as.character(concept$concept_name[[1]] %||% "")
+  terms <- c(
+    mcl_triangle_terms(concept$atlas_search_terms),
+    mcl_triangle_terms(name)
+  )
+  if (grepl("ibrutinib|BTK", name, ignore.case = TRUE)) {
+    terms <- c(terms, "ibrutinib", "Imbruvica", "L01XE27", "BWHA169", "BTK inhibitor", "BTK haemmer")
+  }
+  if (grepl("ASCT|HDT|stem|autolog", name, ignore.case = TRUE)) {
+    terms <- c(
+      terms,
+      "Beh_Hoejdosisbehandling", "Beh_TypeAutologStamcellestoette",
+      "Beh_Stamcelleinfusion_dt", "Rec_Hoejdosisbehandling",
+      "Rec_Stamcelleinfusion_dt", "hoejdosis", "autolog",
+      "stamcelle", "stamcelleinfusion", "stem cell", "stem-cell"
+    )
+  }
+  if (grepl("CIT|immunochemotherapy|regimen|R-CHOP|R-DHAP|cytarabine|rituximab|bendamustine", name, ignore.case = TRUE)) {
+    terms <- c(
+      terms, "treatment", "therapy", "behandling", "regimen", "regime",
+      "protocol", "cytarabine", "Ara C", "rituximab", "bendamustine",
+      "cyclophosphamide", "doxorubicin", "chemotherapy", "kemoterapi"
+    )
+  }
+  unique(terms[nzchar(terms)])
+}
+
+mcl_triangle_frame_columns <- function(frame_type) {
+  switch(
+    frame_type,
+    "semantic dictionary" = c(
+      "semantic_id", "clinical_concept_id", "clinical_variable", "semantic_meaning",
+      "raw_column", "raw_descriptor", "raw_code", "raw_value", "code_system",
+      "clinical_caveat", "search_terms"
+    ),
+    "code map" = c(
+      "semantic_id", "clinical_concept_id", "clinical_variable", "code_system",
+      "code", "code_name", "panel", "notes"
+    ),
+    "value map" = c(
+      "semantic_id", "clinical_concept_id", "clinical_variable", "raw_column",
+      "raw_value", "display_value", "value_class", "clinical_interpretation", "notes"
+    ),
+    "column profile" = c(
+      "column_name", "column", "semantic_type", "logical_type", "data_type",
+      "r_type", "value_type", "notes"
+    ),
+    "panel links" = c("semantic_id", "clinical_concept_id", "panel_id", "panel_section", "relationship"),
+    "source/catalog profile" = c("table_name", "source_label", "domain", "subdomain", "atlas_role", "load_status"),
+    "legacy/reference evidence" = c(
+      "evidence_source", "evidence_type", "canonical_resource_id", "current_source_key",
+      "warning_needed", "notes", "evidence_freshness_status"
+    ),
+    character()
+  )
+}
+
+mcl_triangle_has_terms <- function(text, terms) {
+  pattern <- mcl_triangle_terms_pattern(terms)
+  if (!nzchar(pattern)) return(FALSE)
+  grepl(pattern, mcl_triangle_norm(text), perl = TRUE)
+}
+
+mcl_triangle_row_source_text <- function(row) {
+  paste(
+    mcl_triangle_value(row, c("source_name", "source", "evidence_source", "table_name", "panel_id")),
+    mcl_triangle_value(row, c("object_name", "table_name", "source_name", "current_source_key", "panel_id")),
+    sep = " "
+  )
+}
+
+mcl_triangle_source_filter_match <- function(row, source_filters) {
+  source_filters <- mcl_triangle_terms(source_filters)
+  source_filters <- source_filters[nzchar(source_filters)]
+  if (!length(source_filters)) return(TRUE)
+  mcl_triangle_has_terms(mcl_triangle_row_source_text(row), source_filters)
+}
+
 mcl_triangle_value <- function(row, candidates) {
   col <- mcl_triangle_pick_col(row, candidates)
   if (is.na(col)) return("")
@@ -158,6 +322,138 @@ mcl_triangle_count_value <- function(row, count_cols) {
   value <- suppressWarnings(as.numeric(row[[col]][[1]] %||% NA_real_))
   if (is.na(value)) return("")
   format(value, big.mark = ",", scientific = FALSE, trim = TRUE)
+}
+
+mcl_triangle_known_false_positive_exclusions <- function() {
+  data.frame(
+    concept_name = c(
+      "Ibrutinib", "Ibrutinib", "ASCT / HDT", "Response evaluation",
+      "Death / overall survival", "Neutropenic fever proxy",
+      "Neutropenic fever proxy", "Neutropenic fever proxy", "Ibrutinib", "ASCT / HDT",
+      "Infection"
+    ),
+    source = c(
+      "CLL_TREAT_IBRUTINIB", "CLL_TREAT_IBRUTINIB", "RKKP_DaMyDa",
+      "SP_Social_Hx", "SP_Social_Hx", "SP_VitaleVaerdier",
+      "RKKP_DaMyDa", "RKKP_LYFO", "SDS_t_sksube", "RKKP_CLL", "RKKP_DaMyDa"
+    ),
+    field = c(
+      "smoking", "alcohol", "FU_Doed_aarsag", "drikker",
+      "ryger", "displayname", "FU_Doed_aarsag", "Reg_BSymptomer", "BWHA169", "Beh_TRANSPLANT",
+      "FU_Doed_aarsag"
+    ),
+    value = c("", "", "transplant", "", "", "", "", "", "BWHA169", "", "infection"),
+    reason = c(
+      "Smoking inside the CLL_TREAT_IBRUTINIB table is not ibrutinib exposure evidence.",
+      "Alcohol inside the CLL_TREAT_IBRUTINIB table is not ibrutinib exposure evidence.",
+      "DaMyDa death-cause value transplant is not MCL ASCT/HDT exposure evidence.",
+      "Social-history drinking is not response-evaluation evidence.",
+      "Social-history smoking is not death, response, or safety evidence.",
+      "A generic vital-sign display-name field is not neutropenic-fever evidence.",
+      "DaMyDa cause-of-death field is not neutropenic-fever evidence.",
+      "LYFO B symptoms are not neutropenic-fever evidence.",
+      "BWHA169 in SDS_t_sksube is atlas-confirmed SKS Ibrutinib code evidence, but aggregate person counting requires SDS_t_adm bridge validation.",
+      "CLL transplant fields are not primary MCL ASCT/HDT phenotype evidence.",
+      "DaMyDa cause-of-death infection values are not direct infection phenotype evidence."
+    ),
+    exclusion_type = c(
+      "source_name_false_positive", "source_name_false_positive", "cross_disease_or_wrong_context",
+      "wrong_domain", "wrong_domain", "generic_field_false_positive",
+      "wrong_endpoint", "wrong_endpoint", "bridge_required_not_false_positive", "cross_disease_reference",
+      "cause_of_death_proxy_not_direct_infection"
+    ),
+    notes = c(
+      "Source names are used only as filters/boosts after a concept-specific match.",
+      "Source names are used only as filters/boosts after a concept-specific match.",
+      "Use LYFO first-line HDT/stem-cell fields for the primary MCL ASCT/HDT phenotype.",
+      "Kept out of main MCL/TRIANGLE evidence cards.",
+      "Kept out of main MCL/TRIANGLE evidence cards.",
+      "Kept out of main MCL/TRIANGLE evidence cards.",
+      "Kept out of main MCL/TRIANGLE evidence cards.",
+      "Kept out of main MCL/TRIANGLE evidence cards.",
+      "Retain as Ibrutinib source evidence only with atlas semantics; do not emit person counts without source bridge validation.",
+      "Use LYFO Beh_Hoejdosisbehandling, Beh_TypeAutologStamcellestoette, and Beh_Stamcelleinfusion_dt for MCL.",
+      "May be considered only as a cause-of-death infection proxy in detailed audit outputs, not a main direct evidence card."
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+mcl_triangle_false_positive_reason <- function(row) {
+  concept <- mcl_triangle_norm(row$concept_name[[1]] %||% "")
+  source_text <- mcl_triangle_norm(paste(row$source[[1]] %||% "", row$table_or_source[[1]] %||% ""))
+  field_text <- mcl_triangle_norm(row$raw_field[[1]] %||% "")
+  value_text <- mcl_triangle_norm(row$code_or_value[[1]] %||% "")
+  if (grepl("ibrutinib|btk", concept) && grepl("cll treat ibrutinib", source_text) &&
+      field_text %in% c("smoking", "alcohol", "ryger", "drikker")) {
+    return("Unrelated social-history field inside CLL_TREAT_IBRUTINIB; not ibrutinib exposure evidence.")
+  }
+  if (grepl("ibrutinib|btk", concept) && grepl("bwha169", paste(field_text, value_text))) {
+    return("")
+  }
+  if (grepl("asct|hdt|stem|autolog", concept) && grepl("rkkp damyda", source_text) &&
+      grepl("fu doed aarsag|fu doedsaarsag|fu dod arsag", field_text) &&
+      grepl("transplant", value_text)) {
+    return("DaMyDa death-cause transplant value is not MCL ASCT/HDT exposure evidence.")
+  }
+  if (grepl("asct|hdt|stem|autolog", concept) && grepl("rkkp cll|cll treat|reg cll|mm treat|rkkp damyda", source_text)) {
+    return("Cross-disease transplant fields are reference rows and are not primary MCL ASCT/HDT evidence.")
+  }
+  if (grepl("death|overall survival|response|follow|relapse|progression|neutropenic|fever|safety", concept) &&
+      grepl("sp social hx", source_text) && field_text %in% c("drikker", "ryger", "smoking", "alcohol")) {
+    return("Social-history drinking/smoking field is not outcome or safety evidence.")
+  }
+  if (grepl("neutropenic|fever", concept) && grepl("sp vitalevaerdier", source_text) && field_text == "displayname") {
+    return("Generic vital-sign display name is not neutropenic-fever evidence.")
+  }
+  if (grepl("neutropenic|fever", concept) && grepl("rkkp damyda", source_text) && grepl("fu doed aarsag", field_text)) {
+    return("DaMyDa cause-of-death field is not neutropenic-fever evidence.")
+  }
+  if (grepl("infection|infektion|safety|toxicity", concept) && grepl("rkkp damyda", source_text) &&
+      grepl("fu doed aarsag", field_text)) {
+    return("DaMyDa cause-of-death infection values are not direct infection phenotype evidence; retain only as cause-of-death infection proxy if explicitly labelled.")
+  }
+  if (grepl("neutropenic|fever", concept) && grepl("rkkp lyfo", source_text) && field_text == "reg bsymptomer") {
+    return("LYFO B symptoms are not neutropenic-fever evidence.")
+  }
+  ""
+}
+
+mcl_triangle_evidence_category <- function(row, evidence_type) {
+  false_reason <- mcl_triangle_false_positive_reason(row)
+  if (nzchar(false_reason)) return("false_positive_excluded")
+  if (identical(evidence_type, "source/catalog profile")) return("source_space_only")
+  concept <- mcl_triangle_norm(row$concept_name[[1]] %||% "")
+  field_text <- mcl_triangle_norm(row$raw_field[[1]] %||% "")
+  source_text <- mcl_triangle_norm(paste(row$source[[1]] %||% "", row$table_or_source[[1]] %||% ""))
+  if (grepl("asct|hdt|stem|autolog", concept) &&
+      field_text %in% c("rec hoejdosisbehandling", "rec stamcelleinfusion dt")) {
+    return("proxy_evidence")
+  }
+  if (grepl("asct|hdt|stem|autolog", concept) && grepl("sds t sks|procedure", source_text)) {
+    return("proxy_evidence")
+  }
+  if (identical(evidence_type, "code map")) return("direct_code_evidence")
+  if (identical(evidence_type, "value map")) return("direct_value_evidence")
+  "direct_variable_evidence"
+}
+
+mcl_triangle_match_reason <- function(row, evidence_type) {
+  false_reason <- mcl_triangle_false_positive_reason(row)
+  if (nzchar(false_reason)) return(false_reason)
+  category <- mcl_triangle_evidence_category(row, evidence_type)
+  field_text <- mcl_triangle_norm(row$raw_field[[1]] %||% "")
+  concept <- mcl_triangle_norm(row$concept_name[[1]] %||% "")
+  if (identical(category, "source_space_only")) return("Relevant source/search-space row only; not direct clinical evidence.")
+  if (identical(category, "proxy_evidence") &&
+      field_text %in% c("rec hoejdosisbehandling", "rec stamcelleinfusion dt")) {
+    return("Relapse/recurrence transplant timing proxy; not first-line ASCT/HDT unless explicitly handled.")
+  }
+  if (grepl("asct|hdt|stem|autolog", concept) &&
+      field_text %in% c("beh hoejdosisbehandling", "beh typeautologstamcellestoette", "beh stamcelleinfusion dt")) {
+    return("Primary LYFO MCL first-line ASCT/HDT phenotype field.")
+  }
+  paste0("Matched concept-specific ", evidence_type, " term.")
 }
 
 mcl_triangle_source_profiled <- function(source_name = "", table_name = "", sources = NULL,
@@ -212,6 +508,7 @@ mcl_triangle_canonical_id <- function(source_name = "", canonical_reconciliation
 }
 
 mcl_triangle_inventory_row <- function(concept, row, evidence_type, evidence_priority,
+                                       matched_term = "", matched_field = "",
                                        sources = NULL, canonical_reconciliation = NULL,
                                        legacy_reference_vs_current = NULL) {
   source_name <- mcl_triangle_value(row, c("source_name", "source", "evidence_source", "table_name", "panel_id"))
@@ -228,6 +525,7 @@ mcl_triangle_inventory_row <- function(concept, row, evidence_type, evidence_pri
     "code map" = if (nzchar(count)) "code-map rows" else "",
     "value map" = if (nzchar(count)) "aggregate value-map count" else "",
     "panel links" = "panel-link rows",
+    "column profile" = if (nzchar(count)) "source rows" else "",
     "source/catalog profile" = if (nzchar(count)) "source rows" else "",
     "legacy/reference evidence" = "legacy/reference evidence rows",
     ""
@@ -243,7 +541,7 @@ mcl_triangle_inventory_row <- function(concept, row, evidence_type, evidence_pri
   confidence <- mcl_triangle_value(row, c("mapping_confidence", "mapping_status", "confidence"))
   if (!nzchar(confidence)) confidence <- if (evidence_priority <= 3L) "candidate/high-priority aggregate evidence" else "candidate"
   notes <- mcl_triangle_value(row, c("clinical_caveat", "notes", "privacy_note", "relationship"))
-  data.frame(
+  out <- data.frame(
     concept_group = concept$concept_group[[1]],
     concept_name = concept$concept_name[[1]],
     source = source_name,
@@ -255,6 +553,10 @@ mcl_triangle_inventory_row <- function(concept, row, evidence_type, evidence_pri
     semantic_id = mcl_triangle_value(row, c("semantic_id", "clinical_concept_id", "panel_id")),
     code_or_value = code_or_value,
     evidence_type = evidence_type,
+    matched_term = matched_term %||% "",
+    matched_field = matched_field %||% "",
+    match_reason = "",
+    evidence_category = "",
     count_or_rows_if_available = count,
     count_type = count_type,
     patient_count_if_available = patient_count,
@@ -264,37 +566,140 @@ mcl_triangle_inventory_row <- function(concept, row, evidence_type, evidence_pri
     stringsAsFactors = FALSE,
     check.names = FALSE
   )
+  out$evidence_category <- mcl_triangle_evidence_category(out, evidence_type)
+  out$match_reason <- mcl_triangle_match_reason(out, evidence_type)
+  out
+}
+
+mcl_triangle_inventory_guard_text <- function(row, include_source = FALSE) {
+  bits <- c(
+    row$raw_field[[1]] %||% "",
+    row$semantic_id[[1]] %||% "",
+    row$code_or_value[[1]] %||% "",
+    row$notes[[1]] %||% ""
+  )
+  if (include_source) {
+    bits <- c(bits, row$source[[1]] %||% "", row$table_or_source[[1]] %||% "")
+  }
+  paste(bits, collapse = " ")
+}
+
+mcl_triangle_inventory_has_terms <- function(row, terms, include_source = FALSE) {
+  mcl_triangle_has_terms(mcl_triangle_inventory_guard_text(row, include_source = include_source), terms)
+}
+
+mcl_triangle_treatment_guard_terms <- function(concept_name) {
+  name <- mcl_triangle_norm(concept_name)
+  if (grepl("ibrutinib|btk", name)) {
+    return(c("ibrutinib", "imbruvica", "L01XE27", "BTK", "BTK inhibitor", "BTK haemmer"))
+  }
+  if (grepl("asct|hdt|stem|autolog", name)) {
+    return(c(
+      "ASCT", "HDT", "high dose therapy", "autologous", "stem cell",
+      "stem-cell", "stamcelle", "transplant", "BWHA169",
+      "Beh_Hoejdosisbehandling", "Beh_TypeAutologStamcellestoette",
+      "Beh_Stamcelleinfusion_dt", "Rec_Hoejdosisbehandling",
+      "Rec_Stamcelleinfusion_dt"
+    ))
+  }
+  if (grepl("rituximab", name)) return(c("rituximab", "MabThera", "L01FA01", "L01XC02"))
+  if (grepl("cytarabine|ara", name)) return(c("cytarabine", "Ara C", "L01BC01", "cytosar"))
+  if (grepl("bendamustine", name)) return(c("bendamustine", "bendamustin", "L01AA09", "BR"))
+  if (grepl("r chop", name)) return(c("R CHOP", "RCHOP", "CHOP", "rituximab CHOP"))
+  if (grepl("r dhap", name)) return(c("R DHAP", "RDHAP", "DHAP", "cytarabine", "cisplatin"))
+  c(
+    "first line", "1st line", "immunochemotherapy", "chemoimmunotherapy", "CIT",
+    "induction", "regimen", "regime", "protocol", "kemo", "kemoterapi",
+    "treatment", "therapy", "behandling", "Beh Kemoterapi", "Beh Behandling",
+    "PB Behandling", "FU Behandling", "rituximab", "cytarabine", "R CHOP",
+    "R DHAP", "bendamustine", "cyclophosphamide", "doxorubicin"
+  )
+}
+
+mcl_triangle_outcome_guard_terms <- function(concept_name) {
+  name <- mcl_triangle_norm(concept_name)
+  if (grepl("death|overall survival", name)) {
+    return(c(
+      "death", "date of death", "dead", "deceased", "overall survival",
+      "survival endpoint", "doed", "doedsdato", "dod", "dodsdato",
+      "død", "dødsdato", "patient doed", "patient dead", "vital status",
+      "cause of death", "doedsaarsag", "dødsaarsag", "t doedsaarsag",
+      "KMregisdoed", "doedsregister", "death register"
+    ))
+  }
+  if (grepl("relapse|progression|failure", name)) {
+    return(c("relapse", "relaps", "recurrence", "progression", "progressive disease", "PD", "FFS", "failure free", "Rec", "ind relaps"))
+  }
+  if (grepl("next treatment", name)) {
+    return(c("next treatment", "new treatment", "ny behandling", "Rec NyBehandling", "second line", "line of therapy"))
+  }
+  if (grepl("response", name)) {
+    return(c("response", "response evaluation", "remission", "Beh Response", "Rec Response"))
+  }
+  if (grepl("follow", name)) {
+    return(c("follow up", "followup", "disease status", "ind fu", "Rec", "FU status"))
+  }
+  character()
+}
+
+mcl_triangle_inventory_allowed <- function(row) {
+  group <- as.character(row$concept_group[[1]] %||% "")
+  concept <- as.character(row$concept_name[[1]] %||% "")
+  if (identical(group, "Treatment exposures")) {
+    return(mcl_triangle_inventory_has_terms(row, mcl_triangle_treatment_guard_terms(concept), include_source = FALSE))
+  }
+  if (identical(group, "Outcomes")) {
+    terms <- mcl_triangle_outcome_guard_terms(concept)
+    if (!length(terms)) return(TRUE)
+    include_source <- grepl("death|overall survival", concept, ignore.case = TRUE)
+    return(mcl_triangle_inventory_has_terms(row, terms, include_source = include_source))
+  }
+  TRUE
 }
 
 mcl_triangle_collect_evidence <- function(concept, prepared, max_rows_per_source = 40L) {
-  terms <- c(
-    mcl_triangle_terms(concept$atlas_search_terms),
-    mcl_triangle_terms(concept$concept_name),
+  terms <- mcl_triangle_concept_search_terms(concept)
+  source_filters <- c(
     mcl_triangle_terms(concept$expected_sources),
     mcl_triangle_terms(concept$preferred_sources)
   )
   frames <- list(
-    list(data = prepared$semantic_dictionary, text = prepared$semantic_text, type = "semantic dictionary", priority = 1L),
-    list(data = prepared$semantic_code_map, text = prepared$code_text, type = "code map", priority = 2L),
-    list(data = prepared$semantic_value_map, text = prepared$value_text, type = "value map", priority = 3L),
-    list(data = prepared$semantic_panel_links, text = prepared$panel_text, type = "panel links", priority = 4L),
-    list(data = prepared$sources, text = prepared$source_text, type = "source/catalog profile", priority = 5L),
-    list(data = prepared$legacy_reference_vs_current, text = prepared$legacy_text, type = "legacy/reference evidence", priority = 6L)
+    list(data = prepared$semantic_dictionary, type = "semantic dictionary", priority = 1L),
+    list(data = prepared$semantic_code_map, type = "code map", priority = 2L),
+    list(data = prepared$semantic_value_map, type = "value map", priority = 3L),
+    list(data = prepared$column_evidence, type = "column profile", priority = 4L),
+    list(data = prepared$semantic_panel_links, type = "panel links", priority = 5L),
+    list(data = prepared$sources, type = "source/catalog profile", priority = 6L),
+    list(data = prepared$legacy_reference_vs_current, type = "legacy/reference evidence", priority = 7L)
   )
   out <- list()
   for (frame in frames) {
-    hits <- mcl_triangle_match_rows(frame$data, frame$text, terms, max_rows = max_rows_per_source)
+    hits <- mcl_triangle_match_info(
+      frame$data,
+      columns = mcl_triangle_frame_columns(frame$type),
+      terms = terms,
+      max_rows = max_rows_per_source
+    )
     if (!nrow(hits)) next
+    if (frame$type %in% c("source/catalog profile", "legacy/reference evidence") && length(source_filters)) {
+      keep <- vapply(seq_len(nrow(hits)), function(i) mcl_triangle_source_filter_match(hits[i, , drop = FALSE], source_filters), logical(1))
+      hits <- hits[keep, , drop = FALSE]
+      if (!nrow(hits)) next
+    }
     rows <- lapply(seq_len(nrow(hits)), function(i) {
-      mcl_triangle_inventory_row(
+      out <- mcl_triangle_inventory_row(
         concept = concept,
         row = hits[i, , drop = FALSE],
         evidence_type = frame$type,
         evidence_priority = frame$priority,
+        matched_term = hits$.matched_term[[i]] %||% "",
+        matched_field = hits$.matched_field[[i]] %||% "",
         sources = prepared$sources,
         canonical_reconciliation = prepared$canonical_reconciliation,
         legacy_reference_vs_current = prepared$legacy_reference_vs_current
       )
+      if (is.null(out) || !mcl_triangle_inventory_allowed(out)) return(NULL)
+      out
     })
     out[[length(out) + 1L]] <- bind_rows_base(rows)
   }
@@ -312,12 +717,16 @@ mcl_triangle_collect_evidence <- function(concept, prepared, max_rows_per_source
 
 mcl_triangle_prepare_sources <- function(semantic_dictionary = NULL, semantic_value_map = NULL,
                                          semantic_code_map = NULL, semantic_panel_links = NULL,
+                                         columns = NULL, column_profiles = NULL,
                                          sources = NULL, canonical_reconciliation = NULL,
                                          legacy_reference_vs_current = NULL) {
   if (!is.data.frame(semantic_dictionary)) semantic_dictionary <- empty_semantic_data_dictionary()
   if (!is.data.frame(semantic_value_map)) semantic_value_map <- empty_semantic_value_map()
   if (!is.data.frame(semantic_code_map)) semantic_code_map <- empty_semantic_code_map()
   if (!is.data.frame(semantic_panel_links)) semantic_panel_links <- empty_semantic_panel_links()
+  if (!is.data.frame(columns)) columns <- data.frame(stringsAsFactors = FALSE)
+  if (!is.data.frame(column_profiles)) column_profiles <- data.frame(stringsAsFactors = FALSE)
+  column_evidence <- bind_rows_base(list(column_profiles, columns))
   if (!is.data.frame(sources)) sources <- data.frame(stringsAsFactors = FALSE)
   if (!is.data.frame(canonical_reconciliation)) canonical_reconciliation <- data.frame(stringsAsFactors = FALSE)
   if (!is.data.frame(legacy_reference_vs_current)) legacy_reference_vs_current <- data.frame(stringsAsFactors = FALSE)
@@ -326,12 +735,13 @@ mcl_triangle_prepare_sources <- function(semantic_dictionary = NULL, semantic_va
     semantic_value_map = semantic_value_map,
     semantic_code_map = semantic_code_map,
     semantic_panel_links = semantic_panel_links,
+    column_evidence = column_evidence,
     sources = sources,
     canonical_reconciliation = canonical_reconciliation,
     legacy_reference_vs_current = legacy_reference_vs_current,
-    semantic_text = mcl_triangle_text_for_frame(semantic_dictionary, c("semantic_id", "clinical_concept_id", "clinical_variable", "clinical_group", "clinical_subgroup", "semantic_meaning", "source_name", "object_name", "table_name", "raw_column", "raw_descriptor", "raw_code", "raw_value", "code_system", "evidence_file", "clinical_caveat", "search_terms")),
-    value_text = mcl_triangle_text_for_frame(semantic_value_map, c("semantic_id", "clinical_concept_id", "clinical_variable", "source_name", "object_name", "raw_column", "raw_value", "display_value", "value_class", "clinical_interpretation", "evidence_file", "notes")),
-    code_text = mcl_triangle_text_for_frame(semantic_code_map, c("semantic_id", "clinical_concept_id", "clinical_variable", "clinical_group", "source_name", "object_name", "code_system", "code", "code_name", "panel", "evidence_file", "notes")),
+    semantic_text = mcl_triangle_text_for_frame(semantic_dictionary, c("semantic_id", "clinical_concept_id", "clinical_variable", "semantic_meaning", "raw_column", "raw_descriptor", "raw_code", "raw_value", "code_system", "clinical_caveat", "search_terms")),
+    value_text = mcl_triangle_text_for_frame(semantic_value_map, c("semantic_id", "clinical_concept_id", "clinical_variable", "raw_column", "raw_value", "display_value", "value_class", "clinical_interpretation", "notes")),
+    code_text = mcl_triangle_text_for_frame(semantic_code_map, c("semantic_id", "clinical_concept_id", "clinical_variable", "code_system", "code", "code_name", "panel", "notes")),
     panel_text = mcl_triangle_text_for_frame(semantic_panel_links, c("semantic_id", "clinical_concept_id", "panel_id", "panel_section", "relationship")),
     source_text = mcl_triangle_text_for_frame(sources, c("table_name", "source", "source_label", "domain", "subdomain", "atlas_role", "load_status")),
     legacy_text = mcl_triangle_text_for_frame(legacy_reference_vs_current, c("evidence_source", "evidence_type", "canonical_resource_id", "current_source_key", "warning_needed", "notes", "evidence_freshness_status"))
@@ -357,6 +767,15 @@ mcl_triangle_has_legacy_only <- function(rows) {
   is.data.frame(rows) && nrow(rows) && any(rows$legacy_reference_only, na.rm = TRUE) && !any(rows$current_profiled_this_run, na.rm = TRUE)
 }
 
+mcl_triangle_display_inventory <- function(rows) {
+  if (!is.data.frame(rows) || !nrow(rows)) return(mcl_triangle_empty_variable_inventory())
+  if (!"evidence_category" %in% names(rows)) rows$evidence_category <- "direct_variable_evidence"
+  keep <- !rows$evidence_category %in% c("source_space_only", "false_positive_excluded")
+  rows <- rows[keep, , drop = FALSE]
+  if (!nrow(rows)) return(mcl_triangle_empty_variable_inventory())
+  rows
+}
+
 mcl_triangle_candidate_list <- function(rows, max_items = 8L) {
   if (!is.data.frame(rows) || !nrow(rows)) return("")
   vals <- unique(trimws(c(rows$raw_field, rows$code_or_value, rows$table_or_source, rows$source)))
@@ -374,8 +793,8 @@ mcl_triangle_requirement_status <- function(rows, proxy_rows = NULL, preferred_s
   proxy_current <- mcl_triangle_has_current(proxy_rows)
   legacy_only <- mcl_triangle_has_legacy_only(rows) || (direct_any && !direct_current)
   if (direct_current) {
-    status <- "ready"
-    limitation <- "Direct aggregate evidence is current-profiled."
+    status <- "aggregate_evidence_found_requires_validation"
+    limitation <- "Direct aggregate evidence is current-profiled but still requires source-specific validation."
     action <- "Define operational study windows and source-specific variable logic."
   } else if (proxy_current) {
     status <- "proxy_available"
@@ -425,6 +844,29 @@ mcl_triangle_ki67_source_only_rows <- function(ki67_discovery) {
 
 mcl_triangle_ki67_status <- function(ki67_discovery = NULL) {
   if (is.null(ki67_discovery)) ki67_discovery <- ki67_empty_payload()
+  db_summary <- ki67_discovery$db_summary %||% ki67_discovery$ki67_db_summary %||% data.frame(stringsAsFactors = FALSE)
+  if (is.data.frame(db_summary) && nrow(db_summary) && all(c("channel", "direct_evidence_found", "numeric_percent_found") %in% names(db_summary))) {
+    direct_flag <- tolower(trimws(as.character(db_summary$direct_evidence_found %||% ""))) %in% c("true", "t", "1", "yes")
+    numeric_flag <- tolower(trimws(as.character(db_summary$numeric_percent_found %||% ""))) %in% c("true", "t", "1", "yes")
+    aeki <- db_summary[db_summary$channel == "danish_patobank_aeki_codes" & direct_flag & numeric_flag, , drop = FALSE]
+    registry <- db_summary[db_summary$channel == "structured_registry_fields" & direct_flag & numeric_flag, , drop = FALSE]
+    text <- db_summary[db_summary$channel == "pathology_text_patterns" & direct_flag & numeric_flag, , drop = FALSE]
+    if (nrow(registry) || nrow(aeki) || nrow(text)) {
+      selected <- if (nrow(registry)) registry[1, , drop = FALSE] else if (nrow(aeki)) aeki[1, , drop = FALSE] else text[1, , drop = FALSE]
+      status <- if (nrow(registry)) "strong_structured_numeric" else if (nrow(aeki)) "strong_structured_coded" else "moderate_text_extractable"
+      return(list(
+        status = status,
+        direct_rows = nrow(selected),
+        source_only_rows = 0L,
+        direct_current = TRUE,
+        numeric_direct = TRUE,
+        coded_direct = nrow(aeki) > 0L,
+        text_extractable = nrow(text) > 0L,
+        best_source = as.character((selected$best_source %||% "")[[1]] %||% ""),
+        aggregate_count_display = as.character((selected$aggregate_count_display %||% selected$aggregate_count_total %||% "")[[1]] %||% "")
+      ))
+    }
+  }
   pathology <- ki67_discovery$pathology_code_candidates %||% ki67_empty_pathology_code_candidates()
   text_patterns <- ki67_discovery$text_pattern_candidates %||% ki67_empty_text_pattern_candidates()
   direct <- mcl_triangle_ki67_direct_rows(ki67_discovery)
@@ -495,7 +937,7 @@ mcl_triangle_build_readiness_matrix <- function(inventory, ki67_discovery = NULL
       key_limitation <- switch(
         ki67$status,
         strong_structured_numeric = "Direct structured Ki-67 percent evidence candidate found; validate source definition and units.",
-        strong_structured_coded = "Direct Ki-67 code evidence candidate found; validate Danish/local codebook mapping.",
+        strong_structured_coded = "Direct aggregate Danish pathology code evidence exists, but source-specific clinical validation is required before analytic cohort extraction.",
         moderate_text_extractable = "Ki-67 text extraction appears possible but requires validation and no raw report text is emitted.",
         requires_manual_validation = "Ki-67 candidate evidence requires manual validation before study use.",
         weak_candidate_only = "Only source/search-space evidence is present; source availability is not direct Ki-67 evidence.",
@@ -512,7 +954,7 @@ mcl_triangle_build_readiness_matrix <- function(inventory, ki67_discovery = NULL
         preferred_source = "LYFO structured fields; Danish pathology/SNOMED; t_mikro/t_konk text",
         candidate_fields_or_codes = ki67$best_source,
         key_limitation = key_limitation,
-        recommended_next_action = if (direct_available) "Validate source-specific Ki-67 coding/value semantics." else "Run source-specific Ki-67 codebook lookup and validated text-extraction pilot.",
+        recommended_next_action = if (direct_available) "Validate Danish Patobank Ki-67 coding/value semantics, source scope, and MCL applicability before analytic cohort extraction." else "Run source-specific Ki-67 codebook lookup and validated text-extraction pilot.",
         stringsAsFactors = FALSE
       ))
     }
@@ -552,8 +994,8 @@ mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = 
     if (identical(marker, "Ki-67")) {
       ready_status <- switch(
         ki67$status,
-        strong_structured_numeric = "ready",
-        strong_structured_coded = "ready",
+        strong_structured_numeric = "aggregate_evidence_found_requires_validation",
+        strong_structured_coded = "aggregate_evidence_found_requires_validation",
         moderate_text_extractable = "feasible_with_mapping",
         requires_manual_validation = "requires_manual_validation",
         weak_candidate_only = "weak_candidate_only",
@@ -572,7 +1014,7 @@ mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = 
         feasibility_status = ready_status,
         notes = paste(
           "Ki-67 discovery status:", ki67$status,
-          "- source-only pathology/LYFO availability is not treated as Ki-67 evidence.",
+          if (ki67$status %in% c("strong_structured_numeric", "strong_structured_coded")) "- direct aggregate evidence found, but source-specific clinical validation is required before analytic cohort extraction." else "- source-only pathology/LYFO availability is not treated as Ki-67 evidence.",
           if (nzchar(ki67$best_source)) paste("Best aggregate source:", ki67$best_source) else ""
         ),
         stringsAsFactors = FALSE
@@ -587,7 +1029,7 @@ mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = 
     current <- mcl_triangle_has_current(direct) || (!direct_found && mcl_triangle_has_current(proxy))
     legacy <- mcl_triangle_has_legacy_only(direct) || (!direct_found && mcl_triangle_has_legacy_only(proxy))
     status <- if (direct_found && current) {
-      "ready"
+      "aggregate_evidence_found_requires_validation"
     } else if (proxy_found && current) {
       "proxy_available"
     } else if (direct_found || proxy_found) {
@@ -595,7 +1037,7 @@ mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = 
     } else {
       "needs_source_activation"
     }
-    action <- if (status %in% c("ready", "proxy_available")) {
+    action <- if (status %in% c("aggregate_evidence_found_requires_validation", "proxy_available")) {
       "Validate source-specific definition and coding before cohort extraction."
     } else {
       "Needs source activation or mapping."
@@ -609,7 +1051,7 @@ mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = 
       preferred_recovery_source = mcl_triangle_biology_recovery_source(marker),
       action_required = action,
       feasibility_status = status,
-      notes = if (status %in% c("ready", "proxy_available")) "Aggregate evidence exists; no patient-level inference is made." else "High-risk biology remains a feasibility gap until source activation/mapping is complete.",
+      notes = if (status %in% c("aggregate_evidence_found_requires_validation", "proxy_available")) "Aggregate evidence exists and requires source-specific validation; no patient-level inference is made." else "High-risk biology remains a feasibility gap until source activation/mapping is complete.",
       stringsAsFactors = FALSE
     )
   })
@@ -617,47 +1059,139 @@ mcl_triangle_build_biology_gap_analysis <- function(inventory, ki67_discovery = 
   out[names(mcl_triangle_empty_biology_gap_analysis())]
 }
 
-mcl_triangle_treatment_inventory <- function(inventory) {
-  rows <- mcl_triangle_filter_group(inventory, "Treatment", "")
-  if (!nrow(rows)) return(mcl_triangle_empty_treatment_inventory())
-  data.frame(
-    exposure_name = rows$concept_name,
-    exposure_group = ifelse(grepl("ibrutinib|BTK", rows$concept_name, ignore.case = TRUE), "BTK inhibitor",
-      ifelse(grepl("ASCT|HDT|stem-cell|autologous", rows$concept_name, ignore.case = TRUE), "ASCT/HDT",
-        ifelse(grepl("R-CHOP|R-DHAP|cytarabine|rituximab|bendamustine|CIT|regimen|immunochemotherapy", rows$concept_name, ignore.case = TRUE), "CIT / immunochemotherapy", "Treatment exposure")
-      )
-    ),
-    source = rows$source,
-    code_system = ifelse(grepl("ATC|SKS|NPU", rows$code_or_value, ignore.case = TRUE), rows$code_or_value, ""),
-    code = rows$code_or_value,
-    raw_value = rows$code_or_value,
-    table_or_source = rows$table_or_source,
-    current_profiled_this_run = rows$current_profiled_this_run,
-    evidence_count_or_rows = rows$count_or_rows_if_available,
-    count_type = rows$count_type,
-    notes = ifelse(nzchar(rows$count_or_rows_if_available), paste(rows$count_type, "from aggregate atlas output"), "Evidence found; count not available in atlas aggregate outputs."),
-    stringsAsFactors = FALSE
+mcl_triangle_exposure_group <- function(concept_name) {
+  ifelse(grepl("ibrutinib|BTK", concept_name, ignore.case = TRUE), "BTK inhibitor",
+    ifelse(grepl("ASCT|HDT|stem-cell|autologous", concept_name, ignore.case = TRUE), "ASCT/HDT",
+      ifelse(grepl("R-CHOP|R-DHAP|cytarabine|rituximab|bendamustine|CIT|regimen|immunochemotherapy", concept_name, ignore.case = TRUE), "CIT / immunochemotherapy", "Treatment exposure")
+    )
   )
 }
 
-mcl_triangle_outcome_inventory <- function(inventory) {
-  rows <- mcl_triangle_filter_group(inventory, "Outcomes|Safety", "")
-  if (!nrow(rows)) return(mcl_triangle_empty_outcome_inventory())
-  data.frame(
-    outcome_name = rows$concept_name,
-    source = rows$source,
-    table_or_source = rows$table_or_source,
-    raw_field = rows$raw_field,
-    current_profiled_this_run = rows$current_profiled_this_run,
-    legacy_reference_only = rows$legacy_reference_only,
-    feasibility_role = ifelse(grepl("death|overall survival", rows$concept_name, ignore.case = TRUE), "OS/death",
-      ifelse(grepl("relapse|progression|response|next treatment|follow-up", rows$concept_name, ignore.case = TRUE), "relapse/progression/FFS proxy", "toxicity proxy")
-    ),
-    count_or_rows_if_available = rows$count_or_rows_if_available,
-    count_type = rows$count_type,
-    notes = ifelse(nzchar(rows$count_or_rows_if_available), paste(rows$count_type, "from aggregate atlas output"), "Evidence found; count not available in atlas aggregate outputs."),
+mcl_triangle_outcome_role <- function(concept_name) {
+  ifelse(grepl("death|overall survival", concept_name, ignore.case = TRUE), "OS/death",
+    ifelse(grepl("relapse|progression|response|next treatment|follow-up", concept_name, ignore.case = TRUE), "relapse/progression/FFS proxy", "toxicity proxy")
+  )
+}
+
+mcl_triangle_join_values <- function(x, max_items = 5L) {
+  x <- unique(trimws(as.character(x %||% "")))
+  x <- x[nzchar(x)]
+  if (!length(x)) return("")
+  suffix <- if (length(x) > max_items) paste0(" +", length(x) - max_items, " more") else ""
+  paste0(paste(head(x, max_items), collapse = "; "), suffix)
+}
+
+mcl_triangle_summarize_keys <- function(rows, key_cols) {
+  if (!is.data.frame(rows) || !nrow(rows)) return(integer())
+  key_cols <- intersect(key_cols, names(rows))
+  if (!length(key_cols)) return(rep(1L, nrow(rows)))
+  key_values <- rows[key_cols]
+  key_values[] <- lapply(key_values, mcl_triangle_norm)
+  key <- do.call(paste, c(key_values, sep = "\r"))
+  as.integer(factor(key, levels = unique(key)))
+}
+
+mcl_triangle_false_positive_exclusions <- function(inventory = NULL) {
+  static <- mcl_triangle_known_false_positive_exclusions()
+  if (!is.data.frame(inventory) || !nrow(inventory) || !"evidence_category" %in% names(inventory)) {
+    return(static[names(mcl_triangle_empty_false_positive_exclusions())])
+  }
+  excluded <- inventory[inventory$evidence_category == "false_positive_excluded", , drop = FALSE]
+  if (!nrow(excluded)) return(static[names(mcl_triangle_empty_false_positive_exclusions())])
+  dynamic <- data.frame(
+    concept_name = excluded$concept_name,
+    source = excluded$source,
+    field = excluded$raw_field,
+    value = excluded$code_or_value,
+    reason = excluded$match_reason,
+    exclusion_type = "matched_false_positive_excluded",
+    notes = "Matched during evidence collection but suppressed from main MCL/TRIANGLE UI evidence cards.",
     stringsAsFactors = FALSE
   )
+  out <- bind_rows_base(list(static, dynamic))
+  key <- paste(out$concept_name, out$source, out$field, out$value, out$reason, sep = "\r")
+  out <- out[!duplicated(key), , drop = FALSE]
+  out[names(mcl_triangle_empty_false_positive_exclusions())]
+}
+
+mcl_triangle_treatment_inventory <- function(inventory) {
+  rows <- mcl_triangle_display_inventory(mcl_triangle_filter_group(inventory, "Treatment", ""))
+  if (!nrow(rows)) return(mcl_triangle_empty_treatment_inventory())
+  rows$exposure_group <- mcl_triangle_exposure_group(rows$concept_name)
+  groups <- split(rows, mcl_triangle_summarize_keys(rows, c("concept_name", "exposure_group", "source", "table_or_source", "evidence_category")), drop = TRUE)
+  out <- lapply(groups, function(group) {
+    fields <- mcl_triangle_join_values(c(group$raw_field, group$code_or_value))
+    evidence_types <- mcl_triangle_join_values(group$evidence_type, 4L)
+    categories <- mcl_triangle_join_values(group$evidence_category, 4L)
+    match_reasons <- mcl_triangle_join_values(group$match_reason, 3L)
+    data.frame(
+      exposure_name = group$concept_name[[1]],
+      exposure_group = group$exposure_group[[1]],
+      source = group$source[[1]],
+      code_system = mcl_triangle_join_values(group$code_or_value[grepl("ATC|SKS|NPU|L[0-9]|BWHA", group$code_or_value, ignore.case = TRUE)], 3L),
+      code = mcl_triangle_join_values(group$code_or_value, 4L),
+      raw_value = mcl_triangle_join_values(group$code_or_value, 4L),
+      table_or_source = group$table_or_source[[1]],
+      raw_field = mcl_triangle_join_values(group$raw_field, 5L),
+      matched_term = mcl_triangle_join_values(group$matched_term, 4L),
+      matched_field = mcl_triangle_join_values(group$matched_field, 4L),
+      match_reason = match_reasons,
+      evidence_category = categories,
+      current_profiled_this_run = any(group$current_profiled_this_run, na.rm = TRUE),
+      evidence_count_or_rows = as.character(nrow(group)),
+      count_type = "evidence rows",
+      notes = paste0(
+        if (nzchar(fields)) paste0("Representative fields/codes: ", fields, ". ") else "",
+        if (nzchar(evidence_types)) paste0("Evidence channels: ", evidence_types, ". ") else "",
+        if (nzchar(categories)) paste0("Evidence category: ", categories, ". ") else "",
+        if (nzchar(match_reasons)) paste0("Match reason: ", match_reasons, ". ") else "",
+        nrow(group), " detail evidence row", if (nrow(group) == 1L) "" else "s",
+        " summarized from mcl_triangle_variable_inventory.csv."
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- bind_rows_base(out)
+  out[names(mcl_triangle_empty_treatment_inventory())]
+}
+
+mcl_triangle_outcome_inventory <- function(inventory) {
+  rows <- mcl_triangle_display_inventory(mcl_triangle_filter_group(inventory, "Outcomes|Safety", ""))
+  if (!nrow(rows)) return(mcl_triangle_empty_outcome_inventory())
+  rows$feasibility_role <- mcl_triangle_outcome_role(rows$concept_name)
+  groups <- split(rows, mcl_triangle_summarize_keys(rows, c("concept_name", "feasibility_role", "source", "table_or_source", "evidence_category")), drop = TRUE)
+  out <- lapply(groups, function(group) {
+    fields <- mcl_triangle_join_values(group$raw_field)
+    evidence_types <- mcl_triangle_join_values(group$evidence_type, 4L)
+    categories <- mcl_triangle_join_values(group$evidence_category, 4L)
+    match_reasons <- mcl_triangle_join_values(group$match_reason, 3L)
+    data.frame(
+      outcome_name = group$concept_name[[1]],
+      source = group$source[[1]],
+      table_or_source = group$table_or_source[[1]],
+      raw_field = fields,
+      matched_term = mcl_triangle_join_values(group$matched_term, 4L),
+      matched_field = mcl_triangle_join_values(group$matched_field, 4L),
+      match_reason = match_reasons,
+      evidence_category = categories,
+      current_profiled_this_run = any(group$current_profiled_this_run, na.rm = TRUE),
+      legacy_reference_only = any(group$legacy_reference_only, na.rm = TRUE),
+      feasibility_role = group$feasibility_role[[1]],
+      count_or_rows_if_available = as.character(nrow(group)),
+      count_type = "evidence rows",
+      notes = paste0(
+        if (nzchar(fields)) paste0("Representative fields/codes: ", fields, ". ") else "",
+        if (nzchar(evidence_types)) paste0("Evidence channels: ", evidence_types, ". ") else "",
+        if (nzchar(categories)) paste0("Evidence category: ", categories, ". ") else "",
+        if (nzchar(match_reasons)) paste0("Match reason: ", match_reasons, ". ") else "",
+        nrow(group), " detail evidence row", if (nrow(group) == 1L) "" else "s",
+        " summarized from mcl_triangle_variable_inventory.csv."
+      ),
+      stringsAsFactors = FALSE
+    )
+  })
+  out <- bind_rows_base(out)
+  out[names(mcl_triangle_empty_outcome_inventory())]
 }
 
 mcl_triangle_verdict <- function(matrix, biology) {
@@ -672,7 +1206,7 @@ mcl_triangle_verdict <- function(matrix, biology) {
       isTRUE(as.logical(hit$current_profiled_source_available[[1]])) &&
       !isTRUE(as.logical(hit$legacy_reference_only[[1]]))
   }
-  readyish <- function(status) status %in% c("ready", "proxy_available", "feasible_with_mapping")
+  readyish <- function(status) status %in% c("ready", "aggregate_evidence_found_requires_validation", "proxy_available", "feasible_with_mapping")
   core <- c(
     status_for("MCL cohort"),
     status_for("CIT / immunochemotherapy"),
@@ -772,11 +1306,50 @@ mcl_triangle_caveats <- function() {
   )
 }
 
+mcl_triangle_count_row_display <- function(rows, metric_key, metric_value, display_col = "distinct_person_count_display") {
+  if (!is.data.frame(rows) || !nrow(rows) || !metric_key %in% names(rows)) return("")
+  hit <- rows[as.character(rows[[metric_key]]) == metric_value, , drop = FALSE]
+  if (!nrow(hit) || !display_col %in% names(hit)) return("")
+  as.character(hit[[display_col]][[1]] %||% "")
+}
+
+mcl_triangle_pathology_ki67_signpost <- function(cohort_counts = NULL) {
+  if (!is.list(cohort_counts)) return(mcl_triangle_empty_pathology_ki67_signpost())
+  aeki_people <- cohort_counts$ki67_aeki_person_counts %||% data.frame(stringsAsFactors = FALSE)
+  known <- mcl_triangle_count_row_display(aeki_people, "metric", "ki67_aeki_known")
+  ge30 <- mcl_triangle_count_row_display(aeki_people, "metric", "ki67_aeki_ge_threshold")
+  ge50 <- mcl_triangle_count_row_display(aeki_people, "metric", "ki67_aeki_ge_50")
+  summary <- cohort_counts$ki67_person_count_summary %||% data.frame(stringsAsFactors = FALSE)
+  if (!nzchar(known) && is.data.frame(summary) && nrow(summary) && "distinct_person_count_display" %in% names(summary)) {
+    known <- as.character(summary$distinct_person_count_display[[1]] %||% "")
+  }
+  if (!nzchar(known) && !nzchar(ge30) && !nzchar(ge50)) return(mcl_triangle_empty_pathology_ki67_signpost())
+  data.frame(
+    title = "Ki-67 proliferation index",
+    source_resource = "PATOBANK/SDS pathology",
+    table_name = "import.public.SDS_pato",
+    column_name = "c_snomedkode",
+    code_family = "AEKIxxx / ÆKIxxx",
+    interpretation = "xxx encodes a percentage-like Ki-67 proliferation index in structured coded pathology evidence.",
+    evidence_type = "coded pathology/PATOBANK evidence",
+    current_use_status = "structured coded signal; MCL feasibility count validated",
+    mcl_aeki_known = known,
+    mcl_aeki_ge30 = ge30,
+    mcl_aeki_ge50 = ge50,
+    text_recovery_route = "SDS_pato.v_fritekst; SDS_t_mikro_ny.v_fritekst; SDS_t_konk_ny.v_fritekst",
+    caveat = "Not yet a complete Ki-67 capture strategy; pathology free text is candidate-only and requires separate extraction and clinical validation.",
+    search_terms = "Ki-67;KI67;proliferation index;proliferationsindeks;AEKI;ÆKI;SDS_pato;PATOBANK;c_snomedkode",
+    stringsAsFactors = FALSE
+  )
+}
+
 build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
                                                    semantic_dictionary = NULL,
                                                    semantic_value_map = NULL,
                                                    semantic_code_map = NULL,
                                                    semantic_panel_links = NULL,
+                                                   columns = NULL,
+                                                   column_profiles = NULL,
                                                    panel_raw_fields = NULL,
                                                    panel_distributions = NULL,
                                                    panel_kpis = NULL,
@@ -790,6 +1363,8 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
     semantic_value_map = semantic_value_map,
     semantic_code_map = semantic_code_map,
     semantic_panel_links = semantic_panel_links,
+    columns = columns,
+    column_profiles = column_profiles,
     sources = sources,
     canonical_reconciliation = canonical_reconciliation,
     legacy_reference_vs_current = legacy_reference_vs_current
@@ -811,17 +1386,21 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
       panel_distributions = panel_distributions,
       panel_kpis = panel_kpis,
       sources = sources,
+      columns = columns,
+      column_profiles = column_profiles,
       canonical_reconciliation = canonical_reconciliation,
       legacy_reference_vs_current = legacy_reference_vs_current
     )
   }
-  treatment_inventory <- mcl_triangle_treatment_inventory(variable_inventory)
-  outcome_inventory <- mcl_triangle_outcome_inventory(variable_inventory)
-  biology_gap_analysis <- mcl_triangle_build_biology_gap_analysis(variable_inventory, ki67_discovery = ki67_discovery)
-  study_readiness_matrix <- mcl_triangle_build_readiness_matrix(variable_inventory, ki67_discovery = ki67_discovery)
+  display_inventory <- mcl_triangle_display_inventory(variable_inventory)
+  false_positive_exclusions <- mcl_triangle_false_positive_exclusions(variable_inventory)
+  treatment_inventory <- mcl_triangle_treatment_inventory(display_inventory)
+  outcome_inventory <- mcl_triangle_outcome_inventory(display_inventory)
+  biology_gap_analysis <- mcl_triangle_build_biology_gap_analysis(display_inventory, ki67_discovery = ki67_discovery)
+  study_readiness_matrix <- mcl_triangle_build_readiness_matrix(display_inventory, ki67_discovery = ki67_discovery)
   verdict <- mcl_triangle_verdict(study_readiness_matrix, biology_gap_analysis)
   feasibility_summary <- mcl_triangle_summary(
-    inventory = variable_inventory,
+    inventory = display_inventory,
     treatment = treatment_inventory,
     outcome = outcome_inventory,
     biology = biology_gap_analysis,
@@ -835,6 +1414,7 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
     outcome_inventory = outcome_inventory,
     biology_gap_analysis = biology_gap_analysis,
     study_readiness_matrix = study_readiness_matrix,
+    false_positive_exclusions = false_positive_exclusions,
     ki67_discovery = ki67_discovery,
     recommended_next_actions = mcl_triangle_recommended_actions(study_readiness_matrix, biology_gap_analysis),
     caveats = mcl_triangle_caveats(),
@@ -849,6 +1429,7 @@ mcl_triangle_write_outputs <- function(outputs, output_dir) {
     treatment_inventory = write_csv(outputs$treatment_inventory, file.path(output_dir, "mcl_triangle_treatment_inventory.csv")),
     outcome_inventory = write_csv(outputs$outcome_inventory, file.path(output_dir, "mcl_triangle_outcome_inventory.csv")),
     biology_gap_analysis = write_csv(outputs$biology_gap_analysis, file.path(output_dir, "mcl_triangle_biology_gap_analysis.csv")),
-    study_readiness_matrix = write_csv(outputs$study_readiness_matrix, file.path(output_dir, "mcl_triangle_study_readiness_matrix.csv"))
+    study_readiness_matrix = write_csv(outputs$study_readiness_matrix, file.path(output_dir, "mcl_triangle_study_readiness_matrix.csv")),
+    false_positive_exclusions = write_csv(outputs$false_positive_exclusions %||% mcl_triangle_empty_false_positive_exclusions(), file.path(output_dir, "mcl_triangle_false_positive_exclusions.csv"))
   )
 }

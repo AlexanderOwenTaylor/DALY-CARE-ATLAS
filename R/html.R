@@ -1314,7 +1314,11 @@ sanitize_public_frame <- function(x) {
 }
 
 is_sensitive_payload_column <- function(name) {
-  grepl("id_column_guess|schema_signature", name, ignore.case = TRUE)
+  grepl(
+    "id_column_guess|schema_signature|patientid|patient_id|person_key|cpr|pnr|raw_date|raw_text|snippet|requisition",
+    name,
+    ignore.case = TRUE
+  )
 }
 
 redact_sensitive_text <- function(x) {
