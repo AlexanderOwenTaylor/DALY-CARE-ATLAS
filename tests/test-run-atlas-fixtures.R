@@ -162,6 +162,9 @@ for (needle in c("Height and weight / BMI", "Smoking status", "Alcohol use", "Di
   expect_true(grepl(needle, html, fixed = TRUE), paste("Clinical Variables priority list should include:", needle))
 }
 expect_true(grepl("What can I find in DALY-CARE?", html, fixed = TRUE), "Overview should include the clinician-facing entry section.")
+for (needle in c("Planning a study", "Validating data/source readiness", "New to DALY-CARE", "Disease researcher", "Clinical/management overview", "Data dictionary and QA", "Internal briefing")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Overview audience route and briefing should include:", needle))
+}
 for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "MCL / TRIANGLE feasibility", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview entry cards should include:", needle))
 }
@@ -169,6 +172,10 @@ expect_true(grepl("function renderMclTriangleFeasibilityPanel", html, fixed = TR
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
 expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
 expect_true(grepl("feasibility assessment only", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
+expect_true(grepl("fallback reference count", html, fixed = TRUE), "MCL/TRIANGLE fallback values should be explicitly labelled.")
+expect_true(grepl("renderCountKindBadge", html, fixed = TRUE), "HTML should include count-kind badge helper.")
+expect_true(grepl("not current accepted production evidence", html, fixed = TRUE), "Fallback count caveat should distinguish fallback values from accepted production evidence.")
+expect_true(grepl("Not a treatment recommendation", html, fixed = TRUE), "MCL/TRIANGLE panel should not be presented as treatment recommendation.")
 expect_true(grepl("clone-censor-weight target-trial emulation", html, fixed = TRUE), "MCL/TRIANGLE caution should mention future target-trial emulation design.")
 for (needle in c("Best for:", "Evidence/source type:", "Open panel", "run-status-banner", "Environment:", "Mock / fixture", "Pipeline status", "Profiled rows", "Profiled columns", "Run ID / build identifier")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview UX first pass should include:", needle))
@@ -179,7 +186,7 @@ for (needle in c("global-atlas-search", "Search concept, raw column, code, value
 for (needle in c("function normalizeSearchText", "atlasSearchSynonyms", "function expandSearchTerms", "function scoreSearchResult", "Show all results", "Collapse results", "search-highlight")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Global atlas search pass 3 should include:", needle))
 }
-for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank")) {
+for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank", "pi briefing", "management overview", "data manager", "pcd", "mgus", "amyloidosis", "not in database", "del17p")) {
   expect_true(grepl(needle, tolower(html), fixed = TRUE), paste("Search synonym support should include:", needle))
 }
 for (needle in c("data-search-open", "data-copy-value", "data-copy-share-link", "data-export-view", "function downloadCsv", "function rowsToCsv", "clinical-concepts", "semantic-lineage", "semantic-values", "semantic-codes", "semantic-panels")) {
@@ -257,6 +264,7 @@ for (needle in c("remote-debugging-port=0", "Emulation.setDeviceMetricsOverride"
 }
 for (needle in c(
   "{ name: \"overview\", tab: \"overview\", sub: \"overview-summary\" }",
+  "{ name: \"quick_start\", tab: \"quickstart\", sub: \"quickstart-recipes\" }",
   "{ name: \"clinical_variables\", tab: \"variables\", sub: \"variables-concepts\" }",
   "{ name: \"mcl_triangle\", tab: \"clinical-feasibility\", sub: \"mcl-triangle-feasibility\" }",
   "{ name: \"vitals\", tab: \"clinical\", sub: \"clinical-vitals\" }",
@@ -281,7 +289,7 @@ expect_true(grepl("biobankPanelPresent", visual_qa_script, fixed = TRUE), "Visua
 expect_true(grepl("mclTrianglePanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the MCL/TRIANGLE feasibility panel.")
 expect_true(grepl("overviewConsolidationPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Overview consolidation section.")
 expect_true(grepl("normalScreenshotCaptures", visual_qa_script, fixed = TRUE), "Visual QA script should produce non-QA normal screenshots.")
-for (needle in c("overview_normal", "run_status_normal_desktop.png", "resource_catalog_normal_desktop.png", "scrollSelector", "data_dictionary_normal", "code_maps_normal", "clinical_variables_normal", "treatment_normal", "capture: false", "normalOverflowCaptures", "mobile_375", "normal_360", "normal_375", "normal_390", "normal_414", "normal_482", "overview_normal_mobile_360.png", "code_maps_normal_mobile_375_NPU02319.png")) {
+for (needle in c("overview_normal", "run_status_normal_desktop.png", "quick_start_desktop.png", "quick_start_mobile_375.png", "resource_catalog_normal_desktop.png", "scrollSelector", "data_dictionary_normal", "code_maps_normal", "clinical_variables_normal", "treatment_normal", "capture: false", "normalOverflowCaptures", "mobile_375", "normal_360", "normal_375", "normal_390", "normal_414", "normal_482", "overview_normal_mobile_360.png", "code_maps_normal_mobile_375_NPU02319.png")) {
   expect_true(grepl(needle, visual_qa_script, fixed = TRUE), paste("Visual QA normal capture should include:", needle))
 }
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
