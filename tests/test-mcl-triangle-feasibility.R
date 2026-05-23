@@ -19,20 +19,59 @@ required_requirements <- c(
 )
 
 semantic_dictionary <- data.frame(
-  semantic_id = c("lyfo_mcl", "lyfo_age", "lyfo_diag_date", "death_date", "ldh", "ecog"),
-  clinical_concept_id = c("mcl_cohort", "age", "diagnosis_date", "overall_survival", "ldh", "performance_status"),
-  clinical_variable = c("Mantle cell lymphoma cohort", "Age at diagnosis", "Diagnosis date", "Date of death", "LDH", "ECOG performance status"),
-  clinical_group = c("Registry", "Registry", "Registry", "Outcomes", "Laboratory", "Registry"),
-  clinical_subgroup = c("LYFO", "LYFO", "LYFO", "Death", "Laboratory", "LYFO"),
-  semantic_meaning = c("LYFO MCL subtype evidence", "Age at diagnosis proxy", "Diagnosis date", "Overall survival endpoint", "LDH input", "Performance status input"),
-  source_name = c("RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "patient", "RKKP_LYFO", "RKKP_LYFO"),
-  object_name = c("RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "patient", "RKKP_LYFO", "RKKP_LYFO"),
+  semantic_id = c(
+    "lyfo_mcl", "lyfo_age", "lyfo_diag_date", "death_date", "ldh", "ecog",
+    "lyfo_ipi", "lyfo_flipi", "lyfo_who", "lyfo_stage", "lyfo_hb", "lyfo_leukocytes",
+    "social_smoking", "vitals_display", "damyda_calcium", "damyda_panobinostat", "damyda_amyloidosis"
+  ),
+  clinical_concept_id = c(
+    "mcl_cohort", "age", "diagnosis_date", "overall_survival", "ldh", "performance_status",
+    "ipi", "flipi", "who_histology", "stage", "haemoglobin", "leukocytes",
+    "smoking", "vital_display", "calcium", "panobinostat", "amyloidosis"
+  ),
+  clinical_variable = c(
+    "Mantle cell lymphoma cohort", "Age at diagnosis", "Diagnosis date", "Date of death", "LDH", "ECOG performance status",
+    "IPI", "FLIPI", "WHO histology", "Ann Arbor stage", "Haemoglobin", "Leukocytes",
+    "Smoking history", "Vital-sign display name", "Calcium", "Panobinostat treatment", "Amyloidosis manifestation"
+  ),
+  clinical_group = c(
+    "Registry", "Registry", "Registry", "Outcomes", "Laboratory", "Registry",
+    "Registry", "Registry", "Registry", "Registry", "Laboratory", "Laboratory",
+    "Social history", "Vitals", "Laboratory", "Treatment", "Complication"
+  ),
+  clinical_subgroup = c(
+    "LYFO", "LYFO", "LYFO", "Death", "Laboratory", "LYFO",
+    "LYFO", "LYFO", "LYFO", "LYFO", "LYFO", "LYFO",
+    "Smoking", "Vitals", "DaMyDa", "DaMyDa", "DaMyDa"
+  ),
+  semantic_meaning = c(
+    "LYFO MCL subtype evidence", "Age at diagnosis proxy", "Diagnosis date", "Overall survival endpoint", "LDH input", "Performance status input",
+    "LYFO prognostic score field, not treatment evidence", "LYFO prognostic score field, not treatment evidence", "LYFO histology field, not treatment evidence",
+    "LYFO stage field, not treatment evidence", "LYFO haemoglobin field, not treatment evidence", "LYFO leukocyte field, not treatment evidence",
+    "Smoking history is not death or OS evidence", "Vital signs display labels are not OS evidence",
+    "Baseline calcium is not death or OS evidence", "Follow-up panobinostat treatment is not death or OS evidence",
+    "Amyloidosis manifestation is not death or OS evidence"
+  ),
+  source_name = c(
+    "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "patient", "RKKP_LYFO", "RKKP_LYFO",
+    "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO",
+    "SP_Social_Hx", "SP_VitaleVaerdier", "RKKP_DaMyDa", "RKKP_DaMyDa", "RKKP_DaMyDa"
+  ),
+  object_name = c(
+    "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "patient", "RKKP_LYFO", "RKKP_LYFO",
+    "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO", "RKKP_LYFO",
+    "SP_Social_Hx", "SP_VitaleVaerdier", "RKKP_DaMyDa", "RKKP_DaMyDa", "RKKP_DaMyDa"
+  ),
   schema_name = "", table_name = "",
-  raw_column = c("Reg_Subtype", "Reg_Alder", "Reg_Diagnosedato", "date_of_death", "Reg_LDH", "Reg_PS"),
+  raw_column = c(
+    "Reg_Subtype", "Reg_Alder", "Reg_Diagnosedato", "date_of_death", "Reg_LDH", "Reg_PS",
+    "IPI", "FLIPI", "Reg_WHOHistologikode1", "Reg_Stadium", "Reg_Haemoglobin", "Reg_Leukocytter",
+    "ryger", "displayname", "Reg_Calcium", "FU_Behandling_Panobinostat", "FU_Manifestekomp_Amyloidose"
+  ),
   raw_descriptor = "", raw_code = "", raw_value = "", code_system = "", unit = "",
   value_type = "", data_shape = "", patient_id_column = "", date_column = "",
   value_column = "", source_level = "", geography = "",
-  n_rows = c(100, 100, 100, 100, 100, 100),
+  n_rows = c(100, 100, 100, 100, 100, 100, 21469, 26441, 27061, 27061, 25817, 2517, 100000, 9831949, 9290, 184, 43),
   n_patients = NA_real_, pct_non_missing = NA_real_, min_date = "", max_date = "",
   evidence_file = "fixture", evidence_filter = "", mapping_confidence = "high",
   mapping_status = "confirmed", privacy_note = "", clinical_caveat = "",
@@ -178,3 +217,17 @@ expect_true(any(outputs$variable_inventory$legacy_reference_only), "Inventory sh
 expect_false(any(grepl("patientid|cpr|pnr", paste(outputs$variable_inventory$raw_field, outputs$variable_inventory$code_or_value), ignore.case = TRUE)), "MCL/TRIANGLE outputs must not emit patient identifiers.")
 expect_false(any(nzchar(outputs$variable_inventory$count_or_rows_if_available) & !nzchar(outputs$variable_inventory$count_type)), "Counts should have explicit count-type labels.")
 expect_false(any(grepl("patients should receive|ASCT improves|ibrutinib improves|benefit from ASCT|causal effect estimate", paste(outputs$caveats$text, outputs$recommended_next_actions$text), ignore.case = TRUE)), "MCL/TRIANGLE text must not imply treatment recommendation or causal treatment effect.")
+
+false_treatment_fields <- c("IPI", "FLIPI", "Reg_WHOHistologikode1", "Reg_Stadium", "Reg_Haemoglobin", "Reg_Leukocytter")
+first_line_rows <- outputs$variable_inventory[outputs$variable_inventory$concept_name == "First-line immunochemotherapy", , drop = FALSE]
+expect_false(any(first_line_rows$raw_field %in% false_treatment_fields), "RKKP_LYFO source membership alone must not create first-line immunochemotherapy evidence.")
+
+false_death_fields <- c("ryger", "displayname", "Reg_Calcium", "FU_Behandling_Panobinostat", "FU_Manifestekomp_Amyloidose")
+death_rows <- outputs$outcome_inventory[outputs$outcome_inventory$outcome_name == "Death / overall survival", , drop = FALSE]
+expect_false(any(grepl(paste(false_death_fields, collapse = "|"), death_rows$raw_field, ignore.case = TRUE)), "Death/OS evidence should exclude smoking, generic vitals, laboratory, treatment, and complication fields.")
+expect_true(any(grepl("date_of_death", death_rows$raw_field, ignore.case = TRUE)), "Death/OS evidence should retain explicit death-date fields.")
+
+treatment_display_key <- paste(outputs$treatment_inventory$exposure_name, outputs$treatment_inventory$source, outputs$treatment_inventory$table_or_source, outputs$treatment_inventory$exposure_group, sep = "\r")
+expect_false(any(duplicated(treatment_display_key)), "Treatment inventory should collapse duplicate top-level cards for the same concept/source/table/evidence group.")
+outcome_display_key <- paste(outputs$outcome_inventory$outcome_name, outputs$outcome_inventory$source, outputs$outcome_inventory$table_or_source, outputs$outcome_inventory$feasibility_role, sep = "\r")
+expect_false(any(duplicated(outcome_display_key)), "Outcome inventory should collapse duplicate top-level cards for the same concept/source/table/evidence group.")

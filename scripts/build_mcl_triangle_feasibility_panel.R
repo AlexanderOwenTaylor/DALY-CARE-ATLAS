@@ -19,6 +19,8 @@ output_dir <- normalizePath(args[[2]], winslash = "/", mustWork = FALSE)
 source(file.path(project_root, "R", "utils.R"))
 source(file.path(project_root, "R", "semantic_dictionary.R"))
 source(file.path(project_root, "R", "product_layer.R"))
+source(file.path(project_root, "R", "ki67_discovery.R"))
+source(file.path(project_root, "R", "mcl_triangle_counts.R"))
 source(file.path(project_root, "R", "mcl_triangle_feasibility.R"))
 
 read_output <- function(file, fallback) {
@@ -33,6 +35,8 @@ outputs <- build_mcl_triangle_feasibility_outputs(
   semantic_value_map = read_output("atlas_semantic_value_map.csv", empty_semantic_value_map()),
   semantic_code_map = read_output("atlas_semantic_code_map.csv", empty_semantic_code_map()),
   semantic_panel_links = read_output("atlas_semantic_panel_links.csv", empty_semantic_panel_links()),
+  columns = read_output("atlas_columns.csv", data.frame(stringsAsFactors = FALSE)),
+  column_profiles = read_output("atlas_column_profiles.csv", data.frame(stringsAsFactors = FALSE)),
   panel_raw_fields = read_output("atlas_panel_raw_fields.csv", empty_panel_raw_fields()),
   panel_distributions = read_output("atlas_panel_distributions.csv", empty_panel_distributions()),
   panel_kpis = read_output("atlas_panel_kpis.csv", empty_panel_kpis()),
@@ -42,7 +46,14 @@ outputs <- build_mcl_triangle_feasibility_outputs(
 )
 
 paths <- mcl_triangle_write_outputs(outputs, output_dir)
+count_outputs <- mcl_count_build_outputs(
+  project_root = project_root,
+  outputs_dir = output_dir,
+  mode = "plan",
+  min_cell_count = atlas_min_cell_count()
+)
+count_paths <- mcl_count_write_outputs(count_outputs, output_dir)
 cat("MCL/TRIANGLE feasibility outputs written:\n")
-for (path in unlist(paths, use.names = FALSE)) {
+for (path in unlist(c(paths, count_paths), use.names = FALSE)) {
   cat(" - ", path, "\n", sep = "")
 }
