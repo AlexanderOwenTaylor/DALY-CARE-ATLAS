@@ -379,6 +379,7 @@ const baseUrl = pathToFileURL(htmlPath).href;
 
 const targets = [
   { name: "overview", tab: "overview", sub: "overview-summary" },
+  { name: "quick_start", tab: "quickstart", sub: "quickstart-recipes" },
   { name: "clinical_variables", tab: "variables", sub: "variables-concepts" },
   { name: "vitals", tab: "clinical", sub: "clinical-vitals" },
   { name: "social_history", tab: "clinical", sub: "clinical-social" },
@@ -416,6 +417,8 @@ const normalScreenshotCaptures = [
   { file: "overview_normal_desktop.png", name: "overview_normal", tab: "overview", sub: "overview-summary", viewport: qaViewports[0] },
   { file: "run_status_normal_desktop.png", name: "run_status_normal", tab: "overview", sub: "overview-summary", viewport: qaViewports[0], scrollSelector: "#overview-run-status" },
   { file: "run_status_normal_mobile_375.png", name: "run_status_normal", tab: "overview", sub: "overview-summary", viewport: normalViewports[1], scrollSelector: "#overview-run-status" },
+  { file: "quick_start_desktop.png", name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes", viewport: qaViewports[0] },
+  { file: "quick_start_mobile_375.png", name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes", viewport: normalViewports[1] },
   { file: "data_dictionary_desktop.png", name: "data_dictionary_normal", tab: "dictionary", sub: "dictionary-lineage", search: "smoking", viewport: qaViewports[0] },
   { file: "treatment_desktop.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: qaViewports[0] },
   { file: "infrastructure_catalog_desktop.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: qaViewports[0] },
@@ -445,6 +448,7 @@ const normalScreenshotCaptures = [
 
 const normalOverflowCaptures = [
   { name: "overview_normal", tab: "overview", sub: "overview-summary" },
+  { name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes" },
   { name: "data_dictionary_normal", tab: "dictionary", sub: "dictionary-lineage", search: "smoking" },
   { name: "code_maps_normal", tab: "dictionary", sub: "dictionary-codes", search: "NPU02319" },
   { name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height" },
