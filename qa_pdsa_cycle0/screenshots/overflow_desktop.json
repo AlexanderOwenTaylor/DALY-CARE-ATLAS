@@ -1,0 +1,355 @@
+[
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=overview&qaSub=overview-summary&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "overview",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "overviewConsolidationPresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=variables&qaSub=variables-concepts&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "clinical_variables",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-vitals&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "vitals",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-social&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "social_history",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=clinical-feasibility&qaSub=mcl-triangle-feasibility&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "mcl_triangle",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "mclTrianglePanelPresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-imaging&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "imaging",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "imagingPanelPresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-damyda&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "damyda",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-lyfo&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "lyfo",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-cll&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "cll",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=treatment&qaSub=treatment-dashboard&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "treatment",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "laboratory",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-biobank&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "biobank",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "biobankPanelPresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-microbiology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "microbiology",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "microbiologyAtGlancePresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-pathology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "pathology",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "pathologyPanelPresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/Downloads/Rob%20code%20help/Codex/DALY-CARE-ATLAS/qa_pdsa_cycle0/pdsa_cycle0_mockup_after/site/DALYCARE_atlas.html?qaTab=dictionary&qaSub=dictionary-lineage&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "data_dictionary",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "dataDictionaryDetailStackPresent": true,
+    "dataDictionaryFullLineageTablePresent": false
+  }
+]

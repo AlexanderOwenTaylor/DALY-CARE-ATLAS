@@ -1097,10 +1097,12 @@
           <div class="panel-head">
             <p class="section-kicker">Start with a clinical question</p>
             <h2 class="panel-title">What can I find in DALY-CARE?</h2>
-            <p class="panel-sub">Choose the restored panel that matches your question. These links are navigation aids over aggregate evidence; they do not create analytic definitions or patient-level completeness claims.</p>
+            <p class="panel-sub">Start with what DALY-CARE can show now, then follow a short clinical walkthrough into feasibility, Ki-67/PATOBANK evidence, source signposting, and remaining caveats. These links are navigation aids over aggregate evidence; they do not create analytic definitions or patient-level completeness claims.</p>
           </div>
           <div class="panel-body">
             <div id="run-status-banner"></div>
+            <div style="height:14px"></div>
+            <div id="overview-walkthrough-path"></div>
             <div style="height:14px"></div>
             <div id="overview-entry-cards" class="grid"></div>
             <div style="height:14px"></div>
@@ -1716,12 +1718,12 @@
         { title: "Vitals and anthropometrics", status: "EHR evidence", tone: "blue", bestFor: "Finding height, weight, BMI, and vital-sign source fields.", evidence: "EHR vital-sign descriptors and numeric summaries", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
         { title: "Smoking and alcohol", status: "EHR evidence", tone: "blue", bestFor: "Reviewing social-history smoking and alcohol evidence.", evidence: "EHR social-history categories", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
         { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
-        { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Checking whether MCL, first-line treatment, ASCT/HDT, ibrutinib, outcomes, timing, and high-risk biology evidence are study-ready.", evidence: "Aggregate current-profiled and legacy/reference feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+        { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Walking from a trial-inspired lymphoma question to aggregate feasibility counts, design warnings, and a validation plan.", evidence: "Production aggregate cohort, exposure, outcome, age-proxy, Ibrutinib, and Ki-67 feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
         { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "clinical", sub: "clinical-microbiology" },
         { title: "Imaging", status: "Procedure/metadata evidence", tone: "blue", bestFor: "Finding procedure-code imaging, SP metadata, radiotherapy, and registry modality fields.", evidence: "SKS/procedure rows, SP metadata, DaMyDa registry fields", examples: ["CT", "UXZ11", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
-        { title: "Pathology / PATOBANK", status: "SNOMED evidence", tone: "plum", bestFor: "Reviewing SNOMED, specimen/material, institution, report-text availability, and tumor-coded evidence.", evidence: "PATOBANK/SDS coded pathology and text-availability rows", examples: ["c_snomedkode", "c_mattype", "SDS_pato"], tab: "clinical", sub: "clinical-pathology" },
+        { title: "Pathology / PATOBANK", status: "SNOMED evidence", tone: "plum", bestFor: "Finding coded pathology evidence, including Ki-67 proliferation-index signposting, before planning any text recovery.", evidence: "PATOBANK/SDS coded pathology, SNOMED/AEKI rows, and text-availability rows", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato", "c_snomedkode"], tab: "clinical", sub: "clinical-pathology" },
         { title: "Biobank samples", status: "Sample evidence", tone: "green", bestFor: "Checking aggregate sample source, sample type, and translational source labels.", evidence: "Biobank sample-source/type distributions and lineage rows", examples: ["Sample_source", "PLASMA", "CLL_BIOBANK"], tab: "laboratory", sub: "lab-biobank" },
         { title: "Raw names / Data Dictionary", status: "Raw lineage", tone: "blue", bestFor: "Finding exact table, column, code, descriptor, and value names for analyst lineage.", evidence: "Semantic data dictionary, value map, code map, panel links", examples: ["Reg_LDH", "NPU02319", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
       ];
@@ -1744,6 +1746,7 @@
       const overviewCrossPanelRoutes = [
         { title: "Registry to treatment evidence", from: "DaMyDa / LYFO / CLL", to: "Treatment", examples: ["Bortezomib", "R-CHOP", "Ibrutinib"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "MCL feasibility to source activation", from: "LYFO / Treatment / Pathology", to: "MCL / TRIANGLE", examples: ["MCL", "TP53", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+        { title: "TRIANGLE-lite to Ki-67 pathology evidence", from: "MCL / TRIANGLE", to: "Pathology / PATOBANK", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato"], tab: "clinical", sub: "clinical-pathology" },
         { title: "Registry to labs and NPU codes", from: "Disease registries", to: "Laboratory / NPU", examples: ["LDH", "Creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "clinical", sub: "clinical-microbiology" },
         { title: "Myeloma bone disease to imaging", from: "DaMyDa", to: "Imaging", examples: ["PET/CT", "Reg_Knogleforandringer", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
@@ -1880,7 +1883,7 @@
         "mib-1": ["Ki-67", "Ki67", "proliferation index"],
         mib1: ["Ki-67", "Ki67", "proliferation index"],
         proliferationsindeks: ["Ki-67", "Ki67", "MIB-1"],
-        aeki: ["Ki-67", "proliferation index", "SDS_pato", "PATOBANK"],
+        aeki: ["Ki-67", "ÆKI", "proliferation index", "SDS_pato", "PATOBANK"],
         "æki": ["Ki-67", "AEKI", "proliferation index", "SDS_pato", "PATOBANK"],
         mipi: ["MIPI-c", "LDH", "ECOG"],
         "mipi c": ["MIPI", "Ki-67"]
@@ -2650,6 +2653,38 @@
           <p class="mini">${escapeHtml(env.warning)}</p>
           ${fixtureContext}
         </article>`;
+      }
+      function renderOverviewWalkthroughPath() {
+        return renderSectionCard("Suggested 5-minute clinical walkthrough", `
+          <div class="grid">
+            <article class="clinical-card">
+              ${renderBadge("1", "blue")}
+              <h3>What DALY-CARE can do now</h3>
+              <p class="mini">Start with run status, restored panels, and aggregate-only scope.</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge("2", "violet")}
+              <h3>TRIANGLE-lite feasibility</h3>
+              <p class="mini">Use MCL as the proof-of-concept feasibility pre-study.</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge("3", "plum")}
+              <h3>Ki-67 in PATOBANK</h3>
+              <p class="mini">Show SDS_pato, c_snomedkode, and AEKI/ÆKI as coded signposts.</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge("4", "cyan")}
+              <h3>Source signposting</h3>
+              <p class="mini">Move from clinical concepts to the exact aggregate source evidence.</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge("5", "amber")}
+              <h3>Caveats and next steps</h3>
+              <p class="mini">Separate feasible cohort planning from blocked causal or risk-adapted claims.</p>
+            </article>
+          </div>
+          <div class="callout warn"><strong>Presentation guardrail:</strong> this atlas supports guided feasibility review and validation planning. It does not claim causal treatment effects, safe ASCT omission, observed transplant eligibility, validated standard/high-risk biology, validated MIPI-c, or validated free-text Ki-67 extraction.</div>
+        `, "blue");
       }
       function renderPipelineStatusCards() {
         const metricHelp = {
@@ -4006,6 +4041,7 @@
       });
 
       setHtml("run-status-banner", renderRunStatusBanner());
+      setHtml("overview-walkthrough-path", renderOverviewWalkthroughPath());
       setHtml("overview-entry-cards", renderOverviewEntryCards());
       setHtml("atlas-restoration-status", renderAtlasRestorationStatus());
       setHtml("overview-cross-panel-routes", renderOverviewCrossPanelRoutes());
@@ -5086,6 +5122,10 @@
               { label: "distribution rows", value: distributions.length || "not available", tone: "amber" },
               { label: "text fields", value: rows.filter(pathologyIsFreeText).length || "availability only", tone: "plum" }
             ], { tone: "blue" })}
+            ${renderSectionCard("What this means", `
+              <p><strong>Use this panel as the pathology source signpost.</strong> It shows where coded PATOBANK/SDS pathology evidence lives, including Ki-67 proliferation-index coding in <code>SDS_pato.c_snomedkode</code> via <code>AEKI/ÆKI</code> code families.</p>
+              <p class="mini">Raw pathology text remains a candidate-only recovery route. It is not emitted here and is not treated as clinically validated Ki-67 extraction.</p>
+            `, "green")}
             ${renderSectionCard("Source / coverage", renderPathologySourceCoverage(), "blue")}
             ${renderSectionCard("Pathology evidence layers", renderPathologyLayerCards(), "cyan")}
             ${renderSectionCard("Ki-67 proliferation index", renderPathologyKi67Signpost(), "green")}
@@ -6013,18 +6053,18 @@
         const signpost = mclRows("pathology_ki67_signpost")[0] || {};
         return `
           <div class="dashboard-grid mcl-triangle-dashboard">
-            ${renderSectionCard("TRIANGLE-lite feasibility template: from clinical question to answerability", `
-              <p><strong>Retrospective feasibility: feasible for cohort construction; risk-adapted TRIANGLE emulation not yet ready.</strong></p>
-              <p>This panel is a worked example of how the DALY-CARE atlas can support retrospective clinical-registry/big-data feasibility pre-studies. It starts from a trial-inspired clinical question, maps PICO elements to available DALY-CARE resources, reports aggregate cohort/exposure/outcome counts, and separates ready evidence from validation blockers.</p>
-              <p><strong>Clinical question:</strong> Can younger/fit patients with newly diagnosed mantle cell lymphoma and standard-risk biology safely omit ASCT/HDT when treated with ibrutinib plus chemoimmunotherapy, while patients with high-risk biology should still receive ASCT/HDT in addition to ibrutinib?</p>
-              <p class="mini">This is the motivating question. This is a feasibility assessment only: the current atlas output answers feasibility and source readiness, not clinical efficacy, safety, or risk-adapted treatment recommendations.</p>
-            `, "violet")}
             ${renderKpiStrip([
               { label: "all LYFO MCL", value: mclDisplay(allMcl, "1,417"), tone: "blue" },
               { label: "age <=65 younger proxy", value: mclDisplay(young, "411"), tone: "green" },
               { label: "expanded ibrutinib ever-observed", value: mclDisplay(ibrutinib, "115"), tone: "green" },
               { label: "age <=65 + ASCT/HDT + ibrutinib", value: mclDisplay(youngBoth, "11"), tone: "violet" }
             ], { tone: "violet" })}
+            ${renderSectionCard("TRIANGLE-lite feasibility template: from clinical question to answerability", `
+              <p><strong>Retrospective feasibility: feasible for cohort construction; risk-adapted TRIANGLE emulation not yet ready.</strong></p>
+              <p>This panel is a worked example of how the DALY-CARE atlas can support retrospective clinical-registry/big-data feasibility pre-studies. It starts from a trial-inspired clinical question, maps PICO elements to available DALY-CARE resources, reports aggregate cohort/exposure/outcome counts, and separates ready evidence from validation blockers.</p>
+              <p><strong>Clinical question:</strong> Can younger/fit patients with newly diagnosed mantle cell lymphoma and standard-risk biology safely omit ASCT/HDT when treated with ibrutinib plus chemoimmunotherapy, while patients with high-risk biology should still receive ASCT/HDT in addition to ibrutinib?</p>
+              <p class="mini">This is the motivating question. This is a feasibility assessment only: the current atlas output answers feasibility and source readiness, not clinical efficacy, safety, or risk-adapted treatment recommendations.</p>
+            `, "violet")}
             ${renderSectionCard("Execution and acceptance status", renderMclOutputStatus(), "blue")}
             ${renderSectionCard("PICO", renderMclPicoTable(), "blue")}
             ${renderSectionCard("Study-readiness matrix", renderMclReadinessMatrix(matrix), "blue")}
