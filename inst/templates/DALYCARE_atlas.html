@@ -231,6 +231,46 @@
       z-index: 30;
       box-shadow: var(--shadow);
     }
+    .audience-route-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .audience-route-card {
+      border-left: 4px solid var(--blue);
+      display: grid;
+      gap: 8px;
+    }
+    .audience-route-card.green { border-left-color: var(--green); }
+    .audience-route-card.amber { border-left-color: var(--amber); }
+    .audience-route-card.plum { border-left-color: var(--plum); }
+    .audience-route-card.violet { border-left-color: var(--violet); }
+    .interpretation-lead {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .interpretation-tile {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface3);
+      padding: 12px;
+      min-width: 0;
+    }
+    .trust-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin: 8px 0 12px;
+    }
+    .mcl-verdict-banner {
+      border-left: 5px solid var(--violet);
+      background: linear-gradient(90deg, rgba(91, 70, 147, .1), #fff 62%);
+    }
+    .quickstart-recipe details {
+      margin-top: 8px;
+    }
     .hero-metrics {
       margin-top: 20px;
       display: grid;
@@ -1012,16 +1052,22 @@
     @media (max-width: 520px) {
       h1 { font-size: 30px; }
       .panel-title { font-size: 20px; line-height: 1.16; }
+      .hero { padding-top: 22px; padding-bottom: 18px; }
+      .hero-meta { gap: 6px; }
       .hero-copy { font-size: 14px; }
+      .hero-metrics { margin-top: 12px; }
+      .global-search-shell details { margin-top: 6px; }
       .source-shape, .grid, .value-map-grid, .hero-metrics, .kpi-strip { grid-template-columns: minmax(0, 1fr); }
       main { padding-left: 10px; padding-right: 10px; }
       .panel-body { padding: 14px 12px 16px; }
+      .back-to-top { right: 8px; bottom: 8px; padding: 6px 8px; font-size: 11px; opacity: .86; }
       body.qa-capture main, body.qa-capture .sub-nav { max-width: 100%; margin-left: 0; margin-right: auto; }
     }
     @media (max-width: 380px) {
       .hero { padding-left: 10px; padding-right: 10px; }
       .global-search-shell { padding: 10px; }
       .utility-button, .export-button, .copy-button { padding-left: 8px; padding-right: 8px; }
+      .back-to-top { display: none; }
     }
   </style>
   <script src="DALYCARE_atlas_payload.js"></script>
@@ -1102,6 +1148,8 @@
           <div class="panel-body">
             <div id="run-status-banner"></div>
             <div style="height:14px"></div>
+            <div id="overview-audience-routes"></div>
+            <div style="height:14px"></div>
             <div id="overview-walkthrough-path"></div>
             <div style="height:14px"></div>
             <div id="overview-entry-cards" class="grid"></div>
@@ -1135,6 +1183,8 @@
           </div>
           <div class="panel-body">
             <div id="overview-pipeline-status" class="grid"></div>
+            <div style="height:14px"></div>
+            <div id="overview-special-manual-resources"></div>
           </div>
         </div>
         <div class="panel">
@@ -1249,6 +1299,8 @@
             <p class="panel-sub">Clinician-facing concept cards powered by semantic lineage, value maps, code maps, domain panels, and cartography evidence.</p>
           </div>
           <div class="panel-body">
+            <div id="clinical-variable-interpretation"></div>
+            <div style="height:14px"></div>
             <div id="clinical-variable-global-caveat"></div>
             <div style="height:14px"></div>
             <div class="toolbar">
@@ -1288,7 +1340,7 @@
             <h2 class="panel-title">Situation Report</h2>
             <p class="panel-sub">Current and recent DALY-cohort state counts. Each metric uses its own aggregate source date as the anchor and records definition/freshness status.</p>
           </div>
-          <div class="panel-body"><div id="situation-cards" class="grid"></div></div>
+          <div class="panel-body"><div id="situation-interpretation"></div><div style="height:14px"></div><div id="situation-cards" class="grid"></div></div>
         </div>
       </div>
       <div class="sub-pane" id="situation-breakdowns">
@@ -1325,11 +1377,60 @@
 
     <section class="tab-page" id="tab-quickstart">
       <div class="sub-nav" aria-label="Quick Start sections">
-        <button class="sub-tab active" data-sub="quickstart-rstudio">RStudio</button>
+        <button class="sub-tab active" data-sub="quickstart-recipes">Task recipes</button>
+        <button class="sub-tab" data-sub="quickstart-rstudio">RStudio</button>
         <button class="sub-tab" data-sub="quickstart-terminal">Terminal</button>
         <button class="sub-tab" data-sub="quickstart-preflight">Preflight</button>
       </div>
-      <div class="sub-pane active" id="quickstart-rstudio">
+      <div class="sub-pane active" id="quickstart-recipes">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Practical recipes</p>
+            <h2 class="panel-title">Start with a task</h2>
+            <p class="panel-sub">Use these recipe cards to orient new employees and analysts before opening the full source catalog. They describe aggregate-only atlas workflows; detailed code stays inside collapsible task notes.</p>
+          </div>
+          <div class="panel-body">
+            <div class="grid">
+              <article class="card quickstart-recipe">
+                <div class="trust-badge-row"><span class="badge blue">new employee route</span><span class="badge green">no raw rows</span></div>
+                <h3>RKKP registry loading and cleaning</h3>
+                <p class="mini">Start in Disease Registries, then use Data Dictionary to confirm exact registry fields and caveats.</p>
+                <details><summary>Advanced task notes</summary><pre class="code-block"><code>source("RUN_DALYCARE_ATLAS.R")
+# Review Disease Registries, then export filtered semantic rows for the registry concept.</code></pre></details>
+              </article>
+              <article class="card quickstart-recipe">
+                <div class="trust-badge-row"><span class="badge violet">cohort recipe</span><span class="badge amber">study definition needed</span></div>
+                <h3>Diagnosis cohort construction</h3>
+                <p class="mini">Use Clinical Variables, diagnosis/tumor panels, and source signposts to identify diagnosis dates and disease registry denominators.</p>
+                <details><summary>Advanced task notes</summary><pre class="code-block"><code># Search: diagnosis date, ICD, tumor, registry diagnosis.
+# Export filtered Data Dictionary rows before writing a cohort protocol.</code></pre></details>
+              </article>
+              <article class="card quickstart-recipe">
+                <div class="trust-badge-row"><span class="badge green">treatment route</span><span class="badge amber">timing validation required</span></div>
+                <h3>Drug-exposed cohorts</h3>
+                <p class="mini">Use Treatment to triangulate registry, ATC, SKS, SP medication, SMR, and prescription evidence before defining exposure windows.</p>
+                <details><summary>Advanced task notes</summary><pre class="code-block"><code># Search treatment name, ATC/SKS code, and registry regimen fields.
+# Do not interpret code/source evidence as treatment effect evidence.</code></pre></details>
+              </article>
+              <article class="card quickstart-recipe">
+                <div class="trust-badge-row"><span class="badge plum">pathology route</span><span class="badge amber">candidate / needs validation</span></div>
+                <h3>Text mining / pathology discovery</h3>
+                <p class="mini">Use Pathology/PATOBANK to find coded pathology signals such as SDS_pato.c_snomedkode and AEKI/ÆKI before planning text recovery.</p>
+                <details><summary>Advanced task notes</summary><pre class="code-block"><code># Search: Ki-67, AEKI, ÆKI, SNOMED, SDS_pato.
+# Free text is a candidate-only recovery route; no raw text is emitted.</code></pre></details>
+              </article>
+              <article class="card quickstart-recipe">
+                <div class="trust-badge-row"><span class="badge red">design check</span><span class="badge blue">not patient count</span></div>
+                <h3>Bias and completeness checks</h3>
+                <p class="mini">Use Situation Report, Infrastructure, and panel caveats to separate source availability from analytic completeness.</p>
+                <details><summary>Advanced task notes</summary><pre class="code-block"><code># Check cohort denominator, timing anchor, missingness, source confidence, and caveats.
+# Treat atlas outputs as feasibility evidence until a protocol validates definitions.</code></pre></details>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="quickstart-rstudio">
         <div class="panel">
           <div class="panel-head">
             <p class="section-kicker">One click</p>
@@ -1384,6 +1485,13 @@
             <p class="panel-sub">Search clinical concepts, raw column names, descriptors, codes, values, panels, caveats, and evidence files from the cartography reference.</p>
           </div>
           <div class="panel-body">
+            <article class="card">
+              <div class="trust-badge-row"><span class="badge blue">clinician entry point</span><span class="badge green">exportable lineage</span><span class="badge cyan">no raw text emitted</span></div>
+              <h3>What to do here</h3>
+              <p>Find where a clinical concept is stored, check the source, raw column, confidence, caveat, and evidence file, then export or copy IDs when preparing an analysis.</p>
+              <p class="mini">The detail pane keeps low-level lineage, value maps, code maps, and related panels available for analysts without making the first view a raw database dump.</p>
+            </article>
+            <div style="height:14px"></div>
             <div class="toolbar">
               <label>Search <input id="semantic-search" type="search" placeholder="smoking, ryger, height, Vægt, LDH, NPU02319, PET, blood culture, IGHV"></label>
               <label>Group <select id="semantic-group-filter"><option value="">All groups</option></select></label>
@@ -1449,7 +1557,7 @@
             <h2 class="panel-title">Disease Registry Cards</h2>
             <p class="panel-sub">Aggregate registry facets and numeric summaries for DaMyDa, LYFO, and CLL when present.</p>
           </div>
-          <div class="panel-body"><div id="registry-cards" class="grid"></div></div>
+          <div class="panel-body"><div id="registry-overview-interpretation"></div><div style="height:14px"></div><div id="registry-cards" class="grid"></div></div>
         </div>
       </div>
       <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa: myeloma registry review</h2><p class="panel-sub">Clinician-facing review of aggregate DaMyDa source shape, baseline markers, staging, treatment, response, bone disease, and cytogenetics/FISH fields.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
@@ -1526,6 +1634,8 @@
             <p class="panel-sub">Blocking errors, non-blocking warnings, unresolved sources, temporal flags, and memory guardrail decisions with operator actions.</p>
           </div>
           <div class="panel-body">
+            <div id="infrastructure-actions-interpretation"></div>
+            <div style="height:14px"></div>
             <div id="action-summary-cards" class="grid"></div>
             <div style="height:14px"></div>
             <h3>Temporal Date Quality</h3>
@@ -1534,7 +1644,10 @@
             <h3>DB Streaming Progress</h3>
             <div id="streaming-progress-cards" class="grid"></div>
             <div style="height:14px"></div>
-            <div id="run-action-items"></div>
+            <details class="lineage-block">
+              <summary>Detailed run action items</summary>
+              <div id="run-action-items" style="margin-top:12px"></div>
+            </details>
           </div>
         </div>
       </div>
@@ -1547,6 +1660,10 @@
           <div class="panel-body">
             <div id="resource-reconciliation-summary" class="grid" style="margin-bottom:14px"></div>
             <div id="resource-reconciliation-warning"></div>
+            <div id="infrastructure-catalog-interpretation"></div>
+            <div style="height:14px"></div>
+            <div id="resource-catalog-special-manual-resources"></div>
+            <div style="height:14px"></div>
             <div class="toolbar">
               <label>Search <input id="catalog-search" type="search" placeholder="Search source, domain, role, or message"></label>
               <label>Domain <select id="catalog-domain-filter"><option value="">All domains</option></select></label>
@@ -1554,7 +1671,10 @@
               <label>Role <select id="catalog-role-filter"><option value="">All roles</option></select></label>
             </div>
             <div id="catalog-count" class="mini"></div>
-            <div id="catalog-list" class="catalog-list"></div>
+            <details class="lineage-block">
+              <summary>Detailed resource catalog rows</summary>
+              <div id="catalog-list" class="catalog-list" style="margin-top:12px"></div>
+            </details>
             <details class="lineage-block">
               <summary>Current source-map rows</summary>
               <div id="current-source-catalog-list" class="catalog-list" style="margin-top:12px"></div>
@@ -1585,8 +1705,8 @@
           </div>
         </div>
       </div>
-      <div class="sub-pane" id="infra-resolution"><div class="panel"><div class="panel-head"><h2 class="panel-title">Source Resolution</h2><p class="panel-sub">DB/source resolution diagnostics and skipped or missing sources.</p></div><div class="panel-body"><div id="infrastructure-resolution"></div><div style="height:14px"></div><div id="infrastructure-skipped"></div></div></div></div>
-      <div class="sub-pane" id="infra-memory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Memory Plan</h2><p class="panel-sub">Per-source load strategy, streamed DB query logs, and memory guardrail metadata when available.</p></div><div class="panel-body"><h3>Source Strategy</h3><div id="infrastructure-memory-plan"></div><div style="height:14px"></div><h3>DB Streaming Progress</h3><div id="infrastructure-streaming-progress"></div><div style="height:14px"></div><h3>DB Budget Actions</h3><div id="infrastructure-db-budget-actions"></div><div style="height:14px"></div><h3>Temporal Date Quality</h3><div id="infrastructure-temporal-date-quality"></div><div style="height:14px"></div><h3>DB Query Log</h3><div id="infrastructure-db-query-log"></div></div></div></div>
+      <div class="sub-pane" id="infra-resolution"><div class="panel"><div class="panel-head"><h2 class="panel-title">Source Resolution</h2><p class="panel-sub">DB/source resolution diagnostics and skipped or missing sources.</p></div><div class="panel-body"><details class="lineage-block"><summary>Resolution diagnostics</summary><div id="infrastructure-resolution" style="margin-top:12px"></div></details><details class="lineage-block"><summary>Skipped or missing source rows</summary><div id="infrastructure-skipped" style="margin-top:12px"></div></details></div></div></div>
+      <div class="sub-pane" id="infra-memory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Memory Plan</h2><p class="panel-sub">Per-source load strategy, streamed DB query logs, and memory guardrail metadata when available.</p></div><div class="panel-body"><details class="lineage-block"><summary>Source strategy</summary><div id="infrastructure-memory-plan" style="margin-top:12px"></div></details><details class="lineage-block"><summary>DB streaming progress</summary><div id="infrastructure-streaming-progress" style="margin-top:12px"></div></details><details class="lineage-block"><summary>DB budget actions</summary><div id="infrastructure-db-budget-actions" style="margin-top:12px"></div></details><details class="lineage-block"><summary>Temporal date quality</summary><div id="infrastructure-temporal-date-quality" style="margin-top:12px"></div></details><details class="lineage-block"><summary>DB query log</summary><div id="infrastructure-db-query-log" style="margin-top:12px"></div></details></div></div></div>
       <div class="sub-pane" id="infra-panels">
         <div class="panel">
           <div class="panel-head">
@@ -1713,6 +1833,13 @@
       };
       const globalSearchPlaceholderFull = "Search concept, raw column, code, value, source, panel, Danish/English term...";
       const globalSearchPlaceholderMobile = "Search concept, column, code, source...";
+      const audienceRouteCards = [
+        { audience: "PI / senior research lead", question: "What can DALY-CARE answer now?", bestFor: "A fast clinical-value readout: restored panels, production run success, TRIANGLE-lite proof of concept, and remaining validation blockers.", tab: "overview", sub: "overview-summary", tone: "violet", search: "" },
+        { audience: "Disease researcher", question: "Find disease-area evidence and feasible questions.", bestFor: "Move from registry evidence to treatment, pathology, laboratory, imaging, and feasibility panels for a disease-area study idea.", tab: "registries", sub: "reg-overview", tone: "plum", search: "" },
+        { audience: "Data manager", question: "Check source resolution, run status, caveats, and lineage.", bestFor: "Inspect source confidence, run action items, exact semantic lineage, and exportable source rows without changing payloads.", tab: "infrastructure", sub: "infra-catalog", tone: "blue", search: "" },
+        { audience: "New employee", question: "Start here: learn, run, and search.", bestFor: "Use practical recipes, the one-click runner, global search, and Data Dictionary copy/export actions to learn the atlas safely.", tab: "quickstart", sub: "quickstart-recipes", tone: "green", search: "" },
+        { audience: "Manager / chief doctor", question: "Scale, operational relevance, governance, and care optimization.", bestFor: "Start with aggregate scale, source coverage, governance caveats, and care-optimization routes without opening raw infrastructure first.", tab: "overview", sub: "overview-coverage", tone: "amber", search: "" }
+      ];
       const overviewEntryCards = [
         { title: "Find clinical variables", status: "Concept index", tone: "blue", bestFor: "Checking whether a clinical concept exists before reading raw lineage.", evidence: "Semantic concepts, raw fields, value rows, code signals", examples: ["height", "LDH", "treatment exposure"], tab: "variables", sub: "variables-concepts", search: "" },
         { title: "Vitals and anthropometrics", status: "EHR evidence", tone: "blue", bestFor: "Finding height, weight, BMI, and vital-sign source fields.", evidence: "EHR vital-sign descriptors and numeric summaries", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
@@ -2711,6 +2838,54 @@
           </article>
         `).join("") || `<div class="empty">Run status metrics are not available in the current payload.</div>`;
       }
+      function renderSpecialManualResourcesCard() {
+        const rows = [
+          {
+            resource: "FISH",
+            representation: "Represented through embedded cytogenetic/FISH fields in RKKP_CLL and RKKP_DaMyDa; no standalone LAB_FISH table is expected in this run.",
+            ask: "Confirm the registry fields and source-owner meaning for FISH/cytogenetic availability and result interpretation.",
+            avoid: "Do not assume a normal standalone database table should appear in the standard catalog."
+          },
+          {
+            resource: "DANRICHT",
+            representation: "Manual/on-disk curated Richter transformation resource. Legacy atlas evidence identified danricht_clean.parquet and DANRICHT_20240412.csv. Current artifact does not expose a person-specific filesystem path.",
+            ask: "Ask the source owner for the current manual/on-disk file, ownership, refresh process, and whether it should be supplied for a future run.",
+            avoid: "Do not assume it was profiled in this artifact unless a current production run provides the manual file."
+          }
+        ];
+        return `
+          <div class="callout blue">
+            <strong>Special/manual resources.</strong>
+            FISH and DANRICHT are accounted for outside ordinary database-table profiling. They should not be read as ordinary missing DB tables.
+          </div>
+          <div class="table-wrap" style="margin-top:12px">
+            <table>
+              <thead>
+                <tr>
+                  <th>Resource</th>
+                  <th>Current representation</th>
+                  <th>What to ask the data manager/source owner</th>
+                  <th>What not to assume</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(row => `
+                  <tr>
+                    <td><strong>${escapeHtml(row.resource)}</strong></td>
+                    <td>${escapeHtml(row.representation)}</td>
+                    <td>${escapeHtml(row.ask)}</td>
+                    <td>${escapeHtml(row.avoid)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+          <div class="callout warn" style="margin-top:12px">
+            <strong>Governance note:</strong> Person-specific /NGC paths and credential locations should not be emitted into the static atlas. Keep exact owner/path details in a private source-owner register.
+            BilleddiagnostikeUndersøgelser_Del2 is handled separately as a legacy/current reconciliation issue, not as one of these two special/manual resources.
+          </div>
+        `;
+      }
       function renderOverviewEntryCards() {
         return overviewEntryCards.map(card => `
           <article class="card overview-entry-card">
@@ -2810,6 +2985,43 @@
           <h3>${escapeHtml(title)}</h3>
           ${body || `<div class="empty">not available in current aggregate output</div>`}
         </section>`;
+      }
+      function renderTrustBadge(label) {
+        const normalized = text(label || "").toLowerCase();
+        const tone = /validated|no raw|study-planning/.test(normalized) ? "green"
+          : /candidate|needs validation|manual|legacy/.test(normalized) ? "amber"
+            : /not patient count/.test(normalized) ? "blue"
+              : "cyan";
+        return renderBadge(label, tone);
+      }
+      function renderTrustBadgeRow(labels) {
+        return `<div class="trust-badge-row">${(labels || []).map(renderTrustBadge).join("")}</div>`;
+      }
+      function renderInterpretationLead(config) {
+        const cfg = config || {};
+        const tile = (title, body, tone) => `<article class="interpretation-tile ${escapeHtml(toneColor(tone))}"><h3>${escapeHtml(title)}</h3>${body}</article>`;
+        const list = items => `<ul>${(items || []).map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+        return `<div class="interpretation-lead">
+          ${tile("What this means", `<p>${escapeHtml(cfg.meaning || "Aggregate evidence is available for interpretation, source review, and study planning.")}</p>`, cfg.tone || "blue")}
+          ${tile("Key numbers", cfg.keyNumbers || `<p class="mini">Use the cards and tables below for current aggregate counts.</p>`, "green")}
+          ${tile("What questions this supports", list(cfg.supports || ["Source selection and feasibility review."]), "cyan")}
+          ${tile("Caveats / validation status", list(cfg.caveats || ["Validate source-specific definitions before patient-level extraction."]), "amber")}
+        </div>`;
+      }
+      function renderAudienceRouteCards() {
+        return renderSectionCard("Choose your route", `
+          <div class="audience-route-grid">
+            ${audienceRouteCards.map(card => `
+              <article class="card audience-route-card ${escapeHtml(toneColor(card.tone))}">
+                <div>${renderBadge(card.audience, card.tone)}</div>
+                <h3>${escapeHtml(card.question)}</h3>
+                <p class="mini">${escapeHtml(card.bestFor)}</p>
+                <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(card.tab)}" data-jump-sub="${escapeHtml(card.sub)}"${card.search ? ` data-jump-search="${escapeHtml(card.search)}"` : ""}>Open route</button>
+              </article>
+            `).join("")}
+          </div>
+          <p class="mini">Route cards are navigation aids over the same aggregate payload. They do not filter out data or change source definitions.</p>
+        `, "green");
       }
       function renderCollapsedRawLineage(rows, options) {
         const opts = options || {};
@@ -3032,6 +3244,12 @@
           <div>${renderBadge(panel.panel_status || "unknown", panel.panel_status === "restored" ? "green" : "amber")} ${renderBadge(panel.panel_section || "Panel", "blue")}</div>
           <h3>${escapeHtml(panel.panel_title || panelId)}</h3>
           <p>${escapeHtml(panel.clinical_purpose || "")}</p>
+          ${renderInterpretationLead({
+            meaning: panel.clinical_purpose || "This panel starts with interpretation and keeps source-level rows underneath.",
+            keyNumbers: renderTrustBadgeRow(["study-planning only", "not patient count"]),
+            supports: [panel.use_cases || "Clinical concept and source-signposting review."],
+            caveats: [panel.caveats || "Validate source-specific definitions before analysis."]
+          })}
           ${renderSectionCard("Clinical sections", sections.length ? `<div class="grid">${sections.map((row, i) => renderSectionCard(row.display_value || row.clinical_variable || "", `<p class="mini">${escapeHtml(row.value_class || "section")}</p>`, ["blue","green","amber","plum","cyan"][i % 5])).join("")}</div>` : `<div class="empty">No structured section rows were generated for this panel.</div>`, "blue")}
           ${renderSectionCard("KPIs", kpis.length ? renderKpiStrip(kpis.slice(0, 12).map(row => ({ label: row.label || "", value: row.value, tone: "cyan" })), { tone: "cyan" }) : `<div class="empty">No KPI rows were generated for this panel.</div>`, "cyan")}
           ${renderSectionCard("Distributions", renderDistributionRows(nonSectionDistributions, 10), "green")}
@@ -4041,13 +4259,46 @@
       });
 
       setHtml("run-status-banner", renderRunStatusBanner());
+      setHtml("overview-audience-routes", renderAudienceRouteCards());
       setHtml("overview-walkthrough-path", renderOverviewWalkthroughPath());
       setHtml("overview-entry-cards", renderOverviewEntryCards());
       setHtml("atlas-restoration-status", renderAtlasRestorationStatus());
       setHtml("overview-cross-panel-routes", renderOverviewCrossPanelRoutes());
       setHtml("overview-global-caveat", renderGlobalAtlasCaveat());
+      setHtml("clinical-variable-interpretation", renderInterpretationLead({
+        meaning: "Clinical Variables is the clinician-facing concept index. Start here when the question is clinical but the raw source names are not yet known.",
+        keyNumbers: renderTrustBadgeRow(["candidate / needs validation", "no raw text emitted", "not patient count"]),
+        supports: ["Concept discovery before analysis planning.", "Routing to raw fields, values, codes, and linked panels."],
+        caveats: ["Concept cards are source-signposting evidence; source-specific definitions still need validation."]
+      }));
       setHtml("clinical-variable-global-caveat", renderGlobalAtlasCaveat());
+      setHtml("situation-interpretation", renderInterpretationLead({
+        meaning: "Situation Report summarizes current and recent operational state using aggregate source-date anchors.",
+        keyNumbers: renderTrustBadgeRow(["validated aggregate", "not patient count"]),
+        supports: ["Operational review and freshness checks.", "Identifying where metric definitions need source-owner validation."],
+        caveats: ["Each metric has its own definition and anchor date; do not combine them as a patient-level timeline."]
+      }));
+      setHtml("registry-overview-interpretation", renderInterpretationLead({
+        meaning: "Disease registries provide curated disease-area context for cohort construction, baseline features, treatment fields, response, and follow-up.",
+        keyNumbers: renderTrustBadgeRow(["validated aggregate", "legacy reference", "study-planning only"]),
+        supports: ["Disease-area feasibility review.", "Registry-specific source selection before protocol writing."],
+        caveats: ["Registry fields are curated summaries and may not be complete event streams."]
+      }));
+      setHtml("infrastructure-actions-interpretation", renderInterpretationLead({
+        meaning: "Infrastructure panels explain trust, source resolution, memory strategy, and QA posture without changing clinical evidence.",
+        keyNumbers: renderTrustBadgeRow(["manual / embedded", "not patient count", "no raw text emitted"]),
+        supports: ["Data-manager review of run quality.", "Finding non-blocking warnings and unresolved source issues."],
+        caveats: ["Infrastructure counts are source, row, column, or QA counts, not cohort denominators."]
+      }));
+      setHtml("infrastructure-catalog-interpretation", renderInterpretationLead({
+        meaning: "The source confidence summary appears before the full catalog so reviewers can see what was accounted for before opening operational rows.",
+        keyNumbers: renderTrustBadgeRow(["source confidence summary", "manual / embedded", "not patient count"]),
+        supports: ["Checking canonical resources accounted for.", "Finding DB-attemptable profiled, special/manual/embedded, unexpected missing, and non-blocking notes."],
+        caveats: ["The detailed catalog remains complete below; staging changed, not source accounting."]
+      }));
       setHtml("overview-pipeline-status", renderPipelineStatusCards());
+      setHtml("overview-special-manual-resources", renderSpecialManualResourcesCard());
+      setHtml("resource-catalog-special-manual-resources", renderSpecialManualResourcesCard());
       setHtml("scope-notes", reviewScopeNotes.map(row => `
         <article class="card">
           <h3>${escapeHtml(row.note || "Note")}</h3>
@@ -4318,6 +4569,12 @@
         const sksPriorityRows = sksRows.filter(row => treatmentContains(row, ["antineoplastic", "chemotherapy", "immunotherapy", "radiotherapy", "sct", "stem", "lenalidomide", "bortezomib", "daratumumab", "venetoclax", "ibrutinib"]));
         return `
           <div class="dashboard-grid treatment-dashboard">
+            ${renderInterpretationLead({
+              meaning: "Treatment combines registry therapy fields, ATC medicines, SKS procedures, SP medication layers, SMR medicine, Epikur metadata, and treatment plans as source evidence for exposure definitions.",
+              keyNumbers: renderTrustBadgeRow(["candidate / needs validation", "validated aggregate", "study-planning only"]),
+              supports: ["Drug-exposed cohort planning.", "Cross-source treatment triangulation before timing-window design."],
+              caveats: ["Code or source signals are not treatment effects and are not complete line-of-therapy definitions without validation."]
+            })}
             ${renderKpiStrip([
               { label: "treatment sources", value: sources.length, tone: "blue" },
               { label: "code signals", value: primaryCodeRows.length, tone: "green" },
@@ -6053,6 +6310,24 @@
         const signpost = mclRows("pathology_ki67_signpost")[0] || {};
         return `
           <div class="dashboard-grid mcl-triangle-dashboard">
+            ${renderSectionCard("Verdict", `
+              <article class="card mcl-verdict-banner">
+                <div class="trust-badge-row">
+                  ${renderTrustBadge("validated aggregate")}
+                  ${renderTrustBadge("study-planning only")}
+                  ${renderTrustBadge("candidate / needs validation")}
+                  ${renderTrustBadge("no raw text emitted")}
+                </div>
+                <h3>Retrospective cohort construction feasible; risk-adapted TRIANGLE emulation not yet ready.</h3>
+                <ul>
+                  <li>Aggregate feasibility only.</li>
+                  <li>No causal treatment-effect estimate.</li>
+                  <li>No clinical safety claim about omitting ASCT/HDT.</li>
+                  <li>Age <=65 is a younger proxy, not observed transplant eligibility.</li>
+                  <li>Ki-67 and pathology text routes remain candidate or validation-bound unless a structured aggregate output says otherwise.</li>
+                </ul>
+              </article>
+            `, "violet")}
             ${renderKpiStrip([
               { label: "all LYFO MCL", value: mclDisplay(allMcl, "1,417"), tone: "blue" },
               { label: "age <=65 younger proxy", value: mclDisplay(young, "411"), tone: "green" },

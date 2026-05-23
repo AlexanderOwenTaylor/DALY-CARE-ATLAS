@@ -140,6 +140,55 @@ source_map <- if (length(source_map_files)) {
 mock_dir <- file.path(dirname(output_zip), sub("[.]zip$", "", basename(output_zip), ignore.case = TRUE))
 copy_dir_contents(run_dir, mock_dir)
 
+copy_project_artifact <- function(relative_path) {
+  src <- file.path(project_root, relative_path)
+  if (!file.exists(src)) return(invisible(FALSE))
+  dest <- file.path(mock_dir, relative_path)
+  dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+  file.copy(src, dest, overwrite = TRUE)
+  invisible(TRUE)
+}
+
+project_artifacts <- c(
+  "RUN_KI67_FINDER.R",
+  "RUN_MCL_TRIANGLE_COUNTS.R",
+  "config/mcl_triangle_feasibility_concepts.tsv",
+  "config/mcl_triangle_person_date_mapping.tsv",
+  "config/mcl_triangle_count_value_mappings.tsv",
+  "clinical_questions/ki67_extraction_spec.yml",
+  "clinical_questions/mcl_triangle_count_definitions.yml",
+  "clinical_questions/mcl_triangle_high_risk_biology_definitions.yml",
+  "MCL_TRIANGLE_EVIDENCE_MATCHING_FIX_NOTES.md",
+  "MCL_TRIANGLE_COUNTS_PRODUCTION_NOTES.md",
+  "MCL_TRIANGLE_ANSWERABILITY_COUNTS_NOTES.md",
+  "KI67_ONE_CLICK_RSTDIO_NOTES.md",
+  "KI67_DIRECT_PRODUCTION_FINDER_NOTES.md",
+  "KI67_DISCOVERY_NOTES.md",
+  "KI67_PRODUCTION_VALIDATION_PLAN.md",
+  "R/utils.R",
+  "R/dalycare_preflight.R",
+  "R/source_map.R",
+  "R/db_profile.R",
+  "R/ki67_discovery.R",
+  "R/ki67_production_finder.R",
+  "R/mcl_triangle_counts.R",
+  "R/mcl_triangle_feasibility.R",
+  "scripts/build_ki67_discovery.R",
+  "scripts/find_ki67_in_production.R",
+  "scripts/source_ki67_finder.R",
+  "scripts/source_mcl_triangle_counts.R",
+  "scripts/run_tests.R",
+  "tests/helper.R",
+  "tests/test-ki67-discovery.R",
+  "tests/test-ki67-production-finder.R",
+  "tests/test-ki67-one-click-runner.R",
+  "tests/test-mcl-triangle-counts.R",
+  "tests/test-mcl-triangle-answerability-counts.R",
+  "tests/test-mcl-triangle-feasibility.R",
+  "tests/test-mcl-triangle-evidence-filtering.R"
+)
+invisible(vapply(project_artifacts, copy_project_artifact, logical(1)))
+
 mock_output_dir <- file.path(mock_dir, "outputs")
 mock_panel_dir <- file.path(mock_output_dir, "panels")
 dir_create(mock_panel_dir)
@@ -332,6 +381,8 @@ mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
   semantic_value_map = semantic_outputs$value_map,
   semantic_code_map = semantic_outputs$code_map,
   semantic_panel_links = semantic_outputs$panel_links,
+  columns = columns,
+  column_profiles = column_profiles,
   panel_raw_fields = product_outputs$panel_raw_fields,
   panel_distributions = product_outputs$panel_distributions,
   panel_kpis = product_outputs$panel_kpis,
@@ -355,6 +406,45 @@ write_csv(legacy_reference_vs_current, file.path(mock_output_dir, "legacy_refere
 write_csv(remaining_activation_plan, file.path(mock_output_dir, "remaining_canonical_resources_activation_plan.csv"))
 ki67_write_outputs(ki67_discovery, output_dir = mock_output_dir, project_root = project_root)
 mcl_triangle_write_outputs(mcl_triangle_feasibility, mock_output_dir)
+if (exists("mcl_count_build_outputs", mode = "function")) {
+  mcl_triangle_count_outputs <- mcl_count_build_outputs(
+    project_root = project_root,
+    outputs_dir = mock_output_dir,
+    mode = "plan",
+    min_cell_count = atlas_min_cell_count()
+  )
+  mcl_count_write_outputs(mcl_triangle_count_outputs, mock_output_dir)
+  mcl_triangle_feasibility$cohort_counts <- mcl_count_read_outputs(mock_output_dir)
+}
+
+ki67_db_files <- file.path(
+  mock_output_dir,
+  c(
+    "ki67_db_aeki_code_counts.csv",
+    "ki67_db_p16_dual_stain_counts.csv",
+    "ki67_db_text_pattern_counts.csv",
+    "ki67_db_registry_field_counts.csv",
+    "ki67_db_summary.csv",
+    "ki67_found_locations.csv"
+  )
+)
+if (any(file.exists(ki67_db_files))) {
+  ki67_db_outputs <- ki67_db_read_outputs(mock_output_dir)
+  write_csv(ki67_db_outputs$summary, file.path(mock_output_dir, "ki67_db_summary.csv"))
+  write_csv(ki67_db_outputs$found_locations, file.path(mock_output_dir, "ki67_found_locations.csv"))
+  ki67_db_apply_to_mcl_outputs(mock_output_dir, ki67_db_outputs)
+  mcl_triangle_feasibility$summary <- read_csv_or_empty(file.path(mock_output_dir, "mcl_triangle_feasibility_summary.csv"))
+  mcl_triangle_feasibility$biology_gap_analysis <- read_csv_or_empty(file.path(mock_output_dir, "mcl_triangle_biology_gap_analysis.csv"))
+  mcl_triangle_feasibility$study_readiness_matrix <- read_csv_or_empty(file.path(mock_output_dir, "mcl_triangle_study_readiness_matrix.csv"))
+  ki67_discovery$channel_summary <- read_csv_or_empty(file.path(mock_output_dir, "ki67_channel_summary.csv"))
+  ki67_discovery$db_summary <- ki67_db_outputs$summary
+  ki67_discovery$db_found_locations <- ki67_db_outputs$found_locations
+  ki67_discovery$db_aeki_code_counts <- ki67_db_outputs$aeki_code_counts
+  ki67_discovery$db_p16_dual_stain_counts <- ki67_db_outputs$p16_dual_stain_counts
+  ki67_discovery$db_text_pattern_counts <- ki67_db_outputs$text_pattern_counts
+  ki67_discovery$db_registry_field_counts <- ki67_db_outputs$registry_field_counts
+  mcl_triangle_feasibility$ki67_discovery <- ki67_discovery
+}
 
 if (nrow(run_summary) && all(c("metric", "value") %in% names(run_summary))) {
   source_recovery_metrics <- source_recovery_run_summary_metrics(

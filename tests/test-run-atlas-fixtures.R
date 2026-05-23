@@ -140,6 +140,16 @@ expect_true(grepl("catalog-role-filter", html, fixed = TRUE), "HTML should inclu
 expect_true(grepl("resource-reconciliation-summary", html, fixed = TRUE), "Resource Catalog should include the expected-resource reconciliation summary.")
 expect_true(grepl("resource-reconciliation-warning", html, fixed = TRUE), "Resource Catalog should include legacy-current discrepancy warnings.")
 expect_true(grepl("Current source-map rows", html, fixed = TRUE), "Resource Catalog should keep current source-map details available underneath expected-resource rows.")
+for (needle in c(
+  "Special/manual resources",
+  "Represented through embedded cytogenetic/FISH fields in RKKP_CLL and RKKP_DaMyDa; no standalone LAB_FISH table is expected in this run.",
+  "Manual/on-disk curated Richter transformation resource. Legacy atlas evidence identified danricht_clean.parquet and DANRICHT_20240412.csv.",
+  "private source-owner register",
+  "BilleddiagnostikeUndersøgelser_Del2 is handled separately"
+)) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Special/manual resource clarification should include:", needle))
+}
+expect_false(grepl("/ngc/dalyca_r/people/", html, fixed = TRUE), "Special/manual clarification must not emit guessed person-specific NGC paths.")
 expect_true(grepl("column-search", html, fixed = TRUE), "HTML should include column search.")
 expect_true(grepl("column-dataset-filter", html, fixed = TRUE), "HTML should include column dataset filtering.")
 expect_true(grepl("column-domain-filter", html, fixed = TRUE), "HTML should include column domain filtering.")
@@ -597,7 +607,7 @@ expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "m
 expect_true(all(c("current_run_source_map_audit", "canonical_resource_reconciliation_64", "source_map_row_to_canonical_resource_crosswalk", "legacy_reference_vs_current_profiled_evidence") %in% manifest$artifact_id), "Manifest should list canonical source-recovery artifacts.")
 expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifact_id, "Manifest should list the remaining canonical-resource activation plan.")
 expect_true(all(c("ki67_search_inventory", "ki67_registry_field_candidates", "ki67_pathology_code_candidates", "ki67_text_pattern_candidates", "ki67_channel_summary", "ki67_aeki_validation_plan", "ki67_aeki_code_counts", "ki67_text_validation_plan") %in% manifest$artifact_id), "Manifest should list Ki-67 discovery artifacts.")
-expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
+expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")
 expect_true(all(c("atlas_temporal_coverage", "atlas_temporal_coverage_years", "atlas_spatial_region_counts", "atlas_spatial_region_coverage", "atlas_dk_choropleth_regions") %in% manifest$artifact_id), "Manifest should list V33 coverage panel artifacts.")
 expect_true(all(c("atlas_temporal_date_quality", "atlas_streaming_progress_summary") %in% manifest$artifact_id), "Manifest should list date-quality and streaming-progress panel artifacts.")
