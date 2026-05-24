@@ -124,6 +124,7 @@ expect_true(grepl("data-sub=\"situation-headlines\"", html, fixed = TRUE), "HTML
 expect_true(grepl("data-sub=\"dictionary-lineage\"", html, fixed = TRUE), "HTML should include semantic dictionary sub-tabs.")
 expect_true(grepl("data-sub=\"reg-damyda\"", html, fixed = TRUE), "HTML should include DaMyDa registry sub-tabs.")
 expect_true(grepl("data-sub=\"mcl-triangle-feasibility\"", html, fixed = TRUE), "HTML should include the MCL/TRIANGLE feasibility sub-tab.")
+expect_true(grepl("data-sub=\"confluence-feasibility\"", html, fixed = TRUE), "HTML should include the CONFLUENCE feasibility sub-tab.")
 expect_true(grepl("data-sub=\"clinical-diagnoses\"", html, fixed = TRUE), "HTML should include clinical module sub-tabs.")
 expect_true(grepl("data-sub=\"clinical-microbiology\"", html, fixed = TRUE), "HTML should include Microbiology/Infection clinical sub-tab.")
 expect_true(grepl("data-sub=\"clinical-pathology\"", html, fixed = TRUE), "HTML should include Pathology/PATOBANK clinical sub-tab.")
@@ -171,10 +172,14 @@ for (needle in c("production aggregate", "profiled aggregate", "fallback/referen
 for (needle in c("Plasma cell disorders / MM", "Other lymphoproliferative disorders", "Data Manager command center", "New employee onboarding: first 3 safe tasks", "Clinician/manager print briefing")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Cycle 2 audience panels should include:", needle))
 }
-for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "MCL / TRIANGLE feasibility", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
+for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "MCL / TRIANGLE feasibility", "DALY-CARE CONFLUENCE", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview entry cards should include:", needle))
 }
 expect_true(grepl("function renderMclTriangleFeasibilityPanel", html, fixed = TRUE), "HTML should include the MCL/TRIANGLE feasibility renderer.")
+expect_true(grepl("function renderConfluenceFeasibilityPanel", html, fixed = TRUE), "HTML should include the CONFLUENCE feasibility renderer.")
+for (needle in c("CLL/MBL", "DD479B", "D47.9B", "DD472", "DC911 / C91.1", "DC900 / C90.0", "query executable not run", "not accepted aggregate", "immortal-time bias", "surveillance/testing bias")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CONFLUENCE panel should include:", needle))
+}
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
 expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
 expect_true(grepl("feasibility assessment only", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
@@ -194,7 +199,7 @@ for (needle in c("global-atlas-search", "Search concept, raw column, code, value
 for (needle in c("function normalizeSearchText", "atlasSearchSynonyms", "function expandSearchTerms", "function scoreSearchResult", "Show all results", "Collapse results", "search-highlight")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Global atlas search pass 3 should include:", needle))
 }
-for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank", "pi briefing", "management overview", "chief doctor", "data manager", "source readiness", "feasibility", "pcd", "mm", "mgus", "amyloidosis", "cll", "lymphoma", "not in database", "del17p")) {
+for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank", "pi briefing", "management overview", "chief doctor", "data manager", "source readiness", "feasibility", "confluence", "mbl", "dd479b", "dd472", "overlap", "blood culture", "pcd", "mm", "mgus", "amyloidosis", "cll", "lymphoma", "not in database", "del17p")) {
   expect_true(grepl(needle, tolower(html), fixed = TRUE), paste("Search synonym support should include:", needle))
 }
 for (needle in c("data-search-open", "data-copy-value", "data-copy-share-link", "data-export-view", "function downloadCsv", "function rowsToCsv", "clinical-concepts", "semantic-lineage", "semantic-values", "semantic-codes", "semantic-panels")) {
@@ -275,6 +280,7 @@ for (needle in c(
   "{ name: \"quick_start\", tab: \"quickstart\", sub: \"quickstart-recipes\" }",
   "{ name: \"clinical_variables\", tab: \"variables\", sub: \"variables-concepts\" }",
   "{ name: \"mcl_triangle\", tab: \"clinical-feasibility\", sub: \"mcl-triangle-feasibility\" }",
+  "{ name: \"confluence\", tab: \"clinical-feasibility\", sub: \"confluence-feasibility\" }",
   "{ name: \"vitals\", tab: \"clinical\", sub: \"clinical-vitals\" }",
   "{ name: \"social_history\", tab: \"clinical\", sub: \"clinical-social\" }",
   "{ name: \"damyda\", tab: \"registries\", sub: \"reg-damyda\" }",
@@ -301,6 +307,7 @@ expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visua
 expect_true(grepl("pathologyPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Pathology/PATOBANK panel.")
 expect_true(grepl("biobankPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Biobank panel.")
 expect_true(grepl("mclTrianglePanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the MCL/TRIANGLE feasibility panel.")
+expect_true(grepl("confluencePanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the CONFLUENCE feasibility panel.")
 expect_true(grepl("overviewConsolidationPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Overview consolidation section.")
 expect_true(grepl("normalScreenshotCaptures", visual_qa_script, fixed = TRUE), "Visual QA script should produce non-QA normal screenshots.")
 for (needle in c("overview_normal", "run_status_normal_desktop.png", "quick_start_desktop.png", "quick_start_mobile_375.png", "resource_catalog_normal_desktop.png", "scrollSelector", "data_dictionary_normal", "code_maps_normal", "clinical_variables_normal", "treatment_normal", "capture: false", "normalOverflowCaptures", "mobile_375", "normal_360", "normal_375", "normal_390", "normal_414", "normal_482", "overview_normal_mobile_360.png", "code_maps_normal_mobile_375_NPU02319.png")) {
@@ -587,6 +594,9 @@ expect_true(grepl("No confirmed structured Ki-67 percentage evidence in current 
 expect_true(grepl("Broad pathology or LYFO source availability is search space, not Ki-67 evidence.", html, fixed = TRUE), "Ki-67 UI should label source-only evidence conservatively.")
 expect_true(grepl("AEKIxxx", html, fixed = TRUE), "Ki-67 UI should show AEKI/ÆKI validation as a route, not confirmed evidence.")
 expect_true(grepl("mcl_triangle_feasibility", payload, fixed = TRUE), "Payload should include the MCL/TRIANGLE feasibility view model.")
+expect_true(grepl("confluence_feasibility", payload, fixed = TRUE), "Payload should include the CONFLUENCE feasibility view model.")
+expect_true(grepl("confluence_disease_state_counts", payload, fixed = TRUE) || grepl("disease_state_counts", payload, fixed = TRUE), "Payload should include CONFLUENCE disease-state counts.")
+expect_true(grepl("not accepted aggregate", payload, fixed = TRUE), "Payload should include CONFLUENCE not-accepted aggregate state.")
 expect_true(grepl("Feasible with biology gaps", payload, fixed = TRUE) || grepl("Partially feasible", payload, fixed = TRUE) || grepl("Not currently feasible", payload, fixed = TRUE), "Payload should include an MCL/TRIANGLE feasibility verdict.")
 expect_true(grepl("review_clinical_variables", payload, fixed = TRUE), "Payload should include the Clinical Variables view model.")
 expect_true(grepl("review_semantic_summary", payload, fixed = TRUE), "Payload should include semantic summary rows.")
@@ -623,6 +633,7 @@ expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "m
 expect_true(all(c("current_run_source_map_audit", "canonical_resource_reconciliation_64", "source_map_row_to_canonical_resource_crosswalk", "legacy_reference_vs_current_profiled_evidence") %in% manifest$artifact_id), "Manifest should list canonical source-recovery artifacts.")
 expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifact_id, "Manifest should list the remaining canonical-resource activation plan.")
 expect_true(all(c("ki67_search_inventory", "ki67_registry_field_candidates", "ki67_pathology_code_candidates", "ki67_text_pattern_candidates", "ki67_channel_summary", "ki67_aeki_validation_plan", "ki67_aeki_code_counts", "ki67_text_validation_plan") %in% manifest$artifact_id), "Manifest should list Ki-67 discovery artifacts.")
+expect_true(all(c("confluence_summary", "confluence_disease_state_counts", "confluence_overlap_counts", "confluence_overlap_timing", "confluence_infection_outcome_readiness", "confluence_treatment_modifier_readiness", "confluence_estimands", "confluence_validation_checklist", "confluence_bias_warnings", "confluence_recommended_next_actions") %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
 expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")
 expect_true(all(c("atlas_temporal_coverage", "atlas_temporal_coverage_years", "atlas_spatial_region_counts", "atlas_spatial_region_coverage", "atlas_dk_choropleth_regions") %in% manifest$artifact_id), "Manifest should list V33 coverage panel artifacts.")

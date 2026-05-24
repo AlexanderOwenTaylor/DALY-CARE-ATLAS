@@ -1314,6 +1314,7 @@
             <div class="callout"><strong>Privacy boundary:</strong> the static atlas is aggregate-only. It should not emit patient identifiers, CPR values, raw dates, raw free text, or unsafe row previews.</div>
             <div class="grid">
               <article class="card"><h3>Clinical feasibility</h3><p class="mini">Use the TRIANGLE-lite panel as a feasibility-template example, not as a causal answer.</p><button class="sub-tab" type="button" data-jump-tab="clinical-feasibility" data-jump-sub="mcl-triangle-feasibility">Open feasibility</button></article>
+              <article class="card"><h3>CONFLUENCE</h3><p class="mini">Use the CLL/MBL and plasma-cell-disorder infection pre-study to scope overlap states, infection endpoints, and bias warnings without new production overlap counts.</p><button class="sub-tab" type="button" data-jump-tab="clinical-feasibility" data-jump-sub="confluence-feasibility">Open CONFLUENCE</button></article>
               <article class="card"><h3>Data dictionary</h3><p class="mini">Find source, raw column, confidence, caveat, and evidence file before analysis planning.</p><button class="sub-tab" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-lineage">Open dictionary</button></article>
               <article class="card"><h3>Infrastructure and QA</h3><p class="mini">Check source resolution, special/manual resources, run status, and unresolved action items.</p><button class="sub-tab" type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Open infrastructure</button></article>
             </div>
@@ -1633,6 +1634,7 @@
     <section class="tab-page" id="tab-clinical-feasibility">
       <div class="sub-nav" aria-label="Clinical Feasibility sections">
         <button class="sub-tab active" data-sub="mcl-triangle-feasibility">MCL / TRIANGLE</button>
+        <button class="sub-tab" data-sub="confluence-feasibility">CONFLUENCE</button>
       </div>
       <div class="sub-pane active" id="mcl-triangle-feasibility">
         <div class="panel">
@@ -1645,6 +1647,18 @@
             <div id="clinical-feasibility-trust-legend"></div>
             <div style="height:14px"></div>
             <div id="mcl-triangle-feasibility-dashboard"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="confluence-feasibility">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Feasibility / target-trial specification</p>
+            <h2 class="panel-title">DALY-CARE CONFLUENCE</h2>
+            <p class="panel-sub">CLL/MBLâ€“plasma-cell disorder infection feasibility panel</p>
+          </div>
+          <div class="panel-body">
+            <div id="confluence-feasibility-dashboard"></div>
           </div>
         </div>
       </div>
@@ -1889,6 +1903,7 @@
       const ki67Discovery = payload.ki67_discovery || {};
       const patobankKi67Percent = payload.patobank_ki67_percent || {};
       const mclTriangleFeasibility = payload.mcl_triangle_feasibility || {};
+      const confluenceFeasibility = payload.confluence_feasibility || {};
       const columnRows = payload.column_profile_rows || [];
       const columnTopValues = payload.column_top_value_rows || [];
       const columnSummary = payload.column_profile_summary || [];
@@ -1957,9 +1972,9 @@
       const audienceRouteCards = [
         { audience: "PI / senior investigator", question: "What can DALY-CARE support now, and what needs validation before a protocol?", firstTab: "Clinical Feasibility", nextTabs: ["Overview briefing", "Infrastructure QA"], caveat: "Feasibility panels are descriptive and not treatment-effect evidence.", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", tone: "violet", search: "pi briefing" },
         { audience: "Data manager / QA", question: "Which sources, fields, and validation actions need attention first?", firstTab: "Infrastructure / Source Catalogue", nextTabs: ["Data Dictionary", "Clinical Feasibility"], caveat: "Unknown status must stay unknown/needs validation until source-owner evidence exists.", tab: "infrastructure", sub: "infra-catalog", tone: "blue", search: "data manager QA source readiness" },
-        { audience: "Disease researcher", question: "Where do I start for disease-specific cohort and evidence review?", firstTab: "Disease Registries", nextTabs: ["Treatment", "Laboratory & Diagnostics"], caveat: "Registry indicators are source evidence, not complete medication or event timelines.", tab: "registries", sub: "reg-overview", tone: "plum", search: "disease researcher feasibility" },
-        { audience: "Plasma cell disorder / MM researcher", question: "Where are DaMyDa, imaging, bone disease, treatment, and biobank routes?", firstTab: "DaMyDa", nextTabs: ["Treatment", "Laboratory & Diagnostics"], caveat: "DaMyDa fields need study-specific definitions before extraction.", tab: "registries", sub: "reg-damyda", tone: "green", search: "PCD MM myeloma DaMyDa" },
-        { audience: "CLL researcher", question: "Where are CLL registry, IGHV/FISH/TP53, treatment, and lab signals?", firstTab: "CLL", nextTabs: ["Laboratory & Diagnostics", "Treatment"], caveat: "Embedded registry fields and coded sources need validation for analytic denominators.", tab: "registries", sub: "reg-cll", tone: "cyan", search: "CLL IGHV FISH TP53" },
+        { audience: "Disease researcher", question: "Where do I start for disease-specific cohort and evidence review?", firstTab: "Disease Registries", nextTabs: ["Clinical Feasibility", "Laboratory & Diagnostics"], caveat: "Registry indicators are source evidence; CONFLUENCE overlap rows are not accepted aggregates.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "plum", search: "disease researcher feasibility CONFLUENCE overlap" },
+        { audience: "Plasma cell disorder / MM researcher", question: "Where are DaMyDa, PCD overlap, infection, treatment, and biobank routes?", firstTab: "DaMyDa", nextTabs: ["CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DaMyDa fields and MGUS/MM overlap states need study-specific definitions before extraction.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "green", search: "PCD MM myeloma DaMyDa CONFLUENCE MGUS infection" },
+        { audience: "CLL researcher", question: "Where are CLL/MBL registry, overlap, infection, IGHV/FISH/TP53, and treatment signals?", firstTab: "CLL", nextTabs: ["CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DD479B / D47.9B is coded-candidate MBL, not validated biologic MBL.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "cyan", search: "CLL MBL DD479B CONFLUENCE infection overlap" },
         { audience: "Lymphoma researcher", question: "Where are LYFO, MCL/TRIANGLE, pathology, treatment, and outcome routes?", firstTab: "LYFO", nextTabs: ["Clinical Feasibility", "Pathology / PATOBANK"], caveat: "MCL/TRIANGLE-lite is descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", tone: "plum", search: "lymphoma LYFO MCL feasibility" },
         { audience: "New employee onboarding", question: "How do I learn the atlas safely without touching patient-level data?", firstTab: "Quick Start", nextTabs: ["Clinical Variables", "Data Dictionary"], caveat: "Use aggregate routes, glossary terms, and exports; do not infer patient-level completeness.", tab: "quickstart", sub: "quickstart-recipes", tone: "green", search: "onboarding new employee" },
         { audience: "Senior clinician / manager", question: "What is the scale, operational relevance, and safe headline message?", firstTab: "Overview briefing", nextTabs: ["Situation Report", "Clinical Data"], caveat: "The atlas supports planning and source readiness, not clinical treatment recommendations.", tab: "overview", sub: "overview-briefing", tone: "amber", search: "chief doctor management overview" }
@@ -1974,8 +1989,8 @@
         { label: "descriptive feasibility only", tone: "cyan", meaning: "Study-planning signal only; not causal evidence, not a recommendation, and not treatment safety evidence." }
       ];
       const diseaseEntryCards = [
-        { title: "Plasma cell disorders / MM", firstSource: "DaMyDa registry", support: ["Treatment", "Imaging", "Biobank"], question: "Can a myeloma cohort be scoped with staging, bone disease, imaging, and treatment context?", caveat: "Registry indicators and imaging fields need source-specific definitions.", tab: "registries", sub: "reg-damyda", search: "PCD MM myeloma DaMyDa" },
-        { title: "CLL", firstSource: "RKKP CLL registry", support: ["Laboratory & Diagnostics", "Treatment", "Data Dictionary"], question: "Which CLL registry and molecular/treatment signals are available for feasibility?", caveat: "IGHV/FISH/TP53 and treatment routes are evidence layers, not complete analytic timelines.", tab: "registries", sub: "reg-cll", search: "CLL IGHV FISH TP53" },
+        { title: "Plasma cell disorders / MM", firstSource: "DaMyDa registry", support: ["CONFLUENCE", "Treatment", "Biobank"], question: "Can a myeloma or MGUS/SMM/MM overlap cohort be scoped with infection, staging, imaging, and treatment context?", caveat: "Registry indicators and CONFLUENCE overlap rows need source-specific validation.", tab: "clinical-feasibility", sub: "confluence-feasibility", search: "PCD MM myeloma DaMyDa MGUS CONFLUENCE" },
+        { title: "CLL", firstSource: "RKKP CLL registry", support: ["CONFLUENCE", "Laboratory & Diagnostics", "Treatment"], question: "Which CLL/MBL registry, molecular/treatment, and infection-overlap signals are available for feasibility?", caveat: "IGHV/FISH/TP53 and treatment routes are evidence layers; DD479B MBL is coded candidate evidence.", tab: "clinical-feasibility", sub: "confluence-feasibility", search: "CLL MBL DD479B CONFLUENCE IGHV FISH TP53" },
         { title: "Lymphoma", firstSource: "LYFO registry", support: ["MCL/TRIANGLE-lite", "Pathology / PATOBANK", "Treatment"], question: "Can lymphoma/MCL cohorts be scoped with registry, pathology, treatment, and outcome evidence?", caveat: "TRIANGLE-lite remains descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", search: "lymphoma LYFO MCL" },
         { title: "Other lymphoproliferative disorders", firstSource: "Diagnosis and registry routes", support: ["Clinical Variables", "Laboratory & Diagnostics", "Data Dictionary"], question: "Which diagnosis/source families can support an exploratory LPD feasibility question?", caveat: "Start with diagnosis/source readiness before defining analytic cohorts.", tab: "variables", sub: "variables-concepts", search: "lymphoproliferative diagnosis registry" }
       ];
@@ -1985,6 +2000,7 @@
         { title: "Smoking and alcohol", status: "EHR evidence", tone: "blue", bestFor: "Reviewing social-history smoking and alcohol evidence.", evidence: "EHR social-history categories", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
         { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
         { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Walking from a trial-inspired lymphoma question to aggregate feasibility counts, design warnings, and a validation plan.", evidence: "Production aggregate cohort, exposure, outcome, age-proxy, Ibrutinib, and Ki-67 feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+        { title: "DALY-CARE CONFLUENCE", status: "Overlap-feasibility panel", tone: "cyan", bestFor: "Scoping CLL/MBL, MGUS/SMM/MM, converging clonal states, infection outcomes, and bias structure before any overlap query is accepted.", evidence: "Candidate diagnosis anchors, PICO, estimands, readiness tables, validation logic, and not-run overlap rows", examples: ["MBL", "DD479B", "MGUS", "infection"], tab: "clinical-feasibility", sub: "confluence-feasibility" },
         { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "laboratory", sub: "lab-microbiology" },
@@ -2006,12 +2022,14 @@
         { panel: "Pathology/PATOBANK", status: "restored", note: "SNOMED cleanup passed", tone: "green" },
         { panel: "Biobank", status: "restored", note: "identifier/date and low-count safeguards in place", tone: "green" },
         { panel: "MCL / TRIANGLE feasibility", status: "added", note: "aggregate feasibility panel; no causal or treatment recommendation claims", tone: "violet" },
+        { panel: "DALY-CARE CONFLUENCE", status: "added", note: "overlap-feasibility scaffold; no production overlap queries accepted yet", tone: "cyan" },
         { panel: "Clinical Variables", status: "restored", note: "clinician-first concept ordering", tone: "green" },
         { panel: "Data Dictionary", status: "restored", note: "stacked raw-lineage detail pane", tone: "green" }
       ];
       const overviewCrossPanelRoutes = [
         { title: "Registry to treatment evidence", from: "DaMyDa / LYFO / CLL", to: "Treatment", examples: ["Bortezomib", "R-CHOP", "Ibrutinib"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "MCL feasibility to source activation", from: "LYFO / Treatment / Pathology", to: "MCL / TRIANGLE", examples: ["MCL", "TP53", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+        { title: "CLL/MBL and PCD overlap feasibility", from: "CLL / DaMyDa / Microbiology", to: "CONFLUENCE", examples: ["MBL", "MGUS", "infection"], tab: "clinical-feasibility", sub: "confluence-feasibility" },
         { title: "TRIANGLE-lite to Ki-67 pathology evidence", from: "MCL / TRIANGLE", to: "Pathology / PATOBANK", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato"], tab: "laboratory", sub: "lab-pathology" },
         { title: "Registry to labs and NPU codes", from: "Disease registries", to: "Laboratory / NPU", examples: ["LDH", "Creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "laboratory", sub: "lab-microbiology" },
@@ -2134,7 +2152,17 @@
         "data manager": ["source status", "Data Dictionary", "QA", "Infrastructure", "Catrine", "source readiness"],
         "source readiness": ["source status", "source resolution", "QA", "Infrastructure"],
         "source status": ["source resolution", "not in database", "unresolved", "QA", "source readiness"],
-        feasibility: ["clinical feasibility", "MCL", "TRIANGLE", "study planning"],
+        feasibility: ["clinical feasibility", "MCL", "TRIANGLE", "CONFLUENCE", "study planning"],
+        confluence: ["DALY-CARE CONFLUENCE", "CLL MBL", "MGUS", "overlap", "infection", "blood culture"],
+        mbl: ["DD479B", "D47.9B", "Monoklonal B-celle lymfocytose", "CLL MBL", "CONFLUENCE"],
+        dd479b: ["MBL", "D47.9B", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
+        "d47 9b": ["MBL", "DD479B", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
+        "monoklonal b celle lymfocytose": ["MBL", "DD479B", "D47.9B", "CONFLUENCE"],
+        "cll mgus": ["CONFLUENCE", "overlap", "infection"],
+        "cll mm": ["CONFLUENCE", "overlap", "infection"],
+        "mbl mgus": ["CONFLUENCE", "DD479B", "MGUS", "overlap"],
+        overlap: ["CONFLUENCE", "CLL MGUS", "CLL MM", "MBL MGUS", "infection"],
+        "blood culture": ["microbiology", "infection", "CONFLUENCE"],
         qa: ["quality assurance", "unresolved", "source status", "source readiness"],
         unresolved: ["QA", "not in database", "source status"],
         "not in database": ["source status", "special/manual resource", "manual file"],
@@ -2144,10 +2172,11 @@
         "plasma cell disorder": ["PCD", "myeloma", "MGUS", "amyloidosis", "DaMyDa"],
         myeloma: ["myelomatose", "DaMyDa", "PCD", "plasma cell disorder"],
         myelomatose: ["myeloma", "DaMyDa", "PCD"],
-        mgus: ["PCD", "plasma cell disorder", "DaMyDa"],
+        mgus: ["PCD", "plasma cell disorder", "DaMyDa", "DD472", "CONFLUENCE", "overlap"],
+        dd472: ["MGUS", "D47.2", "plasma cell disorder", "CONFLUENCE"],
         amyloidosis: ["PCD", "plasma cell disorder", "DaMyDa"],
         damyda: ["myeloma", "myelomatose", "PCD"],
-        cll: ["chronic lymphocytic leukemia", "RKKP_CLL", "Binet", "TP53"],
+        cll: ["chronic lymphocytic leukemia", "RKKP_CLL", "Binet", "TP53", "MBL", "CONFLUENCE"],
         lymphoma: ["lymfom", "LYFO"],
         lymfom: ["lymphoma", "LYFO"],
         lyfo: ["lymphoma", "lymfom", "MCL", "mantle cell lymphoma"],
@@ -2295,6 +2324,7 @@
       }
       function panelRoute(panelId) {
         const id = text(panelId || "").toLowerCase();
+        if (/confluence|mbl|mgus|dd479b|dd472|d47\.?9b|d47\.?2|overlap|dual.?clone|cll mgus|cll mm|mbl mgus/.test(id)) return { tab: "clinical-feasibility", sub: "confluence-feasibility" };
         if (/mcl|triangle|mantle|feasibility/.test(id)) return { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" };
         if (/damyda/.test(id)) return { tab: "registries", sub: "reg-damyda" };
         if (/lyfo/.test(id)) return { tab: "registries", sub: "reg-lyfo" };
@@ -2357,6 +2387,27 @@
             mclPanelSearchRow,
             { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
             { query: q, item: "mcl_triangle_feasibility", status: "Feasibility panel", copy: "#clinical-feasibility/mcl-triangle-feasibility", score: mclPanelScore + 100 }
+          ));
+        }
+        const confluencePanelSearchRow = {
+          panel_id: "confluence_feasibility",
+          panel_title: "DALY-CARE CONFLUENCE",
+          clinical_purpose: "CLL/MBL and plasma-cell-disorder infection overlap feasibility panel with PICO, estimands, diagnosis-code anchors, readiness tables, and not-run overlap rows.",
+          search_terms: "CONFLUENCE MBL DD479B D47.9B Monoklonal B-celle lymfocytose MGUS DD472 D47.2 CLL DC911 C91.1 MM DC900 C90.0 CLL MGUS CLL MM MBL MGUS overlap infection microbiology blood culture bloodstream recurrent infection"
+        };
+        const confluencePanelScore = scoreSearchResult(confluencePanelSearchRow, q, {
+          exact: ["panel_id", "panel_title"],
+          title: ["panel_title"],
+          body: ["clinical_purpose", "search_terms"]
+        });
+        if (confluencePanelScore > 0) {
+          grouped["Panels"].push(makeSearchResult(
+            "Panels",
+            "DALY-CARE CONFLUENCE",
+            "CLL/MBL-plasma-cell disorder infection feasibility panel; scaffold-first and not accepted aggregate overlap counts.",
+            confluencePanelSearchRow,
+            { tab: "clinical-feasibility", sub: "confluence-feasibility" },
+            { query: q, item: "confluence_feasibility", status: "Overlap-feasibility panel", copy: "#clinical-feasibility/confluence-feasibility", score: confluencePanelScore + 130 }
           ));
         }
         ((patobankKi67Percent && patobankKi67Percent.summary) || []).forEach(row => {
@@ -7376,6 +7427,176 @@
         `;
       }
 
+      function confluenceRows(name) {
+        return (confluenceFeasibility && confluenceFeasibility[name]) || [];
+      }
+      function confluenceStatusTone(status) {
+        const s = text(status || "").toLowerCase();
+        if (/accepted|validated|present|required|privacy-safe/.test(s) && !/not accepted|validation required/.test(s)) return "green";
+        if (/coded candidate|candidate mapping|fallback|reference|query executable|not run|not accepted|validation required/.test(s)) return "amber";
+        if (/blocked|small-cell|not causal|not available/.test(s)) return "red";
+        if (/profiled|diagnosis-atlas|source-readiness/.test(s)) return "blue";
+        return "cyan";
+      }
+      function renderConfluenceTable(rows, columns, maxRows) {
+        const visible = (rows || []).slice(0, maxRows || 20);
+        if (!visible.length) return `<div class="empty">No CONFLUENCE rows available in current aggregate output.</div>`;
+        return `<div class="table-wrap"><table>
+          <thead><tr>${columns.map(col => `<th>${escapeHtml(col.label)}</th>`).join("")}</tr></thead>
+          <tbody>${visible.map(row => `<tr data-row-search-key="${escapeHtml(rowHay(row))}">${columns.map(col => `<td>${col.render ? col.render(row) : escapeHtml(row[col.key] || "")}</td>`).join("")}</tr>`).join("")}</tbody>
+        </table></div>`;
+      }
+      function confluenceSummaryMetric(metricId) {
+        return confluenceRows("summary").find(row => row.metric === metricId) || {};
+      }
+      function renderConfluenceEvidenceState() {
+        const disease = confluenceRows("disease_state_counts");
+        const anchor = id => disease.find(row => row.entity_id === id) || {};
+        const mbl = anchor("mbl_candidate");
+        const mgus = anchor("mgus_candidate");
+        const cll = anchor("cll_candidate");
+        const mm = anchor("mm_candidate");
+        return `
+          ${renderTrustBadgeRow(["feasibility only", "coded candidate cohort", "diagnosis-atlas records", "query executable not run", "not accepted aggregate", "not causal"])}
+          ${renderKpiStrip([
+            { label: "CLL anchor", value: cll.count_display || "not available", tone: "blue", countKind: cll.count_kind || "diagnosis-atlas records", statusLabel: cll.evidence_status || "coded candidate cohort", source: "DC911 / C91.1", validationStatus: "not validated persons" },
+            { label: "MBL anchor", value: mbl.count_display || "not available", tone: "amber", countKind: mbl.count_kind || "diagnosis-atlas records", statusLabel: "coded candidate cohort", source: "DD479B / D47.9B", validationStatus: "not validated persons" },
+            { label: "MGUS anchor", value: mgus.count_display || "not available", tone: "amber", countKind: mgus.count_kind || "diagnosis-atlas records", statusLabel: "coded candidate cohort", source: "DD472 / D47.2", validationStatus: "not validated persons" },
+            { label: "MM anchor", value: mm.count_display || "not available", tone: "blue", countKind: mm.count_kind || "diagnosis-atlas records", statusLabel: mm.evidence_status || "coded candidate cohort", source: "DC900 / C90.0", validationStatus: "not validated persons" },
+            { label: "overlap counts", value: "not run", tone: "amber", countKind: "not run", statusLabel: "query executable not run", validationStatus: "not accepted aggregate" },
+            { label: "raw patient rows", value: "0", tone: "green", countKind: "not patient count", statusLabel: "aggregate-only" }
+          ], { tone: "cyan" })}
+          <div class="callout warn"><strong>MBL cohort status:</strong> DD479B / D47.9B is displayed as a coded candidate cohort and diagnosis-atlas records, not as validated biologic MBL and not as validated persons.</div>
+          <div class="callout"><strong>Overlap status:</strong> CONFLUENCE is scaffold-first. Overlap rows are query executable not run and not accepted aggregate until a future aggregate execution returns accepted outputs.</div>
+        `;
+      }
+      function renderConfluencePico() {
+        const rows = [
+          ["Population", "Adults in DALY-CARE with candidate or validated evidence of CLL, MBL, MGUS, SMM, MM, or related plasma-cell disorders.", "candidate/source validation required"],
+          ["Exposure", "Time-varying clonal disease state: CLL only, MBL only, MGUS/SMM/MM only, CLL + MGUS/SMM/MM, or MBL + MGUS/SMM/MM.", "not accepted aggregate"],
+          ["Comparator", "Primary: overlap versus CLL/MBL without plasma-cell disorder. Secondary: overlap versus plasma-cell disorder without CLL/MBL.", "query executable not run"],
+          ["Outcomes", "First serious infection, infection-related hospitalization, recurrent serious infection, microbiology-confirmed infection, bloodstream infection, resistant organism signal, and infection-related mortality.", "source validation required"],
+          ["Time horizon", "1, 2, and 5 years after disease-state entry; separate pre-treatment and post-treatment periods.", "protocol validation required"],
+          ["Setting", "Danish nationwide register/EHR-linked DALY-CARE resource with registry, diagnosis, treatment, lab, microbiology, and hospital-contact layers.", "feasibility only"]
+        ];
+        return `<div class="table-wrap"><table>
+          <thead><tr><th>PICO element</th><th>Specification</th><th>Status</th></tr></thead>
+          <tbody>${rows.map(row => `<tr><td><strong>${escapeHtml(row[0])}</strong></td><td>${escapeHtml(row[1])}</td><td>${renderBadge(row[2], confluenceStatusTone(row[2]))}</td></tr>`).join("")}</tbody>
+        </table></div>`;
+      }
+      function renderConfluenceEstimands() {
+        const rows = confluenceRows("estimands");
+        if (!rows.length) return `<div class="empty">No estimand cards were generated.</div>`;
+        return `<div class="grid grid-2">${rows.map(row => `
+          <article class="clinical-card">
+            ${renderTrustBadge(row.feasibility_status || "feasibility only")}
+            <h3>${escapeHtml(row.title || "")}</h3>
+            <p><strong>Population:</strong> ${escapeHtml(row.population || "")}</p>
+            <p><strong>Exposure condition:</strong> ${escapeHtml(row.exposure_condition || "")}</p>
+            <p><strong>Outcome variable:</strong> ${escapeHtml(row.outcome_variable || "")}</p>
+            <p><strong>Intercurrent events:</strong> ${escapeHtml(row.intercurrent_events || "")}</p>
+            <p><strong>Summary measure:</strong> ${escapeHtml(row.summary_measure || "")}</p>
+            <p class="mini">${escapeHtml(row.plain_language || "")}</p>
+          </article>`).join("")}</div>`;
+      }
+      function renderConfluenceDiseaseCounts() {
+        const rows = confluenceRows("disease_state_counts");
+        return renderConfluenceTable(rows, [
+          { key: "entity_label", label: "Disease-state anchor", render: row => `<strong>${escapeHtml(row.entity_label || "")}</strong><div class="mini">${escapeHtml(row.diagnosis_label || "")}</div>` },
+          { key: "danish_sks_code", label: "Anchor code", render: row => escapeHtml([row.danish_sks_code, row.icd10_code].filter(Boolean).join(" / ") || "not located") },
+          { key: "count_display", label: "Current display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "evidence_status", label: "Evidence status", render: row => renderBadge(row.evidence_status || "", confluenceStatusTone(row.evidence_status)) },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "evidence_source", label: "Evidence source" },
+          { key: "notes", label: "Notes" }
+        ], 12);
+      }
+      function renderConfluenceOverlapRows(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "overlap_label", label: "Overlap", render: row => `<strong>${escapeHtml(row.overlap_label || row.timing_label || "")}</strong>` },
+          { key: "count_display", label: "Count display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "query_status", label: "Query status", render: row => renderBadge(row.query_status || row.evidence_status || "", confluenceStatusTone(row.query_status || row.evidence_status)) },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceReadiness(rows, labelKey, idKey) {
+        return renderConfluenceTable(rows, [
+          { key: labelKey, label: "Readiness row", render: row => `<strong>${escapeHtml(row[labelKey] || row[idKey] || "")}</strong><div class="mini">${escapeHtml(row.source_layer || "")}</div>` },
+          { key: "source_signal", label: "Source signal" },
+          { key: "readiness_status", label: "Readiness", render: row => renderBadge(row.readiness_status || "", confluenceStatusTone(row.readiness_status)) },
+          { key: "count_kind", label: "Count kind", render: row => renderTrustBadge(row.count_kind || "source-readiness signal") },
+          { key: "validation_needed", label: "Validation needed" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceBiasWarnings() {
+        const rows = confluenceRows("bias_warnings");
+        return renderConfluenceTable(rows, [
+          { key: "bias_label", label: "Bias", render: row => `<strong>${escapeHtml(row.bias_label || "")}</strong><div class="mini">${escapeHtml(row.severity || "")}</div>` },
+          { key: "why_it_matters", label: "Why it matters" },
+          { key: "mitigation", label: "Mitigation" }
+        ], 12);
+      }
+      function renderConfluenceFeasibilityPanel() {
+        const summary = confluenceRows("summary");
+        const overlapCounts = confluenceRows("overlap_counts");
+        const overlapTiming = confluenceRows("overlap_timing");
+        const validation = confluenceRows("validation_checklist");
+        const infection = confluenceRows("infection_outcome_readiness");
+        const treatment = confluenceRows("treatment_modifier_readiness");
+        const actions = confluenceRows("recommended_next_actions");
+        const disease = confluenceRows("disease_state_counts");
+        const technical = []
+          .concat(summary.map(row => Object.assign({ table: "summary" }, row)))
+          .concat(disease.map(row => Object.assign({ table: "disease_state_counts" }, row)))
+          .concat(overlapCounts.map(row => Object.assign({ table: "overlap_counts" }, row)))
+          .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)));
+        return `
+          <div class="dashboard-grid confluence-dashboard">
+            ${renderSectionCard("DALY-CARE CONFLUENCE", `
+              <div class="callout"><strong>CLL/MBLâ€“plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
+              <p>This panel evaluates whether DALY-CARE can support a retrospective observational study of serious and microbiologically confirmed infections in people with CLL/MBL, plasma-cell disorders, or both. It is feasibility infrastructure only. It does not estimate causal effects and does not make treatment recommendations.</p>
+              ${renderTrustBadgeRow(["feasibility only", "not causal", "coded candidate cohort", "query executable not run", "not accepted aggregate"])}
+            `, "cyan")}
+            ${renderSectionCard("Clinical question", `
+              <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBLâ€“plasma-cell-disorder overlap states?</strong></p>
+              <p class="mini">Core design question: can we identify people with CLL or MBL, people with plasma-cell disorders, and people with overlapping B-cell and plasma-cell clonal states, then compare serious and microbiologically confirmed infection burden without diagnosis-order or surveillance-intensity bias?</p>
+            `, "blue")}
+            ${renderSectionCard("Current evidence state", renderConfluenceEvidenceState(), "cyan")}
+            ${renderSectionCard("PICO", renderConfluencePico(), "blue")}
+            ${renderSectionCard("Estimands", renderConfluenceEstimands(), "plum")}
+            ${renderSectionCard("Disease-state candidate counts", renderConfluenceDiseaseCounts(), "green")}
+            ${renderSectionCard("Overlap counts: not-run / not-accepted", renderConfluenceOverlapRows(overlapCounts), "amber")}
+            ${renderSectionCard("Overlap timing: not-run / not-accepted", renderConfluenceOverlapRows(overlapTiming), "amber")}
+            ${renderSectionCard("Validation checklist", renderConfluenceTable(validation, [
+              { key: "entity_label", label: "Entity", render: row => `<strong>${escapeHtml(row.entity_label || "")}</strong><div class="mini">${escapeHtml(row.status || "")}</div>` },
+              { key: "validation_step", label: "Validation step" },
+              { key: "source_hint", label: "Source hint" },
+              { key: "notes", label: "Notes" }
+            ], 20), "blue")}
+            ${renderSectionCard("Infection outcome readiness", renderConfluenceReadiness(infection, "outcome_label", "outcome_id"), "green")}
+            ${renderSectionCard("Treatment modifier readiness", renderConfluenceReadiness(treatment, "modifier_label", "modifier_id"), "violet")}
+            ${renderSectionCard("Bias warnings", renderConfluenceBiasWarnings(), "red")}
+            ${renderSectionCard("Bias checklist headline", `
+              <p class="mini">Bias warnings covered: immortal-time bias; surveillance/testing bias; MBL undercoding; MGUS ascertainment bias; treatment confounding; progression/state-transition bias; competing mortality; small-cell suppression.</p>
+            `, "red")}
+            ${renderSectionCard("Recommended next actions", renderConfluenceTable(actions, [
+              { key: "action_label", label: "Action", render: row => `<strong>${escapeHtml(row.action_label || "")}</strong><div class="mini">${escapeHtml(row.priority || "")} - ${escapeHtml(row.status || "")}</div>` },
+              { key: "owner_role", label: "Owner role" },
+              { key: "notes", label: "Notes" }
+            ], 12), "green")}
+            ${renderSectionCard("Technical raw/source disclosure", `
+              <details class="lineage-block">
+                <summary>Technical CONFLUENCE scaffold rows</summary>
+                <p class="mini">Raw scaffold rows are preserved here for analysts. They are not patient-level rows and do not contain CPR values, raw dates, or raw free text.</p>
+                ${rowsForTable(technical, 80)}
+              </details>
+            `, "plum")}
+          </div>
+        `;
+      }
+
       function humanizeNpuVector(value) {
         const raw = text(value || "").trim();
         if (!raw) return "";
@@ -7482,6 +7703,7 @@
         setHtml("registry-cll", renderCLLPanel());
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
         setHtml("mcl-triangle-feasibility-dashboard", renderMclTriangleFeasibilityPanel());
+        setHtml("confluence-feasibility-dashboard", renderConfluenceFeasibilityPanel());
 
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));
