@@ -1630,8 +1630,8 @@
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Procedure-code imaging, DaMyDa registry imaging/bone disease, SP metadata/report availability, and radiotherapy signals.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
-      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical infection-study planning.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Aggregate coded pathology, SNOMED, specimen/material, tumor-coded, and report-text availability evidence. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical cohort planning.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical planning.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Aggregate coded pathology, SNOMED, specimen/material, tumor-coded, and report-text availability evidence. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical planning.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
@@ -1652,7 +1652,7 @@
         <button class="sub-tab" data-sub="lab-biobank">Biobank</button>
         <button class="sub-tab" data-sub="lab-sources">Lab Sources</button>
       </div>
-      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory & Diagnostics / NPU atlas</h2><p class="panel-sub">Clinician-facing laboratory concept discovery across NPU/DNK codes, national LABKA/SDS, SP AlleProvesvar, PERSIMUNE biochemistry, and registry lab fields.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
+      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory & Diagnostics / NPU atlas</h2><p class="panel-sub">Clinician-facing Laboratory / NPU atlas concept discovery across NPU/DNK codes, national LABKA/SDS, SP AlleProvesvar, PERSIMUNE biochemistry, and registry lab fields.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
       <div class="sub-pane" id="lab-detective"><div class="panel"><div class="panel-head"><h2 class="panel-title">NPU Detective</h2><p class="panel-sub">Observed NPU inventory and candidate codes from aggregate code panels.</p></div><div class="panel-body"><div id="detective-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging / radiotherapy diagnostics</h2><p class="panel-sub">Primary diagnostics home for UX/BWGC procedure footprints, DaMyDa imaging/bone disease, and SP imaging/report route status. Cross-linked from Clinical Data for study planning.</p></div><div class="panel-body"><div id="laboratory-imaging-cards"></div></div></div></div>
       <div class="sub-pane" id="lab-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / MiBa diagnostics</h2><p class="panel-sub">Primary diagnostics home for microbiology source, organism/culture, specimen, antibiotic-agent, and susceptibility result evidence. Cross-linked from Clinical Data for infection-study planning.</p></div><div class="panel-body"><div id="laboratory-microbiology-cards"></div></div></div></div>
@@ -1908,9 +1908,9 @@
         { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Walking from a trial-inspired lymphoma question to aggregate feasibility counts, design warnings, and a validation plan.", evidence: "Production aggregate cohort, exposure, outcome, age-proxy, Ibrutinib, and Ki-67 feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
         { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
-        { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "clinical", sub: "clinical-microbiology" },
-        { title: "Imaging", status: "Procedure/metadata evidence", tone: "blue", bestFor: "Finding procedure-code imaging, SP metadata, radiotherapy, and registry modality fields.", evidence: "SKS/procedure rows, SP metadata, DaMyDa registry fields", examples: ["CT", "UXZ11", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
-        { title: "Pathology / PATOBANK", status: "SNOMED evidence", tone: "plum", bestFor: "Finding coded pathology evidence, including Ki-67 proliferation-index signposting, before planning any text recovery.", evidence: "PATOBANK/SDS coded pathology, SNOMED/AEKI rows, and text-availability rows", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato", "c_snomedkode"], tab: "clinical", sub: "clinical-pathology" },
+        { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "laboratory", sub: "lab-microbiology" },
+        { title: "Imaging", status: "Procedure/metadata evidence", tone: "blue", bestFor: "Finding procedure-code imaging, SP metadata, radiotherapy, and registry modality fields.", evidence: "SKS/procedure rows, SP metadata, DaMyDa registry fields", examples: ["CT", "UXZ11", "BWGC1"], tab: "laboratory", sub: "lab-imaging" },
+        { title: "Pathology / PATOBANK", status: "SNOMED evidence", tone: "plum", bestFor: "Finding coded pathology evidence, including Ki-67 proliferation-index signposting, before planning any text recovery.", evidence: "PATOBANK/SDS coded pathology, SNOMED/AEKI rows, and text-availability rows", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato", "c_snomedkode"], tab: "laboratory", sub: "lab-pathology" },
         { title: "Biobank samples", status: "Sample evidence", tone: "green", bestFor: "Checking aggregate sample source, sample type, and translational source labels.", evidence: "Biobank sample-source/type distributions and lineage rows", examples: ["Sample_source", "PLASMA", "CLL_BIOBANK"], tab: "laboratory", sub: "lab-biobank" },
         { title: "Raw names / Data Dictionary", status: "Raw lineage", tone: "blue", bestFor: "Finding exact table, column, code, descriptor, and value names for analyst lineage.", evidence: "Semantic data dictionary, value map, code map, panel links", examples: ["Reg_LDH", "NPU02319", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
       ];
@@ -1933,10 +1933,10 @@
       const overviewCrossPanelRoutes = [
         { title: "Registry to treatment evidence", from: "DaMyDa / LYFO / CLL", to: "Treatment", examples: ["Bortezomib", "R-CHOP", "Ibrutinib"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "MCL feasibility to source activation", from: "LYFO / Treatment / Pathology", to: "MCL / TRIANGLE", examples: ["MCL", "TP53", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
-        { title: "TRIANGLE-lite to Ki-67 pathology evidence", from: "MCL / TRIANGLE", to: "Pathology / PATOBANK", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato"], tab: "clinical", sub: "clinical-pathology" },
+        { title: "TRIANGLE-lite to Ki-67 pathology evidence", from: "MCL / TRIANGLE", to: "Pathology / PATOBANK", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato"], tab: "laboratory", sub: "lab-pathology" },
         { title: "Registry to labs and NPU codes", from: "Disease registries", to: "Laboratory / NPU", examples: ["LDH", "Creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
-        { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "clinical", sub: "clinical-microbiology" },
-        { title: "Myeloma bone disease to imaging", from: "DaMyDa", to: "Imaging", examples: ["PET/CT", "Reg_Knogleforandringer", "BWGC1"], tab: "clinical", sub: "clinical-imaging" },
+        { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "laboratory", sub: "lab-microbiology" },
+        { title: "Myeloma bone disease to imaging", from: "DaMyDa", to: "Imaging", examples: ["PET/CT", "Reg_Knogleforandringer", "BWGC1"], tab: "laboratory", sub: "lab-imaging" },
         { title: "Pathology to sample availability", from: "Pathology / PATOBANK", to: "Biobank samples", examples: ["SNOMED", "Sample_source", "PLASMA"], tab: "laboratory", sub: "lab-biobank" },
         { title: "Concept to raw lineage", from: "Clinical Variables", to: "Raw names / Data Dictionary", examples: ["Reg_LDH", "ryger", "c_snomedkode"], tab: "dictionary", sub: "dictionary-lineage" }
       ];
@@ -2214,9 +2214,9 @@
         if (/\bcll\b|reg_cll/.test(id)) return { tab: "registries", sub: "reg-cll" };
         if (/social|lifestyle/.test(id)) return { tab: "clinical", sub: "clinical-social" };
         if (/vital|anthrop/.test(id)) return { tab: "clinical", sub: "clinical-vitals" };
-        if (/micro|infection|blood.?culture/.test(id)) return { tab: "clinical", sub: "clinical-microbiology" };
-        if (/imaging|radiotherapy/.test(id)) return { tab: "clinical", sub: "clinical-imaging" };
-        if (/pathology|pato|snomed/.test(id)) return { tab: "clinical", sub: "clinical-pathology" };
+        if (/micro|infection|blood.?culture/.test(id)) return { tab: "laboratory", sub: "lab-microbiology" };
+        if (/imaging|radiotherapy/.test(id)) return { tab: "laboratory", sub: "lab-imaging" };
+        if (/pathology|pato|snomed/.test(id)) return { tab: "laboratory", sub: "lab-pathology" };
         if (/biobank/.test(id)) return { tab: "laboratory", sub: "lab-biobank" };
         if (/laboratory|lab|npu/.test(id)) return { tab: "laboratory", sub: "lab-npu" };
         if (/treatment/.test(id)) return { tab: "treatment", sub: "treatment-dashboard" };
@@ -2285,8 +2285,8 @@
               "PATOBANK coded Ki-67 percent evidence coverage",
               "Source-coverage cartography for SDS_pato.c_snomedkode AEKI/ÆKI numeric percent codes; not disease-specific completeness.",
               row,
-              { tab: "clinical", sub: "clinical-pathology" },
-              { query: row.label || q, item: "patobank_ki67_percent", status: row.status, copy: "#clinical/clinical-pathology", score: score + 120 }
+              { tab: "laboratory", sub: "lab-pathology" },
+              { query: row.label || q, item: "patobank_ki67_percent", status: row.status, copy: "#laboratory/lab-pathology", score: score + 120 }
             ));
           }
         });
@@ -3809,7 +3809,7 @@
         const minDate = row.min_date;
         const maxDate = row.max_date;
         if (!plausibleDamydaDate(minDate) || !plausibleDamydaDate(maxDate)) {
-          return "not available / not reliable in current aggregate output";
+          return "date span not reliable in current aggregate output";
         }
         return `${escapeHtml(minDate)} to ${escapeHtml(maxDate)}`;
       }
@@ -3976,7 +3976,7 @@
         const minDate = row.min_date;
         const maxDate = row.max_date;
         if (!plausibleDamydaDate(minDate) || !plausibleDamydaDate(maxDate)) {
-          return "not available / not reliable in current aggregate output";
+          return "date span not reliable in current aggregate output";
         }
         return `${escapeHtml(minDate)} to ${escapeHtml(maxDate)}`;
       }
@@ -4134,14 +4134,14 @@
         const confirmed = rows.filter(row => !/not_present|unresolved|expected|candidate/i.test(text(row.mapping_status)));
         confirmed.sort((a, b) => cllRawPriority(a) - cllRawPriority(b));
         const candidates = rows.filter(row => /candidate|low|not_present|unresolved|expected/i.test([row.mapping_status, row.mapping_confidence].join(" ")));
-        return `<div class="lineage-block">
-          <h3>Raw names / data lineage</h3>
-          ${confirmed.length ? renderRawFieldList(confirmed, 36) : `<div class="empty">not available in current aggregate output</div>`}
+        return `<details class="lineage-block">
+          <summary>Raw names / data lineage</summary>
+          ${confirmed.length ? renderRawFieldList(confirmed, 36) : `<div class="empty">No confirmed CLL lineage rows generated in current aggregate output.</div>`}
           <details class="lineage-block">
             <summary>Candidate / low-confidence CLL fields</summary>
             ${candidates.length ? renderRawFieldList(candidates, 48) : `<div class="empty">No candidate CLL rows were generated.</div>`}
           </details>
-        </div>`;
+        </details>`;
       }
       function renderCLLPanel() {
         const summary = cllSummaryRow();
@@ -4649,9 +4649,44 @@
       function treatmentCandidateRows(rows) {
         return (rows || []).filter(row => treatmentSourceContext(row).id === "candidate" || row.mapping_status === "candidate" || row.mapping_confidence === "low");
       }
+      const treatmentKnownCodeLabels = {
+        "BWHA": "Antineoplastic chemotherapy procedure family",
+        "BWHA169": "Antineoplastic chemotherapy procedure code",
+        "BOHJ": "Immunotherapy procedure family",
+        "BWGC": "Radiotherapy procedure family",
+        "BWGC1": "Radiotherapy fraction",
+        "BWGC4A": "Electron beam therapy",
+        "L01XE27": "Ibrutinib",
+        "L01XK02": "Olaparib",
+        "L01XX52": "Venetoclax",
+        "L01XC02": "Rituximab",
+        "L01XC15": "Daratumumab",
+        "L04AX04": "Lenalidomide",
+        "L04AX06": "Pomalidomide",
+        "L01XX32": "Bortezomib",
+        "L01XX45": "Carfilzomib"
+      };
+      function treatmentDisplayLabel(row) {
+        const context = renderlessTreatmentContext(row);
+        const code = text(row.code || row.raw_code || "").trim();
+        const codeSystem = text(row.code_system || "").trim().toUpperCase();
+        const codeKey = code.toUpperCase();
+        const name = text(row.code_name || row.clinical_variable || row.display_value || row.raw_value || row.label || "").trim();
+        const semanticName = name && normalizeClinicalKey(name) !== normalizeClinicalKey(code) ? name : "";
+        if (code && treatmentKnownCodeLabels[codeKey]) {
+          return [context, `${treatmentKnownCodeLabels[codeKey]} (${code})`].filter(Boolean).join(" - ");
+        }
+        if (semanticName) {
+          return [context, semanticName, code && !semanticName.includes(code) ? code : ""].filter(Boolean).join(" - ");
+        }
+        if (code && codeSystem) {
+          return [context, `Unmapped ${codeSystem} code: ${code}`].filter(Boolean).join(" - ");
+        }
+        return [context, row.raw_column, row.clinical_variable, row.display_value, row.raw_value].map(text).filter(Boolean).join(" - ") || "Treatment evidence row";
+      }
       function treatmentBarRows(rows) {
         return (rows || []).map(row => ({
-          label: row.label || [renderlessTreatmentContext(row), row.code || row.raw_code, row.code_name || row.clinical_variable || row.display_value || row.raw_value].filter(Boolean).join(" - "),
+          label: treatmentDisplayLabel(row),
           n: row.n_rows || row.n || row.matched_rows || "",
           pct: row.pct,
           tone: treatmentSourceContext(row).tone || (row.code_system === "ATC" ? "green" : row.code_system === "SKS" ? "plum" : "blue")
@@ -4706,6 +4741,7 @@
         const registryTreatmentRows = treatmentRowsForContext(registryRows, "registry");
         const candidateRows = treatmentCandidateRows(rawRows.concat(primaryCodeRows, treatmentDistributions));
         const codeFamilyRows = treatmentCards.code_families || [];
+        const curatedCohortRows = rawRows.concat(primaryCodeRows, sources).filter(row => treatmentContains(row, ["curated", "cohort", "second-line", "2nd-line", "2linje", "ibrutinib", "daratumumab", "richter"]));
         const layerItems = [
           ["Registry treatment fields", "Disease registries hold curated treatment indicators, response, relapse, targeted therapy, and regimen fields; they are not complete administration records."],
           ["SP treatment plans/protocols", "SP_Behandlingsplaner rows describe protocol names and cycle details when available."],
@@ -4713,6 +4749,8 @@
           ["Prescriptions / ATC", "ATC medication rows support drug exposure proxies across ordered medicine, price/medicine feeds, SMR, and related sources."],
           ["SMR medicine", "SMR medicine is a separate medication evidence surface and should be triangulated with ATC/SP evidence."],
           ["SKS procedures", "SKS codes support chemotherapy, immunotherapy, radiotherapy, SCT, and procedure-family signals."],
+          ["Outpatient prescriptions", "Epikur/Ekokur outpatient prescription rows remain separate from administered medication and SMR in-hospital medication."],
+          ["Curated treatment cohorts", "Curated cohorts such as CLL second-line, ibrutinib, MM daratumumab, or Richter transformation are shown as cohort evidence when present, not general treatment denominators."],
           ["Epikur metadata", "Epikur rows are text/clinical-note metadata, not a complete structured treatment record."]
         ];
         const requiredTreatmentSignals = ["SP_AdministreretMedicin", "SP_OrdineretMedicin", "SMR_medicine", "SDS_t_sksube", "SDS_epikur", "ATC", "SKS", "L01/L04", "antineoplastic chemotherapy", "immunotherapy", "radiotherapy", "lenalidomide", "bortezomib", "daratumumab", "rituximab", "venetoclax", "ibrutinib"];
@@ -4735,7 +4773,7 @@
               { label: "aggregate rows", value: treatmentDistributions.length, tone: "amber" },
               { label: "raw lineage rows", value: rawRows.length, tone: "plum" }
             ], { tone: "blue" })}
-            ${renderSectionCard("Source / coverage", `
+            ${renderSectionCard("Treatment source availability matrix", `
               <p>${escapeHtml(treatmentPanel.clinical_purpose || "Treatment evidence across SKS procedure codes, ATC medication codes, administered medicine, prescriptions, SMR, Epikur, and treatment plans.")}</p>
               ${renderTreatmentSourceCards(sources, "Treatment source")}
             `, "blue")}
@@ -4755,10 +4793,13 @@
               ${renderTreatmentCodeSection("Procedure and SKS treatment codes", sksPriorityRows.length ? sksPriorityRows : sksRows, "plum", "No SKS/procedure treatment rows available.")}
               ${codeFamilyRows.length ? `<details><summary>MM treatment code-family scan</summary>${renderHBarRows(codeFamilyRows.map(row => Object.assign({}, row, { label: `${row.family}: ${row.code}`, n: row.n_rows })), { tone: "violet", limit: 12 })}</details>` : `<div class="empty">No MM treatment code-family rows available.</div>`}
             `, "plum")}
-            ${renderSectionCard("Cross-source treatment matrix and aggregate rows", `
-              <h3>Cross-source treatment matrix</h3>
-              ${renderValueMapCard("Product-layer treatment distributions", treatmentBarRows(treatmentDistributions), { tone: "amber", limit: 12, scope: treatmentDistributions[0], empty: "No treatment panel distributions available." })}
-              <p class="mini">Date-like fields are excluded from categorical bars and retained only as source/raw-field availability.</p>
+            ${renderSectionCard("Technical cross-source treatment matrix", `
+              <details class="lineage-block">
+                <summary>Raw cross-source treatment matrix and aggregate rows</summary>
+                <h3>Cross-source treatment matrix</h3>
+                ${renderValueMapCard("Product-layer treatment distributions", treatmentBarRows(treatmentDistributions), { tone: "amber", limit: 12, scope: treatmentDistributions[0], empty: "No treatment panel distributions generated in current aggregate output." })}
+                <p class="mini">Date-like fields are excluded from categorical bars and retained only as source/raw-field availability.</p>
+              </details>
             `, "amber")}
             ${renderSectionCard("SP treatment plans", `
               ${renderTreatmentSourceCards(spPlanSources, "SP treatment plans")}
@@ -4773,8 +4814,9 @@
               ${renderTreatmentSourceCards(spOrderedSources, "SP ordered medication")}
               ${spOrderedRows.length ? renderCollapsedRawLineage(spOrderedRows, { limit: 6 }) : ""}
             `, "green")}
-            ${renderSectionCard("National prescription data", `
-              ${renderTreatmentSourceCards(nationalPrescriptionSources, "National prescription data")}
+            ${renderSectionCard("Outpatient prescriptions", `
+              <p class="mini">National prescription data / Epikur / Ekokur outpatient prescription rows only; not administered medication.</p>
+              ${renderTreatmentSourceCards(nationalPrescriptionSources, "Outpatient prescriptions")}
               ${nationalPrescriptionRows.length ? renderTreatmentCodeSection("Prescription / outpatient ATC signals", nationalPrescriptionRows, "cyan", "No national prescription rows available.") : ""}
             `, "cyan")}
             ${renderSectionCard("SMR / in-hospital medication", `
@@ -4785,6 +4827,10 @@
               <p class="mini">Registry treatment context: disease registries provide curated treatment, response, and follow-up fields, not complete medication administration records.</p>
               ${registryTreatmentRows.length ? renderCollapsedRawLineage(registryTreatmentRows, { limit: 10 }) : `<div class="empty">not available in current aggregate output</div>`}
             `, "amber")}
+            ${renderSectionCard("Curated treatment cohorts", `
+              <p class="mini">Curated cohort rows are shown as cohort/source evidence only; they are not complete medication timelines or population treatment denominators.</p>
+              ${curatedCohortRows.length ? renderCollapsedRawLineage(curatedCohortRows, { limit: 10 }) : `<div class="empty">No curated treatment cohort rows generated in current aggregate output.</div>`}
+            `, "violet")}
             ${renderSectionCard("Raw names / data lineage", `
               ${rawRows.length ? renderCollapsedRawLineage(rawRows, { limit: 12 }) : `<div class="empty">not available in current aggregate output</div>`}
               ${labSupportRows.length ? `<details><summary>Supporting labs surfaced by treatment matrix</summary>${renderTreatmentCodeSection("Supporting laboratory/code rows", labSupportRows, "cyan", "No supporting lab rows were surfaced.")}</details>` : ""}
@@ -4882,6 +4928,10 @@
         if (imagingIsDateLike(row) || imagingIsFreeText(row)) return "";
         const translated = imagingTranslatedCode(row);
         if (translated) return translated;
+        const codeCandidate = [row.raw_code, row.code, row.raw_value, row.display_value]
+          .map(text)
+          .find(value => /^(UX|BWGC|BWHA|BOHJ|[A-Z]{4}\d)/i.test(value.trim()));
+        if (codeCandidate) return `Unmapped SKS/UX/BWGC code: ${codeCandidate}`;
         if (isDaMyDaImagingRegistryRow(row)) {
           const registryValue = [row.raw_value, row.display_value, row.raw_descriptor, row.raw_code]
             .map(text)
@@ -5430,9 +5480,38 @@
         const key = normalizeClinicalKey([row.raw_column, row.value_type, row.privacy_note, row.clinical_variable].map(text).join(" "));
         return /vfritekst|fritekst|freetext|mikrotext|konklusion|conclusion|description|beskrivelse|tekst|text/.test(key);
       }
+      const pathologyCodeLabels = {
+        "T06002": "Bone marrow biopsy",
+        "T0X000": "Blood",
+        "T06000": "Bone marrow",
+        "P28260": "Flow cytometry",
+        "M97323": "Diffuse large B-cell lymphoma morphology",
+        "M98233": "CLL morphology"
+      };
+      const pathologySpecimenMaterialLabels = {
+        "11": "Pathology specimen/material code 11",
+        "12": "Pathology specimen/material code 12",
+        "21": "Pathology specimen/material code 21"
+      };
+      function pathologyCodeDisplay(row) {
+        const code = text(row.raw_code || row.code || "").trim();
+        const value = text(row.raw_value || row.display_value || "").trim();
+        const codeCandidate = code || value;
+        if (!codeCandidate) return "";
+        const key = codeCandidate.toUpperCase();
+        const layer = pathologyLayer(row).id;
+        if (pathologyCodeLabels[key]) return `${pathologyCodeLabels[key]} (${codeCandidate})`;
+        if (layer === "specimen" && pathologySpecimenMaterialLabels[key]) return `${pathologySpecimenMaterialLabels[key]} (${codeCandidate})`;
+        if (/^[A-Z][A-Z0-9]{3,6}$/.test(key) || /^\d{1,3}$/.test(key) || /^\d{4}[A-Z]\d{2}$/.test(key)) {
+          return `Unmapped SNOMED/pathology code: ${codeCandidate}`;
+        }
+        return "";
+      }
       function pathologySafeLabel(row) {
         if (pathologyIsDateLike(row)) return "";
         if (pathologyIsFreeText(row)) return "free-text field present; values not emitted";
+        const codeLabel = pathologyCodeDisplay(row);
+        if (codeLabel) return codeLabel;
         const label = [row.raw_value, row.raw_descriptor, row.raw_code, row.display_value, row.code, row.clinical_variable]
           .map(text)
           .find(value => {
@@ -5515,7 +5594,7 @@
         const row = rows[0] || {};
         if (!row.title) return `<div class="empty">MCL/TRIANGLE feasibility candidate coded Ki-67 signal was not generated in the current aggregate output.</div>`;
         return `
-          <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text.</div>
+          <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text. It is feasibility-only and not general PATOBANK coverage.</div>
           ${renderTrustBadgeRow(["candidate-only", "feasibility-only", "not complete capture", "raw text not emitted"])}
           <div class="callout"><strong>MCL/TRIANGLE feasibility coded Ki-67 evidence source:</strong> ${escapeHtml(row.table_name || "import.public.SDS_pato")}.${escapeHtml(row.column_name || "c_snomedkode")}, using the ${escapeHtml(row.code_family || "AEKIxxx / ÆKIxxx")} code family.</div>
           ${renderKpiStrip([
@@ -6913,7 +6992,7 @@
             `, "violet")}
             ${renderSectionCard("MCL/TRIANGLE feasibility: candidate coded Ki-67 signal", `
               <div class="callout"><strong>TRIANGLE feasibility-only:</strong> this block is not general PATOBANK Ki-67 coverage. ${patobankKi67QaState().status === "success" ? "Use the Pathology/PATOBANK panel for source-coverage cartography." : "General PATOBANK Ki-67 cartography was attempted but not computed in this build; TRIANGLE Ki-67 counts remain feasibility-only and cannot be generalized."}</div>
-              <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text.</div>
+              <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text. It is feasibility-only and not general PATOBANK coverage.</div>
               ${renderTrustBadgeRow(["candidate-only", "feasibility-only", "not complete capture", "raw text not emitted"])}
               ${renderKpiStrip([
                 mclKpiItem("coded AEKI/ÆKI records", ki67Known, "37", "green"),
