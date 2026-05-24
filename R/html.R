@@ -352,8 +352,8 @@ review_nav <- function() {
     ),
     list(
       id = "laboratory",
-      label = "Laboratory",
-      sub_tabs = c("NPU vectors", "NPU detective", "Isotypes", "Lab sources")
+      label = "Laboratory & Diagnostics",
+      sub_tabs = c("NPU vectors", "NPU detective", "Imaging", "Microbiology", "Pathology", "Isotypes", "Biobank", "Lab sources")
     ),
     list(
       id = "ehr",
@@ -420,7 +420,7 @@ review_domain_jump_links <- function() {
     list(domain = "Registries", target_tab = "registries", label = "DaMyDa, LYFO, and CLL registry review"),
     list(domain = "Clinical Data", target_tab = "clinical", label = "Diagnoses, admissions, imaging, notes, vitals, and social history"),
     list(domain = "Treatment", target_tab = "treatment", label = "MM code families, medicine, and procedures"),
-    list(domain = "Laboratory", target_tab = "laboratory", label = "NPU dictionary, detective, isotype, and lab source evidence"),
+    list(domain = "Laboratory & Diagnostics", target_tab = "laboratory", label = "NPU dictionary, diagnostics, pathology, microbiology, imaging, biobank, and lab source evidence"),
     list(domain = "EHR Modules", target_tab = "ehr", label = "SP, SDS/LPR, and DALY view source readiness"),
     list(domain = "Infrastructure", target_tab = "infrastructure", label = "Resolution, streaming, DB budget, QA, and generated panels")
   )
@@ -706,16 +706,18 @@ atlas_module_readiness <- function(sources, panels = list()) {
     list("Disease Registries", "CLL registry", c("cll", "dcllr"), c("cll", "registry_clinical")),
     list("Clinical Data", "Diagnoses and tumors", c("diagnos", "diag", "cancer", "tumor"), c("diagnos")),
     list("Clinical Data", "Admissions and ADT", c("adt", "adm", "kontakt", "contact", "skadestue", "icu"), c("situation_report")),
-    list("Clinical Data", "Imaging", c("billed", "imaging", "image", "radiolog", "scan", "ct", "mr"), character()),
+    list("Laboratory & Diagnostics", "Imaging and radiotherapy diagnostics", c("billed", "imaging", "image", "radiolog", "scan", "ct", "mr", "bwgc"), character()),
     list("Clinical Data", "Vitals", c("vital", "vaegt", "weight", "height", "bloodpressure"), character()),
     list("Clinical Data", "Notes", c("note", "journal", "epikur", "text"), character()),
     list("Clinical Data", "Social history", c("social", "smoking", "alcohol"), character()),
     list("Treatment", "MM treatment codes", c("behandling", "treatment", "procedure", "sks", "plan"), c("mm_treatment")),
     list("Treatment", "Medicine and ATC", c("medicin", "medicine", "atc", "ordered", "administered"), c("treatment")),
-    list("Laboratory", "NPU dictionary", c("lab", "laborator", "npu", "prove", "analysis", "result"), c("npu_dictionary", "npu_lab")),
-    list("Laboratory", "NPU detective", c("lab", "npu", "analysis"), c("npu_detective")),
-    list("Laboratory", "Isotype finder", c("isotype", "mspike", "m_component", "lab", "npu"), c("isotype")),
-    list("Laboratory", "Molecular, pathology, and biobank readiness", c("molecular", "patholog", "pato", "biobank", "snomed"), character()),
+    list("Laboratory & Diagnostics", "NPU dictionary", c("lab", "laborator", "npu", "prove", "analysis", "result"), c("npu_dictionary", "npu_lab")),
+    list("Laboratory & Diagnostics", "NPU detective", c("lab", "npu", "analysis"), c("npu_detective")),
+    list("Laboratory & Diagnostics", "Isotype finder", c("isotype", "mspike", "m_component", "lab", "npu"), c("isotype")),
+    list("Laboratory & Diagnostics", "Microbiology / MiBa diagnostics", c("microbiology", "miba", "culture", "resistance", "susceptibility"), character()),
+    list("Laboratory & Diagnostics", "Pathology / PATOBANK diagnostics", c("molecular", "patholog", "pato", "snomed", "biopsy"), character()),
+    list("Laboratory & Diagnostics", "Molecular, pathology, and biobank readiness", c("molecular", "patholog", "pato", "biobank", "snomed"), character()),
     list("EHR Modules", "SP modules", c("^sp_", "sp "), character()),
     list("EHR Modules", "SDS/LPR modules", c("^sds", "^lpr", "lpr3", "sksube", "procedure"), character()),
     list("EHR Modules", "DALY views", c("dalycare", "view_", "views", "survival"), character()),
