@@ -170,6 +170,7 @@ project_artifacts <- c(
   "R/source_map.R",
   "R/db_profile.R",
   "R/ki67_discovery.R",
+  "R/patobank_ki67_cartography.R",
   "R/ki67_production_finder.R",
   "R/mcl_triangle_counts.R",
   "R/mcl_triangle_feasibility.R",
@@ -188,6 +189,27 @@ project_artifacts <- c(
   "tests/test-mcl-triangle-evidence-filtering.R"
 )
 invisible(vapply(project_artifacts, copy_project_artifact, logical(1)))
+
+copy_mcl_triangle_count_outputs <- function(from, to) {
+  if (!dir.exists(from) || !dir.exists(to)) return(invisible(FALSE))
+  patterns <- c(
+    "^mcl_triangle_.*[.]csv$",
+    "^mcl_triangle_count_query_templates[.]sql$",
+    "^output_generation_status[.]csv$"
+  )
+  files <- unique(unlist(lapply(patterns, function(pattern) {
+    list.files(from, pattern = pattern, full.names = TRUE)
+  }), use.names = FALSE))
+  if (!length(files)) return(invisible(FALSE))
+  file.copy(files, file.path(to, basename(files)), overwrite = TRUE)
+  invisible(TRUE)
+}
+
+accepted_mcl_source <- function(source) {
+  nzchar(source$outputs_dir %||% "") &&
+    exists("mcl_count_output_dir_is_accepted_production", mode = "function") &&
+    isTRUE(mcl_count_output_dir_is_accepted_production(source$outputs_dir))
+}
 
 mock_output_dir <- file.path(mock_dir, "outputs")
 mock_panel_dir <- file.path(mock_output_dir, "panels")
@@ -405,8 +427,47 @@ write_csv(source_map_crosswalk, file.path(mock_output_dir, "source_map_row_to_ca
 write_csv(legacy_reference_vs_current, file.path(mock_output_dir, "legacy_reference_vs_current_profiled_evidence.csv"))
 write_csv(remaining_activation_plan, file.path(mock_output_dir, "remaining_canonical_resources_activation_plan.csv"))
 ki67_write_outputs(ki67_discovery, output_dir = mock_output_dir, project_root = project_root)
+patobank_ki67_percent <- patobank_ki67_read_outputs(mock_output_dir)
+patobank_file_audit <- patobank_ki67_validate_output_files(mock_output_dir)
+if (any(patobank_file_audit$status == "empty_output_error")) {
+  patobank_ki67_percent <- patobank_ki67_fail_closed_outputs(
+    reason_id = "input_patobank_ki67_header_only",
+    label = "PATOBANK Ki-67 cartography output",
+    notes = "Input atlas artifact contained header-only PATOBANK Ki-67 cartography files. Mock-up output fails closed instead of presenting empty scaffolds as completed coverage.",
+    source_table = "SDS_pato",
+    source_column = "c_snomedkode",
+    query_templates = patobank_ki67_percent$query_templates %||% character()
+  )
+  patobank_ki67_write_outputs(patobank_ki67_percent, output_dir = mock_output_dir)
+} else if (!file.exists(file.path(mock_output_dir, "patobank_ki67_percent_summary.csv"))) {
+  patobank_ki67_write_outputs(patobank_ki67_percent, output_dir = mock_output_dir)
+}
 mcl_triangle_write_outputs(mcl_triangle_feasibility, mock_output_dir)
-if (exists("mcl_count_build_outputs", mode = "function")) {
+standalone_mcl_source <- if (exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
+  mcl_count_resolve_standalone_output_source(
+    project_root = project_root,
+    outputs_dir = mock_output_dir,
+    count_output_zip = "",
+    count_output_dir = mock_output_dir
+  )
+} else {
+  list(outputs_dir = "", metadata = mcl_triangle_empty_standalone_output_source())
+}
+if (!accepted_mcl_source(standalone_mcl_source) && exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
+  standalone_mcl_source <- mcl_count_resolve_standalone_output_source(
+    project_root = project_root,
+    outputs_dir = mock_output_dir,
+    count_output_zip = "",
+    count_output_dir = ""
+  )
+}
+if (exists("mcl_count_read_outputs", mode = "function") &&
+    accepted_mcl_source(standalone_mcl_source)) {
+  copy_mcl_triangle_count_outputs(standalone_mcl_source$outputs_dir, mock_output_dir)
+  mcl_triangle_feasibility$cohort_counts <- mcl_count_read_outputs(standalone_mcl_source$outputs_dir)
+  mcl_triangle_feasibility$standalone_output_source <- standalone_mcl_source$metadata
+  mcl_triangle_feasibility$pathology_ki67_signpost <- mcl_triangle_pathology_ki67_signpost(mcl_triangle_feasibility$cohort_counts)
+} else if (exists("mcl_count_build_outputs", mode = "function")) {
   mcl_triangle_count_outputs <- mcl_count_build_outputs(
     project_root = project_root,
     outputs_dir = mock_output_dir,
@@ -415,6 +476,12 @@ if (exists("mcl_count_build_outputs", mode = "function")) {
   )
   mcl_count_write_outputs(mcl_triangle_count_outputs, mock_output_dir)
   mcl_triangle_feasibility$cohort_counts <- mcl_count_read_outputs(mock_output_dir)
+  mcl_triangle_feasibility$standalone_output_source <- if (exists("mcl_count_empty_standalone_output_source", mode = "function")) {
+    mcl_count_empty_standalone_output_source()
+  } else {
+    mcl_triangle_empty_standalone_output_source()
+  }
+  mcl_triangle_feasibility$pathology_ki67_signpost <- mcl_triangle_pathology_ki67_signpost(mcl_triangle_feasibility$cohort_counts)
 }
 
 ki67_db_files <- file.path(
@@ -517,6 +584,7 @@ payload <- atlas_payload(
   legacy_reference_vs_current = legacy_reference_vs_current,
   remaining_activation_plan = remaining_activation_plan,
   ki67_discovery = ki67_discovery,
+  patobank_ki67_percent = patobank_ki67_percent,
   mcl_triangle_feasibility = mcl_triangle_feasibility
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)

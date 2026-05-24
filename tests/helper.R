@@ -15,6 +15,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/semantic_dictionary.R",
     "R/product_layer.R",
     "R/ki67_discovery.R",
+    "R/patobank_ki67_cartography.R",
     "R/mcl_triangle_counts.R",
     "R/mcl_triangle_feasibility.R",
     "R/html.R",
@@ -34,6 +35,7 @@ source_ki67_test_runtime <- function(root = normalizePath(file.path(getwd()), wi
     "R/mcl_triangle_feasibility.R",
     "R/source_map.R",
     "R/db_profile.R",
+    "R/patobank_ki67_cartography.R",
     "R/ki67_production_finder.R"
   )
   for (file in files) {

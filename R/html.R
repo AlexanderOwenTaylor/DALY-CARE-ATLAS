@@ -115,6 +115,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           legacy_reference_vs_current = NULL,
                           remaining_activation_plan = NULL,
                           ki67_discovery = NULL,
+                          patobank_ki67_percent = NULL,
                           mcl_triangle_feasibility = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
@@ -143,6 +144,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(legacy_reference_vs_current)) legacy_reference_vs_current <- data.frame(stringsAsFactors = FALSE)
   if (is.null(remaining_activation_plan)) remaining_activation_plan <- data.frame(stringsAsFactors = FALSE)
   if (is.null(ki67_discovery)) ki67_discovery <- ki67_empty_payload()
+  if (is.null(patobank_ki67_percent)) patobank_ki67_percent <- patobank_ki67_empty_outputs()
   if (is.null(mcl_triangle_feasibility)) mcl_triangle_feasibility <- mcl_triangle_empty_payload()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
@@ -175,6 +177,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_legacy_reference_vs_current <- sanitize_public_frame(legacy_reference_vs_current)
   public_remaining_activation_plan <- sanitize_public_frame(remaining_activation_plan)
   public_ki67_discovery <- lapply(ki67_discovery, function(x) {
+    if (is.data.frame(x)) public_rows(sanitize_public_frame(x), max_rows = 2000) else x
+  })
+  public_patobank_ki67_percent <- lapply(patobank_ki67_percent, function(x) {
     if (is.data.frame(x)) public_rows(sanitize_public_frame(x), max_rows = 2000) else x
   })
   public_mcl_triangle_feasibility <- lapply(mcl_triangle_feasibility, function(x) {
@@ -280,6 +285,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     legacy_reference_vs_current_rows = public_rows(public_legacy_reference_vs_current, max_rows = 1000),
     remaining_activation_plan_rows = public_rows(public_remaining_activation_plan, max_rows = 1000),
     ki67_discovery = public_ki67_discovery,
+    patobank_ki67_percent = public_patobank_ki67_percent,
     mcl_triangle_feasibility = public_mcl_triangle_feasibility,
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),

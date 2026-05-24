@@ -11,6 +11,7 @@ The direct production finder is a targeted, aggregate-only search for where Ki-6
 - Writes a concrete aggregate query plan and SQL/pseudo-SQL templates in plan mode.
 - Uses existing DALY-CARE read-only DB conventions in production aggregate mode.
 - Searches candidate Patobank, pathology text, and RKKP/LYFO registry locations.
+- Preserves `db_name` in search-plan, metadata-hit, count, and found-location outputs so core/import source boundaries remain visible.
 - Counts only grouped aggregate evidence.
 - Applies small-cell suppression, default `n < 5`.
 - Keeps p16/Ki-67 cervix/cytology triage codes separate from numeric MCL Ki-67 proliferation-index evidence.
@@ -47,6 +48,16 @@ Rscript scripts/find_ki67_in_production.R --mode production_aggregate --candidat
 
 Broad pathology text scans are disabled by default. Use `--full-scan true` only after reviewing `outputs/ki67_db_query_templates.sql`.
 
+The MCL/TRIANGLE one-click runner also inventories Ki-67 source space directly:
+
+```r
+MCL_TRIANGLE_ATLAS_OUTPUT_DIR <- "path/to/main_atlas_outputs"
+MCL_TRIANGLE_KI67_TEXT_SCAN <- FALSE
+source("RUN_MCL_TRIANGLE_COUNTS.R")
+```
+
+By default it validates the coded `SDS_pato.c_snomedkode` AEKI route and writes text bridge plans without scanning raw pathology text.
+
 ## Outputs
 
 - `ki67_db_query_templates.sql`: aggregate-only SQL/pseudo-SQL templates.
@@ -57,6 +68,8 @@ Broad pathology text scans are disabled by default. Use `--full-scan true` only 
 - `ki67_db_text_pattern_counts.csv`: aggregate pathology text pattern counts by value class.
 - `ki67_db_registry_field_counts.csv`: aggregate registry field summaries.
 - `ki67_db_summary.csv`: channel-level evidence interpretation.
+
+MCL/TRIANGLE-specific Ki-67 outputs include `mcl_triangle_atlas_ki67_source_inventory.csv`, `mcl_triangle_ki67_aeki_code_counts.csv`, `mcl_triangle_ki67_threshold_counts.csv`, and `mcl_triangle_ki67_text_bridge_validation.csv`.
 - `ki67_found_locations.csv`: the single answer table for “where was Ki-67 found?”
 
 ## Danish Patobank Numeric Ki-67 Codes
@@ -102,6 +115,8 @@ Readiness updates are conservative:
 - registry numeric Ki-67 fields can upgrade Ki-67 to `strong_structured_numeric`;
 - text pattern counts can upgrade Ki-67 to `moderate_text_extractable`;
 - p16/Ki-67 dual-stain and source-only evidence do not upgrade numeric MCL Ki-67 readiness.
+
+For the TRIANGLE feasibility counts, text-pattern source space does not upgrade risk classifiability unless an explicit clinical validation flag/config is added later. Missing Ki-67 is never interpreted as standard-risk biology.
 
 ## Privacy Safeguards
 
