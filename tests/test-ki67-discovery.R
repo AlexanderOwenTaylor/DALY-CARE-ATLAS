@@ -182,18 +182,21 @@ for (path in c(
 }
 expect_false(file.exists(file.path(zip_root, "R", "run_atlas.R")), "ZIP-shaped Ki-67 package test should not include the full atlas runner.")
 rscript <- file.path(R.home("bin"), if (.Platform$OS.type == "windows") "Rscript.exe" else "Rscript")
-oldwd <- setwd(zip_root)
-on.exit(setwd(oldwd), add = TRUE)
 cached_result <- system2(
   rscript,
-  c("scripts/build_ki67_discovery.R", "--mode", "cached_outputs", "--project-root", ".", "--outputs-dir", "outputs", "--validate-only", "true"),
+  c(
+    file.path(zip_root, "scripts", "build_ki67_discovery.R"),
+    "--mode", "cached_outputs",
+    "--project-root", zip_root,
+    "--outputs-dir", "outputs",
+    "--validate-only", "true"
+  ),
   stdout = TRUE,
   stderr = TRUE
 )
 cached_status <- attr(cached_result, "status") %||% 0L
 expect_equal(as.integer(cached_status), 0L, paste(c("Cached-output validate-only command should run from the unpacked ZIP shape.", cached_result), collapse = "\n"))
 expect_true(any(grepl("without running source profiling or DB access", cached_result, fixed = TRUE)), "Cached-output validate-only command should state that it does not run source profiling or DB access.")
-setwd(tempdir())
 outside_cached_result <- system2(
   rscript,
   c(

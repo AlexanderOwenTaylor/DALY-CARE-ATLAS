@@ -245,6 +245,14 @@
     .audience-route-card.amber { border-left-color: var(--amber); }
     .audience-route-card.plum { border-left-color: var(--plum); }
     .audience-route-card.violet { border-left-color: var(--violet); }
+    .role-route-meta {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .role-route-meta div { min-width: 0; overflow-wrap: anywhere; }
     .interpretation-lead {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -263,6 +271,30 @@
       flex-wrap: wrap;
       gap: 7px;
       margin: 8px 0 12px;
+    }
+    .trust-legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 10px;
+    }
+    .trust-legend-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+      min-width: 0;
+    }
+    .briefing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .print-briefing {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 14px;
     }
     .mcl-verdict-banner {
       border-left: 5px solid var(--violet);
@@ -1069,6 +1101,14 @@
       .utility-button, .export-button, .copy-button { padding-left: 8px; padding-right: 8px; }
       .back-to-top { display: none; }
     }
+    @media print {
+      body { background: #fff; }
+      .hero, .nav, .sub-nav, .back-to-top, .global-search-shell, .utility-button, .export-button, .copy-button { display: none !important; }
+      main { padding: 0; max-width: 100%; }
+      .tab-page, .sub-pane { display: block !important; }
+      .panel, .card, .panel-section, .print-briefing { box-shadow: none; break-inside: avoid; }
+      .print-briefing { page-break-after: always; }
+    }
   </style>
   <script src="DALYCARE_atlas_payload.js"></script>
 </head>
@@ -1143,13 +1183,25 @@
         <div class="panel atlas-entry-panel">
           <div class="panel-head">
             <p class="section-kicker">Start with a clinical question</p>
-            <h2 class="panel-title">What can I find in DALY-CARE?</h2>
-            <p class="panel-sub">Start with what DALY-CARE can show now, then follow a short clinical walkthrough into feasibility, Ki-67/PATOBANK evidence, source signposting, and remaining caveats. These links are navigation aids over aggregate evidence; they do not create analytic definitions or patient-level completeness claims.</p>
+            <h2 class="panel-title">Start here — DALY-CARE internal briefing</h2>
+            <p class="panel-sub">What can I find in DALY-CARE? Start with what the atlas can show now, then follow a role route into feasibility, disease evidence, source signposting, and caveats. These links are navigation aids over aggregate evidence; they do not create analytic definitions or patient-level completeness claims.</p>
           </div>
           <div class="panel-body">
+            <div id="overview-start-briefing"></div>
+            <div style="height:14px"></div>
+            <div id="overview-trust-legend"></div>
+            <div style="height:14px"></div>
             <div id="run-status-banner"></div>
             <div style="height:14px"></div>
             <div id="overview-audience-routes"></div>
+            <div style="height:14px"></div>
+            <div id="overview-disease-entry-paths"></div>
+            <div style="height:14px"></div>
+            <div id="overview-data-manager-command-center"></div>
+            <div style="height:14px"></div>
+            <div id="overview-onboarding-safe-tasks"></div>
+            <div style="height:14px"></div>
+            <div id="overview-clinician-print-briefing"></div>
             <div style="height:14px"></div>
             <div id="overview-walkthrough-path"></div>
             <div style="height:14px"></div>
@@ -1542,6 +1594,8 @@
               <p class="mini">The detail pane keeps low-level lineage, value maps, code maps, and related panels available for analysts without making the first view a raw database dump.</p>
             </article>
             <div style="height:14px"></div>
+            <div id="dictionary-trust-legend"></div>
+            <div style="height:14px"></div>
             <div class="toolbar">
               <label>Search <input id="semantic-search" type="search" placeholder="smoking, ryger, height, Vægt, LDH, NPU02319, PET, blood culture, IGHV"></label>
               <label>Group <select id="semantic-group-filter"><option value="">All groups</option></select></label>
@@ -1584,10 +1638,14 @@
         <div class="panel">
           <div class="panel-head">
             <p class="section-kicker">Feasibility / study planning</p>
-            <h2 class="panel-title">MCL / TRIANGLE feasibility</h2>
+            <h2 class="panel-title">MCL/TRIANGLE-lite feasibility pre-study</h2>
             <p class="panel-sub">Aggregate-only feasibility review for younger mantle cell lymphoma, first-line immunochemotherapy, ASCT/HDT, ibrutinib, outcomes, timing, and high-risk biology readiness.</p>
           </div>
-          <div class="panel-body"><div id="mcl-triangle-feasibility-dashboard"></div></div>
+          <div class="panel-body">
+            <div id="clinical-feasibility-trust-legend"></div>
+            <div style="height:14px"></div>
+            <div id="mcl-triangle-feasibility-dashboard"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -1692,6 +1750,8 @@
           <div class="panel-body">
             <div id="infrastructure-actions-interpretation"></div>
             <div style="height:14px"></div>
+            <div id="qa-trust-legend"></div>
+            <div style="height:14px"></div>
             <div id="action-summary-cards" class="grid"></div>
             <div style="height:14px"></div>
             <h3>Temporal Date Quality</h3>
@@ -1710,13 +1770,15 @@
       <div class="sub-pane" id="infra-catalog">
         <div class="panel">
           <div class="panel-head">
-            <h2 class="panel-title">Resource Catalog</h2>
+            <h2 class="panel-title">Source Catalogue / Resource Catalog</h2>
             <p class="panel-sub">Search expected V033 DALY-CARE resources, legacy resolver status, and current-run coverage. Current counts remain refreshable and are never replaced by legacy counts.</p>
           </div>
           <div class="panel-body">
             <div id="resource-reconciliation-summary" class="grid" style="margin-bottom:14px"></div>
             <div id="resource-reconciliation-warning"></div>
             <div id="infrastructure-catalog-interpretation"></div>
+            <div style="height:14px"></div>
+            <div id="source-catalog-trust-legend"></div>
             <div style="height:14px"></div>
             <div id="resource-catalog-special-manual-resources"></div>
             <div style="height:14px"></div>
@@ -1893,12 +1955,29 @@
       const globalSearchPlaceholderFull = "Search concept, raw column, code, value, source, panel, Danish/English term...";
       const globalSearchPlaceholderMobile = "Search concept, column, code, source...";
       const audienceRouteCards = [
-        { audience: "Planning a study", question: "Start from a feasible clinical question.", bestFor: "Use Clinical Feasibility, Disease Registries, Treatment, and Laboratory to move from idea to aggregate source-readiness review.", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", tone: "violet", search: "study planning" },
-        { audience: "Validating data/source readiness", question: "Check whether sources are resolved and trustworthy.", bestFor: "Use Infrastructure, Data Dictionary, QA, and Source Resolution to inspect lineage, caveats, and source-owner follow-up needs.", tab: "infrastructure", sub: "infra-catalog", tone: "blue", search: "source status" },
-        { audience: "New to DALY-CARE", question: "Learn, run, search, and export safely.", bestFor: "Use Quick Start recipes, glossary-like concept cards, the one-click runner, and Data Dictionary copy/export tools.", tab: "quickstart", sub: "quickstart-recipes", tone: "green", search: "DALY-CARE onboarding" },
-        { audience: "Disease researcher", question: "Find disease-area evidence and feasible questions.", bestFor: "Move from PCD/MM, CLL, LYFO/lymphoma, MCL, and other LPD routes into treatment, pathology, labs, and feasibility panels.", tab: "registries", sub: "reg-overview", tone: "plum", search: "disease researcher" },
-        { audience: "Clinical/management overview", question: "Understand scale, operational relevance, and caveats.", bestFor: "Start with Situation Report, ADT, regional coverage, treatment evidence, governance caveats, and health-system optimization routes.", tab: "overview", sub: "overview-briefing", tone: "amber", search: "management overview" },
-        { audience: "Data dictionary and QA", question: "Find exact fields, statuses, and unresolved issues.", bestFor: "Search clinical concepts, raw columns, source status, unresolved items, and QA caveats without filtering out any payload detail.", tab: "dictionary", sub: "dictionary-lineage", tone: "cyan", search: "data dictionary QA" }
+        { audience: "PI / senior investigator", question: "What can DALY-CARE support now, and what needs validation before a protocol?", firstTab: "Clinical Feasibility", nextTabs: ["Overview briefing", "Infrastructure QA"], caveat: "Feasibility panels are descriptive and not treatment-effect evidence.", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", tone: "violet", search: "pi briefing" },
+        { audience: "Data manager / QA", question: "Which sources, fields, and validation actions need attention first?", firstTab: "Infrastructure / Source Catalogue", nextTabs: ["Data Dictionary", "Clinical Feasibility"], caveat: "Unknown status must stay unknown/needs validation until source-owner evidence exists.", tab: "infrastructure", sub: "infra-catalog", tone: "blue", search: "data manager QA source readiness" },
+        { audience: "Disease researcher", question: "Where do I start for disease-specific cohort and evidence review?", firstTab: "Disease Registries", nextTabs: ["Treatment", "Laboratory & Diagnostics"], caveat: "Registry indicators are source evidence, not complete medication or event timelines.", tab: "registries", sub: "reg-overview", tone: "plum", search: "disease researcher feasibility" },
+        { audience: "Plasma cell disorder / MM researcher", question: "Where are DaMyDa, imaging, bone disease, treatment, and biobank routes?", firstTab: "DaMyDa", nextTabs: ["Treatment", "Laboratory & Diagnostics"], caveat: "DaMyDa fields need study-specific definitions before extraction.", tab: "registries", sub: "reg-damyda", tone: "green", search: "PCD MM myeloma DaMyDa" },
+        { audience: "CLL researcher", question: "Where are CLL registry, IGHV/FISH/TP53, treatment, and lab signals?", firstTab: "CLL", nextTabs: ["Laboratory & Diagnostics", "Treatment"], caveat: "Embedded registry fields and coded sources need validation for analytic denominators.", tab: "registries", sub: "reg-cll", tone: "cyan", search: "CLL IGHV FISH TP53" },
+        { audience: "Lymphoma researcher", question: "Where are LYFO, MCL/TRIANGLE, pathology, treatment, and outcome routes?", firstTab: "LYFO", nextTabs: ["Clinical Feasibility", "Pathology / PATOBANK"], caveat: "MCL/TRIANGLE-lite is descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", tone: "plum", search: "lymphoma LYFO MCL feasibility" },
+        { audience: "New employee onboarding", question: "How do I learn the atlas safely without touching patient-level data?", firstTab: "Quick Start", nextTabs: ["Clinical Variables", "Data Dictionary"], caveat: "Use aggregate routes, glossary terms, and exports; do not infer patient-level completeness.", tab: "quickstart", sub: "quickstart-recipes", tone: "green", search: "onboarding new employee" },
+        { audience: "Senior clinician / manager", question: "What is the scale, operational relevance, and safe headline message?", firstTab: "Overview briefing", nextTabs: ["Situation Report", "Clinical Data"], caveat: "The atlas supports planning and source readiness, not clinical treatment recommendations.", tab: "overview", sub: "overview-briefing", tone: "amber", search: "chief doctor management overview" }
+      ];
+      const trustLegendItems = [
+        { label: "production aggregate", tone: "green", meaning: "Accepted aggregate output generated by the current run for the stated source/count kind." },
+        { label: "profiled aggregate", tone: "blue", meaning: "Source/profile/cartography aggregate evidence; useful for discovery, not a cohort denominator unless labelled." },
+        { label: "fallback/reference", tone: "amber", meaning: "Historical, fixture, or reference value retained for orientation and clearly not current accepted production truth." },
+        { label: "candidate mapping", tone: "amber", meaning: "Plausible code, field, or text route that requires validation before analytic use." },
+        { label: "blocked/mapping gap", tone: "red", meaning: "Unavailable, uncomputed, inconsistent, or unresolved route that should not be interpreted as absent clinical data." },
+        { label: "special access", tone: "violet", meaning: "Manual, embedded, source-owner, or access-controlled resource represented without exposing private paths." },
+        { label: "descriptive feasibility only", tone: "cyan", meaning: "Study-planning signal only; not causal evidence, not a recommendation, and not treatment safety evidence." }
+      ];
+      const diseaseEntryCards = [
+        { title: "Plasma cell disorders / MM", firstSource: "DaMyDa registry", support: ["Treatment", "Imaging", "Biobank"], question: "Can a myeloma cohort be scoped with staging, bone disease, imaging, and treatment context?", caveat: "Registry indicators and imaging fields need source-specific definitions.", tab: "registries", sub: "reg-damyda", search: "PCD MM myeloma DaMyDa" },
+        { title: "CLL", firstSource: "RKKP CLL registry", support: ["Laboratory & Diagnostics", "Treatment", "Data Dictionary"], question: "Which CLL registry and molecular/treatment signals are available for feasibility?", caveat: "IGHV/FISH/TP53 and treatment routes are evidence layers, not complete analytic timelines.", tab: "registries", sub: "reg-cll", search: "CLL IGHV FISH TP53" },
+        { title: "Lymphoma", firstSource: "LYFO registry", support: ["MCL/TRIANGLE-lite", "Pathology / PATOBANK", "Treatment"], question: "Can lymphoma/MCL cohorts be scoped with registry, pathology, treatment, and outcome evidence?", caveat: "TRIANGLE-lite remains descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", search: "lymphoma LYFO MCL" },
+        { title: "Other lymphoproliferative disorders", firstSource: "Diagnosis and registry routes", support: ["Clinical Variables", "Laboratory & Diagnostics", "Data Dictionary"], question: "Which diagnosis/source families can support an exploratory LPD feasibility question?", caveat: "Start with diagnosis/source readiness before defining analytic cohorts.", tab: "variables", sub: "variables-concepts", search: "lymphoproliferative diagnosis registry" }
       ];
       const overviewEntryCards = [
         { title: "Find clinical variables", status: "Concept index", tone: "blue", bestFor: "Checking whether a clinical concept exists before reading raw lineage.", evidence: "Semantic concepts, raw fields, value rows, code signals", examples: ["height", "LDH", "treatment exposure"], tab: "variables", sub: "variables-concepts", search: "" },
@@ -2046,14 +2125,22 @@
         mabthera: ["rituximab"],
         onboarding: ["DALY-CARE onboarding", "new employee", "quick start"],
         "daly care onboarding": ["Quick Start", "new employee", "atlas recipes"],
-        "pi briefing": ["study planning", "clinical feasibility", "management overview"],
-        "management overview": ["Situation Report", "regional coverage", "ADT", "governance"],
-        "data manager": ["source status", "Data Dictionary", "QA", "Infrastructure"],
-        "source status": ["source resolution", "not in database", "unresolved", "QA"],
-        qa: ["quality assurance", "unresolved", "source status"],
+        pi: ["PI / senior investigator", "principal investigator", "Carsten", "clinical feasibility", "management overview"],
+        "pi briefing": ["study planning", "clinical feasibility", "management overview", "senior investigator"],
+        "senior investigator": ["PI", "study planning", "clinical feasibility"],
+        "chief doctor": ["senior clinician", "management overview", "Situation Report"],
+        management: ["chief doctor", "senior clinician", "Situation Report", "regional coverage"],
+        "management overview": ["Situation Report", "regional coverage", "ADT", "governance", "chief doctor"],
+        "data manager": ["source status", "Data Dictionary", "QA", "Infrastructure", "Catrine", "source readiness"],
+        "source readiness": ["source status", "source resolution", "QA", "Infrastructure"],
+        "source status": ["source resolution", "not in database", "unresolved", "QA", "source readiness"],
+        feasibility: ["clinical feasibility", "MCL", "TRIANGLE", "study planning"],
+        qa: ["quality assurance", "unresolved", "source status", "source readiness"],
         unresolved: ["QA", "not in database", "source status"],
         "not in database": ["source status", "special/manual resource", "manual file"],
         pcd: ["plasma cell disorder", "myeloma", "MGUS", "amyloidosis", "DaMyDa"],
+        mm: ["multiple myeloma", "myeloma", "DaMyDa", "PCD"],
+        "multiple myeloma": ["MM", "myeloma", "DaMyDa", "PCD"],
         "plasma cell disorder": ["PCD", "myeloma", "MGUS", "amyloidosis", "DaMyDa"],
         myeloma: ["myelomatose", "DaMyDa", "PCD", "plasma cell disorder"],
         myelomatose: ["myeloma", "DaMyDa", "PCD"],
@@ -3032,6 +3119,154 @@
           </article>
         `).join("");
       }
+      function renderStartHereBriefing() {
+        return renderSectionCard("Start here — DALY-CARE internal briefing", `
+          <div class="briefing-grid">
+            <article class="interpretation-tile blue">
+              <h3>What this atlas is</h3>
+              <p>A privacy-preserving, aggregate-only review artifact for source readiness, semantic lineage, clinical feasibility, and internal DALY-CARE planning.</p>
+            </article>
+            <article class="interpretation-tile green">
+              <h3>What can be used now</h3>
+              <p>Source discovery, registry/lab/pathology/treatment signposting, aggregate feasibility review, and exportable lineage for study planning.</p>
+            </article>
+            <article class="interpretation-tile amber">
+              <h3>What needs validation first</h3>
+              <p>Study definitions, timing windows, code/value logic, candidate mappings, text-recovery routes, and denominator claims.</p>
+            </article>
+            <article class="interpretation-tile red">
+              <h3>What must not be concluded</h3>
+              <p>No treatment effects, treatment recommendations, ASCT/HDT omission safety claims, transplant eligibility, validated risk classes, or validated text-derived Ki-67 extraction.</p>
+            </article>
+          </div>
+        `, "green");
+      }
+      function renderTrustStatusLegend() {
+        return renderSectionCard("Global trust/status legend", `
+          <div class="trust-legend-grid">
+            ${trustLegendItems.map(item => `
+              <article class="trust-legend-item">
+                <div>${renderBadge(item.label, item.tone)}</div>
+                <p class="mini">${escapeHtml(item.meaning)}</p>
+              </article>
+            `).join("")}
+          </div>
+          <p class="mini">Badge meaning is expressed as text and color. The same labels are reused in Overview, Clinical Feasibility, Data Dictionary, Source Catalogue, and QA panels.</p>
+        `, "blue");
+      }
+      function renderDiseaseEntryPaths() {
+        return renderSectionCard("Disease-specific entry paths", `
+          <div class="grid">
+            ${diseaseEntryCards.map(card => `
+              <article class="card overview-entry-card">
+                <div>${renderBadge("disease route", "plum")}</div>
+                <h3>${escapeHtml(card.title)}</h3>
+                <p><strong>First source/table family:</strong> ${escapeHtml(card.firstSource)}</p>
+                <p class="mini"><strong>Linked supporting sources:</strong> ${card.support.map(item => escapeHtml(item)).join("; ")}</p>
+                <p class="mini"><strong>Example research question:</strong> ${escapeHtml(card.question)}</p>
+                <p class="mini"><strong>Main caveat:</strong> ${escapeHtml(card.caveat)}</p>
+                <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(card.tab)}" data-jump-sub="${escapeHtml(card.sub)}" data-jump-search="${escapeHtml(card.search)}">Open route</button>
+              </article>
+            `).join("")}
+          </div>
+        `, "plum");
+      }
+      function dataManagerCommandRows() {
+        const rows = [];
+        const add = (resource, status, evidence, risk, nextAction, owner) => {
+          rows.push({ resource, status, evidence, risk, nextAction, owner });
+        };
+        const unresolved = (resourceReconciliationRows || []).filter(row =>
+          /missing|unexpected|needs|validate|not_loaded|not profiled|unresolved/i.test([row.current_status, row.action_required, row.current_resolution_strategy, row.current_table_name].map(text).join(" "))
+        ).slice(0, 5);
+        unresolved.forEach(row => add(
+          row.display_name || row.expected_resource_id || row.canonical_resource_id || "Resource",
+          row.current_status || "unknown/needs validation",
+          row.evidence_file || "atlas_resource_reconciliation.csv",
+          row.action_required || row.current_resolution_strategy || "Needs source reconciliation.",
+          row.action_required || "Confirm resolver and source-owner evidence.",
+          "Data manager / source owner"
+        ));
+        (actionItems || []).slice(0, 5).forEach(row => add(
+          row.resource || row.table_name || row.check_id || "Action item",
+          row.status || row.severity || "unknown/needs validation",
+          row.evidence_file || "atlas_run_action_items.csv",
+          row.risk || row.message || row.text || "Open QA action.",
+          row.recommended_next_action || row.next_action || row.text || "Review and assign validation owner.",
+          row.owner_role || "Data manager / analyst"
+        ));
+        add(
+          "MCL/TRIANGLE-lite feasibility",
+          mclAcceptedProductionAggregate() ? "production aggregate where labelled" : "fallback/reference or candidate where labelled",
+          "mcl_triangle_* outputs and Clinical Feasibility panel",
+          "Do not convert descriptive feasibility into causal evidence.",
+          "Validate biology/risk predicates, timing, and target-trial design before extraction.",
+          "PI + disease researcher + data manager"
+        );
+        if (!rows.length) {
+          add("Atlas QA command center", "unknown/needs validation", "qa_items/action_items payload", "No prioritized action rows were generated.", "Review source catalogue and Data Dictionary manually.", "Data manager / QA");
+        }
+        return rows.slice(0, 10);
+      }
+      function renderDataManagerCommandCenter() {
+        const rows = dataManagerCommandRows();
+        return renderSectionCard("Data Manager command center", `
+          <div class="table-wrap"><table>
+            <thead><tr><th>Resource or field</th><th>Current status</th><th>Evidence file or panel</th><th>Risk</th><th>Next validation action</th><th>Owner role</th></tr></thead>
+            <tbody>${rows.map(row => `
+              <tr>
+                <td><strong>${escapeHtml(row.resource)}</strong></td>
+                <td>${renderTrustBadge(row.status || "unknown/needs validation")}</td>
+                <td>${escapeHtml(row.evidence)}</td>
+                <td>${escapeHtml(row.risk)}</td>
+                <td>${escapeHtml(row.nextAction)}</td>
+                <td>${escapeHtml(row.owner)}</td>
+              </tr>
+            `).join("")}</tbody>
+          </table></div>
+        `, "blue");
+      }
+      function renderOnboardingSafeTasks() {
+        const glossary = [
+          ["RKKP", "Danish clinical quality registry family; use Disease Registries first."],
+          ["SDS", "National health-data source layer; inspect source catalogue and code maps."],
+          ["SP", "EHR module/source layer; distinguish plans, orders, administered medicine, notes, and ADT."],
+          ["LABKA", "Laboratory source family; review through Laboratory & Diagnostics/NPU."],
+          ["PATOBANK", "Diagnostic pathology evidence; coded outputs only unless text route is explicitly validated."],
+          ["MiBa", "Microbiology source family; primary taxonomy is Laboratory & Diagnostics."],
+          ["PERSIMUNE", "Curated/lab/microbiology linked resources represented as aggregate source evidence."],
+          ["SKS", "Procedure code system; imaging/radiotherapy/procedure footprints need translation."],
+          ["NPU", "Laboratory code system; use translated analyte labels where available."],
+          ["ATC", "Medication code system; separate antineoplastic and supportive contexts."],
+          ["QA", "Quality assurance and source-readiness review, not clinical evidence by itself."],
+          ["fallback", "Reference value retained for orientation; not accepted current production truth."],
+          ["production aggregate", "Accepted aggregate output for the stated source and count kind."]
+        ];
+        return renderSectionCard("New employee onboarding: first 3 safe tasks", `
+          <div class="grid">
+            <article class="card"><h3>1. Define a diagnosis cohort</h3><p class="mini">Start in Clinical Variables or Disease Registries, then open Data Dictionary for exact fields.</p><button class="sub-tab" type="button" data-jump-tab="variables" data-jump-sub="variables-concepts" data-jump-search="diagnosis">Open task</button></article>
+            <article class="card"><h3>2. Inspect a source and caveat</h3><p class="mini">Open Infrastructure / Source Catalogue and read status, role, and QA caveats before interpreting a count.</p><button class="sub-tab" type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog" data-jump-search="source readiness">Open task</button></article>
+            <article class="card"><h3>3. Find a dictionary entry and export route</h3><p class="mini">Search a concept, inspect raw lineage, and use the built-in export/copy controls.</p><button class="sub-tab" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-lineage" data-jump-search="LDH">Open task</button></article>
+          </div>
+          <details style="margin-top:12px" open><summary>Glossary</summary>
+            <div class="grid">${glossary.map(([term, definition]) => `<article class="card"><h3>${escapeHtml(term)}</h3><p class="mini">${escapeHtml(definition)}</p></article>`).join("")}</div>
+          </details>
+        `, "green");
+      }
+      function renderClinicianManagerPrintBriefing() {
+        const scale = `${formatNumber(payload.source_count || catalogRows.length)} mapped/profied sources; ${formatNumber(payload.column_count || columnRows.length)} column/profile signals; ${formatNumber(payload.check_count || qaItems.length)} QA rows.`;
+        return renderSectionCard("Clinician/manager print briefing", `
+          <article class="print-briefing">
+            <h3>One-page briefing for senior clinician / manager review</h3>
+            <p><strong>Scale:</strong> ${escapeHtml(scale)}</p>
+            <p><strong>Use-now domains:</strong> source readiness, disease registries, laboratory/diagnostics signposting, treatment source-context review, aggregate feasibility planning.</p>
+            <p><strong>Validate-first domains:</strong> study definitions, denominators, code/value logic, text routes, timing windows, exposure/outcome definitions, and disease-specific analytic cohorts.</p>
+            <p><strong>Blocked/limited areas:</strong> patient-level review, causal treatment effects, treatment recommendations, ASCT/HDT omission safety, transplant eligibility, validated risk classification, and validated text-derived Ki-67 extraction.</p>
+            <p><strong>Operational relevance:</strong> helps leadership see which DALY-CARE source areas are ready for internal planning and which need data-manager/source-owner validation.</p>
+            <p><strong>Privacy and non-causal caveat:</strong> aggregate-only, no CPR, no raw patient rows, no raw free text, no unsuppressed small-cell output, and no causal or clinical-treatment claims.</p>
+          </article>
+        `, "amber");
+      }
       function scopeLabel(row) {
         return renderScopeChip(row);
       }
@@ -3046,6 +3281,9 @@
             <span class="label">${escapeHtml(item.label || "")}</span>
             ${item.countKind ? `<div class="trust-badge-row">${renderCountKindBadge(item.countKind)}</div>` : ""}
             ${item.statusLabel ? `<div class="trust-badge-row">${renderTrustBadge(item.statusLabel)}</div>` : ""}
+            ${item.denominator ? `<p class="mini"><strong>Denominator:</strong> ${escapeHtml(item.denominator)}</p>` : ""}
+            ${item.source ? `<p class="mini"><strong>Source:</strong> ${escapeHtml(item.source)}</p>` : ""}
+            ${item.validationStatus ? `<p class="mini"><strong>Validation status:</strong> ${escapeHtml(item.validationStatus)}</p>` : ""}
             ${item.note ? `<p class="mini">${escapeHtml(item.note)}</p>` : ""}
           </div>`;
         }).join("");
@@ -3105,11 +3343,13 @@
       }
       function renderTrustBadge(label) {
         const normalized = text(label || "").toLowerCase();
-        const tone = /accepted production aggregate|validated|no raw|study-planning/.test(normalized) ? "green"
-          : /blocked|suppressed|unavailable|not causal/.test(normalized) ? "red"
-            : /candidate|needs validation|manual|legacy|plan\/mockup|fallback|reference|query executable|not run/.test(normalized) ? "amber"
-              : /not patient count|source rows|profiled rows|datasets|tables|registry entries|aggregate evidence rows/.test(normalized) ? "blue"
-                : "cyan";
+        const tone = /accepted production aggregate|production aggregate|validated|no raw|study-planning/.test(normalized) ? "green"
+          : /blocked|mapping gap|suppressed|unavailable|not causal/.test(normalized) ? "red"
+            : /candidate mapping|candidate|needs validation|manual|legacy|plan\/mockup|fallback|reference|query executable|not run/.test(normalized) ? "amber"
+              : /special access|special|manual \/ embedded/.test(normalized) ? "violet"
+                : /profiled aggregate|not patient count|source rows|profiled rows|datasets|tables|registry entries|aggregate evidence rows/.test(normalized) ? "blue"
+                  : /descriptive feasibility only|feasibility only/.test(normalized) ? "cyan"
+                    : "cyan";
         return renderBadge(label, tone);
       }
       function renderCountKindBadge(label) {
@@ -3142,7 +3382,11 @@
               <article class="card audience-route-card ${escapeHtml(toneColor(card.tone))}">
                 <div>${renderBadge(card.audience, card.tone)}</div>
                 <h3>${escapeHtml(card.question)}</h3>
-                <p class="mini">${escapeHtml(card.bestFor)}</p>
+                <div class="role-route-meta">
+                  <div><strong>Recommended first tab:</strong> ${escapeHtml(card.firstTab || card.tab)}</div>
+                  <div><strong>Next two useful tabs:</strong> ${(card.nextTabs || []).map(tab => escapeHtml(tab)).join("; ")}</div>
+                  <div><strong>Main caveat:</strong> ${escapeHtml(card.caveat || "")}</div>
+                </div>
                 <button class="sub-tab" type="button" data-jump-tab="${escapeHtml(card.tab)}" data-jump-sub="${escapeHtml(card.sub)}"${card.search ? ` data-jump-search="${escapeHtml(card.search)}"` : ""}>Open route</button>
               </article>
             `).join("")}
@@ -4409,7 +4653,17 @@
       });
 
       setHtml("run-status-banner", renderRunStatusBanner());
+      setHtml("overview-start-briefing", renderStartHereBriefing());
+      setHtml("overview-trust-legend", renderTrustStatusLegend());
+      setHtml("clinical-feasibility-trust-legend", renderTrustStatusLegend());
+      setHtml("dictionary-trust-legend", renderTrustStatusLegend());
+      setHtml("source-catalog-trust-legend", renderTrustStatusLegend());
+      setHtml("qa-trust-legend", renderTrustStatusLegend());
       setHtml("overview-audience-routes", renderAudienceRouteCards());
+      setHtml("overview-disease-entry-paths", renderDiseaseEntryPaths());
+      setHtml("overview-data-manager-command-center", renderDataManagerCommandCenter());
+      setHtml("overview-onboarding-safe-tasks", renderOnboardingSafeTasks());
+      setHtml("overview-clinician-print-briefing", renderClinicianManagerPrintBriefing());
       setHtml("overview-walkthrough-path", renderOverviewWalkthroughPath());
       setHtml("overview-entry-cards", renderOverviewEntryCards());
       setHtml("atlas-restoration-status", renderAtlasRestorationStatus());
@@ -6481,8 +6735,15 @@
         };
       }
       function mclKpiItem(label, row, fallback, tone, options) {
-        const info = mclDisplayInfo(row, fallback, options);
-        return Object.assign({ label, tone }, info);
+        const opts = options || {};
+        const info = mclDisplayInfo(row, fallback, opts);
+        return Object.assign({
+          label,
+          tone,
+          denominator: opts.denominator || row && (row.denominator || row.denominator_id || row.denominator_scope || row.data_point_id) || "",
+          source: opts.source || row && (row.source_locations || row.source || row.table_or_source || row.evidence_file) || "mcl_triangle aggregate outputs",
+          validationStatus: opts.validationStatus || row && (row.validation_status || row.count_status || row.acceptance_status || row.status) || info.statusLabel || ""
+        }, info);
       }
       function mclDisplay(row, fallback) {
         return mclDisplayInfo(row, fallback).value;
@@ -6872,6 +7133,29 @@
         const signpost = mclRows("pathology_ki67_signpost")[0] || {};
         return `
           <div class="dashboard-grid mcl-triangle-dashboard">
+            ${renderSectionCard("MCL/TRIANGLE-lite feasibility pre-study", `
+              <div class="callout warn"><strong>Descriptive feasibility only — not causal evidence and not a treatment recommendation.</strong></div>
+              <div class="grid">
+                <article class="card">
+                  <h3>Can say</h3>
+                  <ul>
+                    <li>Aggregate source-readiness and feasibility signals exist for a TRIANGLE-lite pre-study.</li>
+                    <li>Counts are labelled by source, count kind, validation status, and accepted/fallback state.</li>
+                    <li>Biology/risk fields and Ki-67 routes require validation before analytic extraction.</li>
+                  </ul>
+                </article>
+                <article class="card">
+                  <h3>Cannot say</h3>
+                  <ul>
+                    <li>No causal treatment-effect estimate.</li>
+                    <li>No treatment recommendation.</li>
+                    <li>No safe ASCT/HDT omission claim.</li>
+                    <li>No transplant-eligibility or validated high-risk/standard-risk classification claim.</li>
+                    <li>No validated text-derived Ki-67 extraction claim.</li>
+                  </ul>
+                </article>
+              </div>
+            `, "red")}
             ${renderSectionCard("Clinical question", `
               <p><strong>Can younger/fit patients with newly diagnosed mantle cell lymphoma and standard-risk biology safely omit ASCT/HDT when treated with ibrutinib plus chemoimmunotherapy, while patients with high-risk biology should still receive ASCT/HDT in addition to ibrutinib?</strong></p>
               <p class="mini">This is the motivating question only. The atlas presents aggregate feasibility and source readiness, not clinical efficacy, safety, or treatment recommendations.</p>
@@ -6942,6 +7226,18 @@
               ], { tone: "violet" })}
               <p class="mini">Fallback/reference values are deliberately retained for reviewer orientation, but they are visually labelled and are not current accepted production evidence unless the payload metadata and row status support that claim.</p>
             `, "violet")}
+            ${renderSectionCard("Fallback/reference counts", `
+              <p class="mini">Fallback/reference values remain visible for orientation and are not current accepted production evidence unless the current payload state explicitly supports that claim.</p>
+              ${renderTrustBadgeRow(["fallback/reference", "descriptive feasibility only", "not causal / feasibility only"])}
+            `, "amber")}
+            ${renderSectionCard("Unavailable or blocked data points", `
+              <p class="mini">Blocked or unavailable routes are validation states, not proof that the underlying clinical phenomenon is absent.</p>
+              ${renderMclCountTable(mclCountRows("data_point_counts").filter(row => mclRowBlocked(row)), [
+                { key: "clinical_label", label: "Data point", render: row => `<strong>${escapeHtml(row.clinical_label || row.data_point_id || "")}</strong><div class="mini">${escapeHtml(row.data_point_id || "")}</div>` },
+                { key: "count_status", label: "Status", render: row => renderBadge(row.count_status || row.validation_status || "blocked/mapping gap", mclStatusTone(row.count_status || row.validation_status)) },
+                { key: "source_locations", label: "Source" }
+              ], 12)}
+            `, "red")}
             ${renderSectionCard("Study-readiness matrix", renderMclReadinessMatrix(matrix), "blue")}
             ${renderSectionCard("Feasibility scorecard", renderMclFeasibilityScorecard(), "green")}
             ${renderSectionCard("Cohort funnel", `

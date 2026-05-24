@@ -162,8 +162,14 @@ for (needle in c("Height and weight / BMI", "Smoking status", "Alcohol use", "Di
   expect_true(grepl(needle, html, fixed = TRUE), paste("Clinical Variables priority list should include:", needle))
 }
 expect_true(grepl("What can I find in DALY-CARE?", html, fixed = TRUE), "Overview should include the clinician-facing entry section.")
-for (needle in c("Planning a study", "Validating data/source readiness", "New to DALY-CARE", "Disease researcher", "Clinical/management overview", "Data dictionary and QA", "Internal briefing")) {
+for (needle in c("Start here — DALY-CARE internal briefing", "PI / senior investigator", "Data manager / QA", "Disease researcher", "Plasma cell disorder / MM researcher", "CLL researcher", "Lymphoma researcher", "New employee onboarding", "Senior clinician / manager", "Internal briefing")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview audience route and briefing should include:", needle))
+}
+for (needle in c("production aggregate", "profiled aggregate", "fallback/reference", "candidate mapping", "blocked/mapping gap", "special access", "descriptive feasibility only", "Global trust/status legend")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Overview trust legend should include:", needle))
+}
+for (needle in c("Plasma cell disorders / MM", "Other lymphoproliferative disorders", "Data Manager command center", "New employee onboarding: first 3 safe tasks", "Clinician/manager print briefing")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("Cycle 2 audience panels should include:", needle))
 }
 for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoking and alcohol", "Disease registries", "MCL / TRIANGLE feasibility", "Treatment evidence", "Laboratory / NPU", "Microbiology / infection", "Imaging", "Pathology / PATOBANK", "Biobank samples", "Raw names / Data Dictionary")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview entry cards should include:", needle))
@@ -172,6 +178,8 @@ expect_true(grepl("function renderMclTriangleFeasibilityPanel", html, fixed = TR
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
 expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
 expect_true(grepl("feasibility assessment only", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
+expect_true(grepl("Descriptive feasibility only — not causal evidence and not a treatment recommendation.", html, fixed = TRUE), "MCL/TRIANGLE panel should include the Cycle 2 feasibility warning.")
+expect_true(grepl("Can say", html, fixed = TRUE) && grepl("Cannot say", html, fixed = TRUE), "MCL/TRIANGLE panel should include Can say / Cannot say.")
 expect_true(grepl("fallback reference count", html, fixed = TRUE), "MCL/TRIANGLE fallback values should be explicitly labelled.")
 expect_true(grepl("renderCountKindBadge", html, fixed = TRUE), "HTML should include count-kind badge helper.")
 expect_true(grepl("not current accepted production evidence", html, fixed = TRUE), "Fallback count caveat should distinguish fallback values from accepted production evidence.")
@@ -186,7 +194,7 @@ for (needle in c("global-atlas-search", "Search concept, raw column, code, value
 for (needle in c("function normalizeSearchText", "atlasSearchSynonyms", "function expandSearchTerms", "function scoreSearchResult", "Show all results", "Collapse results", "search-highlight")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Global atlas search pass 3 should include:", needle))
 }
-for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank", "pi briefing", "management overview", "data manager", "pcd", "mgus", "amyloidosis", "not in database", "del17p")) {
+for (needle in c("height", "hoejde", "weight", "vaegt", "ryger", "rituximab", "mabthera", "patobank", "biobank", "pi briefing", "management overview", "chief doctor", "data manager", "source readiness", "feasibility", "pcd", "mm", "mgus", "amyloidosis", "cll", "lymphoma", "not in database", "del17p")) {
   expect_true(grepl(needle, tolower(html), fixed = TRUE), paste("Search synonym support should include:", needle))
 }
 for (needle in c("data-search-open", "data-copy-value", "data-copy-share-link", "data-export-view", "function downloadCsv", "function rowsToCsv", "clinical-concepts", "semantic-lineage", "semantic-values", "semantic-codes", "semantic-panels")) {
@@ -278,10 +286,16 @@ for (needle in c(
 expect_true(grepl("{ name: \"cll\", tab: \"registries\", sub: \"reg-cll\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the CLL registry target.")
 expect_true(grepl("{ name: \"treatment\", tab: \"treatment\", sub: \"treatment-dashboard\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Treatment target.")
 expect_true(grepl("{ name: \"laboratory\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory/NPU target.")
+expect_true(grepl("{ name: \"laboratory_diagnostics\", tab: \"laboratory\", sub: \"lab-npu\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory & Diagnostics target.")
+expect_true(grepl("{ name: \"npu_detective\", tab: \"laboratory\", sub: \"lab-npu\", search: \"NPU02319\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the NPU Detective target.")
 expect_true(grepl("{ name: \"biobank\", tab: \"laboratory\", sub: \"lab-biobank\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Biobank target.")
-expect_true(grepl("{ name: \"microbiology\", tab: \"clinical\", sub: \"clinical-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Microbiology/Infection target.")
+expect_true(grepl("{ name: \"microbiology\", tab: \"laboratory\", sub: \"lab-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory Microbiology target.")
+expect_true(grepl("{ name: \"microbiology_clinical_crosslink\", tab: \"clinical\", sub: \"clinical-microbiology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Microbiology clinical cross-link target.")
 expect_true(grepl("{ name: \"imaging\", tab: \"clinical\", sub: \"clinical-imaging\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Imaging target.")
-expect_true(grepl("{ name: \"pathology\", tab: \"clinical\", sub: \"clinical-pathology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Pathology/PATOBANK target.")
+expect_true(grepl("{ name: \"imaging_lab\", tab: \"laboratory\", sub: \"lab-imaging\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory Imaging target.")
+expect_true(grepl("{ name: \"pathology\", tab: \"laboratory\", sub: \"lab-pathology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Laboratory Pathology/PATOBANK target.")
+expect_true(grepl("{ name: \"pathology_clinical_crosslink\", tab: \"clinical\", sub: \"clinical-pathology\" }", visual_qa_script, fixed = TRUE), "Visual QA script should include the Pathology clinical cross-link target.")
+expect_true(grepl("print_briefing_desktop.png", visual_qa_script, fixed = TRUE), "Visual QA script should include the print briefing capture.")
 expect_true(grepl("microbiologyAtGlancePresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Microbiology At a glance section.")
 expect_true(grepl("imagingPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Imaging panel.")
 expect_true(grepl("pathologyPanelPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Pathology/PATOBANK panel.")
@@ -294,25 +308,19 @@ for (needle in c("overview_normal", "run_status_normal_desktop.png", "quick_star
 }
 expect_true(grepl("dataDictionaryDetailStackPresent", visual_qa_script, fixed = TRUE), "Visual QA script should verify the Data Dictionary stacked detail pane.")
 expect_true(grepl("dataDictionaryFullLineageTablePresent", visual_qa_script, fixed = TRUE), "Visual QA script should reject wide Full lineage tables in the detail pane.")
-expect_file(file.path(root, "UX_FIRST_PASS_NOTES.md"))
-ux_notes <- paste(readLines(file.path(root, "UX_FIRST_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
-for (needle in c("What changed", "Files modified", "Assumptions", "Known limitations", "How to test locally", "Screenshots generated")) {
-  expect_true(grepl(needle, ux_notes, fixed = TRUE), paste("UX first pass notes should include:", needle))
+for (path in c(
+  "qa_pdsa_cycle2/AUDIENCE_UI_ASSESSMENT.md",
+  "qa_pdsa_cycle2/PDSA_CYCLE2_PLAN.md",
+  "qa_pdsa_cycle2/PDSA_CYCLE2_STUDY_TEMPLATE.md",
+  "qa_pdsa_cycle2/PDSA_CYCLE2_STUDY_RESULTS_TEMPLATE.md",
+  "qa_pdsa_cycle2/preservation_snapshot_before.json",
+  "qa_pdsa_cycle2/preservation_snapshot_after.json"
+)) {
+  expect_file(file.path(root, path))
 }
-expect_file(file.path(root, "UX_SECOND_PASS_NOTES.md"))
-ux2_notes <- paste(readLines(file.path(root, "UX_SECOND_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
-for (needle in c("What changed", "Files modified", "Search implementation notes", "Deep-link format", "Copy/export behavior", "Mobile changes", "QA screenshots generated", "Known limitations", "How to test locally")) {
-  expect_true(grepl(needle, ux2_notes, fixed = TRUE), paste("UX second pass notes should include:", needle))
-}
-expect_file(file.path(root, "UX_THIRD_PASS_NOTES.md"))
-ux3_notes <- paste(readLines(file.path(root, "UX_THIRD_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
-for (needle in c("What changed", "Files modified", "Mobile clipping fixes", "Search normalization / synonym logic", "Ranking logic", "Code-map routing fix", "Copy/export feedback behavior", "QA screenshots generated", "Known limitations", "How to test locally")) {
-  expect_true(grepl(needle, ux3_notes, fixed = TRUE), paste("UX third pass notes should include:", needle))
-}
-expect_file(file.path(root, "UX_FOURTH_PASS_NOTES.md"))
-ux4_notes <- paste(readLines(file.path(root, "UX_FOURTH_PASS_NOTES.md"), warn = FALSE), collapse = "\n")
-for (needle in c("What changed", "Files modified", "Root cause of the viewport/screenshot bug", "Mobile clipping fixes", "Deep-link preservation fix", "CSV export zero-row fix", "Global search collapse/dedup/ranking fixes", "QA screenshots generated", "Known limitations", "How to test locally")) {
-  expect_true(grepl(needle, ux4_notes, fixed = TRUE), paste("UX fourth pass notes should include:", needle))
+cycle2_plan <- paste(readLines(file.path(root, "qa_pdsa_cycle2", "PDSA_CYCLE2_PLAN.md"), warn = FALSE), collapse = "\n")
+for (needle in c("first-fold", "role-specific routes", "global trust/status legend", "preservation snapshots", "No prohibited causal")) {
+  expect_true(grepl(needle, cycle2_plan, fixed = TRUE), paste("PDSA Cycle 2 plan should include:", needle))
 }
 expect_file(file.path(root, "SOURCE_RECONCILIATION_FROM_LEGACY_R_SCRIPTS.md"))
 source_reconciliation_notes <- paste(readLines(file.path(root, "SOURCE_RECONCILIATION_FROM_LEGACY_R_SCRIPTS.md"), warn = FALSE), collapse = "\n")
