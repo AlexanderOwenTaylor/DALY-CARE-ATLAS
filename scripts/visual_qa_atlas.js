@@ -390,9 +390,14 @@ const targets = [
   { name: "cll", tab: "registries", sub: "reg-cll" },
   { name: "treatment", tab: "treatment", sub: "treatment-dashboard" },
   { name: "laboratory", tab: "laboratory", sub: "lab-npu" },
+  { name: "laboratory_diagnostics", tab: "laboratory", sub: "lab-npu" },
+  { name: "npu_detective", tab: "laboratory", sub: "lab-npu", search: "NPU02319" },
   { name: "biobank", tab: "laboratory", sub: "lab-biobank" },
-  { name: "microbiology", tab: "clinical", sub: "clinical-microbiology" },
-  { name: "pathology", tab: "clinical", sub: "clinical-pathology" },
+  { name: "microbiology", tab: "laboratory", sub: "lab-microbiology" },
+  { name: "microbiology_clinical_crosslink", tab: "clinical", sub: "clinical-microbiology" },
+  { name: "imaging_lab", tab: "laboratory", sub: "lab-imaging" },
+  { name: "pathology", tab: "laboratory", sub: "lab-pathology" },
+  { name: "pathology_clinical_crosslink", tab: "clinical", sub: "clinical-pathology" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 
@@ -440,6 +445,7 @@ const normalScreenshotCaptures = [
   { file: "mcl_triangle_mobile.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[2] },
   { file: "mcl_triangle_ki67_desktop.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0], scrollSelector: "#mcl-ki67-readiness" },
   { file: "mcl_triangle_ki67_mobile_375.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1], scrollSelector: "#mcl-ki67-readiness" },
+  { file: "print_briefing_desktop.png", name: "print_mode", tab: "overview", sub: "overview-summary", viewport: qaViewports[0], scrollSelector: "#overview-clinician-print-briefing" },
   { file: "global_search_ki67_desktop.png", name: "global_search_ki67", tab: "overview", sub: "overview-summary", search: "Ki-67", viewport: qaViewports[0], autoScroll: false },
   { file: "global_search_aeki020_desktop.png", name: "global_search_aeki020", tab: "overview", sub: "overview-summary", search: "ÆKI020", viewport: qaViewports[0], autoScroll: false },
   { file: "global_search_mib1_desktop.png", name: "global_search_mib1", tab: "overview", sub: "overview-summary", search: "MIB-1", viewport: qaViewports[0], autoScroll: false },
@@ -502,10 +508,10 @@ async function main() {
           report.biobankPanelPresent = /Biobank sample atlas/.test(overflowRender.dom) && /Biobank evidence layers/.test(overflowRender.dom) && /Sample sources/.test(overflowRender.dom) && /Raw names \/ data lineage/.test(overflowRender.dom);
         }
         if (target.name === "mcl_triangle") {
-          report.mclTrianglePanelPresent = /MCL \/ TRIANGLE feasibility/.test(overflowRender.dom) &&
+          report.mclTrianglePanelPresent = /MCL\/TRIANGLE-lite feasibility pre-study/.test(overflowRender.dom) &&
             /Study-readiness matrix/.test(overflowRender.dom) &&
             /Treatment-timing feasibility/.test(overflowRender.dom) &&
-            /feasibility assessment only/.test(overflowRender.dom);
+            /Descriptive feasibility only/.test(overflowRender.dom);
         }
         reports.push(report);
       }
