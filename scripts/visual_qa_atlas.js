@@ -384,6 +384,7 @@ const targets = [
   { name: "vitals", tab: "clinical", sub: "clinical-vitals" },
   { name: "social_history", tab: "clinical", sub: "clinical-social" },
   { name: "mcl_triangle", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+  { name: "confluence", tab: "clinical-feasibility", sub: "confluence-feasibility" },
   { name: "imaging", tab: "clinical", sub: "clinical-imaging" },
   { name: "damyda", tab: "registries", sub: "reg-damyda" },
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
@@ -443,6 +444,9 @@ const normalScreenshotCaptures = [
   { file: "mcl_triangle_desktop.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0] },
   { file: "mcl_triangle_mobile_375.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1] },
   { file: "mcl_triangle_mobile.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[2] },
+  { file: "confluence_desktop.png", name: "confluence_normal", tab: "clinical-feasibility", sub: "confluence-feasibility", viewport: qaViewports[0] },
+  { file: "confluence_mobile_375.png", name: "confluence_normal", tab: "clinical-feasibility", sub: "confluence-feasibility", viewport: normalViewports[1] },
+  { file: "confluence_mobile.png", name: "confluence_normal", tab: "clinical-feasibility", sub: "confluence-feasibility", viewport: normalViewports[2] },
   { file: "mcl_triangle_ki67_desktop.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0], scrollSelector: "#mcl-ki67-readiness" },
   { file: "mcl_triangle_ki67_mobile_375.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1], scrollSelector: "#mcl-ki67-readiness" },
   { file: "print_briefing_desktop.png", name: "print_mode", tab: "overview", sub: "overview-summary", viewport: qaViewports[0], scrollSelector: "#overview-clinician-print-briefing" },
@@ -513,6 +517,13 @@ async function main() {
             /Treatment-timing feasibility/.test(overflowRender.dom) &&
             /Descriptive feasibility only/.test(overflowRender.dom);
         }
+        if (target.name === "confluence") {
+          report.confluencePanelPresent = /DALY-CARE CONFLUENCE/.test(overflowRender.dom) &&
+            /CLL\/MBL/.test(overflowRender.dom) &&
+            /query executable not run/.test(overflowRender.dom) &&
+            /not accepted aggregate/.test(overflowRender.dom) &&
+            /immortal-time bias/.test(overflowRender.dom);
+        }
         reports.push(report);
       }
     }
@@ -582,7 +593,8 @@ async function main() {
       (report.target === "imaging" && !report.imagingPanelPresent) ||
       (report.target === "pathology" && !report.pathologyPanelPresent) ||
       (report.target === "biobank" && !report.biobankPanelPresent) ||
-      (report.target === "mcl_triangle" && !report.mclTrianglePanelPresent)
+      (report.target === "mcl_triangle" && !report.mclTrianglePanelPresent) ||
+      (report.target === "confluence" && !report.confluencePanelPresent)
     );
     if (failures.length) {
       console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);

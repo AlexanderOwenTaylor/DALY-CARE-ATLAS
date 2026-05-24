@@ -1,6 +1,6 @@
 [
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=overview&qaSub=overview-summary&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=overview&qaSub=overview-summary&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -24,7 +24,7 @@
     "overviewConsolidationPresent": true
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=quickstart&qaSub=quickstart-recipes&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=quickstart&qaSub=quickstart-recipes&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -47,7 +47,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=variables&qaSub=variables-concepts&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=variables&qaSub=variables-concepts&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -70,7 +70,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-vitals&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-vitals&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -93,7 +93,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-social&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-social&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -116,7 +116,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=clinical-feasibility&qaSub=mcl-triangle-feasibility&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical-feasibility&qaSub=mcl-triangle-feasibility&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -140,7 +140,31 @@
     "mclTrianglePanelPresent": true
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-imaging&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical-feasibility&qaSub=confluence-feasibility&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "qaViewport": "desktop",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerWidth": 1440,
+    "documentElementClientWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "documentClientWidth": 1440,
+    "bodyOverflow": false,
+    "overflowing": [],
+    "target": "confluence",
+    "viewportName": "desktop",
+    "requestedViewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "windowInnerHeight": 1000,
+    "screenshotWidth": 1440,
+    "screenshotHeight": 1000,
+    "confluencePanelPresent": true
+  },
+  {
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-imaging&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -164,7 +188,7 @@
     "imagingPanelPresent": true
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-damyda&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-damyda&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -187,7 +211,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-lyfo&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-lyfo&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -210,7 +234,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-cll&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=registries&qaSub=reg-cll&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -233,7 +257,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=treatment&qaSub=treatment-dashboard&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=treatment&qaSub=treatment-dashboard&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -256,7 +280,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -279,7 +303,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -302,7 +326,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaSearch=NPU02319&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-npu&qaSearch=NPU02319&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -325,7 +349,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-biobank&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-biobank&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -349,7 +373,7 @@
     "biobankPanelPresent": true
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-microbiology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-microbiology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -373,7 +397,7 @@
     "microbiologyAtGlancePresent": true
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-microbiology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-microbiology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -396,7 +420,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-imaging&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-imaging&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -419,7 +443,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-pathology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=laboratory&qaSub=lab-pathology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -443,7 +467,7 @@
     "pathologyPanelPresent": true
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-pathology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=clinical&qaSub=clinical-pathology&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
@@ -466,7 +490,7 @@
     "screenshotHeight": 1000
   },
   {
-    "href": "file:///C:/Users/User/AppData/Local/Temp/cycle2_visual_qa_atlas_28356/20260524_172214-p28356/site/DALYCARE_atlas.html?qaTab=dictionary&qaSub=dictionary-lineage&qaOverflow=1&qaCapture=1&qaViewport=desktop",
+    "href": "file:///C:/Users/User/AppData/Local/Temp/confluence_visual_qa_atlas_30312/20260524_184451-p30312/site/DALYCARE_atlas.html?qaTab=dictionary&qaSub=dictionary-lineage&qaOverflow=1&qaCapture=1&qaViewport=desktop",
     "qaViewport": "desktop",
     "viewport": {
       "width": 1440,
