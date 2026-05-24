@@ -1109,7 +1109,7 @@
         <option value="registries">Disease Registries</option>
         <option value="clinical">Clinical Data</option>
         <option value="treatment">Treatment</option>
-        <option value="laboratory">Laboratory</option>
+        <option value="laboratory">Laboratory & Diagnostics</option>
         <option value="dictionary">Data Dictionary</option>
         <option value="ehr">EHR Modules</option>
         <option value="infrastructure">Infrastructure</option>
@@ -1122,7 +1122,7 @@
       <button class="tab-button" data-tab="registries">Disease Registries</button>
       <button class="tab-button" data-tab="clinical">Clinical Data</button>
       <button class="tab-button" data-tab="treatment">Treatment</button>
-      <button class="tab-button" data-tab="laboratory">Laboratory</button>
+      <button class="tab-button" data-tab="laboratory">Laboratory & Diagnostics</button>
       <button class="tab-button" data-tab="dictionary">Data Dictionary</button>
       <button class="tab-button" data-tab="ehr">EHR Modules</button>
       <button class="tab-button" data-tab="infrastructure">Infrastructure</button>
@@ -1642,15 +1642,21 @@
     </section>
 
     <section class="tab-page" id="tab-laboratory">
-      <div class="sub-nav" aria-label="Laboratory sections">
+      <div class="sub-nav" aria-label="Laboratory and Diagnostics sections">
         <button class="sub-tab active" data-sub="lab-npu">NPU Vectors</button>
         <button class="sub-tab" data-sub="lab-detective">NPU Detective</button>
+        <button class="sub-tab" data-sub="lab-imaging">Imaging</button>
+        <button class="sub-tab" data-sub="lab-microbiology">Microbiology</button>
+        <button class="sub-tab" data-sub="lab-pathology">Pathology</button>
         <button class="sub-tab" data-sub="lab-isotype">Isotype Finder</button>
         <button class="sub-tab" data-sub="lab-biobank">Biobank</button>
         <button class="sub-tab" data-sub="lab-sources">Lab Sources</button>
       </div>
-      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory / NPU atlas</h2><p class="panel-sub">Clinician-facing laboratory concept discovery across NPU/DNK codes, national LABKA/SDS, SP AlleProvesvar, PERSIMUNE biochemistry, and registry lab fields.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
+      <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory & Diagnostics / NPU atlas</h2><p class="panel-sub">Clinician-facing laboratory concept discovery across NPU/DNK codes, national LABKA/SDS, SP AlleProvesvar, PERSIMUNE biochemistry, and registry lab fields.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
       <div class="sub-pane" id="lab-detective"><div class="panel"><div class="panel-head"><h2 class="panel-title">NPU Detective</h2><p class="panel-sub">Observed NPU inventory and candidate codes from aggregate code panels.</p></div><div class="panel-body"><div id="detective-cards" class="grid"></div></div></div></div>
+      <div class="sub-pane" id="lab-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging / radiotherapy diagnostics</h2><p class="panel-sub">Primary diagnostics home for UX/BWGC procedure footprints, DaMyDa imaging/bone disease, and SP imaging/report route status. Cross-linked from Clinical Data for study planning.</p></div><div class="panel-body"><div id="laboratory-imaging-cards"></div></div></div></div>
+      <div class="sub-pane" id="lab-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / MiBa diagnostics</h2><p class="panel-sub">Primary diagnostics home for microbiology source, organism/culture, specimen, antibiotic-agent, and susceptibility result evidence. Cross-linked from Clinical Data for infection-study planning.</p></div><div class="panel-body"><div id="laboratory-microbiology-cards"></div></div></div></div>
+      <div class="sub-pane" id="lab-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK diagnostics</h2><p class="panel-sub">Primary diagnostics home for PATOBANK/SDS pathology, SNOMED translation, specimen/material, morphology, procedure, and report-text route status. Cross-linked from Clinical Data for cohort planning.</p></div><div class="panel-body"><div id="laboratory-pathology-cards"></div></div></div></div>
       <div class="sub-pane" id="lab-isotype"><div class="panel"><div class="panel-head"><h2 class="panel-title">Isotype Finder</h2><p class="panel-sub">M-spike and isotype code families at aggregate level.</p></div><div class="panel-body"><div id="isotype-cards" class="grid"></div></div></div></div>
       <div class="sub-pane" id="lab-biobank"><div class="panel"><div class="panel-head"><h2 class="panel-title">Biobank sample atlas</h2><p class="panel-sub">Aggregate sample-source, sample-type/material, availability, and translational/cohort source evidence. Sample identifiers and collection-date values are not emitted.</p></div><div class="panel-body"><div id="biobank-dashboard"></div></div></div></div>
       <div class="sub-pane" id="lab-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory Sources</h2><p class="panel-sub">Lab-like source metadata and relevant NPU/isotype panels.</p></div><div class="panel-body"><div id="laboratory-source-cards"></div></div></div></div>
@@ -3659,15 +3665,36 @@
       function damydaFacetRows(keys) {
         return damydaClinicalRows().filter(row => rowMatchesKeys(row, keys));
       }
+      function damydaImagingBoneLabel(row) {
+        const key = damydaColumnKey(row);
+        const hay = normalizeClinicalKey([row.source_column, row.raw_column, row.field, row.facet, row.clinical_variable, row.label].map(text).join(" "));
+        if (/petct|pet/.test(hay)) return "PET/CT";
+        if (/dexa/.test(hay)) return "DEXA";
+        if (/scinti|scintig/.test(hay)) return "Scintigraphy";
+        if (/mri|knogleundersoegelsermr|undersoegelsermr/.test(hay)) return "MRI";
+        if (/ct|knogleundersoegelserct|undersoegelserct/.test(hay)) return "CT";
+        if (/andreknogleundersoegelse|otherimaging|other/.test(hay)) return "Other imaging";
+        if (/knogleforandringertype|bonelesiontype/.test(key) || /knogleforandringertype|bonelesiontype/.test(hay)) return "Bone lesion type";
+        if (/knogleforandringer|bonedisease|bonelesion/.test(key) || /knogleforandringer|bonedisease|bonelesion/.test(hay)) return "Bone lesions";
+        return row.label || row.source_column || row.facet || "Unmapped DaMyDa imaging/bone field";
+      }
+      function groupDaMyDaFacetRows(rows, labelFn, tone) {
+        const grouped = {};
+        (rows || []).forEach(row => {
+          const label = labelFn ? labelFn(row) : (row.label || row.source_column || row.facet || "");
+          if (!grouped[label]) grouped[label] = { label, n: 0, pct: "", tone };
+          grouped[label].n += numberValue(row.n || row.n_rows || row.statistic_value);
+          if (!grouped[label].pct && row.pct_rows) grouped[label].pct = row.pct_rows;
+        });
+        return Object.values(grouped).sort((a, b) => numberValue(b.n) - numberValue(a.n) || text(a.label).localeCompare(text(b.label)));
+      }
       function renderDaMyDaFacetGroup(title, keys, note, tone) {
         const cardTone = toneColor(tone || "blue");
         const rows = damydaFacetRows(keys).slice(0, 12);
-        const body = rows.length ? renderHBarRows(rows.map(row => ({
-          label: row.label || row.source_column || row.facet || "",
-          n: row.n,
-          pct: row.pct_rows,
-          tone: cardTone
-        })), { tone: cardTone, limit: 10 }) : `<div class="empty">No aggregate rows for this DaMyDa block were generated in the current output.</div>`;
+        const groupedRows = title === "Bone disease / imaging"
+          ? groupDaMyDaFacetRows(rows, damydaImagingBoneLabel, cardTone)
+          : groupDaMyDaFacetRows(rows, row => row.label || row.source_column || row.facet || "", cardTone);
+        const body = groupedRows.length ? renderHBarRows(groupedRows, { tone: cardTone, limit: 10 }) : `<div class="empty">No aggregate rows for this DaMyDa block were generated in the current output.</div>`;
         return `<article class="value-map-card ${escapeHtml(cardTone)} section-${escapeHtml(cssClass(title))}">
           <h3>${escapeHtml(title)}</h3>
           ${note ? `<p class="mini">${escapeHtml(note)}</p>` : ""}
@@ -4123,7 +4150,7 @@
             { label: "registry source", value: "RKKP_CLL", tone: "violet" },
             { label: "registry entries", value: metricOrUnavailable(summary.n_rows, "registry entries"), tone: "violet" },
             { label: "variables", value: metricOrUnavailable(summary.n_cols, "variables"), tone: "cyan" },
-            { label: "patients", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not available", tone: "green" },
+            { label: "patient denominator", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not computed for this aggregate block", tone: "green" },
             { label: "date span", value: cllDateSpan(summary), tone: "amber" }
           ], { tone: "violet" }), "violet")}
           <div class="value-map-grid">
@@ -4689,8 +4716,10 @@
           ["Epikur metadata", "Epikur rows are text/clinical-note metadata, not a complete structured treatment record."]
         ];
         const requiredTreatmentSignals = ["SP_AdministreretMedicin", "SP_OrdineretMedicin", "SMR_medicine", "SDS_t_sksube", "SDS_epikur", "ATC", "SKS", "L01/L04", "antineoplastic chemotherapy", "immunotherapy", "radiotherapy", "lenalidomide", "bortezomib", "daratumumab", "rituximab", "venetoclax", "ibrutinib"];
-        const namedDrugs = ["venetoclax", "ibrutinib", "idelalisib", "rituximab", "lenalidomide", "bortezomib", "daratumumab", "dexamethasone", "aciclovir", "trimethoprim", "sulfamethoxazole", "fluconazole", "filgrastim"];
-        const namedDrugRows = atcRows.filter(row => treatmentContains(row, namedDrugs));
+        const antineoplasticDrugTerms = ["venetoclax", "ibrutinib", "idelalisib", "rituximab", "obinutuzumab", "lenalidomide", "pomalidomide", "bortezomib", "carfilzomib", "daratumumab", "cyclophosphamide", "melphalan", "vincristine", "doxorubicin", "cytarabine", "etoposide", "L01", "L04"];
+        const supportiveMedicationTerms = ["aciclovir", "trimethoprim", "sulfamethoxazole", "fluconazole", "filgrastim", "pegfilgrastim", "ondansetron", "metoclopramide", "paracetamol", "pantoprazole", "potassium", "sodium", "dexamethasone", "prednisolone"];
+        const antineoplasticRows = atcRows.filter(row => treatmentContains(row, antineoplasticDrugTerms));
+        const supportiveMedicationRows = atcRows.filter(row => treatmentContains(row, supportiveMedicationTerms));
         const sksPriorityRows = sksRows.filter(row => treatmentContains(row, ["antineoplastic", "chemotherapy", "immunotherapy", "radiotherapy", "sct", "stem", "lenalidomide", "bortezomib", "daratumumab", "venetoclax", "ibrutinib"]));
         return `
           <div class="dashboard-grid treatment-dashboard">
@@ -4714,8 +4743,11 @@
               <div class="grid grid-3">${layerItems.map(item => `<article class="raw-lineage-card">${renderBadge(item[0], "cyan")}<p>${escapeHtml(item[1])}</p></article>`).join("")}</div>
             `, "cyan")}
             ${renderSectionCard("ATC medication signals", `
-              ${renderTreatmentCodeSection("Named treatment/supportive medicines", namedDrugRows.length ? namedDrugRows : atcRows, "green", "No ATC medication rows available.")}
-              <p class="mini">ATC rows, including L01/L04 antineoplastic or immunomodulating signals when present, are code-level treatment signals and require exposure-window definitions before patient-level analysis.</p>
+              <h3>Antineoplastic / immunomodulatory ATC signals</h3>
+              ${renderTreatmentCodeSection("Antineoplastic and immunomodulatory drug concepts", antineoplasticRows.length ? antineoplasticRows : atcRows.filter(row => /^L0[14]/i.test(text(row.code || row.raw_code || ""))), "green", "No antineoplastic or immunomodulatory ATC rows available.")}
+              <h3>Supportive medication signals</h3>
+              ${renderTreatmentCodeSection("Supportive medications", supportiveMedicationRows, "cyan", "No supportive medication ATC rows available.")}
+              <p class="mini">ATC rows are split by concept before display: L01/L04 antineoplastic or immunomodulating signals are separate from prophylaxis, antiemetic, analgesic, electrolyte, steroid/supportive, and other supportive medication evidence.</p>
               <p class="mini">Expected signal labels: ${requiredTreatmentSignals.map(escapeHtml).join("; ")}</p>
             `, "green")}
             ${renderSectionCard("SKS/procedure signals", `
@@ -4831,8 +4863,25 @@
         const key = normalizeClinicalKey([row.raw_column, row.value_type, row.privacy_note].map(text).join(" "));
         return /rapporttekst|reporttext|report_text|beskrivelse|freetext|free_text|tekst|text|note/.test(key);
       }
+      const imagingCodeLabels = {
+        UXCC00: "CT thorax",
+        UXCD00: "CT abdomen",
+        UXZ10: "CT",
+        UXZ11: "MRI",
+        UXRC00: "X-ray thorax",
+        BWGC1: "Radiotherapy fraction",
+        BWGC4A: "Electron beam therapy"
+      };
+      function imagingTranslatedCode(row) {
+        const values = [row.raw_code, row.code, row.raw_value, row.display_value, row.raw_descriptor].map(text);
+        const cleaned = values.map(value => value.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+        const hit = cleaned.find(value => imagingCodeLabels[value]) || Object.keys(imagingCodeLabels).find(code => cleaned.some(value => value.includes(code)));
+        return hit ? imagingCodeLabels[hit] : "";
+      }
       function imagingSafeLabel(row) {
         if (imagingIsDateLike(row) || imagingIsFreeText(row)) return "";
+        const translated = imagingTranslatedCode(row);
+        if (translated) return translated;
         if (isDaMyDaImagingRegistryRow(row)) {
           const registryValue = [row.raw_value, row.display_value, row.raw_descriptor, row.raw_code]
             .map(text)
@@ -4950,7 +4999,11 @@
         `).join("")}</div>`;
       }
       function renderImagingModalityCard(spec) {
-        const rows = imagingRowsForConcept(spec.ids).filter(row => imagingValueMatches(row, spec.terms) || spec.ids.includes(row.clinical_concept_id));
+        let rows = imagingRowsForConcept(spec.ids).filter(row => imagingValueMatches(row, spec.terms) || spec.ids.includes(row.clinical_concept_id));
+        if (spec.title === "Radiotherapy") {
+          const layerRows = imagingRowsForLayer("radiotherapy").filter(row => imagingValueMatches(row, spec.terms) || /bwgc|radiotherapy/.test(normalizeClinicalKey([row.raw_code, row.code, row.raw_value, row.raw_descriptor, row.clinical_variable].map(text).join(" "))));
+          if (layerRows.length) rows = layerRows;
+        }
         return renderValueMapCard(spec.title, imagingBarRows(rows), {
           tone: spec.tone,
           limit: 10,
@@ -4983,6 +5036,10 @@
         const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_imaging") || {};
         const allRows = imagingAllRawRows();
         const distributionRows = imagingPanelDistributionRows();
+        const radiotherapyRows = imagingRowsForLayer("radiotherapy");
+        const radiotherapyRouteMessage = radiotherapyRows.length
+          ? "Radiotherapy procedure evidence is available through SKS/BWGC procedure codes. SP radiotherapy plan/report detail is not available in the current aggregate block."
+          : "No radiotherapy procedure-code aggregate rows were generated in the current output; check SKS/BWGC and SP radiotherapy route activation.";
         return `
           <div class="dashboard-grid imaging-dashboard">
             ${renderKpiStrip([
@@ -5011,6 +5068,7 @@
             ${renderSectionCard("X-ray", renderImagingModalityCard(imagingModalitySpecs[3]), "cyan")}
             ${renderSectionCard("Radiotherapy", `
               ${renderImagingModalityCard(imagingModalitySpecs[4])}
+              <p class="mini">${escapeHtml(radiotherapyRouteMessage)}</p>
               <p class="mini">Radiotherapy rows are procedure signals, not medication treatment exposure.</p>
             `, "red")}
             ${renderSectionCard("Raw names / data lineage", renderImagingRawLineageByLayer(), "blue")}
@@ -5056,6 +5114,36 @@
         if (/microbiology_analysis|micro_analysis/.test(key)) return microbiologyLayerSpecs[0];
         if (/bloddyrkning/.test(key)) return microbiologyLayerSpecs[4];
         return { id: "candidate", label: "Candidate / needs-validation", tone: "amber", captures: "Candidate microbiology evidence.", best: "Discovery only.", caveat: "Validate source-specific meaning before analytic use.", fields: [] };
+      }
+      const microbiologySourceAliasKeys = new Set([
+        "HVH", "HER", "RHM", "STM", "AUH", "OUM", "NJA", "SSI", "VEM", "RGH",
+        "Rigshospitalet", "Region Hovedstaden", "Herlev", "Hvidovre"
+      ].map(normalizeClinicalKey));
+      function microbiologyColumnRole(row) {
+        const key = normalizeClinicalKey([row.raw_column, row.field, row.raw_descriptor, row.clinical_variable, row.clinical_concept_id, row.display_value].map(text).join(" "));
+        if (/antibiotic|antibiotika|antimikrob|drug|agent/.test(key)) return "antibiotic";
+        if (/suscept|sensitivity|sensitivitet|resistan|resistens|foelsom|folsom|intermed/.test(key)) return "susceptibility";
+        if (/hospital|source|lab|laborator|institution|institut|afdeling|department|region|responsible|identifier|producer|requisition/.test(key)) return "source";
+        if (/organism|organisme|species|morg|bacteria|virus|fungus|domain/.test(key)) return "organism";
+        if (/sample|material|specimen|proeve|prove|urine|blood|stool|swab|airway|bal/.test(key)) return "specimen";
+        if (row.clinical_concept_id === "microbiology_lab_source") return "source";
+        if (row.clinical_concept_id === "microbiology_antibiotic") return "antibiotic";
+        if (row.clinical_concept_id === "microbiology_susceptibility" || row.clinical_concept_id === "microbiology_susceptibility_result") return "susceptibility";
+        return "candidate";
+      }
+      function microbiologyIsSourceAliasValue(row) {
+        return [microbiologySafeLabel(row), row.raw_value, row.display_value, row.raw_code, row.raw_descriptor]
+          .map(normalizeClinicalKey)
+          .some(value => value && microbiologySourceAliasKeys.has(value));
+      }
+      function microbiologyAllowedForConcept(row, ids) {
+        const wanted = new Set(Array.isArray(ids) ? ids : [ids]);
+        const role = microbiologyColumnRole(row);
+        const isSourceAlias = microbiologyIsSourceAliasValue(row);
+        if (wanted.has("microbiology_lab_source")) return role === "source" || isSourceAlias;
+        if (wanted.has("microbiology_antibiotic")) return role === "antibiotic" && !isSourceAlias;
+        if (wanted.has("microbiology_susceptibility") || wanted.has("microbiology_susceptibility_result")) return role === "susceptibility" && !isSourceAlias;
+        return !isSourceAlias || role === "source";
       }
       function microbiologyRawRows(predicate) {
         return (panelRawFieldRows || [])
@@ -5115,6 +5203,7 @@
         const conceptMatch = !spec.ids || spec.ids.includes(row.clinical_concept_id);
         const layerMatch = !spec.layer || microbiologyLayer(row).id === spec.layer;
         if (!conceptMatch || !layerMatch) return false;
+        if (!microbiologyAllowedForConcept(row, spec.ids || [])) return false;
         if (spec.broadOnly && !["virus", "bacteria", "bacterium", "fungus", "fungi", "other", "unclassified"].includes(normalizeClinicalKey(microbiologySafeLabel(row)))) return false;
         return microbiologyValueMatches(row, spec.values);
       }
@@ -5125,8 +5214,9 @@
       }
       function microbiologyConceptRows(ids) {
         const wanted = new Set(Array.isArray(ids) ? ids : [ids]);
-        const distRows = microbiologyPanelDistributionRows(row => wanted.has(row.clinical_concept_id));
-        return distRows.length ? distRows : microbiologyDistributionRows(row => wanted.has(row.clinical_concept_id));
+        const matches = row => wanted.has(row.clinical_concept_id) && microbiologyAllowedForConcept(row, ids);
+        const distRows = microbiologyPanelDistributionRows(matches);
+        return distRows.length ? distRows : microbiologyDistributionRows(matches);
       }
       function microbiologyRowsForLayer(layerId) {
         return microbiologyRawRows(row => microbiologyLayer(row).id === layerId);
@@ -5220,7 +5310,7 @@
       }
       function renderMicrobiologyLayerSection(title, layerId, conceptIds, tone) {
         const layerRows = microbiologyRowsForLayer(layerId);
-        const distRows = conceptIds ? layerRows.filter(row => conceptIds.includes(row.clinical_concept_id) && text(row.raw_value || row.raw_descriptor) !== "suppressed / not shown") : layerRows.filter(row => text(row.raw_value || row.raw_descriptor) !== "suppressed / not shown");
+        const distRows = conceptIds ? layerRows.filter(row => conceptIds.includes(row.clinical_concept_id) && microbiologyAllowedForConcept(row, conceptIds) && text(row.raw_value || row.raw_descriptor) !== "suppressed / not shown") : layerRows.filter(row => text(row.raw_value || row.raw_descriptor) !== "suppressed / not shown");
         return `
           ${distRows.length ? renderHBarRows(microbiologyBarRows(distRows), { tone, limit: 10 }) : `<div class="empty">not available in current aggregate output</div>`}
           ${layerRows.length ? renderCollapsedRawLineage(layerRows, { limit: 6 }) : ""}
@@ -5423,19 +5513,21 @@
       function renderPathologyKi67Signpost() {
         const rows = (mclTriangleFeasibility && mclTriangleFeasibility.pathology_ki67_signpost) || [];
         const row = rows[0] || {};
-        if (!row.title) return `<div class="empty">Ki-67 proliferation-index signpost is not available in current aggregate output.</div>`;
+        if (!row.title) return `<div class="empty">MCL/TRIANGLE feasibility candidate coded Ki-67 signal was not generated in the current aggregate output.</div>`;
         return `
-          <div class="callout"><strong>Ki-67 proliferation-index evidence was found in PATOBANK/SDS pathology coding:</strong> ${escapeHtml(row.table_name || "import.public.SDS_pato")}.${escapeHtml(row.column_name || "c_snomedkode")}, using the ${escapeHtml(row.code_family || "AEKIxxx / ÆKIxxx")} code family.</div>
+          <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text.</div>
+          ${renderTrustBadgeRow(["candidate-only", "feasibility-only", "not complete capture", "raw text not emitted"])}
+          <div class="callout"><strong>MCL/TRIANGLE feasibility coded Ki-67 evidence source:</strong> ${escapeHtml(row.table_name || "import.public.SDS_pato")}.${escapeHtml(row.column_name || "c_snomedkode")}, using the ${escapeHtml(row.code_family || "AEKIxxx / ÆKIxxx")} code family.</div>
           ${renderKpiStrip([
-            { label: "coded Ki-67 AEKI evidence", value: row.mcl_aeki_known || "not available", tone: "green" },
-            { label: "AEKI >=30%", value: row.mcl_aeki_ge30 || "not available", tone: "amber" },
-            { label: "AEKI >=50%", value: row.mcl_aeki_ge50 || "not available", tone: "amber" },
+            { label: "coded AEKI/ÆKI records", value: row.mcl_aeki_known || "not computed for this aggregate block", tone: "green" },
+            { label: "coded records >=30%", value: row.mcl_aeki_ge30 || "not computed for this aggregate block", tone: "amber" },
+            { label: "coded records >=50%", value: row.mcl_aeki_ge50 || "not computed for this aggregate block", tone: "amber" },
             { label: "raw pathology text emitted", value: "0", tone: "red" }
           ], { tone: "green" })}
           <div class="grid grid-2">
             <article class="clinical-card">
-              ${renderBadge("structured coded signal", "green")}
-              <h3>${escapeHtml(row.title || "Ki-67 proliferation index")}</h3>
+              ${renderBadge("candidate-only structured coded signal", "green")}
+              <h3>${escapeHtml(row.title || "MCL/TRIANGLE feasibility: candidate coded Ki-67 signal")}</h3>
               <p><strong>Source/resource:</strong> ${escapeHtml(row.source_resource || "PATOBANK/SDS pathology")}</p>
               <p><strong>Field:</strong> ${escapeHtml(row.table_name || "import.public.SDS_pato")}.${escapeHtml(row.column_name || "c_snomedkode")}</p>
               <p><strong>Code family:</strong> ${escapeHtml(row.code_family || "AEKIxxx / ÆKIxxx")}</p>
@@ -6819,15 +6911,17 @@
               ], { tone: "green" })}
               <p class="mini">The age <=65 expanded ibrutinib count is derived from age-specific stratum cells. If those cells are not accepted production aggregates, the displayed 28 is fallback/reference only.</p>
             `, "violet")}
-            ${renderSectionCard("TRIANGLE feasibility-only Ki-67 coded evidence and pathology text recovery route", `
+            ${renderSectionCard("MCL/TRIANGLE feasibility: candidate coded Ki-67 signal", `
               <div class="callout"><strong>TRIANGLE feasibility-only:</strong> this block is not general PATOBANK Ki-67 coverage. ${patobankKi67QaState().status === "success" ? "Use the Pathology/PATOBANK panel for source-coverage cartography." : "General PATOBANK Ki-67 cartography was attempted but not computed in this build; TRIANGLE Ki-67 counts remain feasibility-only and cannot be generalized."}</div>
+              <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text.</div>
+              ${renderTrustBadgeRow(["candidate-only", "feasibility-only", "not complete capture", "raw text not emitted"])}
               ${renderKpiStrip([
-                mclKpiItem("coded Ki-67 AEKI evidence", ki67Known, "37", "green"),
-                mclKpiItem("coded Ki-67 AEKI >=30%", ki67Ge30, "20", "amber"),
-                mclKpiItem("coded Ki-67 AEKI >=50%", ki67Ge50, "13", "amber"),
+                mclKpiItem("coded AEKI/ÆKI records", ki67Known, "37", "green"),
+                mclKpiItem("coded records >=30%", ki67Ge30, "20", "amber"),
+                mclKpiItem("coded records >=50%", ki67Ge50, "13", "amber"),
                 mclKpiItem("coded AEKI missing/not found", ki67Missing, "1,380", "blue")
               ], { tone: "amber" })}
-              <p><strong>Ki-67 proliferation index:</strong> ${escapeHtml(signpost.table_name || "import.public.SDS_pato")}.${escapeHtml(signpost.column_name || "c_snomedkode")} using ${escapeHtml(signpost.code_family || "AEKIxxx / ÆKIxxx")} structured coded pathology/PATOBANK evidence.</p>
+              <p><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal:</strong> ${escapeHtml(signpost.table_name || "import.public.SDS_pato")}.${escapeHtml(signpost.column_name || "c_snomedkode")} using ${escapeHtml(signpost.code_family || "AEKIxxx / ÆKIxxx")} structured coded pathology/PATOBANK evidence. This is not all Ki-67 in DALY-CARE.</p>
               <div class="callout warn"><strong>Pathology text recovery route - candidate only:</strong> SDS_pato.v_fritekst, SDS_t_mikro_ny.v_fritekst, and SDS_t_konk_ny.v_fritekst may contain additional Ki-67 values, but text-derived Ki-67 is not validated extraction and is excluded from risk classification.</div>
               ${renderMclCountTable(textBridge, [
                 { key: "text_source", label: "Text source" },
@@ -6907,15 +7001,85 @@
         `;
       }
 
+      function humanizeNpuVector(value) {
+        const raw = text(value || "").trim();
+        if (!raw) return "";
+        const cleaned = raw
+          .replace(/_CODES$/i, "")
+          .replace(/^renal_/i, "")
+          .replace(/_/g, " ")
+          .trim();
+        if (!cleaned || /^codes$/i.test(cleaned)) return "";
+        return cleaned.toLowerCase().replace(/\b([a-z])/g, match => match.toUpperCase());
+      }
+      function npuCodeList(row) {
+        const codes = [
+          row.npu_code,
+          row.code,
+          row.raw_code,
+          row.codes_included,
+          row.codes
+        ].map(text).filter(Boolean);
+        return Array.from(new Set(codes.flatMap(value => value.split(/[;,]\s*/).filter(Boolean))));
+      }
+      function npuDisplayConcept(row) {
+        const explicit = [
+          row.display_concept,
+          row.candidate_label,
+          row.clinical_role,
+          row.analyte,
+          row.code_name,
+          row.npu_label
+        ].map(text).find(value => {
+          const key = normalizeClinicalKey(value);
+          return key && !/_codes$|renalcreatinine|leukocytecodes|creatininecodes/.test(key);
+        });
+        if (explicit) return explicit;
+        const vectorLabel = humanizeNpuVector(row.consensus_vector);
+        if (vectorLabel) return vectorLabel;
+        const surfaceLabel = humanizeNpuVector(row.surface);
+        if (surfaceLabel) return surfaceLabel;
+        const code = npuCodeList(row)[0];
+        return code ? `Unmapped NPU code: ${code}` : "Unmapped NPU concept";
+      }
+      function npuDetectiveGroupedRows(rows) {
+        const groups = {};
+        (rows || []).forEach(row => {
+          const concept = npuDisplayConcept(row);
+          if (!groups[concept]) {
+            groups[concept] = {
+              "Display concept": concept,
+              "Codes included": new Set(),
+              "Aggregate rows": 0,
+              "Observed rows": 0,
+              "Technical vectors": new Set()
+            };
+          }
+          npuCodeList(row).forEach(code => groups[concept]["Codes included"].add(code));
+          groups[concept]["Aggregate rows"] += 1;
+          groups[concept]["Observed rows"] += numberValue(row.n_observed || row.n || row.n_rows || row.statistic_value);
+          [row.consensus_vector, row.surface].map(text).filter(Boolean).forEach(value => groups[concept]["Technical vectors"].add(value));
+        });
+        return Object.values(groups).map(group => ({
+          "Display concept": group["Display concept"],
+          "Codes included": Array.from(group["Codes included"]).join(", ") || "No explicit code emitted",
+          "Aggregate rows": group["Aggregate rows"],
+          "Observed rows": group["Observed rows"],
+          "Technical vectors": Array.from(group["Technical vectors"]).join(", ")
+        })).sort((a, b) => numberValue(b["Observed rows"]) - numberValue(a["Observed rows"]) || text(a["Display concept"]).localeCompare(text(b["Display concept"])));
+      }
       function renderCodeDiscoveryCards() {
         const detectiveObserved = detectiveCards.observed_codes || [];
         const detectiveCandidates = detectiveCards.candidate_codes || [];
+        const groupedDetective = npuDetectiveGroupedRows(detectiveObserved);
         const isotypeBuckets = isotypeCards.bucket_summary || [];
         const isotypeUsage = isotypeCards.code_usage || [];
         setHtml("detective-cards", `
           <article class="card">
             <h3>NPU Detective Inventory</h3>
-            ${detectiveObserved.length ? bars(detectiveObserved.map(row => Object.assign({}, row, { display_label: row.surface || row.consensus_vector || row.npu_code })), "n_observed", "display_label") : `<div class="empty">No detective inventory rows available.</div>`}
+            <p class="mini">Primary labels are grouped display concepts. Internal candidate-set names and raw surfaces are retained only in the technical disclosure.</p>
+            ${groupedDetective.length ? bars(groupedDetective.map(row => ({ display_label: row["Display concept"], n_observed: row["Observed rows"] || row["Aggregate rows"] })), "n_observed", "display_label") : `<div class="empty">No detective inventory rows available.</div>`}
+            ${groupedDetective.length ? `<details class="lineage-block"><summary>Display concept, codes included, and raw technical vectors</summary>${rowsForTable(groupedDetective, 25)}</details>` : ""}
           </article>
           <article class="card">
             <h3>Candidate NPU Codes</h3>
@@ -6956,6 +7120,9 @@
         setHtml("treatment-dashboard", renderTreatmentPanel());
 
         setHtml("laboratory-npu-dashboard", renderLaboratoryNPUPanel());
+        setHtml("laboratory-imaging-cards", renderImagingPanel());
+        setHtml("laboratory-microbiology-cards", renderMicrobiologyPanel());
+        setHtml("laboratory-pathology-cards", renderPathologyPanel());
         setHtml("biobank-dashboard", renderBiobankPanel());
         setHtml("laboratory-source-cards", sourceTiles(reviewLaboratory.lab_sources, "No lab-like sources were mapped in this run."));
         setHtml("ehr-sp-cards", sourceTiles(reviewEhr.sp, "No SP sources were mapped in this run."));
