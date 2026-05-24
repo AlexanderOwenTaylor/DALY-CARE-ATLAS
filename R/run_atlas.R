@@ -434,7 +434,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panel_distributions = product_outputs$panel_distributions,
     panel_kpis = product_outputs$panel_kpis,
     canonical_reconciliation = canonical_reconciliation,
-    legacy_reference_vs_current = legacy_reference_vs_current
+    legacy_reference_vs_current = legacy_reference_vs_current,
+    min_cell_count = atlas_min_cell_count()
   )
   patobank_ki67_percent <- patobank_ki67_build_outputs(
     project_root = project_root,
@@ -658,7 +659,19 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     estimands = safe_read_output_csv(output_paths$confluence_estimands, confluence_feasibility$estimands),
     validation_checklist = safe_read_output_csv(output_paths$confluence_validation_checklist, confluence_feasibility$validation_checklist),
     bias_warnings = safe_read_output_csv(output_paths$confluence_bias_warnings, confluence_feasibility$bias_warnings),
-    recommended_next_actions = safe_read_output_csv(output_paths$confluence_recommended_next_actions, confluence_feasibility$recommended_next_actions)
+    recommended_next_actions = safe_read_output_csv(output_paths$confluence_recommended_next_actions, confluence_feasibility$recommended_next_actions),
+    code_sets = safe_read_output_csv(output_paths$confluence_code_sets, confluence_feasibility$code_sets),
+    mbl_source_counts = safe_read_output_csv(output_paths$confluence_mbl_source_counts, confluence_feasibility$mbl_source_counts),
+    mgus_source_counts = safe_read_output_csv(output_paths$confluence_mgus_source_counts, confluence_feasibility$mgus_source_counts),
+    candidate_first_date_summary = safe_read_output_csv(output_paths$confluence_candidate_first_date_summary, confluence_feasibility$candidate_first_date_summary),
+    overlap_counts_accepted = safe_read_output_csv(output_paths$confluence_overlap_counts_accepted, confluence_feasibility$overlap_counts_accepted),
+    overlap_timing_accepted = safe_read_output_csv(output_paths$confluence_overlap_timing_accepted, confluence_feasibility$overlap_timing_accepted),
+    mbl_validation_waterfall = safe_read_output_csv(output_paths$confluence_mbl_validation_waterfall, confluence_feasibility$mbl_validation_waterfall),
+    mgus_validation_waterfall = safe_read_output_csv(output_paths$confluence_mgus_validation_waterfall, confluence_feasibility$mgus_validation_waterfall),
+    dual_clone_validation_waterfall = safe_read_output_csv(output_paths$confluence_dual_clone_validation_waterfall, confluence_feasibility$dual_clone_validation_waterfall),
+    small_cell_suppression_audit = safe_read_output_csv(output_paths$confluence_small_cell_suppression_audit, confluence_feasibility$small_cell_suppression_audit),
+    utf8_quality_audit = safe_read_output_csv(output_paths$confluence_utf8_quality_audit, confluence_feasibility$utf8_quality_audit),
+    infection_endpoint_definitions = safe_read_output_csv(output_paths$confluence_infection_endpoint_definitions, confluence_feasibility$infection_endpoint_definitions)
   )
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])

@@ -1655,7 +1655,7 @@
           <div class="panel-head">
             <p class="section-kicker">Feasibility / target-trial specification</p>
             <h2 class="panel-title">DALY-CARE CONFLUENCE</h2>
-            <p class="panel-sub">CLL/MBLâ€“plasma-cell disorder infection feasibility panel</p>
+            <p class="panel-sub">CLL/MBL-plasma-cell disorder infection feasibility panel</p>
           </div>
           <div class="panel-body">
             <div id="confluence-feasibility-dashboard"></div>
@@ -2153,11 +2153,15 @@
         "source readiness": ["source status", "source resolution", "QA", "Infrastructure"],
         "source status": ["source resolution", "not in database", "unresolved", "QA", "source readiness"],
         feasibility: ["clinical feasibility", "MCL", "TRIANGLE", "CONFLUENCE", "study planning"],
-        confluence: ["DALY-CARE CONFLUENCE", "CLL MBL", "MGUS", "overlap", "infection", "blood culture"],
-        mbl: ["DD479B", "D47.9B", "Monoklonal B-celle lymfocytose", "CLL MBL", "CONFLUENCE"],
-        dd479b: ["MBL", "D47.9B", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
-        "d47 9b": ["MBL", "DD479B", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
-        "monoklonal b celle lymfocytose": ["MBL", "DD479B", "D47.9B", "CONFLUENCE"],
+        confluence: ["DALY-CARE CONFLUENCE", "CLL MBL", "MGUS", "overlap", "infection", "blood culture", "M95911", "M96121", "M98231", "M98233"],
+        mbl: ["DD479B", "D47.9B", "M95911", "M96121", "M98231", "Monoklonal B-celle lymfocytose", "CLL MBL", "CONFLUENCE"],
+        dd479b: ["MBL", "D47.9B", "M95911", "M96121", "M98231", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
+        "d47 9b": ["MBL", "DD479B", "M95911", "M96121", "M98231", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
+        m95911: ["MBL", "PATOBANK", "SNOMED", "non-CLL-type", "CONFLUENCE"],
+        m96121: ["MBL", "PATOBANK", "SNOMED", "NOS", "CONFLUENCE"],
+        m98231: ["MBL", "PATOBANK", "SNOMED", "CLL-type MBL", "CONFLUENCE"],
+        m98233: ["CLL morphology", "not MBL", "contamination", "exclusion pressure", "CONFLUENCE"],
+        "monoklonal b celle lymfocytose": ["MBL", "DD479B", "D47.9B", "M95911", "M96121", "M98231", "CONFLUENCE"],
         "cll mgus": ["CONFLUENCE", "overlap", "infection"],
         "cll mm": ["CONFLUENCE", "overlap", "infection"],
         "mbl mgus": ["CONFLUENCE", "DD479B", "MGUS", "overlap"],
@@ -2173,7 +2177,8 @@
         myeloma: ["myelomatose", "DaMyDa", "PCD", "plasma cell disorder"],
         myelomatose: ["myeloma", "DaMyDa", "PCD"],
         mgus: ["PCD", "plasma cell disorder", "DaMyDa", "DD472", "CONFLUENCE", "overlap"],
-        dd472: ["MGUS", "D47.2", "plasma cell disorder", "CONFLUENCE"],
+        dd472: ["MGUS", "DD472B", "D47.2", "plasma cell disorder", "CONFLUENCE"],
+        dd472b: ["MGUS", "DD472", "D47.2", "plasma cell disorder", "CONFLUENCE"],
         amyloidosis: ["PCD", "plasma cell disorder", "DaMyDa"],
         damyda: ["myeloma", "myelomatose", "PCD"],
         cll: ["chronic lymphocytic leukemia", "RKKP_CLL", "Binet", "TP53", "MBL", "CONFLUENCE"],
@@ -2324,7 +2329,7 @@
       }
       function panelRoute(panelId) {
         const id = text(panelId || "").toLowerCase();
-        if (/confluence|mbl|mgus|dd479b|dd472|d47\.?9b|d47\.?2|overlap|dual.?clone|cll mgus|cll mm|mbl mgus/.test(id)) return { tab: "clinical-feasibility", sub: "confluence-feasibility" };
+        if (/confluence|mbl|mgus|dd479b|dd472|dd472b|m95911|m96121|m98231|m98233|d47\.?9b|d47\.?2|overlap|dual.?clone|cll mgus|cll mm|mbl mgus/.test(id)) return { tab: "clinical-feasibility", sub: "confluence-feasibility" };
         if (/mcl|triangle|mantle|feasibility/.test(id)) return { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" };
         if (/damyda/.test(id)) return { tab: "registries", sub: "reg-damyda" };
         if (/lyfo/.test(id)) return { tab: "registries", sub: "reg-lyfo" };
@@ -2393,7 +2398,7 @@
           panel_id: "confluence_feasibility",
           panel_title: "DALY-CARE CONFLUENCE",
           clinical_purpose: "CLL/MBL and plasma-cell-disorder infection overlap feasibility panel with PICO, estimands, diagnosis-code anchors, readiness tables, and not-run overlap rows.",
-          search_terms: "CONFLUENCE MBL DD479B D47.9B Monoklonal B-celle lymfocytose MGUS DD472 D47.2 CLL DC911 C91.1 MM DC900 C90.0 CLL MGUS CLL MM MBL MGUS overlap infection microbiology blood culture bloodstream recurrent infection"
+          search_terms: "CONFLUENCE MBL DD479B D47.9B M95911 M96121 M98231 M98233 Monoklonal B-celle lymfocytose MGUS DD472 DD472B D47.2 CLL DC911 C91.1 MM DC900 C90.0 CLL MGUS CLL MM MBL MGUS overlap infection microbiology blood culture bloodstream recurrent infection"
         };
         const confluencePanelScore = scoreSearchResult(confluencePanelSearchRow, q, {
           exact: ["panel_id", "panel_title"],
@@ -2404,7 +2409,7 @@
           grouped["Panels"].push(makeSearchResult(
             "Panels",
             "DALY-CARE CONFLUENCE",
-            "CLL/MBL-plasma-cell disorder infection feasibility panel; scaffold-first and not accepted aggregate overlap counts.",
+            "CLL/MBL-plasma-cell disorder infection feasibility panel; scaffold-first, exact MBL SNOMED codes, and not accepted aggregate overlap counts.",
             confluencePanelSearchRow,
             { tab: "clinical-feasibility", sub: "confluence-feasibility" },
             { query: q, item: "confluence_feasibility", status: "Overlap-feasibility panel", copy: "#clinical-feasibility/confluence-feasibility", score: confluencePanelScore + 130 }
@@ -3730,8 +3735,8 @@
           row.panel_id === "clinical_vitals" ||
           rowSourceMatches(row, ["SP_VitaleVaerdier", "SP Vitale Vaerdier", "SP Vitaleværdier"])
         );
-        const weightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Vægt", "Vaegt", "VÃ¦gt"]));
-        const heightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Højde", "Hoejde", "HÃ¸jde"]));
+        const weightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Vægt", "Vaegt"]));
+        const heightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Højde", "Hoejde"]));
         const numericRow = firstMatchingRow(raw, row => fieldMatches(row, ["numericvalue"]));
         const priorityRows = [weightRow, heightRow, numericRow].filter(Boolean);
         const priorityKeys = new Set(priorityRows.map(row => row.semantic_id || rawFieldDisplay(row)));
@@ -3745,8 +3750,8 @@
             <div class="source-fact"><span class="mini">Value column</span><b>numericvalue</b></div>
           </div>
           <div class="grid">
-            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt", "VÃ¦gt"], "weight", "kg")}
-            ${renderVitalsStatCard("Height", ["Højde", "Hoejde", "HÃ¸jde"], "height", "cm")}
+            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt"], "weight", "kg")}
+            ${renderVitalsStatCard("Height", ["Højde", "Hoejde"], "height", "cm")}
           </div>
           <div class="raw-lineage-card">
             <h3>Priority raw names / data lineage</h3>
@@ -7511,6 +7516,76 @@
           { key: "notes", label: "Notes" }
         ], 12);
       }
+      function renderConfluenceCodeSets() {
+        const rows = confluenceRows("code_sets");
+        return `
+          <div class="callout warn"><strong>Exact-match rule:</strong> CONFLUENCE uses exact normalized code matching. M98231 is CLL-type MBL; M98233 is CLL morphology and is contamination/exclusion-pressure evidence, not MBL.</div>
+          ${renderConfluenceTable(rows, [
+            { key: "concept_label", label: "Concept", render: row => `<strong>${escapeHtml(row.concept_label || "")}</strong><div class="mini">${escapeHtml(row.disease_family || "")}</div>` },
+            { key: "code", label: "Code", render: row => `<strong>${escapeHtml(row.code || "source pending")}</strong><div class="mini">${escapeHtml(row.code_system || "")}</div>` },
+            { key: "include_or_exclude", label: "Use", render: row => renderBadge(row.include_or_exclude || "", confluenceStatusTone(row.include_or_exclude)) },
+            { key: "validation_role", label: "Validation role" },
+            { key: "notes", label: "Notes" }
+          ], 24)}
+        `;
+      }
+      function renderConfluenceSourceTiers(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "source_tier_label", label: "Source tier", render: row => `<strong>${escapeHtml(row.source_tier_label || "")}</strong><div class="mini">${escapeHtml(row.source_role || "")}</div>` },
+          { key: "codes", label: "Codes", render: row => escapeHtml(row.codes || "source definition pending") },
+          { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "evidence_status", label: "Evidence", render: row => renderBadge(row.evidence_status || "", confluenceStatusTone(row.evidence_status)) },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "suppression_status", label: "Suppression" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceAcceptedCounts(rows, labelKey) {
+        return renderConfluenceTable(rows, [
+          { key: labelKey, label: "Accepted-count scaffold", render: row => `<strong>${escapeHtml(row[labelKey] || "")}</strong><div class="mini">${escapeHtml(row.mbl_tier || row.pcd_tier || "")}</div>` },
+          { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "acceptance_gate_status", label: "Gate" },
+          { key: "suppression_status", label: "Suppression" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceWaterfall(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "step_label", label: "Waterfall step", render: row => `<strong>${escapeHtml(row.step_order || "")}. ${escapeHtml(row.step_label || "")}</strong><div class="mini">${escapeHtml(row.source_tier || "")}</div>` },
+          { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "suppression_status", label: "Suppression" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceEndpointDefinitions() {
+        return renderConfluenceTable(confluenceRows("infection_endpoint_definitions"), [
+          { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || "")}</strong><div class="mini">${escapeHtml(row.source_layer || "")}</div>` },
+          { key: "definition_status", label: "Definition", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
+          { key: "required_code_set_status", label: "Code set" },
+          { key: "readiness_status", label: "Readiness", render: row => renderBadge(row.readiness_status || "", confluenceStatusTone(row.readiness_status)) },
+          { key: "notes", label: "Notes" }
+        ], 12);
+      }
+      function renderConfluenceQaAudits() {
+        return `
+          <h3>Small-cell suppression audit</h3>
+          ${renderConfluenceTable(confluenceRows("small_cell_suppression_audit"), [
+            { key: "audit_id", label: "Audit" },
+            { key: "count_display", label: "Public display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong>` },
+            { key: "suppression_status", label: "Suppression" },
+            { key: "public_safe", label: "Public safe", render: row => renderBadge(row.public_safe || "", confluenceStatusTone(row.public_safe)) },
+            { key: "notes", label: "Notes" }
+          ], 8)}
+          <h3>UTF-8 quality audit</h3>
+          ${renderConfluenceTable(confluenceRows("utf8_quality_audit"), [
+            { key: "pattern_code", label: "Pattern" },
+            { key: "status", label: "Status", render: row => renderBadge(row.status || "", confluenceStatusTone(row.status)) },
+            { key: "notes", label: "Notes" }
+          ], 8)}
+        `;
+      }
       function renderConfluenceOverlapRows(rows) {
         return renderConfluenceTable(rows, [
           { key: "overlap_label", label: "Overlap", render: row => `<strong>${escapeHtml(row.overlap_label || row.timing_label || "")}</strong>` },
@@ -7547,28 +7622,70 @@
         const treatment = confluenceRows("treatment_modifier_readiness");
         const actions = confluenceRows("recommended_next_actions");
         const disease = confluenceRows("disease_state_counts");
+        const codeSets = confluenceRows("code_sets");
+        const mblSourceCounts = confluenceRows("mbl_source_counts");
+        const mgusSourceCounts = confluenceRows("mgus_source_counts");
+        const firstDates = confluenceRows("candidate_first_date_summary");
+        const acceptedOverlapCounts = confluenceRows("overlap_counts_accepted");
+        const acceptedOverlapTiming = confluenceRows("overlap_timing_accepted");
+        const mblWaterfall = confluenceRows("mbl_validation_waterfall");
+        const mgusWaterfall = confluenceRows("mgus_validation_waterfall");
+        const dualCloneWaterfall = confluenceRows("dual_clone_validation_waterfall");
+        const endpoints = confluenceRows("infection_endpoint_definitions");
+        const suppressionAudit = confluenceRows("small_cell_suppression_audit");
+        const utf8Audit = confluenceRows("utf8_quality_audit");
         const technical = []
           .concat(summary.map(row => Object.assign({ table: "summary" }, row)))
           .concat(disease.map(row => Object.assign({ table: "disease_state_counts" }, row)))
+          .concat(codeSets.map(row => Object.assign({ table: "code_sets" }, row)))
+          .concat(mblSourceCounts.map(row => Object.assign({ table: "mbl_source_counts" }, row)))
+          .concat(mgusSourceCounts.map(row => Object.assign({ table: "mgus_source_counts" }, row)))
           .concat(overlapCounts.map(row => Object.assign({ table: "overlap_counts" }, row)))
-          .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)));
+          .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)))
+          .concat(firstDates.map(row => Object.assign({ table: "candidate_first_date_summary" }, row)))
+          .concat(acceptedOverlapCounts.map(row => Object.assign({ table: "overlap_counts_accepted" }, row)))
+          .concat(acceptedOverlapTiming.map(row => Object.assign({ table: "overlap_timing_accepted" }, row)))
+          .concat(suppressionAudit.map(row => Object.assign({ table: "small_cell_suppression_audit" }, row)))
+          .concat(utf8Audit.map(row => Object.assign({ table: "utf8_quality_audit" }, row)));
         return `
           <div class="dashboard-grid confluence-dashboard">
             ${renderSectionCard("DALY-CARE CONFLUENCE", `
-              <div class="callout"><strong>CLL/MBLâ€“plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
+              <div class="callout"><strong>CLL/MBL-plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
               <p>This panel evaluates whether DALY-CARE can support a retrospective observational study of serious and microbiologically confirmed infections in people with CLL/MBL, plasma-cell disorders, or both. It is feasibility infrastructure only. It does not estimate causal effects and does not make treatment recommendations.</p>
               ${renderTrustBadgeRow(["feasibility only", "not causal", "coded candidate cohort", "query executable not run", "not accepted aggregate"])}
             `, "cyan")}
             ${renderSectionCard("Clinical question", `
-              <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBLâ€“plasma-cell-disorder overlap states?</strong></p>
+              <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBL-plasma-cell-disorder overlap states?</strong></p>
               <p class="mini">Core design question: can we identify people with CLL or MBL, people with plasma-cell disorders, and people with overlapping B-cell and plasma-cell clonal states, then compare serious and microbiologically confirmed infection burden without diagnosis-order or surveillance-intensity bias?</p>
             `, "blue")}
             ${renderSectionCard("Current evidence state", renderConfluenceEvidenceState(), "cyan")}
+            ${renderSectionCard("Current stage: scaffold vs accepted aggregate", `
+              <p><strong>CONFLUENCE v0.2 is scaffold hardening only.</strong> Code sets, source tiers, endpoint definitions, and acceptance gates are visible. First-date, overlap, and timing rows remain query executable not run and not accepted aggregate.</p>
+              ${renderTrustBadgeRow(["scaffold first", "source validation required", "not accepted aggregate", "small-cell suppression", "privacy-safe aggregate only"])}
+            `, "amber")}
+            ${renderSectionCard("Code sets and exact-match warnings", renderConfluenceCodeSets(), "plum")}
+            ${renderSectionCard("MBL source tiers", renderConfluenceSourceTiers(mblSourceCounts), "cyan")}
+            ${renderSectionCard("MGUS source tiers", renderConfluenceSourceTiers(mgusSourceCounts), "green")}
             ${renderSectionCard("PICO", renderConfluencePico(), "blue")}
             ${renderSectionCard("Estimands", renderConfluenceEstimands(), "plum")}
             ${renderSectionCard("Disease-state candidate counts", renderConfluenceDiseaseCounts(), "green")}
             ${renderSectionCard("Overlap counts: not-run / not-accepted", renderConfluenceOverlapRows(overlapCounts), "amber")}
             ${renderSectionCard("Overlap timing: not-run / not-accepted", renderConfluenceOverlapRows(overlapTiming), "amber")}
+            ${renderSectionCard("First-date / overlap status", renderConfluenceTable(firstDates, [
+              { key: "state_label", label: "State", render: row => `<strong>${escapeHtml(row.state_label || "")}</strong><div class="mini">${escapeHtml(row.source_tier || "")}</div>` },
+              { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+              { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+              { key: "first_date_logic", label: "First-date logic" }
+            ], 12), "amber")}
+            ${renderSectionCard("Accepted overlap counts if available", renderConfluenceAcceptedCounts(acceptedOverlapCounts, "overlap_label"), "amber")}
+            ${renderSectionCard("Accepted overlap timing if available", renderConfluenceAcceptedCounts(acceptedOverlapTiming, "timing_label"), "amber")}
+            ${renderSectionCard("Validation waterfalls", `
+              <h3>MBL validation waterfall</h3>${renderConfluenceWaterfall(mblWaterfall)}
+              <h3>MGUS validation waterfall</h3>${renderConfluenceWaterfall(mgusWaterfall)}
+              <h3>Dual-clone validation waterfall</h3>${renderConfluenceWaterfall(dualCloneWaterfall)}
+            `, "blue")}
+            ${renderSectionCard("Small-cell and UTF-8 QA", renderConfluenceQaAudits(), "green")}
+            ${renderSectionCard("Infection endpoint definitions", renderConfluenceEndpointDefinitions(), "green")}
             ${renderSectionCard("Validation checklist", renderConfluenceTable(validation, [
               { key: "entity_label", label: "Entity", render: row => `<strong>${escapeHtml(row.entity_label || "")}</strong><div class="mini">${escapeHtml(row.status || "")}</div>` },
               { key: "validation_step", label: "Validation step" },

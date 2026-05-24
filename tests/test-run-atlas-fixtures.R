@@ -505,8 +505,8 @@ expect_true(grepl("Unknown and true missing were not separately quantified in th
 expect_true(grepl("Row-level social-history observations do not necessarily equal current patient-level status", html, fixed = TRUE), "Social History renderer should include the row-level caveat.")
 expect_true(grepl("{ label: \"patients\", value: patientCountForConcept", html, fixed = TRUE), "Vitals stat cards should render patient-count fields.")
 expect_true(grepl("clinical-metric-card", html, fixed = TRUE) && grepl("{ label: \"unit\", value: unit || \"not available\"", html, fixed = TRUE), "Vitals stat cards should render units with a not-available fallback.")
-expect_true(grepl("renderVitalsStatCard(\"Weight\", [\"Vægt\", \"Vaegt\", \"VÃ¦gt\"], \"weight\", \"kg\")", html, fixed = TRUE), "Vitals stat cards should render kg for weight.")
-expect_true(grepl("renderVitalsStatCard(\"Height\", [\"Højde\", \"Hoejde\", \"HÃ¸jde\"], \"height\", \"cm\")", html, fixed = TRUE), "Vitals stat cards should render cm for height.")
+expect_true(grepl("renderVitalsStatCard(\"Weight\", [\"Vægt\", \"Vaegt\"], \"weight\", \"kg\")", html, fixed = TRUE), "Vitals stat cards should render kg for weight.")
+expect_true(grepl("renderVitalsStatCard(\"Height\", [\"Højde\", \"Hoejde\"], \"height\", \"cm\")", html, fixed = TRUE), "Vitals stat cards should render cm for height.")
 expect_true(grepl("scope: mixed; displayed distributions are cartography_scan", html, fixed = TRUE) || grepl("scope: displayed distributions are cartography_scan", html, fixed = TRUE), "Vitals/Social renderer should expose cartography-scan scope.")
 bmi_label <- paste("BMI", intToUtf8(0x2014), "derived from height and weight")
 expect_true(grepl(bmi_label, html, fixed = TRUE), "Vitals lineage should label BMI as derived from height and weight.")
@@ -633,7 +633,19 @@ expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "m
 expect_true(all(c("current_run_source_map_audit", "canonical_resource_reconciliation_64", "source_map_row_to_canonical_resource_crosswalk", "legacy_reference_vs_current_profiled_evidence") %in% manifest$artifact_id), "Manifest should list canonical source-recovery artifacts.")
 expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifact_id, "Manifest should list the remaining canonical-resource activation plan.")
 expect_true(all(c("ki67_search_inventory", "ki67_registry_field_candidates", "ki67_pathology_code_candidates", "ki67_text_pattern_candidates", "ki67_channel_summary", "ki67_aeki_validation_plan", "ki67_aeki_code_counts", "ki67_text_validation_plan") %in% manifest$artifact_id), "Manifest should list Ki-67 discovery artifacts.")
-expect_true(all(c("confluence_summary", "confluence_disease_state_counts", "confluence_overlap_counts", "confluence_overlap_timing", "confluence_infection_outcome_readiness", "confluence_treatment_modifier_readiness", "confluence_estimands", "confluence_validation_checklist", "confluence_bias_warnings", "confluence_recommended_next_actions") %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
+expect_true(all(c(
+  "confluence_summary", "confluence_disease_state_counts", "confluence_overlap_counts",
+  "confluence_overlap_timing", "confluence_infection_outcome_readiness",
+  "confluence_treatment_modifier_readiness", "confluence_estimands",
+  "confluence_validation_checklist", "confluence_bias_warnings",
+  "confluence_recommended_next_actions", "confluence_code_sets",
+  "confluence_mbl_source_counts", "confluence_mgus_source_counts",
+  "confluence_candidate_first_date_summary", "confluence_overlap_counts_accepted",
+  "confluence_overlap_timing_accepted", "confluence_mbl_validation_waterfall",
+  "confluence_mgus_validation_waterfall", "confluence_dual_clone_validation_waterfall",
+  "confluence_small_cell_suppression_audit", "confluence_utf8_quality_audit",
+  "confluence_infection_endpoint_definitions"
+) %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
 expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")
 expect_true(all(c("atlas_temporal_coverage", "atlas_temporal_coverage_years", "atlas_spatial_region_counts", "atlas_spatial_region_coverage", "atlas_dk_choropleth_regions") %in% manifest$artifact_id), "Manifest should list V33 coverage panel artifacts.")
