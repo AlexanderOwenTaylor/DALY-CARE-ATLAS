@@ -154,8 +154,32 @@ expect_true(grepl("PATOBANK coded Ki-67 percent evidence coverage", template, fi
 expect_true(grepl("renderPatobankKi67PercentCoverage()", template, fixed = TRUE), "Pathology/PATOBANK panel should render the PATOBANK Ki-67 output, not the TRIANGLE signpost.")
 expect_true(grepl("TRIANGLE feasibility-only", template, fixed = TRUE), "TRIANGLE Ki-67 section should remain visibly scoped to TRIANGLE feasibility.")
 expect_true(grepl("empty-output-error", template, fixed = TRUE), "PATOBANK Ki-67 UI should expose an empty-output QA error state.")
+expect_true(grepl("ui_output_inconsistent", template, fixed = TRUE), "PATOBANK Ki-67 UI should fail inconsistent success/fail-closed output states.")
 expect_true(grepl("not computed in this build", template, fixed = TRUE), "PATOBANK Ki-67 UI should expose a failed-closed not-computed state.")
 expect_true(grepl("General PATOBANK Ki-67 cartography was attempted but not computed in this build", template, fixed = TRUE), "TRIANGLE Ki-67 wording should not generalize when PATOBANK Ki-67 coverage is unavailable.")
+expect_true(grepl("atlas_reviewable", template, fixed = TRUE), "Semantic QA should split atlas reviewability from production Ki-67 availability.")
+expect_true(grepl("production_ki67_available", template, fixed = TRUE), "Semantic QA should expose whether production PATOBANK Ki-67 coverage is available.")
+expect_true(grepl("shippable_without_known_semantic_failures", template, fixed = TRUE), "Semantic QA should distinguish full shippability from reviewable-with-caveat states.")
+expect_true(grepl("reviewable: yes; production Ki-67 unavailable", template, fixed = TRUE), "Failed-closed Ki-67 should render as reviewable with unavailable production Ki-67, not fully shippable.")
+expect_true(grepl("shippable with caveat only", template, fixed = TRUE), "Failed-closed Ki-67 should be described as shippable with caveat only.")
+expect_false(grepl("\\{ label: \"shippable\", value: shippable \\? \"yes\" : \"no\"", template), "Semantic QA must not collapse failed-closed Ki-67 into a generic shippable yes/no badge.")
 expect_true(grepl("Semantic output QA", template, fixed = TRUE), "Atlas should include a visible semantic-output QA summary.")
 expect_true(grepl("Technical lineage / raw cartography rows", template, fixed = TRUE), "DaMyDa/LYFO raw cartography rows should be behind technical disclosure.")
 expect_true(grepl("Primary taxonomy: Laboratory & Diagnostics", template, fixed = TRUE), "Microbiology and Pathology should be labelled as Laboratory & Diagnostics resources even when cross-linked from Clinical Data.")
+
+failed_closed_branch <- regmatches(
+  template,
+  regexpr("if \\(qaState\\.status === \"failed-closed\"\\)[\\s\\S]*?if \\(qaState\\.status === \"empty-output-error\" \\|\\| qaState\\.status === \"ui_output_inconsistent\"\\)", template, perl = TRUE)
+)
+if (!length(failed_closed_branch) || identical(failed_closed_branch, character(0)) || failed_closed_branch == "") {
+  failed_closed_branch <- regmatches(
+    template,
+    regexpr("if \\(qaState\\.status === \"failed-closed\"\\)[\\s\\S]*?return `\\n          <div class=\"callout\"><strong>PATOBANK coded Ki-67 percent evidence coverage:", template, perl = TRUE)
+  )
+}
+expect_true(length(failed_closed_branch) == 1L && nzchar(failed_closed_branch), "Failed-closed Ki-67 rendering branch should be testable.")
+expect_false(grepl("patient coverage", failed_closed_branch, fixed = TRUE), "Failed-closed Ki-67 must not render patient denominator coverage KPIs.")
+expect_false(grepl("investigation coverage", failed_closed_branch, fixed = TRUE), "Failed-closed Ki-67 must not render investigation denominator coverage KPIs.")
+expect_false(grepl("specimen/material coverage", failed_closed_branch, fixed = TRUE), "Failed-closed Ki-67 must not render specimen denominator coverage KPIs.")
+expect_false(grepl("Valid normalized AEKI code counts and parsed percent distribution", failed_closed_branch, fixed = TRUE), "Failed-closed Ki-67 must not render code distributions as valid counts.")
+expect_true(grepl("TRIANGLE feasibility-only", template, fixed = TRUE) && grepl("not general PATOBANK Ki-67 coverage", template, fixed = TRUE), "TRIANGLE Ki-67 should always say feasibility-only and not general PATOBANK coverage.")
