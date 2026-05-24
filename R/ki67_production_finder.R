@@ -2,6 +2,7 @@ ki67_db_empty_search_plan <- function() {
   empty_df(
     search_step = character(),
     resource_id = character(),
+    db_name = character(),
     schema = character(),
     table = character(),
     column = character(),
@@ -17,6 +18,7 @@ ki67_db_empty_search_plan <- function() {
 
 ki67_db_empty_column_name_hits <- function() {
   empty_df(
+    db_name = character(),
     schema = character(),
     table = character(),
     column = character(),
@@ -30,6 +32,7 @@ ki67_db_empty_column_name_hits <- function() {
 ki67_db_empty_aeki_code_counts <- function() {
   empty_df(
     resource_id = character(),
+    db_name = character(),
     schema = character(),
     table = character(),
     column = character(),
@@ -47,6 +50,7 @@ ki67_db_empty_aeki_code_counts <- function() {
 ki67_db_empty_p16_dual_stain_counts <- function() {
   empty_df(
     resource_id = character(),
+    db_name = character(),
     schema = character(),
     table = character(),
     column = character(),
@@ -60,6 +64,7 @@ ki67_db_empty_p16_dual_stain_counts <- function() {
 ki67_db_empty_text_pattern_counts <- function() {
   empty_df(
     resource_id = character(),
+    db_name = character(),
     schema = character(),
     table = character(),
     text_column = character(),
@@ -74,6 +79,7 @@ ki67_db_empty_text_pattern_counts <- function() {
 
 ki67_db_empty_registry_field_counts <- function() {
   empty_df(
+    db_name = character(),
     schema = character(),
     table = character(),
     field = character(),
@@ -92,6 +98,11 @@ ki67_db_empty_summary <- function() {
     direct_evidence_found = logical(),
     numeric_percent_found = logical(),
     aggregate_count_total = character(),
+    physical_locations_found = character(),
+    unique_numeric_percent_codes = character(),
+    non_suppressed_code_rows = character(),
+    small_cell_suppressed_rows = character(),
+    aggregate_count_display = character(),
     best_source = character(),
     evidence_strength = character(),
     mcl_triangle_relevance = character(),
@@ -104,6 +115,7 @@ ki67_db_empty_summary <- function() {
 ki67_empty_found_locations <- function() {
   empty_df(
     evidence_channel = character(),
+    db_name = character(),
     schema = character(),
     table = character(),
     column = character(),
@@ -313,6 +325,7 @@ ki67_db_plan_from_candidates <- function(candidates) {
       rows[[length(rows) + 1L]] <- data.frame(
         search_step = channel,
         resource_id = candidates$resource_id[[i]],
+        db_name = candidates$db_name[[i]] %||% "",
         schema = candidates$schema[[i]],
         table = candidates$table[[i]],
         column = cols$column[[j]],
@@ -345,6 +358,7 @@ ki67_db_plan_from_metadata <- function(metadata, candidate_tables = ki67_db_defa
     data.frame(
       search_step = channel,
       resource_id = metadata$table[[i]],
+      db_name = if ("db_name" %in% names(metadata)) metadata$db_name[[i]] %||% "" else "",
       schema = metadata$schema[[i]],
       table = metadata$table[[i]],
       column = metadata$column[[i]],
@@ -431,7 +445,7 @@ ki67_db_query_templates <- function(search_plan) {
     row <- search_plan[i, , drop = FALSE]
     paste(
       paste0("-- search_step: ", row$search_step[[1]]),
-      paste0("-- location: ", row$schema[[1]], ".", row$table[[1]], ".", row$column[[1]]),
+      paste0("-- location: ", row$db_name[[1]] %||% "", ".", row$schema[[1]], ".", row$table[[1]], ".", row$column[[1]]),
       paste0("-- privacy: aggregate-only; suppress exact counts below configured threshold"),
       ki67_db_query_for_plan_row(row),
       sep = "\n"
@@ -467,7 +481,10 @@ ki67_db_find_column_name_hits <- function(connections, candidate_tables = ki67_d
       " order by table_schema, table_name, ordinal_position"
     )
     out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) data.frame(stringsAsFactors = FALSE))
-    if (is.data.frame(out) && nrow(out)) rows[[length(rows) + 1L]] <- out
+    if (is.data.frame(out) && nrow(out)) {
+      out$db_name <- db_name
+      rows[[length(rows) + 1L]] <- out
+    }
   }
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(ki67_db_empty_column_name_hits())
@@ -517,6 +534,7 @@ ki67_db_execute_aeki_counts <- function(connections, search_plan, min_cell_count
       count <- ki67_db_suppress_count(out$aggregate_count[[j]], min_cell_count)
       rows[[length(rows) + 1L]] <- data.frame(
         resource_id = x$resource_id[[i]],
+        db_name = x$db_name[[i]] %||% "",
         schema = x$schema[[i]],
         table = x$table[[i]],
         column = x$column[[i]],
@@ -559,6 +577,7 @@ ki67_db_execute_p16_counts <- function(connections, search_plan, min_cell_count 
       count <- ki67_db_suppress_count(out$aggregate_count[[j]], min_cell_count)
       rows[[length(rows) + 1L]] <- data.frame(
         resource_id = x$resource_id[[i]],
+        db_name = x$db_name[[i]] %||% "",
         schema = x$schema[[i]],
         table = x$table[[i]],
         column = x$column[[i]],
@@ -588,6 +607,7 @@ ki67_db_execute_text_counts <- function(connections, search_plan, min_cell_count
       count <- ki67_db_suppress_count(out$aggregate_count[[j]], min_cell_count)
       rows[[length(rows) + 1L]] <- data.frame(
         resource_id = x$resource_id[[i]],
+        db_name = x$db_name[[i]] %||% "",
         schema = x$schema[[i]],
         table = x$table[[i]],
         text_column = x$column[[i]],
@@ -618,6 +638,7 @@ ki67_db_execute_registry_counts <- function(connections, search_plan, min_cell_c
     non_missing <- ki67_db_suppress_count(out$non_missing_count[[1]], min_cell_count)
     distinct <- ki67_db_suppress_count(out$distinct_value_count[[1]], min_cell_count)
     rows[[length(rows) + 1L]] <- data.frame(
+      db_name = x$db_name[[i]] %||% "",
       schema = x$schema[[i]],
       table = x$table[[i]],
       field = x$column[[i]],
@@ -638,21 +659,21 @@ ki67_db_execute_registry_counts <- function(connections, search_plan, min_cell_c
 ki67_db_placeholder_counts <- function(status = "not_run_plan_mode", note = "Plan generated; aggregate production query not executed.") {
   list(
     aeki_code_counts = data.frame(
-      resource_id = "", schema = "", table = "", column = "", code = "", parsed_percent = "",
+      resource_id = "", db_name = "", schema = "", table = "", column = "", code = "", parsed_percent = "",
       aggregate_count = "", distinct_patient_count_if_allowed = "", year_min_if_allowed = "", year_max_if_allowed = "",
       validation_status = status, notes = note, stringsAsFactors = FALSE
     )[names(ki67_db_empty_aeki_code_counts())],
     p16_dual_stain_counts = data.frame(
-      resource_id = "", schema = "", table = "", column = "", code = "", interpretation = "",
+      resource_id = "", db_name = "", schema = "", table = "", column = "", code = "", interpretation = "",
       aggregate_count = "", notes = note, stringsAsFactors = FALSE
     )[names(ki67_db_empty_p16_dual_stain_counts())],
     text_pattern_counts = data.frame(
-      resource_id = "", schema = "", table = "", text_column = "", pattern_name = "", value_class = "",
+      resource_id = "", db_name = "", schema = "", table = "", text_column = "", pattern_name = "", value_class = "",
       aggregate_count = "", numeric_value_min_if_aggregate_safe = "", numeric_value_max_if_aggregate_safe = "",
       notes = note, stringsAsFactors = FALSE
     )[names(ki67_db_empty_text_pattern_counts())],
     registry_field_counts = data.frame(
-      schema = "", table = "", field = "", matched_term = "", likely_value_type = "",
+      db_name = "", schema = "", table = "", field = "", matched_term = "", likely_value_type = "",
       non_missing_count_if_allowed = "", distinct_value_count_if_allowed = "", aggregate_value_summary_if_allowed = "",
       notes = note, stringsAsFactors = FALSE
     )[names(ki67_db_empty_registry_field_counts())]
@@ -669,35 +690,147 @@ ki67_db_count_has_evidence <- function(x) {
   }, logical(nrow(x))) %in% TRUE, na.rm = TRUE)
 }
 
+ki67_db_count_is_suppressed <- function(x) {
+  grepl("^<|suppressed", as.character(x %||% ""), ignore.case = TRUE)
+}
+
+ki67_db_count_is_displayed <- function(x) {
+  x <- trimws(as.character(x %||% ""))
+  nzchar(x) & x != "0" & !ki67_db_count_is_suppressed(x)
+}
+
+ki67_db_deduplicate_aeki_counts <- function(aeki) {
+  if (!is.data.frame(aeki) || !nrow(aeki)) return(ki67_db_empty_aeki_code_counts())
+  for (nm in names(ki67_db_empty_aeki_code_counts())) {
+    if (!nm %in% names(aeki)) aeki[[nm]] <- ""
+  }
+  aeki <- aeki[names(ki67_db_empty_aeki_code_counts())]
+  key <- paste(
+    aeki$db_name %||% "",
+    aeki$schema %||% "",
+    aeki$table %||% "",
+    aeki$column %||% "",
+    aeki$code %||% "",
+    aeki$parsed_percent %||% "",
+    sep = "\r"
+  )
+  aeki[!duplicated(key), , drop = FALSE]
+}
+
+ki67_db_physical_locations <- function(x, column_name = "column") {
+  if (!is.data.frame(x) || !nrow(x)) return(character())
+  parts <- paste(x$db_name %||% "", x$schema %||% "", x$table %||% "", x[[column_name]] %||% "", sep = ".")
+  unique(parts[nzchar(gsub("[.]", "", parts))])
+}
+
+ki67_db_count_stats <- function(x, count_col = "aggregate_count", code_col = NULL, column_name = "column", aeki_numeric = FALSE) {
+  if (!is.data.frame(x) || !nrow(x) || !count_col %in% names(x)) {
+    return(list(
+      physical_locations_found = 0L,
+      unique_numeric_percent_codes = 0L,
+      non_suppressed_code_rows = 0L,
+      small_cell_suppressed_rows = 0L,
+      aggregate_count_display = "0",
+      best_source = ""
+    ))
+  }
+  counts <- as.character(x[[count_col]] %||% "")
+  locations <- ki67_db_physical_locations(x, column_name = column_name)
+  displayed <- ki67_db_count_is_displayed(counts)
+  suppressed <- ki67_db_count_is_suppressed(counts)
+  unique_codes <- if (!is.null(code_col) && code_col %in% names(x)) {
+    length(unique(x[[code_col]][nzchar(as.character(x[[code_col]] %||% ""))]))
+  } else {
+    0L
+  }
+  exact_total <- suppressWarnings(sum(as.numeric(counts[displayed]), na.rm = TRUE))
+  aggregate_display <- if (length(locations) && unique_codes && isTRUE(aeki_numeric)) {
+    paste0(
+      "AEKI numeric Ki-67 code evidence found in ", length(locations),
+      " pathology code columns, covering ", unique_codes,
+      " unique percent-code values. Exact small cells are suppressed."
+    )
+  } else if (length(locations) && unique_codes) {
+    paste0(
+      "Aggregate code evidence found in ", length(locations),
+      " columns, covering ", unique_codes,
+      " unique code values. Exact small cells are suppressed."
+    )
+  } else if (any(displayed) || any(suppressed)) {
+    paste0(
+      if (is.finite(exact_total) && exact_total > 0) as.character(exact_total) else "aggregate evidence",
+      if (any(suppressed)) paste0("; ", sum(suppressed), " small-cell rows suppressed") else ""
+    )
+  } else {
+    "0"
+  }
+  list(
+    physical_locations_found = length(locations),
+    unique_numeric_percent_codes = unique_codes,
+    non_suppressed_code_rows = sum(displayed, na.rm = TRUE),
+    small_cell_suppressed_rows = sum(suppressed, na.rm = TRUE),
+    aggregate_count_display = aggregate_display,
+    best_source = paste(locations, collapse = "; ")
+  )
+}
+
 ki67_db_summary <- function(aeki, p16, text_counts, registry_counts) {
+  aeki <- ki67_db_deduplicate_aeki_counts(aeki)
   aeki_found <- ki67_db_count_has_evidence(aeki) && any(nzchar(aeki$code %||% ""), na.rm = TRUE)
   registry_found <- ki67_db_count_has_evidence(registry_counts) && any(nzchar(registry_counts$field %||% ""), na.rm = TRUE)
   text_found <- ki67_db_count_has_evidence(text_counts) && any(nzchar(text_counts$value_class %||% ""), na.rm = TRUE)
   p16_found <- ki67_db_count_has_evidence(p16) && any(nzchar(p16$code %||% ""), na.rm = TRUE)
-  total_display <- function(x, col = "aggregate_count") {
-    if (!is.data.frame(x) || !nrow(x) || !col %in% names(x)) return("0")
-    vals <- as.character(x[[col]] %||% "")
-    vals <- vals[nzchar(vals)]
-    if (!length(vals)) "0" else paste(unique(vals), collapse = "; ")
-  }
-  best_source <- function(x, col = "column") {
-    if (!is.data.frame(x) || !nrow(x)) return("")
-    parts <- paste(x$schema %||% "", x$table %||% "", x[[col]] %||% "", sep = ".")
-    parts <- parts[nzchar(gsub("[.]", "", parts))]
-    paste(unique(head(parts, 3)), collapse = "; ")
-  }
+  registry_stats <- ki67_db_count_stats(registry_counts, "non_missing_count_if_allowed", column_name = "field")
+  aeki_stats <- ki67_db_count_stats(aeki, "aggregate_count", code_col = "code", column_name = "column", aeki_numeric = TRUE)
+  text_stats <- ki67_db_count_stats(text_counts, "aggregate_count", column_name = "text_column")
+  p16_stats <- ki67_db_count_stats(p16, "aggregate_count", code_col = "code", column_name = "column")
   data.frame(
     channel = c("structured_registry_fields", "danish_patobank_aeki_codes", "pathology_text_patterns", "p16_ki67_dual_stain_codes", "source_only_search_space"),
     direct_evidence_found = c(registry_found, aeki_found, text_found, p16_found, FALSE),
     numeric_percent_found = c(registry_found, aeki_found, text_found, FALSE, FALSE),
     aggregate_count_total = c(
-      total_display(registry_counts, "non_missing_count_if_allowed"),
-      total_display(aeki),
-      total_display(text_counts),
-      total_display(p16),
+      registry_stats$aggregate_count_display,
+      aeki_stats$aggregate_count_display,
+      text_stats$aggregate_count_display,
+      p16_stats$aggregate_count_display,
       "0"
     ),
-    best_source = c(best_source(registry_counts, "field"), best_source(aeki, "column"), best_source(text_counts, "text_column"), best_source(p16, "column"), ""),
+    physical_locations_found = c(
+      registry_stats$physical_locations_found,
+      aeki_stats$physical_locations_found,
+      text_stats$physical_locations_found,
+      p16_stats$physical_locations_found,
+      0L
+    ),
+    unique_numeric_percent_codes = c(
+      registry_stats$unique_numeric_percent_codes,
+      aeki_stats$unique_numeric_percent_codes,
+      text_stats$unique_numeric_percent_codes,
+      p16_stats$unique_numeric_percent_codes,
+      0L
+    ),
+    non_suppressed_code_rows = c(
+      registry_stats$non_suppressed_code_rows,
+      aeki_stats$non_suppressed_code_rows,
+      text_stats$non_suppressed_code_rows,
+      p16_stats$non_suppressed_code_rows,
+      0L
+    ),
+    small_cell_suppressed_rows = c(
+      registry_stats$small_cell_suppressed_rows,
+      aeki_stats$small_cell_suppressed_rows,
+      text_stats$small_cell_suppressed_rows,
+      p16_stats$small_cell_suppressed_rows,
+      0L
+    ),
+    aggregate_count_display = c(
+      registry_stats$aggregate_count_display,
+      aeki_stats$aggregate_count_display,
+      text_stats$aggregate_count_display,
+      p16_stats$aggregate_count_display,
+      "0"
+    ),
+    best_source = c(registry_stats$best_source, aeki_stats$best_source, text_stats$best_source, p16_stats$best_source, ""),
     evidence_strength = c(
       if (registry_found) "strong_structured_numeric" else "not_found",
       if (aeki_found) "strong_structured_coded" else "not_found",
@@ -735,22 +868,34 @@ ki67_db_found_locations <- function(summary, aeki, text_counts, registry_counts,
   rows <- list()
   add_rows <- function(channel, x, column_name, evidence_type, readiness_impact, next_step, numeric = TRUE) {
     if (!is.data.frame(x) || !nrow(x)) return(NULL)
-    for (i in seq_len(nrow(x))) {
-      count <- as.character((x$aggregate_count %||% x$non_missing_count_if_allowed %||% "")[[i]] %||% "")
+    if (identical(channel, "danish_patobank_aeki_codes")) {
+      x <- ki67_db_deduplicate_aeki_counts(x)
+    }
+    split_key <- paste(x$db_name %||% "", x$schema %||% "", x$table %||% "", x[[column_name]] %||% "", sep = "\r")
+    for (key in unique(split_key)) {
+      group <- x[split_key == key, , drop = FALSE]
+      stats <- ki67_db_count_stats(
+        group,
+        count_col = if ("aggregate_count" %in% names(group)) "aggregate_count" else "non_missing_count_if_allowed",
+        code_col = if ("code" %in% names(group)) "code" else NULL,
+        column_name = column_name
+      )
+      count <- stats$aggregate_count_display
       if (!nzchar(count) || count == "0") next
       rows[[length(rows) + 1L]] <<- data.frame(
         evidence_channel = channel,
-        schema = as.character((x$schema %||% "")[[i]] %||% ""),
-        table = as.character((x$table %||% "")[[i]] %||% ""),
-        column = as.character((x[[column_name]] %||% "")[[i]] %||% ""),
+        db_name = as.character((group$db_name %||% "")[[1]] %||% ""),
+        schema = as.character((group$schema %||% "")[[1]] %||% ""),
+        table = as.character((group$table %||% "")[[1]] %||% ""),
+        column = as.character((group[[column_name]] %||% "")[[1]] %||% ""),
         evidence_type = evidence_type,
         direct_evidence_found = TRUE,
         numeric_percent_found = numeric,
         aggregate_count_display = count,
-        small_cell_suppressed = grepl("^<|suppressed", count),
+        small_cell_suppressed = stats$small_cell_suppressed_rows > 0L,
         readiness_impact = readiness_impact,
         next_validation_step = next_step,
-        notes = as.character((x$notes %||% "")[[i]] %||% ""),
+        notes = paste(unique(as.character(group$notes %||% "")), collapse = "; "),
         stringsAsFactors = FALSE
       )
     }
@@ -763,7 +908,7 @@ ki67_db_found_locations <- function(summary, aeki, text_counts, registry_counts,
   if (!nrow(out)) {
     return(data.frame(
       evidence_channel = "none",
-      schema = "", table = "", column = "", evidence_type = "no_direct_aggregate_evidence",
+      db_name = "", schema = "", table = "", column = "", evidence_type = "no_direct_aggregate_evidence",
       direct_evidence_found = FALSE, numeric_percent_found = FALSE, aggregate_count_display = "0",
       small_cell_suppressed = FALSE, readiness_impact = "no_readiness_upgrade",
       next_validation_step = "Run production aggregate scan with validated candidate tables/columns.",
@@ -777,7 +922,8 @@ ki67_db_found_locations <- function(summary, aeki, text_counts, registry_counts,
 ki67_db_apply_to_mcl_outputs <- function(output_dir, db_outputs) {
   summary <- db_outputs$summary
   if (!is.data.frame(summary) || !nrow(summary)) return(character())
-  direct <- summary[summary$direct_evidence_found %in% TRUE & summary$channel %in% c("structured_registry_fields", "danish_patobank_aeki_codes", "pathology_text_patterns"), , drop = FALSE]
+  direct_flag <- tolower(trimws(as.character(summary$direct_evidence_found %||% ""))) %in% c("true", "t", "1", "yes")
+  direct <- summary[direct_flag & summary$channel %in% c("structured_registry_fields", "danish_patobank_aeki_codes", "pathology_text_patterns"), , drop = FALSE]
   if (!nrow(direct)) return(character())
   strongest <- if (any(direct$channel == "structured_registry_fields")) {
     "strong_structured_numeric"
@@ -786,6 +932,8 @@ ki67_db_apply_to_mcl_outputs <- function(output_dir, db_outputs) {
   } else {
     "moderate_text_extractable"
   }
+  direct_display <- if ("aggregate_count_display" %in% names(direct)) as.character(direct$aggregate_count_display) else rep("", nrow(direct))
+  direct_locations <- if ("physical_locations_found" %in% names(direct)) as.character(direct$physical_locations_found) else rep("", nrow(direct))
   paths <- character()
   update_csv <- function(name, updater) {
     path <- file.path(output_dir, name)
@@ -804,8 +952,8 @@ ki67_db_apply_to_mcl_outputs <- function(output_dir, db_outputs) {
     x$proxy_available[idx] <- identical(strongest, "moderate_text_extractable")
     x$current_profiled_evidence[idx] <- TRUE
     x$candidate_fields_or_codes[idx] <- paste(direct$best_source, collapse = "; ")
-    x$key_limitation[idx] <- "Direct aggregate Ki-67 evidence found by production finder; source-specific clinical validation is still required."
-    x$recommended_next_action[idx] <- "Validate Ki-67 coding/value semantics before analytic cohort extraction."
+    x$key_limitation[idx] <- "Direct aggregate Danish pathology code evidence exists, but source-specific clinical validation is required before analytic cohort extraction."
+    x$recommended_next_action[idx] <- "Validate Danish Patobank Ki-67 coding/value semantics, source scope, and MCL applicability before analytic cohort extraction."
     x
   })
   update_csv("mcl_triangle_biology_gap_analysis.csv", function(x) {
@@ -815,9 +963,13 @@ ki67_db_apply_to_mcl_outputs <- function(output_dir, db_outputs) {
     x$direct_variable_found[idx] <- strongest %in% c("strong_structured_numeric", "strong_structured_coded")
     x$indirect_proxy_found[idx] <- identical(strongest, "moderate_text_extractable")
     x$current_profiled_source_available[idx] <- TRUE
-    x$feasibility_status[idx] <- if (strongest %in% c("strong_structured_numeric", "strong_structured_coded")) "ready" else "feasible_with_mapping"
+    x$feasibility_status[idx] <- if (strongest %in% c("strong_structured_numeric", "strong_structured_coded")) "aggregate_evidence_found_requires_validation" else "feasible_with_mapping"
     x$action_required[idx] <- "Validate source-specific definition and coding before cohort extraction."
-    x$notes[idx] <- paste("Production Ki-67 finder status:", strongest, "- aggregate-only evidence found; no raw text emitted.")
+    x$notes[idx] <- paste(
+      "Production Ki-67 finder status:", strongest,
+      "- aggregate-only Danish pathology code evidence found; no raw text emitted.",
+      paste(unique(direct_display), collapse = " ")
+    )
     x
   })
   update_csv("mcl_triangle_feasibility_summary.csv", function(x) {
@@ -826,8 +978,15 @@ ki67_db_apply_to_mcl_outputs <- function(output_dir, db_outputs) {
     if (!any(idx)) return(x)
     x$status[idx] <- strongest
     x$value[idx] <- strongest
-    x$evidence_count[idx] <- nrow(direct)
-    x$notes[idx] <- "Ki-67 evidence updated from direct aggregate production finder; manual validation required."
+    if (any(nzchar(direct_locations))) {
+      x$evidence_count[idx] <- paste(direct_locations[nzchar(direct_locations)], collapse = "; ")
+    } else {
+      x$evidence_count[idx] <- nrow(direct)
+    }
+    x$notes[idx] <- paste(
+      "Ki-67 evidence updated from direct aggregate production finder; manual validation required.",
+      paste(unique(direct_display), collapse = " ")
+    )
     x
   })
   update_csv("ki67_channel_summary.csv", function(x) {
@@ -842,14 +1001,42 @@ ki67_db_apply_to_mcl_outputs <- function(output_dir, db_outputs) {
       )
       idx <- x$evidence_channel == channel
       if (any(idx)) {
-        x$confirmed_hits[idx] <- as.integer(suppressWarnings(as.integer(x$confirmed_hits[idx])) %||% 0L) + 1L
+        increment <- suppressWarnings(as.integer(direct_locations[[i]] %||% "1"))
+        if (is.na(increment) || increment < 1L) increment <- 1L
+        current <- suppressWarnings(as.integer(x$confirmed_hits[idx]))
+        current[is.na(current)] <- 0L
+        x$confirmed_hits[idx] <- current + increment
         x$status[idx] <- "confirmed_present"
-        x$notes[idx] <- paste("Updated from direct aggregate production finder:", direct$best_source[[i]])
+        x$notes[idx] <- paste("Updated from direct aggregate production finder:", direct$best_source[[i]], direct_display[[i]] %||% "")
       }
     }
     x
   })
   paths
+}
+
+ki67_db_read_outputs <- function(output_dir) {
+  read_optional <- function(name, empty) {
+    path <- file.path(output_dir, name)
+    if (!file.exists(path)) return(empty)
+    out <- read_delimited_file(path)
+    if (!is.data.frame(out) || !nrow(out)) return(empty)
+    out
+  }
+  aeki <- read_optional("ki67_db_aeki_code_counts.csv", ki67_db_empty_aeki_code_counts())
+  p16 <- read_optional("ki67_db_p16_dual_stain_counts.csv", ki67_db_empty_p16_dual_stain_counts())
+  text_counts <- read_optional("ki67_db_text_pattern_counts.csv", ki67_db_empty_text_pattern_counts())
+  registry_counts <- read_optional("ki67_db_registry_field_counts.csv", ki67_db_empty_registry_field_counts())
+  summary <- ki67_db_summary(aeki, p16, text_counts, registry_counts)
+  found <- ki67_db_found_locations(summary, aeki, text_counts, registry_counts, p16)
+  list(
+    summary = summary,
+    aeki_code_counts = aeki,
+    p16_dual_stain_counts = p16,
+    text_pattern_counts = text_counts,
+    registry_field_counts = registry_counts,
+    found_locations = found
+  )
 }
 
 build_ki67_db_outputs <- function(project_root = ".",

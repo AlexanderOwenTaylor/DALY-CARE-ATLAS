@@ -74,6 +74,30 @@ no_db_outputs <- build_ki67_db_outputs(
 expect_true(any(no_db_outputs$aeki_code_counts$validation_status == "no_db_connection"), "Production aggregate mode should fail safely without DB credentials.")
 expect_true(nrow(no_db_outputs$search_plan) > 0, "Production aggregate no-DB fallback should still write a query plan.")
 
+alias_aeki <- data.frame(
+  resource_id = c("SDS_pato", "pato", "SDS_dimpatologiskdiagnose"),
+  schema = c("public", "public", "public"),
+  table = c("SDS_pato", "SDS_pato", "SDS_dimpatologiskdiagnose"),
+  column = c("c_snomedkode", "c_snomedkode", "diagnose_snomed_kode"),
+  code = c("AEKI020", "AEKI020", "AEKI020"),
+  parsed_percent = c("20", "20", "20"),
+  aggregate_count = c("152", "152", "172"),
+  distinct_patient_count_if_allowed = "",
+  year_min_if_allowed = "",
+  year_max_if_allowed = "",
+  validation_status = "aggregate_count_available",
+  notes = "Synthetic aggregate count.",
+  stringsAsFactors = FALSE
+)
+alias_summary <- ki67_db_summary(alias_aeki, ki67_db_empty_p16_dual_stain_counts(), ki67_db_empty_text_pattern_counts(), ki67_db_empty_registry_field_counts())
+alias_aeki_row <- alias_summary[alias_summary$channel == "danish_patobank_aeki_codes", , drop = FALSE]
+expect_equal(as.integer(alias_aeki_row$physical_locations_found[[1]]), 2L, "AEKI aliases should deduplicate to physical schema/table/column locations.")
+expect_equal(as.integer(alias_aeki_row$unique_numeric_percent_codes[[1]]), 1L, "Duplicate AEKI aliases should not inflate unique percent-code counts.")
+expect_false(grepl("152; 172", alias_aeki_row$aggregate_count_total[[1]], fixed = TRUE), "AEKI summary should not use semicolon-list aggregate totals.")
+alias_found <- ki67_db_found_locations(alias_summary, alias_aeki, ki67_db_empty_text_pattern_counts(), ki67_db_empty_registry_field_counts(), ki67_db_empty_p16_dual_stain_counts())
+alias_locations <- alias_found[alias_found$evidence_channel == "danish_patobank_aeki_codes", , drop = FALSE]
+expect_equal(nrow(alias_locations), 2L, "Found-location table should display physical AEKI columns, not alias/code duplicates.")
+
 out_dir <- tempfile("ki67_direct_mcl_")
 dir_create(out_dir)
 write_csv(data.frame(
@@ -129,6 +153,11 @@ direct_outputs <- list(
     direct_evidence_found = TRUE,
     numeric_percent_found = TRUE,
     aggregate_count_total = "<5",
+    physical_locations_found = "2",
+    unique_numeric_percent_codes = "51",
+    non_suppressed_code_rows = "32",
+    small_cell_suppressed_rows = "19",
+    aggregate_count_display = "AEKI numeric Ki-67 code evidence found in 2 pathology code columns, covering 51 unique percent-code values. Exact small cells are suppressed.",
     best_source = "public.SDS_pato.c_snomedkode",
     evidence_strength = "strong_structured_coded",
     mcl_triangle_relevance = "numeric Danish Patobank Ki-67 code candidate",
@@ -142,6 +171,9 @@ updated <- ki67_db_apply_to_mcl_outputs(out_dir, direct_outputs)
 expect_true(length(updated) >= 3L, "Direct aggregate evidence should update MCL/TRIANGLE summary tables.")
 matrix <- read_delimited_file(file.path(out_dir, "mcl_triangle_study_readiness_matrix.csv"))
 expect_equal(matrix$readiness_status[[1]], "strong_structured_coded", "Direct AEKI evidence should upgrade Ki-67 readiness to strong structured coded.")
+expect_true(grepl("source-specific clinical validation", matrix$key_limitation[[1]], fixed = TRUE), "Direct AEKI readiness should retain validation-required wording.")
+biology <- read_delimited_file(file.path(out_dir, "mcl_triangle_biology_gap_analysis.csv"))
+expect_equal(biology$feasibility_status[[1]], "aggregate_evidence_found_requires_validation", "Direct aggregate Ki-67 evidence should not mark biology as ready before source validation.")
 
 tmp_out <- tempfile("ki67_direct_plan_outputs_")
 dir_create(tmp_out)

@@ -1185,6 +1185,8 @@
           <div class="panel-body">
             <div id="overview-pipeline-status" class="grid"></div>
             <div style="height:14px"></div>
+            <div id="overview-semantic-output-qa"></div>
+            <div style="height:14px"></div>
             <div id="overview-special-manual-resources"></div>
           </div>
         </div>
@@ -1628,8 +1630,8 @@
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Procedure-code imaging, DaMyDa registry imaging/bone disease, SP metadata/report availability, and radiotherapy signals.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
-      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Aggregate coded pathology, SNOMED, specimen/material, tumor-coded, and report-text availability evidence.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical infection-study planning.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Aggregate coded pathology, SNOMED, specimen/material, tumor-coded, and report-text availability evidence. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical cohort planning.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
@@ -1786,6 +1788,8 @@
               </label>
             </div>
             <div id="qa-list" class="qa-list"></div>
+            <div style="height:14px"></div>
+            <div id="infra-semantic-output-qa"></div>
           </div>
         </div>
       </div>
@@ -1815,6 +1819,7 @@
       const legacyReferenceVsCurrentRows = payload.legacy_reference_vs_current_rows || [];
       const remainingActivationPlanRows = payload.remaining_activation_plan_rows || [];
       const ki67Discovery = payload.ki67_discovery || {};
+      const patobankKi67Percent = payload.patobank_ki67_percent || {};
       const mclTriangleFeasibility = payload.mcl_triangle_feasibility || {};
       const columnRows = payload.column_profile_rows || [];
       const columnTopValues = payload.column_top_value_rows || [];
@@ -2261,6 +2266,24 @@
             { query: q, item: "mcl_triangle_feasibility", status: "Feasibility panel", copy: "#clinical-feasibility/mcl-triangle-feasibility", score: mclPanelScore + 100 }
           ));
         }
+        ((patobankKi67Percent && patobankKi67Percent.summary) || []).forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["metric_id", "label", "source_scope"],
+            title: ["label", "status"],
+            source: ["source_scope"],
+            body: ["notes", "count_kind", "percent_display"]
+          });
+          if (score > 0 || ["ki67", "ki-67", "aeki", "æki", "patobank", "sds_pato", "c_snomedkode"].some(term => q.includes(term))) {
+            grouped["Panels"].push(makeSearchResult(
+              "Panels",
+              "PATOBANK coded Ki-67 percent evidence coverage",
+              "Source-coverage cartography for SDS_pato.c_snomedkode AEKI/ÆKI numeric percent codes; not disease-specific completeness.",
+              row,
+              { tab: "clinical", sub: "clinical-pathology" },
+              { query: row.label || q, item: "patobank_ki67_percent", status: row.status, copy: "#clinical/clinical-pathology", score: score + 120 }
+            ));
+          }
+        });
         ((mclTriangleFeasibility && mclTriangleFeasibility.pathology_ki67_signpost) || []).forEach(row => {
           const score = scoreSearchResult(row, q, {
             exact: ["title", "table_name", "column_name", "code_family"],
@@ -2271,11 +2294,11 @@
           if (score > 0) {
             grouped["Panels"].push(makeSearchResult(
               "Panels",
-              row.title || "Ki-67 proliferation index",
-              [row.table_name, row.column_name, row.code_family, row.caveat].filter(Boolean).join(" - "),
+              "TRIANGLE feasibility-only Ki-67 signal",
+              [row.table_name, row.column_name, row.code_family, "not general PATOBANK coverage"].filter(Boolean).join(" - "),
               row,
-              { tab: "clinical", sub: "clinical-pathology" },
-              { query: row.title || q, item: "pathology_ki67_signpost", status: row.current_use_status, copy: "#clinical/clinical-pathology", score: score + 80 }
+              { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+              { query: row.title || q, item: "pathology_ki67_signpost", status: "TRIANGLE feasibility-only", copy: "#clinical-feasibility/mcl-triangle-feasibility", score: score + 40 }
             ));
           }
         });
@@ -2902,6 +2925,24 @@
             <p class="mini">${escapeHtml(metricHelp[row.metric] || "Refreshable run metric from the generated payload.")}</p>
           </article>
         `).join("") || `<div class="empty">Run status metrics are not available in the current payload.</div>`;
+      }
+      function renderSemanticOutputQaSummary() {
+        const ki67State = patobankKi67QaState();
+        const headerOnlyCount = ki67State.emptyComponents.length;
+        const shippable = ki67State.status !== "empty-output-error";
+        return renderSectionCard("Semantic output QA", `
+          ${renderKpiStrip([
+            { label: "PATOBANK Ki-67 status", value: ki67State.label, tone: ki67State.tone },
+            { label: "header-only semantic outputs", value: headerOnlyCount, tone: headerOnlyCount ? "red" : "green" },
+            { label: "DaMyDa panel staging", value: "summary first", tone: "green" },
+            { label: "LYFO panel staging", value: "summary first", tone: "green" },
+            { label: "taxonomy status", value: "cross-linked diagnostics", tone: "amber" },
+            { label: "shippable", value: shippable ? "yes" : "no", tone: shippable ? "green" : "red" }
+          ], { tone: ki67State.tone })}
+          <p class="mini">${escapeHtml(ki67State.notes)}</p>
+          <p class="mini"><strong>Registry staging:</strong> DaMyDa and LYFO audience panels lead with registry-facing summaries; detailed cartography rows remain available below as technical lineage / raw cartography rows.</p>
+          <p class="mini"><strong>Taxonomy:</strong> Microbiology and Pathology are cross-linked from Clinical Data but should be read as Laboratory & Diagnostics resources for source-coverage review.</p>
+        `, ki67State.tone);
       }
       function renderSpecialManualResourcesCard() {
         const rows = [
@@ -3676,14 +3717,15 @@
         const confirmed = rows.filter(row => !/not_present|unresolved|expected/i.test(text(row.mapping_status)));
         confirmed.sort((a, b) => damydaRawPriority(a) - damydaRawPriority(b));
         const expected = rows.filter(row => /not_present|unresolved|expected/i.test(text(row.mapping_status)));
-        return `<div class="lineage-block">
-          <h3>Raw names / data lineage</h3>
+        return `<details class="lineage-block">
+          <summary>Technical lineage / raw cartography rows</summary>
+          <h3>Technical lineage / raw cartography rows</h3>
           ${confirmed.length ? renderRawFieldList(confirmed, 24) : `<div class="empty">No confirmed DaMyDa raw-field mappings were generated.</div>`}
           <details class="lineage-block">
             <summary>Expected but not found / unresolved fields</summary>
             ${expected.length ? renderRawFieldList(expected, 24) : `<div class="empty">No expected-but-not-found DaMyDa rows were generated.</div>`}
           </details>
-        </div>`;
+        </details>`;
       }
       function renderDaMyDaPanel() {
         const summary = damydaSummaryRow();
@@ -3692,7 +3734,7 @@
             { label: "registry source", value: "RKKP_DaMyDa", tone: "plum" },
             { label: "registry entries", value: metricOrUnavailable(summary.n_rows, "registry entries"), tone: "plum" },
             { label: "variables", value: metricOrUnavailable(summary.n_cols, "variables"), tone: "violet" },
-            { label: "patients", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not available", tone: "cyan" },
+            { label: "patient denominator", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not computed for this aggregate block", tone: "cyan" },
             { label: "date span", value: damydaDateSpan(summary), tone: "amber" }
           ], { tone: "plum" })}
           <section class="panel-section blue section-baseline-markers">
@@ -3847,14 +3889,15 @@
         const confirmed = rows.filter(row => !/not_present|unresolved|expected|candidate/i.test(text(row.mapping_status)));
         confirmed.sort((a, b) => lyfoRawPriority(a) - lyfoRawPriority(b));
         const candidates = rows.filter(row => /candidate|low|not_present|unresolved|expected/i.test([row.mapping_status, row.mapping_confidence].join(" ")));
-        return `<div class="lineage-block">
-          <h3>Raw names / data lineage</h3>
+        return `<details class="lineage-block">
+          <summary>Technical lineage / raw cartography rows</summary>
+          <h3>Technical lineage / raw cartography rows</h3>
           ${confirmed.length ? renderRawFieldList(confirmed, 30) : `<div class="empty">not available in current aggregate output</div>`}
           <details class="lineage-block">
             <summary>Candidate / low-confidence LYFO fields</summary>
             ${candidates.length ? renderRawFieldList(candidates, 40) : `<div class="empty">No candidate LYFO rows were generated.</div>`}
           </details>
-        </div>`;
+        </details>`;
       }
       function renderLYFOPanel() {
         const summary = lyfoSummaryRow();
@@ -3863,7 +3906,7 @@
             { label: "registry source", value: "RKKP_LYFO", tone: "blue" },
             { label: "registry entries", value: metricOrUnavailable(summary.n_rows, "registry entries"), tone: "blue" },
             { label: "variables", value: metricOrUnavailable(summary.n_cols, "variables"), tone: "cyan" },
-            { label: "patients", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not available", tone: "green" },
+            { label: "patient denominator", value: hasDisplayValue(summary.n_patients) ? metricOrUnavailable(summary.n_patients, "patients") : "not computed for this aggregate block", tone: "green" },
             { label: "date span", value: lyfoDateSpan(summary), tone: "amber" }
           ], { tone: "blue" }), "blue")}
           <div class="value-map-grid">
@@ -4375,6 +4418,7 @@
         caveats: ["The detailed catalog remains complete below; staging changed, not source accounting."]
       }));
       setHtml("overview-pipeline-status", renderPipelineStatusCards());
+      setHtml("overview-semantic-output-qa", renderSemanticOutputQaSummary());
       setHtml("overview-special-manual-resources", renderSpecialManualResourcesCard());
       setHtml("resource-catalog-special-manual-resources", renderSpecialManualResourcesCard());
       setHtml("scope-notes", reviewScopeNotes.map(row => `
@@ -4419,6 +4463,7 @@
       }
       renderQa("qa-preview", actionItems.length ? actionItems : qaItems, 8);
       renderQa("qa-list", qaItems);
+      setHtml("infra-semantic-output-qa", renderSemanticOutputQaSummary());
 
       function renderSituationReport() {
         const cards = reviewSituation.cards || situationCards || [];
@@ -5403,6 +5448,129 @@
           </div>
         `;
       }
+      function patobankKi67Metric(metricId) {
+        return ((patobankKi67Percent && patobankKi67Percent.summary) || []).find(row => row.metric_id === metricId) || {};
+      }
+      function patobankKi67Denominator(denominatorId) {
+        return ((patobankKi67Percent && patobankKi67Percent.denominator_counts) || []).find(row => row.denominator_id === denominatorId) || {};
+      }
+      function patobankKi67Rows() {
+        return {
+          summary: (patobankKi67Percent && patobankKi67Percent.summary) || [],
+          denominator_counts: (patobankKi67Percent && patobankKi67Percent.denominator_counts) || [],
+          code_counts: (patobankKi67Percent && patobankKi67Percent.code_counts) || [],
+          validation: (patobankKi67Percent && patobankKi67Percent.validation) || []
+        };
+      }
+      function patobankKi67StatusText(row) {
+        return text([
+          row && row.status,
+          row && row.count_status,
+          row && row.validation_status,
+          row && row.key_status,
+          row && row.notes
+        ].filter(Boolean).join(" ")).toLowerCase();
+      }
+      function patobankKi67QaState() {
+        const rows = patobankKi67Rows();
+        const required = ["summary", "denominator_counts", "code_counts", "validation"];
+        const empty = required.filter(name => !rows[name].length);
+        const allRows = required.reduce((acc, name) => acc.concat(rows[name]), []);
+        const hasValidCodeCounts = rows.code_counts.some(row => /valid_numeric_percent_code|aggregate_count_available/.test(patobankKi67StatusText(row)));
+        const hasFailedClosed = allRows.some(row => /failed_closed|not_queryable|not_found|missing|query_failed|unavailable|not_computed|no_valid_aeki/.test(patobankKi67StatusText(row)));
+        if (empty.length) {
+          return {
+            status: "empty-output-error",
+            tone: "red",
+            label: "empty-output-error",
+            shippable: false,
+            emptyComponents: empty,
+            notes: "PATOBANK Ki-67 cartography failed: output file exists but contains no data rows and no fail-closed validation row."
+          };
+        }
+        if (hasValidCodeCounts) {
+          return { status: "success", tone: "green", label: "success", shippable: true, emptyComponents: [], notes: "PATOBANK Ki-67 output contains aggregate source-coverage rows." };
+        }
+        if (hasFailedClosed || allRows.length) {
+          return { status: "failed-closed", tone: "amber", label: "failed-closed", shippable: true, emptyComponents: [], notes: "PATOBANK Ki-67 cartography was attempted or represented, but coverage was not computed in this build. Validation rows explain why." };
+        }
+        return { status: "empty-output-error", tone: "red", label: "empty-output-error", shippable: false, emptyComponents: required, notes: "PATOBANK Ki-67 output state could not be interpreted." };
+      }
+      function patobankKi67DenominatorDisplay(row) {
+        if (!row || row.count_status !== "aggregate_count_available") return row && (row.count_status || row.key_status) || "key unavailable";
+        return row.percent_display || row.numerator_display || "not available";
+      }
+      function renderPatobankKi67PercentCoverage() {
+        const summaryRows = (patobankKi67Percent && patobankKi67Percent.summary) || [];
+        const denominatorRows = (patobankKi67Percent && patobankKi67Percent.denominator_counts) || [];
+        const codeRows = (patobankKi67Percent && patobankKi67Percent.code_counts) || [];
+        const validationRows = (patobankKi67Percent && patobankKi67Percent.validation) || [];
+        const validRows = patobankKi67Metric("valid_code_rows");
+        const patient = patobankKi67Denominator("patient");
+        const investigation = patobankKi67Denominator("investigation");
+        const specimen = patobankKi67Denominator("specimen");
+        const qaState = patobankKi67QaState();
+        if (qaState.status === "empty-output-error") {
+          return `
+            <div class="callout red"><strong>PATOBANK coded Ki-67 percent evidence coverage - QA error:</strong> ${escapeHtml(qaState.notes)}</div>
+            ${renderKpiStrip([
+              { label: "PATOBANK Ki-67 status", value: qaState.label, tone: "red" },
+              { label: "header-only components", value: qaState.emptyComponents.length, tone: "red" },
+              { label: "shippable", value: "no", tone: "red" }
+            ], { tone: "red" })}
+          `;
+        }
+        if (qaState.status === "failed-closed") {
+          return `
+            <div class="callout warn"><strong>PATOBANK coded Ki-67 percent evidence coverage - not computed in this build:</strong> ${escapeHtml(qaState.notes)}</div>
+            ${renderKpiStrip([
+              { label: "PATOBANK Ki-67 status", value: "failed-closed", tone: "amber" },
+              { label: "raw pathology text emitted", value: "0", tone: "green" },
+              { label: "coverage denominator", value: "not computed", tone: "amber" }
+            ], { tone: "amber" })}
+            <details class="lineage-block" open>
+              <summary>Fail-closed validation reasons</summary>
+              ${renderCollapsedRawLineage(validationRows.concat(summaryRows, denominatorRows, codeRows), { limit: 24 })}
+            </details>
+          `;
+        }
+        return `
+          <div class="callout"><strong>PATOBANK coded Ki-67 percent evidence coverage:</strong> this panel is aggregate source-coverage cartography for <code>SDS_pato.c_snomedkode</code> AEKI/ÆKI numeric percent codes. It is not disease-specific clinical completeness, not MCL/TRIANGLE eligibility, and not pathology-text extraction.</div>
+          ${renderKpiStrip([
+            { label: "valid coded Ki-67 rows", value: validRows.value_display || "not available", tone: "green" },
+            { label: "patient coverage", value: patobankKi67DenominatorDisplay(patient), tone: "blue" },
+            { label: "investigation coverage", value: patobankKi67DenominatorDisplay(investigation), tone: "cyan" },
+            { label: "specimen/material coverage", value: patobankKi67DenominatorDisplay(specimen), tone: "violet" },
+            { label: "raw pathology text emitted", value: "0", tone: "red" }
+          ], { tone: "green" })}
+          <div class="grid grid-2">
+            <article class="clinical-card">
+              ${renderBadge("source-coverage cartography", "green")}
+              <h3>What this counts</h3>
+              <p>Valid numeric Ki-67 percent codes are normalized from <code>AEKIxxx</code>, <code>ÆKIxxx</code>, and mojibake AEKI variants, where <code>xxx</code> is 000-100.</p>
+              <p class="mini">The denominator is the profiled PATOBANK/SDS_pato source denominator, not lymphoma, MCL, myeloma, CLL, treatment, or TRIANGLE completeness.</p>
+            </article>
+            <article class="clinical-card">
+              ${renderBadge("not a clinical completeness estimate", "amber")}
+              <h3>What this does not count</h3>
+              <p class="mini">This does not validate pathology free text, disease-specific availability, prognostic use, treatment effect, or clinical eligibility. Missing denominator keys fail closed instead of being guessed.</p>
+              <p class="mini">The MCL/TRIANGLE Ki-67 feasibility signal remains separate under Clinical Feasibility.</p>
+            </article>
+          </div>
+          <details class="lineage-block" open>
+            <summary>Coverage denominators</summary>
+            ${renderCollapsedRawLineage(denominatorRows, { limit: 10 })}
+          </details>
+          <details class="lineage-block">
+            <summary>Valid normalized AEKI code counts and parsed percent distribution</summary>
+            ${codeRows.length ? renderCollapsedRawLineage(codeRows, { limit: 20 }) : `<div class="empty">No valid numeric AEKI percent-code rows were emitted.</div>`}
+          </details>
+          <details class="lineage-block">
+            <summary>Validation and rejected-code metadata</summary>
+            ${renderCollapsedRawLineage(validationRows, { limit: 20 })}
+          </details>
+        `;
+      }
       function renderPathologyLayerCards() {
         return `<div class="grid grid-3">${pathologyLayerSpecs.filter(layer => layer.id !== "candidate").map(layer => `
           <article class="raw-lineage-card">
@@ -5463,7 +5631,7 @@
             `, "green")}
             ${renderSectionCard("Source / coverage", renderPathologySourceCoverage(), "blue")}
             ${renderSectionCard("Pathology evidence layers", renderPathologyLayerCards(), "cyan")}
-            ${renderSectionCard("Ki-67 proliferation index", renderPathologyKi67Signpost(), "green")}
+            ${renderSectionCard("PATOBANK coded Ki-67 percent evidence coverage", renderPatobankKi67PercentCoverage(), "green")}
             ${renderSectionCard("SNOMED-coded pathology", renderPathologyLayerSection("snomed", "green"), "green")}
             ${renderSectionCard("Specimen / material", renderPathologyLayerSection("specimen", "cyan"), "cyan")}
             ${renderSectionCard("Pathology institution / lab source", renderPathologyLayerSection("institution", "violet"), "violet")}
@@ -6590,7 +6758,8 @@
               ], { tone: "green" })}
               <p class="mini">The age <=65 expanded ibrutinib count is derived from age-specific stratum cells. If those cells are not accepted production aggregates, the displayed 28 is fallback/reference only.</p>
             `, "violet")}
-            ${renderSectionCard("Ki-67 coded evidence and pathology text recovery route", `
+            ${renderSectionCard("TRIANGLE feasibility-only Ki-67 coded evidence and pathology text recovery route", `
+              <div class="callout"><strong>TRIANGLE feasibility-only:</strong> this block is not general PATOBANK Ki-67 coverage. ${patobankKi67QaState().status === "success" ? "Use the Pathology/PATOBANK panel for source-coverage cartography." : "General PATOBANK Ki-67 cartography was attempted but not computed in this build; TRIANGLE Ki-67 counts remain feasibility-only and cannot be generalized."}</div>
               ${renderKpiStrip([
                 mclKpiItem("coded Ki-67 AEKI evidence", ki67Known, "37", "green"),
                 mclKpiItem("coded Ki-67 AEKI >=30%", ki67Ge30, "20", "amber"),

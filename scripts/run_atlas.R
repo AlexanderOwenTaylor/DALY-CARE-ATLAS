@@ -76,6 +76,7 @@ load_atlas_runtime <- function(project_root = find_project_root()) {
   source(file.path(project_root, "R", "semantic_dictionary.R"))
   source(file.path(project_root, "R", "product_layer.R"))
   source(file.path(project_root, "R", "ki67_discovery.R"))
+  source(file.path(project_root, "R", "patobank_ki67_cartography.R"))
   source(file.path(project_root, "R", "ki67_production_finder.R"))
   source(file.path(project_root, "R", "mcl_triangle_counts.R"))
   source(file.path(project_root, "R", "mcl_triangle_feasibility.R"))

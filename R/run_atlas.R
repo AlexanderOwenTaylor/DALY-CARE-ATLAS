@@ -423,6 +423,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     legacy_reference_vs_current = legacy_reference_vs_current,
     ki67_discovery = ki67_discovery
   )
+  patobank_ki67_percent <- patobank_ki67_build_outputs(
+    project_root = project_root,
+    db_adapter = db_adapter,
+    source_resolution = source_resolution,
+    sources = sources,
+    min_cell_count = atlas_min_cell_count()
+  )
   resource_checks <- resource_reconciliation_checks(resource_reconciliation)
   if (nrow(resource_checks)) checks <- bind_rows_base(list(checks, resource_checks))
   empty_live_refused <- should_refuse_empty_live_run(source_map, sources)
@@ -468,6 +475,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   ki67_paths <- ki67_paths[setdiff(names(ki67_paths), "extraction_spec")]
   names(ki67_paths) <- paste0("ki67_", names(ki67_paths))
   output_paths <- c(output_paths, ki67_paths)
+  patobank_ki67_paths <- patobank_ki67_write_outputs(patobank_ki67_percent, output_dir = output_dir)
+  names(patobank_ki67_paths) <- paste0("patobank_ki67_", names(patobank_ki67_paths))
+  output_paths <- c(output_paths, patobank_ki67_paths)
   mcl_triangle_paths <- mcl_triangle_write_outputs(mcl_triangle_feasibility, output_dir)
   names(mcl_triangle_paths) <- paste0("mcl_triangle_", names(mcl_triangle_paths))
   output_paths <- c(output_paths, mcl_triangle_paths)
@@ -584,6 +594,17 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     db_registry_field_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_registry_field_counts.csv"), data.frame(stringsAsFactors = FALSE)),
     summary = ki67_discovery$summary
   )
+  payload_patobank_ki67_percent <- list(
+    validation = safe_read_output_csv(output_paths$patobank_ki67_validation, patobank_ki67_percent$validation),
+    summary = safe_read_output_csv(output_paths$patobank_ki67_summary, patobank_ki67_percent$summary),
+    code_counts = safe_read_output_csv(output_paths$patobank_ki67_code_counts, patobank_ki67_percent$code_counts),
+    denominator_counts = safe_read_output_csv(output_paths$patobank_ki67_denominator_counts, patobank_ki67_percent$denominator_counts),
+    query_templates = if (file.exists(output_paths$patobank_ki67_query_templates)) {
+      paste(readLines(output_paths$patobank_ki67_query_templates, warn = FALSE), collapse = "\n")
+    } else {
+      ""
+    }
+  )
   mcl_triangle_count_source <- if (exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
     mcl_count_resolve_standalone_output_source(project_root = project_root, outputs_dir = output_dir)
   } else {
@@ -650,6 +671,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     legacy_reference_vs_current = payload_legacy_reference_vs_current,
     remaining_activation_plan = payload_remaining_activation_plan,
     ki67_discovery = payload_ki67_discovery,
+    patobank_ki67_percent = payload_patobank_ki67_percent,
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
