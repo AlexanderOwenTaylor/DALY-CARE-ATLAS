@@ -2929,16 +2929,18 @@
       function renderSemanticOutputQaSummary() {
         const ki67State = patobankKi67QaState();
         const headerOnlyCount = ki67State.emptyComponents.length;
-        const shippable = ki67State.status !== "empty-output-error";
         return renderSectionCard("Semantic output QA", `
           ${renderKpiStrip([
             { label: "PATOBANK Ki-67 status", value: ki67State.label, tone: ki67State.tone },
             { label: "header-only semantic outputs", value: headerOnlyCount, tone: headerOnlyCount ? "red" : "green" },
+            { label: "atlas_reviewable", value: ki67State.atlasReviewable ? "yes" : "no", tone: ki67State.atlasReviewable ? "green" : "red" },
+            { label: "production_ki67_available", value: ki67State.productionKi67Available ? "yes" : "no", tone: ki67State.productionKi67Available ? "green" : "amber" },
+            { label: "shippable_without_known_semantic_failures", value: ki67State.shippableWithoutKnownSemanticFailures ? "yes" : "no", tone: ki67State.shippableWithoutKnownSemanticFailures ? "green" : "red" },
             { label: "DaMyDa panel staging", value: "summary first", tone: "green" },
             { label: "LYFO panel staging", value: "summary first", tone: "green" },
-            { label: "taxonomy status", value: "cross-linked diagnostics", tone: "amber" },
-            { label: "shippable", value: shippable ? "yes" : "no", tone: shippable ? "green" : "red" }
+            { label: "taxonomy status", value: "cross-linked diagnostics", tone: "amber" }
           ], { tone: ki67State.tone })}
+          <p class="mini"><strong>QA interpretation:</strong> ${escapeHtml(ki67State.reviewLabel)}</p>
           <p class="mini">${escapeHtml(ki67State.notes)}</p>
           <p class="mini"><strong>Registry staging:</strong> DaMyDa and LYFO audience panels lead with registry-facing summaries; detailed cartography rows remain available below as technical lineage / raw cartography rows.</p>
           <p class="mini"><strong>Taxonomy:</strong> Microbiology and Pathology are cross-linked from Clinical Data but should be read as Laboratory & Diagnostics resources for source-coverage review.</p>
@@ -5477,24 +5479,77 @@
         const empty = required.filter(name => !rows[name].length);
         const allRows = required.reduce((acc, name) => acc.concat(rows[name]), []);
         const hasValidCodeCounts = rows.code_counts.some(row => /valid_numeric_percent_code|aggregate_count_available/.test(patobankKi67StatusText(row)));
+        const hasSuccessSummary = rows.summary.some(row => /valid_numeric_percent_evidence_found|aggregate_count_available/.test(patobankKi67StatusText(row)));
+        const hasFailedClosedSummary = rows.summary.some(row => /failed_closed|not computed|not_computed/.test(patobankKi67StatusText(row)));
         const hasFailedClosed = allRows.some(row => /failed_closed|not_queryable|not_found|missing|query_failed|unavailable|not_computed|no_valid_aeki/.test(patobankKi67StatusText(row)));
         if (empty.length) {
           return {
             status: "empty-output-error",
             tone: "red",
             label: "empty-output-error",
-            shippable: false,
+            atlasReviewable: false,
+            productionKi67Available: false,
+            shippableWithoutKnownSemanticFailures: false,
+            shippableWithCaveat: false,
+            reviewLabel: "not reviewable; PATOBANK Ki-67 semantic output is header-only or missing",
             emptyComponents: empty,
             notes: "PATOBANK Ki-67 cartography failed: output file exists but contains no data rows and no fail-closed validation row."
           };
         }
+        if ((hasValidCodeCounts && hasFailedClosedSummary) || (!hasValidCodeCounts && hasSuccessSummary)) {
+          return {
+            status: "ui_output_inconsistent",
+            tone: "red",
+            label: "ui_output_inconsistent",
+            atlasReviewable: false,
+            productionKi67Available: false,
+            shippableWithoutKnownSemanticFailures: false,
+            shippableWithCaveat: false,
+            emptyComponents: [],
+            reviewLabel: "not reviewable; PATOBANK Ki-67 UI status conflicts with emitted output rows",
+            notes: "PATOBANK Ki-67 semantic output has inconsistent success and fail-closed signals. The panel must not present coverage KPIs until the output state is repaired."
+          };
+        }
         if (hasValidCodeCounts) {
-          return { status: "success", tone: "green", label: "success", shippable: true, emptyComponents: [], notes: "PATOBANK Ki-67 output contains aggregate source-coverage rows." };
+          return {
+            status: "success",
+            tone: "green",
+            label: "success",
+            atlasReviewable: true,
+            productionKi67Available: true,
+            shippableWithoutKnownSemanticFailures: true,
+            shippableWithCaveat: false,
+            emptyComponents: [],
+            reviewLabel: "reviewable: yes; production Ki-67 available",
+            notes: "PATOBANK Ki-67 output contains aggregate source-coverage rows."
+          };
         }
         if (hasFailedClosed || allRows.length) {
-          return { status: "failed-closed", tone: "amber", label: "failed-closed", shippable: true, emptyComponents: [], notes: "PATOBANK Ki-67 cartography was attempted or represented, but coverage was not computed in this build. Validation rows explain why." };
+          return {
+            status: "failed-closed",
+            tone: "amber",
+            label: "failed-closed",
+            atlasReviewable: true,
+            productionKi67Available: false,
+            shippableWithoutKnownSemanticFailures: false,
+            shippableWithCaveat: true,
+            emptyComponents: [],
+            reviewLabel: "reviewable: yes; production Ki-67 unavailable",
+            notes: "PATOBANK Ki-67 cartography was attempted or represented, but coverage was not computed in this build. Validation rows explain why."
+          };
         }
-        return { status: "empty-output-error", tone: "red", label: "empty-output-error", shippable: false, emptyComponents: required, notes: "PATOBANK Ki-67 output state could not be interpreted." };
+        return {
+          status: "empty-output-error",
+          tone: "red",
+          label: "empty-output-error",
+          atlasReviewable: false,
+          productionKi67Available: false,
+          shippableWithoutKnownSemanticFailures: false,
+          shippableWithCaveat: false,
+          emptyComponents: required,
+          reviewLabel: "not reviewable; PATOBANK Ki-67 output state could not be interpreted",
+          notes: "PATOBANK Ki-67 output state could not be interpreted."
+        };
       }
       function patobankKi67DenominatorDisplay(row) {
         if (!row || row.count_status !== "aggregate_count_available") return row && (row.count_status || row.key_status) || "key unavailable";
@@ -5510,13 +5565,15 @@
         const investigation = patobankKi67Denominator("investigation");
         const specimen = patobankKi67Denominator("specimen");
         const qaState = patobankKi67QaState();
-        if (qaState.status === "empty-output-error") {
+        if (qaState.status === "empty-output-error" || qaState.status === "ui_output_inconsistent") {
           return `
             <div class="callout red"><strong>PATOBANK coded Ki-67 percent evidence coverage - QA error:</strong> ${escapeHtml(qaState.notes)}</div>
             ${renderKpiStrip([
               { label: "PATOBANK Ki-67 status", value: qaState.label, tone: "red" },
               { label: "header-only components", value: qaState.emptyComponents.length, tone: "red" },
-              { label: "shippable", value: "no", tone: "red" }
+              { label: "atlas_reviewable", value: "no", tone: "red" },
+              { label: "production_ki67_available", value: "no", tone: "red" },
+              { label: "shippable_without_known_semantic_failures", value: "no", tone: "red" }
             ], { tone: "red" })}
           `;
         }
@@ -5525,9 +5582,13 @@
             <div class="callout warn"><strong>PATOBANK coded Ki-67 percent evidence coverage - not computed in this build:</strong> ${escapeHtml(qaState.notes)}</div>
             ${renderKpiStrip([
               { label: "PATOBANK Ki-67 status", value: "failed-closed", tone: "amber" },
+              { label: "atlas_reviewable", value: "yes", tone: "green" },
+              { label: "production_ki67_available", value: "no", tone: "amber" },
+              { label: "shippable_without_known_semantic_failures", value: "no", tone: "red" },
               { label: "raw pathology text emitted", value: "0", tone: "green" },
               { label: "coverage denominator", value: "not computed", tone: "amber" }
             ], { tone: "amber" })}
+            <p class="mini"><strong>QA interpretation:</strong> reviewable: yes; production Ki-67 unavailable. This is shippable with caveat only, not a completed production Ki-67 coverage product.</p>
             <details class="lineage-block" open>
               <summary>Fail-closed validation reasons</summary>
               ${renderCollapsedRawLineage(validationRows.concat(summaryRows, denominatorRows, codeRows), { limit: 24 })}
