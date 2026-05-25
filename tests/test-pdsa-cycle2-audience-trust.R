@@ -63,14 +63,11 @@ for (needle in c(
 }
 
 for (needle in c(
-  "Descriptive feasibility only — not causal evidence and not a treatment recommendation.",
-  "Can say",
-  "Cannot say",
-  "No causal treatment-effect estimate.",
-  "No treatment recommendation.",
-  "No safe ASCT/HDT omission claim.",
-  "No transplant-eligibility or validated high-risk/standard-risk classification claim.",
-  "No validated text-derived Ki-67 extraction claim."
+  "Scope:",
+  "feasibility/readiness review for study planning",
+  "does not estimate treatment effects or recommend ASCT/HDT decisions",
+  "Cohort construction looks feasible; risk-adapted TRIANGLE emulation still needs validation.",
+  "Fallback/reference counts stay visible and labelled when production acceptance is absent."
 )) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("MCL/TRIANGLE-lite warning should include:", needle))
 }

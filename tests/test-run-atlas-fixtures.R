@@ -182,13 +182,12 @@ for (needle in c("CLL/MBL", "DD479B", "D47.9B", "DD472", "DC911 / C91.1", "DC900
 }
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
 expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
-expect_true(grepl("feasibility assessment only", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
-expect_true(grepl("Descriptive feasibility only — not causal evidence and not a treatment recommendation.", html, fixed = TRUE), "MCL/TRIANGLE panel should include the Cycle 2 feasibility warning.")
-expect_true(grepl("Can say", html, fixed = TRUE) && grepl("Cannot say", html, fixed = TRUE), "MCL/TRIANGLE panel should include Can say / Cannot say.")
+expect_true(grepl("feasibility/readiness review for study planning", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
+expect_true(grepl("feasibility/readiness review for study planning", html, fixed = TRUE), "MCL/TRIANGLE panel should include the concise Cycle 2 scope warning.")
+expect_true(grepl("does not estimate treatment effects or recommend ASCT/HDT decisions", html, fixed = TRUE), "MCL/TRIANGLE scope should keep the treatment recommendation boundary.")
 expect_true(grepl("fallback reference count", html, fixed = TRUE), "MCL/TRIANGLE fallback values should be explicitly labelled.")
 expect_true(grepl("renderCountKindBadge", html, fixed = TRUE), "HTML should include count-kind badge helper.")
-expect_true(grepl("not current accepted production evidence", html, fixed = TRUE), "Fallback count caveat should distinguish fallback values from accepted production evidence.")
-expect_true(grepl("Not a treatment recommendation", html, fixed = TRUE), "MCL/TRIANGLE panel should not be presented as treatment recommendation.")
+expect_true(grepl("Fallback/reference counts stay visible and labelled", html, fixed = TRUE), "Fallback count caveat should distinguish fallback values from accepted production evidence.")
 expect_true(grepl("clone-censor-weight target-trial emulation", html, fixed = TRUE), "MCL/TRIANGLE caution should mention future target-trial emulation design.")
 for (needle in c("Best for:", "Evidence/source type:", "Open panel", "run-status-banner", "Environment:", "Mock / fixture", "Pipeline status", "Profiled rows", "Profiled columns", "Run ID / build identifier")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("Overview UX first pass should include:", needle))
