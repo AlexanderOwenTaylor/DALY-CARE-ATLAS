@@ -1165,10 +1165,11 @@ if (grepl("\"source_name\":\"SDS_pato\"", payload, fixed = TRUE) && grepl("\"raw
   expect_false(grepl("\"source_name\":\"SDS_pato\"[^}]*\"raw_column\":\"c_snomedkode\"[^}]*\"clinical_group\":\"Treatment\"", payload), "DALYCARE_atlas_payload.js must not carry SDS_pato.c_snomedkode as Treatment.")
   expect_false(grepl("\"source_name\":\"SDS_pato\"[^}]*\"raw_column\":\"c_snomedkode\"[^}]*\"code_system\":\"SKS\"", payload), "DALYCARE_atlas_payload.js must not carry SDS_pato.c_snomedkode as SKS.")
 }
-snomed_pathology_rows <- pathology_rows[
-  pathology_rows$code_system == "SNOMED" |
-    grepl("snomed|c_snomedkode", pathology_rows$raw_column, ignore.case = TRUE) |
-    grepl("^[A-Z][0-9]{4,}", pathology_rows$raw_code),
+native_pathology_rows <- pathology_rows[pathology_rows$data_shape != "semantic_overlay", , drop = FALSE]
+snomed_pathology_rows <- native_pathology_rows[
+  native_pathology_rows$code_system == "SNOMED" |
+    grepl("snomed|c_snomedkode", native_pathology_rows$raw_column, ignore.case = TRUE) |
+    grepl("^[A-Z][0-9]{4,}", native_pathology_rows$raw_code),
   , drop = FALSE
 ]
 if (nrow(snomed_pathology_rows)) {

@@ -80,8 +80,128 @@ empty_semantic_outputs <- function() {
     dictionary = empty_semantic_data_dictionary(),
     value_map = empty_semantic_value_map(),
     code_map = empty_semantic_code_map(),
-    panel_links = empty_semantic_panel_links()
+    panel_links = empty_semantic_panel_links(),
+    unmapped_entity_overlay = empty_semantic_unmapped_entity_overlay(),
+    mapping_conflicts = empty_semantic_mapping_conflicts()
   )
+}
+
+semantic_unmapped_entity_map_columns <- function() {
+  c(
+    "review_priority", "needs_manual_denotation", "needs_semantic_layer_wiring",
+    "code_system", "entity_code", "entity_scope_key", "current_denotation_in_atlas_or_reference",
+    "current_mapping_status", "why_flagged", "suggested_codex_action",
+    "fill_preferred_label", "fill_denotation_definition", "fill_clinical_domain",
+    "fill_specimen_or_context", "fill_unit_or_value_type", "fill_synonyms_or_danish_label",
+    "fill_validation_source_or_owner", "fill_notes_for_codex", "source_tables",
+    "code_columns", "source_files", "example_context", "observed_count_max",
+    "observed_count_sum_across_surfaces_do_not_treat_as_unique", "pct_rows_max",
+    "surface_label_seen", "reference_label_sources", "extraction_note"
+  )
+}
+
+semantic_unmapped_entity_overlay_columns <- function() {
+  c(
+    semantic_unmapped_entity_map_columns(),
+    "target_code_system", "clinical_group", "clinical_variable", "clinical_concept_id",
+    "n_rows", "n_patients", "overlay_action", "mapping_status", "conflict_reason",
+    "existing_label", "existing_mapping_confidence", "evidence_file"
+  )
+}
+
+semantic_mapping_conflict_columns <- function() {
+  c(
+    "entity_scope_key", "code_system", "entity_code", "target_code_system",
+    "overlay_label", "existing_label", "existing_clinical_variable",
+    "existing_clinical_concept_id", "existing_clinical_group",
+    "existing_mapping_confidence", "existing_evidence_file", "mapping_status",
+    "conflict_reason", "review_priority", "source_files", "notes"
+  )
+}
+
+empty_semantic_unmapped_entity_overlay <- function() {
+  data.frame(
+    matrix(ncol = length(semantic_unmapped_entity_overlay_columns()), nrow = 0,
+           dimnames = list(NULL, semantic_unmapped_entity_overlay_columns())),
+    stringsAsFactors = FALSE
+  )
+}
+
+empty_semantic_mapping_conflicts <- function() {
+  data.frame(
+    matrix(ncol = length(semantic_mapping_conflict_columns()), nrow = 0,
+           dimnames = list(NULL, semantic_mapping_conflict_columns())),
+    stringsAsFactors = FALSE
+  )
+}
+
+semantic_unmapped_entity_map_path <- function(project_root = ".") {
+  file.path(project_root, "config", "semantic-unmapped-entity-map.tsv")
+}
+
+read_semantic_unmapped_entity_map <- function(project_root = ".", validate = TRUE) {
+  path <- semantic_unmapped_entity_map_path(project_root)
+  if (!file.exists(path)) {
+    return(data.frame(matrix(ncol = length(semantic_unmapped_entity_map_columns()), nrow = 0,
+                             dimnames = list(NULL, semantic_unmapped_entity_map_columns())),
+                      stringsAsFactors = FALSE))
+  }
+  rows <- suppressWarnings(read_delimited_file(path))
+  if (isTRUE(validate)) validate_semantic_unmapped_entity_map(rows)
+  rows
+}
+
+validate_semantic_unmapped_entity_map <- function(rows) {
+  if (!is.data.frame(rows)) stop("Semantic unmapped entity map must be a data frame.", call. = FALSE)
+  required <- semantic_unmapped_entity_map_columns()
+  missing <- setdiff(required, names(rows))
+  if (length(missing)) {
+    stop("Semantic unmapped entity map is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  if (any(!nzchar(trimws(rows$entity_scope_key %||% "")))) {
+    stop("Semantic unmapped entity map has blank entity_scope_key values.", call. = FALSE)
+  }
+  if (any(duplicated(rows$entity_scope_key))) {
+    stop("Semantic unmapped entity map has duplicate entity_scope_key values.", call. = FALSE)
+  }
+  denotation_fields <- c(
+    "fill_preferred_label", "fill_denotation_definition", "fill_clinical_domain",
+    "fill_specimen_or_context", "fill_unit_or_value_type"
+  )
+  for (field in denotation_fields) {
+    if (any(!nzchar(trimws(rows[[field]] %||% "")))) {
+      stop("Semantic unmapped entity map has blank ", field, " values.", call. = FALSE)
+    }
+  }
+  recognized <- c(
+    "NPU", "DNK/local_lab", "ATC", "SKS/procedure", "SNOMED/pathology",
+    "ICD10/SKS_diagnosis", "ICD10/cause_of_death", "cause_of_death_classification",
+    "Danish_pathology_AEKI_Ki67_percent_code"
+  )
+  unknown <- setdiff(unique(rows$code_system), recognized)
+  if (length(unknown)) {
+    stop("Semantic unmapped entity map has unrecognized code_system values: ", paste(unknown, collapse = ", "), call. = FALSE)
+  }
+  text_matrix <- as.character(unlist(rows, use.names = FALSE))
+  text_matrix <- text_matrix[!is.na(text_matrix) & nzchar(text_matrix)]
+  if (any(grepl("\\b[0-9]{6}[- ]?[0-9]{4}\\b", text_matrix))) {
+    stop("Semantic unmapped entity map contains CPR-like values.", call. = FALSE)
+  }
+  if (any(grepl("[\u00C3\u00E2\uFFFD]", text_matrix))) {
+    stop("Semantic unmapped entity map contains mojibake markers.", call. = FALSE)
+  }
+  raw_date_fields <- c(
+    "entity_code", "fill_preferred_label", "fill_denotation_definition",
+    "fill_clinical_domain", "fill_specimen_or_context", "fill_unit_or_value_type",
+    "fill_synonyms_or_danish_label", "surface_label_seen"
+  )
+  raw_date_values <- unlist(rows[intersect(raw_date_fields, names(rows))], use.names = FALSE)
+  raw_date_values <- trimws(as.character(raw_date_values))
+  raw_date_values <- raw_date_values[!is.na(raw_date_values) & nzchar(raw_date_values)]
+  if (any(grepl("^((19|20)[0-9]{2}[-/][0-9]{2}[-/][0-9]{2}|[0-9]{8}|[0-9]{2}[-/][0-9]{2}[-/](19|20)[0-9]{2})$", raw_date_values))) {
+    stop("Semantic unmapped entity map contains raw date-like values in display/denotation fields.", call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 cartography_reference_root <- function(project_root = ".") {
@@ -192,6 +312,14 @@ build_semantic_outputs <- function(project_root = ".", sources = NULL, column_pr
   dictionary <- semantic_dedupe_dictionary(dictionary)
   value_map <- semantic_dedupe_value_map(value_map)
   code_map <- semantic_dedupe_code_map(code_map)
+  unmapped_overlay <- semantic_build_unmapped_entity_overlay(
+    project_root = project_root,
+    dictionary = dictionary,
+    code_map = code_map,
+    min_cell_count = min_cell_count
+  )
+  dictionary <- semantic_dedupe_dictionary(bind_rows_base(list(dictionary, unmapped_overlay$dictionary)))
+  code_map <- semantic_dedupe_code_map(bind_rows_base(list(code_map, unmapped_overlay$code_map)))
   if (!nrow(panel_links) && nrow(dictionary)) {
     panel_links <- semantic_panel_links_for_dictionary(dictionary)
   } else if (nrow(dictionary)) {
@@ -201,7 +329,9 @@ build_semantic_outputs <- function(project_root = ".", sources = NULL, column_pr
     dictionary = align_semantic_frame(dictionary, semantic_dictionary_columns()),
     value_map = align_semantic_frame(value_map, semantic_value_map_columns()),
     code_map = align_semantic_frame(code_map, semantic_code_map_columns()),
-    panel_links = align_semantic_frame(panel_links, semantic_panel_links_columns())
+    panel_links = align_semantic_frame(panel_links, semantic_panel_links_columns()),
+    unmapped_entity_overlay = align_semantic_frame(unmapped_overlay$overlay, semantic_unmapped_entity_overlay_columns()),
+    mapping_conflicts = align_semantic_frame(unmapped_overlay$conflicts, semantic_mapping_conflict_columns())
   )
   normalize_semantic_source_names(out)
 }
@@ -1246,6 +1376,282 @@ semantic_candidate_discovery <- function(project_root, min_cell_count) {
     value_map = empty_semantic_value_map(),
     code_map = empty_semantic_code_map(),
     panel_links = semantic_panel_links_for_dictionary(dictionary)
+  )
+}
+
+semantic_overlay_target_code_system <- function(code_system, code = "") {
+  system <- as.character(code_system %||% "")
+  if (identical(system, "NPU")) return("NPU")
+  if (identical(system, "DNK/local_lab")) return("DNK")
+  if (identical(system, "ATC")) return("ATC")
+  if (identical(system, "SKS/procedure")) return("SKS")
+  if (identical(system, "SNOMED/pathology")) return("SNOMED")
+  if (identical(system, "Danish_pathology_AEKI_Ki67_percent_code")) return("AEKI_Ki67_percent_code")
+  if (identical(system, "ICD10/SKS_diagnosis")) return("ICD10/SKS diagnosis")
+  if (identical(system, "ICD10/cause_of_death")) return("ICD10 cause of death")
+  if (identical(system, "cause_of_death_classification")) return("cause_of_death_classification")
+  system
+}
+
+semantic_overlay_comparable_code_system <- function(code_system) {
+  system <- toupper(as.character(code_system %||% ""))
+  if (grepl("DNK", system)) return("DNK")
+  if (grepl("NPU", system)) return("NPU")
+  if (grepl("ATC", system)) return("ATC")
+  if (grepl("SNOMED", system)) return("SNOMED")
+  if (grepl("AEKI|KI67", system)) return("AEKI")
+  if (grepl("ICD|DIAGNOS", system)) return("ICD10")
+  if (grepl("SKS|PROCEDURE", system)) return("SKS")
+  if (grepl("CAUSE|DEATH", system)) return("CAUSE_OF_DEATH")
+  system
+}
+
+semantic_overlay_group <- function(code_system, code, label, domain) {
+  system <- as.character(code_system %||% "")
+  key <- paste(code, label, domain)
+  if (system %in% c("NPU", "DNK/local_lab")) return("Laboratory")
+  if (identical(system, "ATC")) return("Treatment")
+  if (system %in% c("SNOMED/pathology", "Danish_pathology_AEKI_Ki67_percent_code")) return("Pathology")
+  if (identical(system, "ICD10/SKS_diagnosis")) return("Diagnosis")
+  if (system %in% c("ICD10/cause_of_death", "cause_of_death_classification")) return("Outcomes")
+  if (identical(system, "SKS/procedure")) {
+    if (grepl("\\bCT\\b|PET|MRI|MR\\b|DEXA|radiolog|imaging|billeddiagnost|^UX|^MH", key, ignore.case = TRUE)) return("Imaging")
+    if (grepl("radioter|BWGC|antineoplastic|treatment|therapy|procedure|behandling", key, ignore.case = TRUE)) return("Treatment")
+    return("Clinical Data")
+  }
+  "Data Dictionary"
+}
+
+semantic_overlay_subgroup <- function(group, code_system, domain) {
+  if (group == "Laboratory") return("Curated NPU/DNK overlay")
+  if (group == "Treatment") return("Curated medication/procedure overlay")
+  if (group == "Pathology") return("Curated pathology code overlay")
+  if (group == "Diagnosis") return("Curated diagnosis-code overlay")
+  if (group == "Outcomes") return("Curated mortality/outcome-code overlay")
+  if (group == "Imaging") return("Curated imaging/procedure overlay")
+  first_nonblank(domain, paste("Curated", code_system, "overlay"))
+}
+
+semantic_overlay_source_name <- function(row) {
+  "semantic_unmapped_entity_map"
+}
+
+semantic_overlay_evidence_file <- function(row) {
+  first <- first_nonblank(strsplit(row$source_files %||% "", ";", fixed = TRUE)[[1]], "")
+  first_nonblank(first, "config/semantic-unmapped-entity-map.tsv")
+}
+
+semantic_overlay_label_key <- function(value) {
+  key <- iconv(as.character(value %||% ""), from = "", to = "ASCII//TRANSLIT", sub = "")
+  key <- tolower(key)
+  key <- gsub("\\b(npu|dnk|atc|sks|snomed|icd|code|kode|signal|procedure|classification|class)\\b", " ", key)
+  key <- gsub("[^a-z0-9]+", " ", key)
+  key <- gsub("\\b[bcfpsuoxkpnrvtd]{1,3}\\b", " ", key)
+  key <- gsub("\\b[0-9]+\\b", " ", key)
+  gsub("\\s+", " ", trimws(key))
+}
+
+semantic_overlay_labels_compatible <- function(existing_label, overlay_label) {
+  existing <- semantic_overlay_label_key(existing_label)
+  overlay <- semantic_overlay_label_key(overlay_label)
+  if (!nzchar(existing) || !nzchar(overlay)) return(TRUE)
+  if (identical(existing, overlay)) return(TRUE)
+  if (nchar(existing) >= 4 && grepl(existing, overlay, fixed = TRUE)) return(TRUE)
+  if (nchar(overlay) >= 4 && grepl(overlay, existing, fixed = TRUE)) return(TRUE)
+  FALSE
+}
+
+semantic_overlay_existing_is_generic <- function(row, code) {
+  code <- toupper(as.character(code %||% ""))
+  label <- first_nonblank(c(row$code_name, row$clinical_variable), "")
+  key <- toupper(trimws(label))
+  if (!nzchar(label)) return(TRUE)
+  if (identical(key, code)) return(TRUE)
+  if (grepl("^UNMAPPED|CODE ECHO|GENERIC", key)) return(TRUE)
+  if (grepl(paste0("\\b", gsub("([\\W])", "\\\\\\1", code), "\\b"), key) &&
+      grepl("\\b(CODE|KODE|SIGNAL|PROCEDURE|CLASSIFICATION)\\b", key)) {
+    return(TRUE)
+  }
+  FALSE
+}
+
+semantic_overlay_conflict_for_row <- function(row, code_map) {
+  if (!is.data.frame(code_map) || !nrow(code_map)) return(NULL)
+  code <- row$entity_code %||% ""
+  target_system <- semantic_overlay_target_code_system(row$code_system, code)
+  target_comparable <- semantic_overlay_comparable_code_system(target_system)
+  code_map_system <- if (".semantic_overlay_comparable_system" %in% names(code_map)) {
+    code_map$.semantic_overlay_comparable_system
+  } else {
+    vapply(code_map$code_system %||% rep("", nrow(code_map)), semantic_overlay_comparable_code_system, character(1))
+  }
+  code_map_code <- if (".semantic_overlay_code" %in% names(code_map)) {
+    code_map$.semantic_overlay_code
+  } else {
+    toupper(code_map$code %||% "")
+  }
+  hits <- code_map[code_map_code == toupper(code) & code_map_system == target_comparable, , drop = FALSE]
+  if (!nrow(hits)) return(NULL)
+  overlay_label <- row$fill_preferred_label %||% code
+  for (i in seq_len(nrow(hits))) {
+    existing <- hits[i, , drop = FALSE]
+    existing_label <- first_nonblank(c(existing$code_name, existing$clinical_variable), "")
+    if (semantic_overlay_existing_is_generic(existing, code)) next
+    if (semantic_overlay_labels_compatible(existing_label, overlay_label)) next
+    if (tolower(existing$mapping_confidence %||% "") %in% c("high", "confirmed", "curated", "medium")) {
+      return(existing)
+    }
+  }
+  NULL
+}
+
+semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, code_map, min_cell_count) {
+  rows <- read_semantic_unmapped_entity_map(project_root, validate = TRUE)
+  if (!nrow(rows)) {
+    return(list(
+      overlay = empty_semantic_unmapped_entity_overlay(),
+      conflicts = empty_semantic_mapping_conflicts(),
+      dictionary = empty_semantic_data_dictionary(),
+      code_map = empty_semantic_code_map()
+    ))
+  }
+  overlay_rows <- list()
+  conflict_rows <- list()
+  dictionary_rows <- list()
+  code_rows <- list()
+  conflict_code_map <- code_map
+  if (is.data.frame(conflict_code_map) && nrow(conflict_code_map)) {
+    conflict_code_map$.semantic_overlay_comparable_system <- vapply(
+      conflict_code_map$code_system %||% rep("", nrow(conflict_code_map)),
+      semantic_overlay_comparable_code_system,
+      character(1)
+    )
+    conflict_code_map$.semantic_overlay_code <- toupper(conflict_code_map$code %||% "")
+  }
+  for (i in seq_len(nrow(rows))) {
+    row <- rows[i, , drop = FALSE]
+    code <- trimws(row$entity_code[[1]] %||% "")
+    label <- trimws(row$fill_preferred_label[[1]] %||% "")
+    group <- semantic_overlay_group(row$code_system[[1]], code, label, row$fill_clinical_domain[[1]])
+    target_system <- semantic_overlay_target_code_system(row$code_system[[1]], code)
+    concept_id <- semantic_id_from(c(target_system, label))
+    n_rows <- semantic_suppress_count(row$observed_count_max[[1]], min_cell_count)
+    conflict <- semantic_overlay_conflict_for_row(row, conflict_code_map)
+    action <- if (is.null(conflict)) "wired_overlay" else "conflict_pending_review"
+    conflict_reason <- if (is.null(conflict)) "" else "Curated overlay label disagrees with an existing non-generic atlas/cartography label."
+    existing_label <- if (is.null(conflict)) "" else first_nonblank(c(conflict$code_name, conflict$clinical_variable), "")
+    overlay_rows[[length(overlay_rows) + 1L]] <- cbind(
+      row,
+      data.frame(
+        target_code_system = target_system,
+        clinical_group = group,
+        clinical_variable = label,
+        clinical_concept_id = concept_id,
+        n_rows = n_rows,
+        n_patients = NA_real_,
+        overlay_action = action,
+        mapping_status = action,
+        conflict_reason = conflict_reason,
+        existing_label = existing_label,
+        existing_mapping_confidence = if (is.null(conflict)) "" else conflict$mapping_confidence[[1]] %||% "",
+        evidence_file = semantic_overlay_evidence_file(row),
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      ),
+      stringsAsFactors = FALSE
+    )
+    if (!is.null(conflict)) {
+      conflict_rows[[length(conflict_rows) + 1L]] <- data.frame(
+        entity_scope_key = row$entity_scope_key[[1]],
+        code_system = row$code_system[[1]],
+        entity_code = code,
+        target_code_system = target_system,
+        overlay_label = label,
+        existing_label = existing_label,
+        existing_clinical_variable = conflict$clinical_variable[[1]] %||% "",
+        existing_clinical_concept_id = conflict$clinical_concept_id[[1]] %||% "",
+        existing_clinical_group = conflict$clinical_group[[1]] %||% "",
+        existing_mapping_confidence = conflict$mapping_confidence[[1]] %||% "",
+        existing_evidence_file = conflict$evidence_file[[1]] %||% "",
+        mapping_status = "conflict_pending_review",
+        conflict_reason = conflict_reason,
+        review_priority = row$review_priority[[1]],
+        source_files = row$source_files[[1]],
+        notes = row$fill_notes_for_codex[[1]],
+        stringsAsFactors = FALSE,
+        check.names = FALSE
+      )
+      next
+    }
+    source_name <- semantic_overlay_source_name(row)
+    evidence <- semantic_overlay_evidence_file(row)
+    notes <- semantic_terms(c(
+      trimws(row$fill_specimen_or_context[[1]] %||% ""),
+      trimws(row$fill_unit_or_value_type[[1]] %||% ""),
+      trimws(row$fill_validation_source_or_owner[[1]] %||% ""),
+      trimws(row$fill_notes_for_codex[[1]] %||% ""),
+      "Curated semantic overlay for previously unmapped/code-echo entity; counts are aggregate/code-inventory context and not patient/person denominators."
+    ))
+    if (identical(group, "Treatment") && identical(target_system, "ATC")) {
+      notes <- semantic_append_text(notes, "ATC medication-code context is preserved; this row is not an SKS procedure.")
+    }
+    if (identical(group, "Treatment") && identical(target_system, "SKS")) {
+      notes <- semantic_append_text(notes, "SKS procedure-code context is preserved; this row is not an administered medication or prescription.")
+    }
+    semantic_id <- semantic_id_from(c("curated_overlay", row$entity_scope_key[[1]]))
+    code_rows[[length(code_rows) + 1L]] <- semantic_code_row(
+      semantic_id = semantic_id,
+      clinical_concept_id = concept_id,
+      clinical_variable = label,
+      clinical_group = group,
+      source_name = source_name,
+      object_name = source_name,
+      code_system = target_system,
+      code = code,
+      code_name = label,
+      panel = semantic_overlay_subgroup(group, target_system, row$fill_clinical_domain[[1]]),
+      n_rows = n_rows,
+      n_patients = NA_real_,
+      evidence_file = evidence,
+      mapping_confidence = "curated_overlay",
+      notes = notes
+    )
+    dictionary_rows[[length(dictionary_rows) + 1L]] <- semantic_row(
+      semantic_id = semantic_id,
+      clinical_concept_id = concept_id,
+      clinical_variable = label,
+      clinical_group = group,
+      clinical_subgroup = semantic_overlay_subgroup(group, target_system, row$fill_clinical_domain[[1]]),
+      semantic_meaning = trimws(row$fill_denotation_definition[[1]] %||% ""),
+      source_name = source_name,
+      object_name = source_name,
+      raw_column = row$code_columns[[1]] %||% "",
+      raw_descriptor = row$current_denotation_in_atlas_or_reference[[1]] %||% "",
+      raw_code = code,
+      code_system = target_system,
+      unit = trimws(row$fill_unit_or_value_type[[1]] %||% ""),
+      value_type = "code",
+      data_shape = "semantic_overlay",
+      source_level = source_level_for_source(source_name),
+      geography = geography_for_source(source_name),
+      n_rows = n_rows,
+      n_patients = NA_real_,
+      evidence_file = evidence,
+      evidence_filter = row$example_context[[1]] %||% paste0("entity_scope_key=", row$entity_scope_key[[1]]),
+      mapping_confidence = "curated_overlay",
+      mapping_status = "curated_overlay",
+      privacy_note = "aggregate_only; not_patient_count",
+      clinical_caveat = notes,
+      search_terms = semantic_terms(c(code, label, row$fill_synonyms_or_danish_label[[1]], row$code_system[[1]], source_name, row$source_tables[[1]], row$source_files[[1]], row$why_flagged[[1]]))
+    )
+  }
+  overlay <- align_semantic_frame(bind_rows_base(overlay_rows), semantic_unmapped_entity_overlay_columns())
+  conflicts <- align_semantic_frame(bind_rows_base(conflict_rows), semantic_mapping_conflict_columns())
+  list(
+    overlay = overlay,
+    conflicts = conflicts,
+    dictionary = semantic_dedupe_dictionary(bind_rows_base(dictionary_rows)),
+    code_map = semantic_dedupe_code_map(bind_rows_base(code_rows))
   )
 }
 

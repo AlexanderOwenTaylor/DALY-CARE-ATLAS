@@ -1624,7 +1624,7 @@
         <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Value Map</h2><p class="panel-sub">Raw categorical values mapped to display values and clinical interpretation, with small cells suppressed.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-value-search" type="search" placeholder="raw value, display value, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-values">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-value-map"></div></div></div>
       </div>
       <div class="sub-pane" id="dictionary-codes">
-        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-code-search" type="search" placeholder="code, system, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-codes">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-code-map"></div></div></div>
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-code-search" type="search" placeholder="code, system, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-codes">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-code-map"></div><details class="lineage-block" open><summary>Curated semantic overlay</summary><p class="mini">Completed denotations for previously unmapped or code-echo entities. Conflict rows are not silently promoted.</p><div class="toolbar"><label>Search <input id="semantic-overlay-search" type="search" placeholder="overlay code, label, system, action"></label><button class="export-button" type="button" data-export-view="semantic-overlay">Export overlay CSV</button></div><div id="semantic-overlay-map"></div></details><details class="lineage-block"><summary>Semantic mapping conflicts</summary><p class="mini">Rows where the curated overlay disagrees with an existing non-generic atlas/cartography label. Current labels remain primary until review.</p><div class="toolbar"><label>Search <input id="semantic-conflict-search" type="search" placeholder="conflict code, overlay label, existing label"></label><button class="export-button" type="button" data-export-view="semantic-conflicts">Export conflict CSV</button></div><div id="semantic-conflict-map"></div></details></div></div>
       </div>
       <div class="sub-pane" id="dictionary-panels">
         <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Panel Links</h2><p class="panel-sub">Many-to-many links between raw variables, clinical concepts, and user-facing atlas panels.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-panel-search" type="search" placeholder="panel, concept, semantic id"></label><button class="export-button" type="button" data-export-view="semantic-panels">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-panel-links"></div></div></div>
@@ -1937,6 +1937,8 @@
       const semanticValueRows = payload.semantic_value_map_rows || [];
       const semanticCodeRows = payload.semantic_code_map_rows || [];
       const semanticPanelLinks = payload.semantic_panel_links || [];
+      const semanticOverlayRows = payload.semantic_unmapped_entity_overlay_rows || [];
+      const semanticConflictRows = payload.semantic_mapping_conflict_rows || [];
       const semanticSummary = payload.review_semantic_summary || [];
       const clinicalConceptRows = payload.clinical_concept_rows || [];
       const domainPanelRows = payload.domain_panel_rows || [];
@@ -1958,11 +1960,15 @@
         semanticValueFilteredRows: [],
         semanticCodeFilteredRows: [],
         semanticPanelFilteredRows: [],
+        semanticOverlayFilteredRows: [],
+        semanticConflictFilteredRows: [],
         clinicalFilterActive: false,
         semanticFilterActive: false,
         semanticValueFilterActive: false,
         semanticCodeFilterActive: false,
         semanticPanelFilterActive: false,
+        semanticOverlayFilterActive: false,
+        semanticConflictFilterActive: false,
         selectedSemanticId: "",
         globalResultsExpanded: false,
         lastGlobalQuery: ""
@@ -2546,6 +2552,24 @@
             ));
           }
         });
+        semanticOverlayRows.forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["entity_scope_key", "entity_code", "target_code_system"],
+            title: ["fill_preferred_label", "clinical_variable", "code_system"],
+            source: ["source_tables", "source_files"],
+            body: ["fill_denotation_definition", "fill_notes_for_codex", "overlay_action", "conflict_reason"]
+          });
+          if (score > 0) {
+            grouped["Codes"].push(makeSearchResult(
+              "Codes",
+              row.entity_code || row.entity_scope_key,
+              [row.target_code_system || row.code_system, row.fill_preferred_label, row.overlay_action].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-codes" },
+              { query: row.entity_code || row.fill_preferred_label || row.entity_scope_key, item: row.entity_scope_key, status: row.overlay_action || row.mapping_status, copy: row.entity_code || row.entity_scope_key, score }
+            ));
+          }
+        });
         semanticValueRows.forEach(row => {
           const score = scoreSearchResult(row, q, {
             exact: ["raw_value", "display_value", "semantic_id", "clinical_concept_id"],
@@ -2689,7 +2713,9 @@
           "semantic-lineage": appState.semanticFilterActive ? appState.semanticFilteredRows : semanticRows,
           "semantic-values": appState.semanticValueFilterActive ? appState.semanticValueFilteredRows : semanticValueRows,
           "semantic-codes": appState.semanticCodeFilterActive ? appState.semanticCodeFilteredRows : semanticCodeRows,
-          "semantic-panels": appState.semanticPanelFilterActive ? appState.semanticPanelFilteredRows : semanticPanelLinks
+          "semantic-panels": appState.semanticPanelFilterActive ? appState.semanticPanelFilteredRows : semanticPanelLinks,
+          "semantic-overlay": appState.semanticOverlayFilterActive ? appState.semanticOverlayFilteredRows : semanticOverlayRows,
+          "semantic-conflicts": appState.semanticConflictFilterActive ? appState.semanticConflictFilteredRows : semanticConflictRows
         };
         return map[viewName] || [];
       }
@@ -3078,10 +3104,15 @@
       function renderSemanticOutputQaSummary() {
         const ki67State = patobankKi67QaState();
         const headerOnlyCount = ki67State.emptyComponents.length;
+        const overlayWired = semanticOverlayRows.filter(row => row.overlay_action === "wired_overlay").length;
+        const overlayConflicts = semanticConflictRows.length;
         return renderSectionCard("Semantic output QA", `
           ${renderKpiStrip([
             { label: "PATOBANK Ki-67 status", value: ki67State.label, tone: ki67State.tone },
             { label: "header-only semantic outputs", value: headerOnlyCount, tone: headerOnlyCount ? "red" : "green" },
+            { label: "curated semantic overlay rows", value: semanticOverlayRows.length, tone: semanticOverlayRows.length ? "green" : "amber" },
+            { label: "wired overlay labels", value: overlayWired, tone: overlayWired ? "green" : "amber" },
+            { label: "mapping conflicts flagged", value: overlayConflicts, tone: overlayConflicts ? "amber" : "green" },
             { label: "atlas_reviewable", value: ki67State.atlasReviewable ? "yes" : "no", tone: ki67State.atlasReviewable ? "green" : "red" },
             { label: "production_ki67_available", value: ki67State.productionKi67Available ? "yes" : "no", tone: ki67State.productionKi67Available ? "green" : "amber" },
             { label: "shippable_without_known_semantic_failures", value: ki67State.shippableWithoutKnownSemanticFailures ? "yes" : "no", tone: ki67State.shippableWithoutKnownSemanticFailures ? "green" : "red" },
@@ -3091,6 +3122,7 @@
           ], { tone: ki67State.tone })}
           <p class="mini"><strong>QA interpretation:</strong> ${escapeHtml(ki67State.reviewLabel)}</p>
           <p class="mini">${escapeHtml(ki67State.notes)}</p>
+          <p class="mini"><strong>Curated semantic overlay:</strong> non-conflicting unmapped/code-echo entities are wired into the code map; disagreements with existing non-generic labels are retained in the semantic mapping-conflict audit and not silently promoted.</p>
           <p class="mini"><strong>Registry staging:</strong> DaMyDa and LYFO audience panels lead with registry-facing summaries; detailed cartography rows remain available below as technical lineage / raw cartography rows.</p>
           <p class="mini"><strong>Taxonomy:</strong> Microbiology and Pathology are cross-linked from Clinical Data but should be read as Laboratory & Diagnostics resources for source-coverage review.</p>
         `, ki67State.tone);
@@ -8351,10 +8383,14 @@
       renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500);
       renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500);
       renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500);
+      renderFilteredSemanticTable("semantic-overlay-map", semanticOverlayRows, "semanticOverlayFilteredRows", "semantic-overlay-search", 500);
+      renderFilteredSemanticTable("semantic-conflict-map", semanticConflictRows, "semanticConflictFilteredRows", "semantic-conflict-search", 500);
       [
         ["semantic-value-search", () => renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500)],
         ["semantic-code-search", () => renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500)],
-        ["semantic-panel-search", () => renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500)]
+        ["semantic-panel-search", () => renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500)],
+        ["semantic-overlay-search", () => renderFilteredSemanticTable("semantic-overlay-map", semanticOverlayRows, "semanticOverlayFilteredRows", "semantic-overlay-search", 500)],
+        ["semantic-conflict-search", () => renderFilteredSemanticTable("semantic-conflict-map", semanticConflictRows, "semanticConflictFilteredRows", "semantic-conflict-search", 500)]
       ].forEach(([id, fn]) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("input", fn);

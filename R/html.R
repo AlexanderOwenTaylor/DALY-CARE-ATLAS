@@ -102,6 +102,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           db_budget_actions = NULL,
                           semantic_dictionary = NULL, semantic_value_map = NULL,
                           semantic_code_map = NULL, semantic_panel_links = NULL,
+                          semantic_unmapped_entity_overlay = NULL,
+                          semantic_mapping_conflicts = NULL,
                           clinical_concepts = NULL, domain_panels = NULL,
                           panel_kpis_product = NULL, panel_distributions = NULL,
                           panel_raw_fields = NULL, panel_parity = NULL,
@@ -125,6 +127,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(semantic_value_map)) semantic_value_map <- empty_semantic_value_map()
   if (is.null(semantic_code_map)) semantic_code_map <- empty_semantic_code_map()
   if (is.null(semantic_panel_links)) semantic_panel_links <- empty_semantic_panel_links()
+  if (is.null(semantic_unmapped_entity_overlay)) semantic_unmapped_entity_overlay <- empty_semantic_unmapped_entity_overlay()
+  if (is.null(semantic_mapping_conflicts)) semantic_mapping_conflicts <- empty_semantic_mapping_conflicts()
   if (is.null(clinical_concepts)) clinical_concepts <- empty_clinical_concepts()
   if (is.null(domain_panels)) domain_panels <- empty_domain_panels()
   if (is.null(panel_kpis_product)) panel_kpis_product <- empty_panel_kpis()
@@ -159,6 +163,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_semantic_value_map <- sanitize_public_frame(semantic_value_map)
   public_semantic_code_map <- sanitize_public_frame(semantic_code_map)
   public_semantic_panel_links <- sanitize_public_frame(semantic_panel_links)
+  public_semantic_unmapped_entity_overlay <- sanitize_public_frame(semantic_unmapped_entity_overlay)
+  public_semantic_mapping_conflicts <- sanitize_public_frame(semantic_mapping_conflicts)
   public_clinical_concepts <- sanitize_public_frame(clinical_concepts)
   public_domain_panels <- sanitize_public_frame(domain_panels)
   public_panel_kpis <- sanitize_public_frame(panel_kpis_product)
@@ -276,6 +282,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     semantic_value_map_rows = public_rows(public_semantic_value_map, max_rows = 5000),
     semantic_code_map_rows = public_rows(public_semantic_code_map, max_rows = 5000),
     semantic_panel_links = public_rows(public_semantic_panel_links, max_rows = 5000),
+    semantic_unmapped_entity_overlay_rows = public_rows(public_semantic_unmapped_entity_overlay, max_rows = 5000),
+    semantic_mapping_conflict_rows = public_rows(public_semantic_mapping_conflicts, max_rows = 5000),
     clinical_concept_rows = public_rows(public_clinical_concepts, max_rows = 5000),
     domain_panel_rows = public_rows(public_domain_panels, max_rows = 500),
     panel_kpi_rows = public_rows(public_panel_kpis, max_rows = 2000),
