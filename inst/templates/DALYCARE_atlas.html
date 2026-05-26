@@ -8170,19 +8170,41 @@
         const mgusWaterfall = confluenceRows("mgus_validation_waterfall");
         const dualCloneWaterfall = confluenceRows("dual_clone_validation_waterfall");
         const endpoints = confluenceRows("infection_endpoint_definitions");
+        const diseasePersonCounts = confluenceRows("disease_state_person_counts");
+        const firstDateAvailability = confluenceRows("first_date_availability");
+        const endpointCodeSets = confluenceRows("infection_endpoint_code_sets");
+        const infectionCounts = confluenceRows("infection_counts");
+        const recurrentInfectionCounts = confluenceRows("recurrent_infection_counts");
+        const infectionPersonTime = confluenceRows("infection_person_time");
+        const infectionRates = confluenceRows("infection_rates");
+        const microbiologyConfirmationCounts = confluenceRows("microbiology_confirmation_counts");
+        const productionQueryReview = confluenceRows("production_query_review");
+        const failedQueryAudit = confluenceRows("failed_query_audit");
+        const productionExecutionSummary = confluenceRows("production_execution_summary");
         const suppressionAudit = confluenceRows("small_cell_suppression_audit");
         const utf8Audit = confluenceRows("utf8_quality_audit");
+        const productionSuccess = productionExecutionSummary.some(row => row.metric === "production_query_success" && String(row.value).toLowerCase() === "true");
         const technical = []
           .concat(summary.map(row => Object.assign({ table: "summary" }, row)))
           .concat(disease.map(row => Object.assign({ table: "disease_state_counts" }, row)))
+          .concat(diseasePersonCounts.map(row => Object.assign({ table: "disease_state_person_counts" }, row)))
           .concat(codeSets.map(row => Object.assign({ table: "code_sets" }, row)))
           .concat(mblSourceCounts.map(row => Object.assign({ table: "mbl_source_counts" }, row)))
           .concat(mgusSourceCounts.map(row => Object.assign({ table: "mgus_source_counts" }, row)))
           .concat(overlapCounts.map(row => Object.assign({ table: "overlap_counts" }, row)))
           .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)))
           .concat(firstDates.map(row => Object.assign({ table: "candidate_first_date_summary" }, row)))
+          .concat(firstDateAvailability.map(row => Object.assign({ table: "first_date_availability" }, row)))
           .concat(acceptedOverlapCounts.map(row => Object.assign({ table: "overlap_counts_accepted" }, row)))
           .concat(acceptedOverlapTiming.map(row => Object.assign({ table: "overlap_timing_accepted" }, row)))
+          .concat(infectionCounts.map(row => Object.assign({ table: "infection_counts" }, row)))
+          .concat(recurrentInfectionCounts.map(row => Object.assign({ table: "recurrent_infection_counts" }, row)))
+          .concat(infectionPersonTime.map(row => Object.assign({ table: "infection_person_time" }, row)))
+          .concat(infectionRates.map(row => Object.assign({ table: "infection_rates" }, row)))
+          .concat(microbiologyConfirmationCounts.map(row => Object.assign({ table: "microbiology_confirmation_counts" }, row)))
+          .concat(productionQueryReview.map(row => Object.assign({ table: "production_query_review" }, row)))
+          .concat(failedQueryAudit.map(row => Object.assign({ table: "failed_query_audit" }, row)))
+          .concat(productionExecutionSummary.map(row => Object.assign({ table: "production_execution_summary" }, row)))
           .concat(suppressionAudit.map(row => Object.assign({ table: "small_cell_suppression_audit" }, row)))
           .concat(utf8Audit.map(row => Object.assign({ table: "utf8_quality_audit" }, row)));
         return `
@@ -8198,15 +8220,22 @@
             `, "blue")}
             ${renderSectionCard("Current evidence state", renderConfluenceEvidenceState(), "cyan")}
             ${renderSectionCard("Current stage: scaffold vs accepted aggregate", `
-              <p><strong>CONFLUENCE v0.2 is scaffold hardening only.</strong> Code sets, source tiers, endpoint definitions, and acceptance gates are visible. First-date, overlap, and timing rows remain query executable not run and not accepted aggregate.</p>
-              ${renderTrustBadgeRow(["scaffold first", "source validation required", "not accepted aggregate", "small-cell suppression", "privacy-safe aggregate only"])}
+              <p><strong>${productionSuccess ? "Production aggregates available for accepted rows." : "Scaffold/readiness mode unless production execution succeeds."}</strong> Code sets, source tiers, endpoint definitions, acceptance gates, failed-query audits, and production rows are rendered together. Only rows with passed acceptance gates are shown as accepted aggregates.</p>
+              ${renderTrustBadgeRow(productionSuccess ? ["production aggregate", "repo-derived provisional endpoints", "small-cell suppression", "privacy-safe aggregate only"] : ["scaffold first", "source validation required", "not accepted aggregate", "small-cell suppression", "privacy-safe aggregate only"])}
             `, "amber")}
+            ${renderSectionCard("Production aggregate execution", renderConfluenceTable(productionExecutionSummary, [
+              { key: "label", label: "Metric", render: row => `<strong>${escapeHtml(row.label || row.metric || "")}</strong><div class="mini">${escapeHtml(row.metric || "")}</div>` },
+              { key: "value", label: "Value" },
+              { key: "status", label: "Status", render: row => renderBadge(row.status || "", confluenceStatusTone(row.status)) },
+              { key: "notes", label: "Notes" }
+            ], 12), productionSuccess ? "green" : "amber")}
             ${renderSectionCard("Code sets and exact-match warnings", renderConfluenceCodeSets(), "plum")}
             ${renderSectionCard("MBL source tiers", renderConfluenceSourceTiers(mblSourceCounts), "cyan")}
             ${renderSectionCard("MGUS source tiers", renderConfluenceSourceTiers(mgusSourceCounts), "green")}
             ${renderSectionCard("PICO", renderConfluencePico(), "blue")}
             ${renderSectionCard("Estimands", renderConfluenceEstimands(), "plum")}
             ${renderSectionCard("Disease-state candidate counts", renderConfluenceDiseaseCounts(), "green")}
+            ${renderSectionCard("Accepted disease-state person counts", renderConfluenceAcceptedCounts(diseasePersonCounts, "state_label"), "green")}
             ${renderSectionCard("Overlap counts: not-run / not-accepted", renderConfluenceOverlapRows(overlapCounts), "amber")}
             ${renderSectionCard("Overlap timing: not-run / not-accepted", renderConfluenceOverlapRows(overlapTiming), "amber")}
             ${renderSectionCard("First-date / overlap status", renderConfluenceTable(firstDates, [
@@ -8215,6 +8244,7 @@
               { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
               { key: "first_date_logic", label: "First-date logic" }
             ], 12), "amber")}
+            ${renderSectionCard("Accepted first-date availability", renderConfluenceAcceptedCounts(firstDateAvailability, "state_label"), "green")}
             ${renderSectionCard("Accepted overlap counts if available", renderConfluenceAcceptedCounts(acceptedOverlapCounts, "overlap_label"), "amber")}
             ${renderSectionCard("Accepted overlap timing if available", renderConfluenceAcceptedCounts(acceptedOverlapTiming, "timing_label"), "amber")}
             ${renderSectionCard("Validation waterfalls", `
@@ -8224,6 +8254,23 @@
             `, "blue")}
             ${renderSectionCard("Small-cell and UTF-8 QA", renderConfluenceQaAudits(), "green")}
             ${renderSectionCard("Infection endpoint definitions", renderConfluenceEndpointDefinitions(), "green")}
+            ${renderSectionCard("Provisional infection endpoint code sets", renderConfluenceTable(endpointCodeSets, [
+              { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || row.endpoint_id || "")}</strong><div class="mini">${escapeHtml(row.endpoint_id || "")}</div>` },
+              { key: "code_prefix", label: "Code prefix" },
+              { key: "definition_status", label: "Definition status", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
+              { key: "notes", label: "Notes" }
+            ], 20), "green")}
+            ${renderSectionCard("Provisional infection aggregates", renderConfluenceAcceptedCounts(infectionCounts, "endpoint_label"), "green")}
+            ${renderSectionCard("Recurrent infection aggregates", renderConfluenceAcceptedCounts(recurrentInfectionCounts, "endpoint_label"), "green")}
+            ${renderSectionCard("Person-time denominators", renderConfluenceAcceptedCounts(infectionPersonTime, "group_label"), "blue")}
+            ${renderSectionCard("Infection rates", renderConfluenceTable(infectionRates, [
+              { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || "")}</strong><div class="mini">${escapeHtml(row.group_label || "")} · ${escapeHtml(row.horizon_years || "")}y</div>` },
+              { key: "event_count_display", label: "Events" },
+              { key: "person_years_display", label: "Person-years" },
+              { key: "rate_per_100_person_years", label: "Rate / 100 PY" },
+              { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
+            ], 20), "blue")}
+            ${renderSectionCard("Microbiology-confirmed infection status", renderConfluenceAcceptedCounts(microbiologyConfirmationCounts, "endpoint_label"), "amber")}
             ${renderSectionCard("Validation checklist", renderConfluenceTable(validation, [
               { key: "entity_label", label: "Entity", render: row => `<strong>${escapeHtml(row.entity_label || "")}</strong><div class="mini">${escapeHtml(row.status || "")}</div>` },
               { key: "validation_step", label: "Validation step" },
@@ -8241,6 +8288,22 @@
               { key: "owner_role", label: "Owner role" },
               { key: "notes", label: "Notes" }
             ], 12), "green")}
+            ${renderSectionCard("Production query review and failed-query audit", `
+              <h3>Query review</h3>${renderConfluenceTable(productionQueryReview, [
+                { key: "query_id", label: "Query", render: row => `<strong>${escapeHtml(row.query_id || "")}</strong><div class="mini">${escapeHtml(row.output_file || "")}</div>` },
+                { key: "query_executable", label: "Executable" },
+                { key: "tables_used", label: "Tables used" },
+                { key: "endpoint_definition_status", label: "Endpoint status" },
+                { key: "reviewer_notes", label: "Reviewer notes" }
+              ], 12)}
+              <h3>Failed-query audit</h3>${renderConfluenceTable(failedQueryAudit, [
+                { key: "component", label: "Component", render: row => `<strong>${escapeHtml(row.component || "")}</strong><div class="mini">${escapeHtml(row.output_file || "")}</div>` },
+                { key: "count_status", label: "Status", render: row => renderBadge(row.count_status || "", confluenceStatusTone(row.count_status)) },
+                { key: "query_attempted", label: "Attempted" },
+                { key: "query_success", label: "Success" },
+                { key: "notes", label: "Notes" }
+              ], 12)}
+            `, failedQueryAudit.length ? "amber" : "green")}
             ${renderSectionCard("Technical raw/source disclosure", `
               <details class="lineage-block">
                 <summary>Technical CONFLUENCE scaffold rows</summary>

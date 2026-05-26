@@ -415,7 +415,11 @@ expect_true(all(c(
   "code_sets", "mbl_source_counts", "mgus_source_counts",
   "candidate_first_date_summary", "overlap_counts_accepted", "overlap_timing_accepted",
   "mbl_validation_waterfall", "mgus_validation_waterfall", "dual_clone_validation_waterfall",
-  "small_cell_suppression_audit", "utf8_quality_audit", "infection_endpoint_definitions"
+  "small_cell_suppression_audit", "utf8_quality_audit", "infection_endpoint_definitions",
+  "disease_state_person_counts", "first_date_availability", "infection_endpoint_code_sets",
+  "infection_counts", "recurrent_infection_counts", "infection_person_time", "infection_rates",
+  "microbiology_confirmation_counts", "production_query_review", "failed_query_audit",
+  "production_execution_summary"
 ) %in% names(payload$confluence_feasibility)), "Payload should include every CONFLUENCE feasibility table.")
 expect_true(all(c("review_temporal_coverage", "review_spatial_coverage", "review_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
 expect_true(all(c("builder_credit", "review_scope_notes", "review_data_landscape", "review_module_readiness", "review_streaming_summary", "review_temporal_date_quality", "review_domain_jump_links") %in% names(payload)), "Payload should include transparent credit and neutral review metadata.")

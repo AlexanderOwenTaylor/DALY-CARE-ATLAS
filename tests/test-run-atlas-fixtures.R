@@ -643,7 +643,12 @@ expect_true(all(c(
   "confluence_overlap_timing_accepted", "confluence_mbl_validation_waterfall",
   "confluence_mgus_validation_waterfall", "confluence_dual_clone_validation_waterfall",
   "confluence_small_cell_suppression_audit", "confluence_utf8_quality_audit",
-  "confluence_infection_endpoint_definitions"
+  "confluence_infection_endpoint_definitions", "confluence_disease_state_person_counts",
+  "confluence_first_date_availability", "confluence_infection_endpoint_code_sets",
+  "confluence_infection_counts", "confluence_recurrent_infection_counts",
+  "confluence_infection_person_time", "confluence_infection_rates",
+  "confluence_microbiology_confirmation_counts", "confluence_production_query_review",
+  "confluence_failed_query_audit", "confluence_production_execution_summary"
 ) %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
 expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")

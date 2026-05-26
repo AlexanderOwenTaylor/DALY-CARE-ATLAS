@@ -304,7 +304,45 @@ confluence_empty_payload <- function() {
     dual_clone_validation_waterfall = confluence_empty_validation_waterfall(),
     small_cell_suppression_audit = confluence_empty_small_cell_suppression_audit(),
     utf8_quality_audit = confluence_empty_utf8_quality_audit(),
-    infection_endpoint_definitions = confluence_empty_infection_endpoint_definitions()
+    infection_endpoint_definitions = confluence_empty_infection_endpoint_definitions(),
+    disease_state_person_counts = confluence_empty_candidate_first_date_summary(),
+    first_date_availability = confluence_empty_candidate_first_date_summary(),
+    infection_endpoint_code_sets = confluence_empty_infection_endpoint_definitions(),
+    infection_counts = confluence_empty_overlap_counts_accepted(),
+    recurrent_infection_counts = confluence_empty_overlap_counts_accepted(),
+    infection_person_time = confluence_empty_overlap_counts_accepted(),
+    infection_rates = confluence_empty_overlap_counts_accepted(),
+    microbiology_confirmation_counts = confluence_empty_infection_endpoint_definitions(),
+    production_query_review = empty_df(
+      query_id = character(),
+      output_file = character(),
+      query_executable = logical(),
+      tables_used = character(),
+      person_key_used = character(),
+      date_anchor_used = character(),
+      value_rule_used = character(),
+      endpoint_definition_status = character(),
+      emits_only_aggregate_counts = logical(),
+      reviewer_notes = character()
+    ),
+    failed_query_audit = empty_df(
+      component = character(),
+      output_file = character(),
+      query_id = character(),
+      count_status = character(),
+      query_attempted = logical(),
+      query_success = logical(),
+      error_class = character(),
+      error_message_sanitized = character(),
+      notes = character()
+    ),
+    production_execution_summary = empty_df(
+      metric = character(),
+      label = character(),
+      value = character(),
+      status = character(),
+      notes = character()
+    )
   )
 }
 
@@ -816,7 +854,7 @@ confluence_acceptance_gate <- function(row) {
   row <- row[1, , drop = FALSE]
   val <- function(name) as.character(row[[name]] %||% "")
   executed <- identical(tolower(val("query_executed")), "yes") || identical(tolower(val("query_status")), "executed")
-  count_kind_ok <- grepl("distinct people|distinct events|defined aggregate denominator", val("count_kind"), ignore.case = TRUE)
+  count_kind_ok <- grepl("distinct people|distinct events|defined aggregate denominator|person-years|rate from suppressed aggregate components", val("count_kind"), ignore.case = TRUE)
   source_recorded <- nzchar(val("source_table")) && nzchar(val("code_set_version"))
   suppression_ok <- identical(tolower(val("min_cell_suppression_applied")), "yes") || grepl("not suppressed|suppressed", val("suppression_status"), ignore.case = TRUE)
   privacy_ok <- identical(tolower(val("public_safe")), "yes") || identical(tolower(val("privacy_safe")), "yes")
@@ -1293,6 +1331,7 @@ build_confluence_feasibility_outputs <- function(project_root = ".",
     confluence_bias_warnings(),
     confluence_recommended_next_actions()
   )
+  empty_production <- confluence_empty_payload()
   list(
     summary = confluence_summary(disease_counts, infection_readiness, treatment_readiness),
     disease_state_counts = disease_counts,
@@ -1315,7 +1354,18 @@ build_confluence_feasibility_outputs <- function(project_root = ".",
     dual_clone_validation_waterfall = dual_clone_validation_waterfall,
     small_cell_suppression_audit = small_cell_suppression_audit,
     utf8_quality_audit = utf8_quality_audit,
-    infection_endpoint_definitions = infection_endpoint_definitions
+    infection_endpoint_definitions = infection_endpoint_definitions,
+    disease_state_person_counts = empty_production$disease_state_person_counts,
+    first_date_availability = empty_production$first_date_availability,
+    infection_endpoint_code_sets = empty_production$infection_endpoint_code_sets,
+    infection_counts = empty_production$infection_counts,
+    recurrent_infection_counts = empty_production$recurrent_infection_counts,
+    infection_person_time = empty_production$infection_person_time,
+    infection_rates = empty_production$infection_rates,
+    microbiology_confirmation_counts = empty_production$microbiology_confirmation_counts,
+    production_query_review = empty_production$production_query_review,
+    failed_query_audit = empty_production$failed_query_audit,
+    production_execution_summary = empty_production$production_execution_summary
   )
 }
 
@@ -1343,6 +1393,17 @@ confluence_write_outputs <- function(outputs, output_dir) {
     dual_clone_validation_waterfall = write_csv(outputs$dual_clone_validation_waterfall %||% confluence_empty_validation_waterfall(), file.path(output_dir, "confluence_dual_clone_validation_waterfall.csv")),
     small_cell_suppression_audit = write_csv(outputs$small_cell_suppression_audit %||% confluence_empty_small_cell_suppression_audit(), file.path(output_dir, "confluence_small_cell_suppression_audit.csv")),
     utf8_quality_audit = write_csv(outputs$utf8_quality_audit %||% confluence_empty_utf8_quality_audit(), file.path(output_dir, "confluence_utf8_quality_audit.csv")),
-    infection_endpoint_definitions = write_csv(outputs$infection_endpoint_definitions %||% confluence_empty_infection_endpoint_definitions(), file.path(output_dir, "confluence_infection_endpoint_definitions.csv"))
+    infection_endpoint_definitions = write_csv(outputs$infection_endpoint_definitions %||% confluence_empty_infection_endpoint_definitions(), file.path(output_dir, "confluence_infection_endpoint_definitions.csv")),
+    disease_state_person_counts = write_csv(outputs$disease_state_person_counts %||% confluence_empty_payload()$disease_state_person_counts, file.path(output_dir, "confluence_disease_state_person_counts.csv")),
+    first_date_availability = write_csv(outputs$first_date_availability %||% confluence_empty_payload()$first_date_availability, file.path(output_dir, "confluence_first_date_availability.csv")),
+    infection_endpoint_code_sets = write_csv(outputs$infection_endpoint_code_sets %||% confluence_empty_payload()$infection_endpoint_code_sets, file.path(output_dir, "confluence_infection_endpoint_code_sets.csv")),
+    infection_counts = write_csv(outputs$infection_counts %||% confluence_empty_payload()$infection_counts, file.path(output_dir, "confluence_infection_counts.csv")),
+    recurrent_infection_counts = write_csv(outputs$recurrent_infection_counts %||% confluence_empty_payload()$recurrent_infection_counts, file.path(output_dir, "confluence_recurrent_infection_counts.csv")),
+    infection_person_time = write_csv(outputs$infection_person_time %||% confluence_empty_payload()$infection_person_time, file.path(output_dir, "confluence_infection_person_time.csv")),
+    infection_rates = write_csv(outputs$infection_rates %||% confluence_empty_payload()$infection_rates, file.path(output_dir, "confluence_infection_rates.csv")),
+    microbiology_confirmation_counts = write_csv(outputs$microbiology_confirmation_counts %||% confluence_empty_payload()$microbiology_confirmation_counts, file.path(output_dir, "confluence_microbiology_confirmation_counts.csv")),
+    production_query_review = write_csv(outputs$production_query_review %||% confluence_empty_payload()$production_query_review, file.path(output_dir, "confluence_production_query_review.csv")),
+    failed_query_audit = write_csv(outputs$failed_query_audit %||% confluence_empty_payload()$failed_query_audit, file.path(output_dir, "confluence_failed_query_audit.csv")),
+    production_execution_summary = write_csv(outputs$production_execution_summary %||% confluence_empty_payload()$production_execution_summary, file.path(output_dir, "confluence_production_execution_summary.csv"))
   )
 }

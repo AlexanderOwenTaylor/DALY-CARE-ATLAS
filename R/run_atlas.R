@@ -437,6 +437,15 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     legacy_reference_vs_current = legacy_reference_vs_current,
     min_cell_count = atlas_min_cell_count()
   )
+  if (exists("confluence_count_build_outputs", mode = "function")) {
+    confluence_count_outputs <- confluence_count_build_outputs(
+      project_root = project_root,
+      db_adapter = db_adapter,
+      mode = confluence_count_mode(db_adapter),
+      min_cell_count = atlas_min_cell_count()
+    )
+    confluence_feasibility <- confluence_count_merge_outputs(confluence_feasibility, confluence_count_outputs)
+  }
   patobank_ki67_percent <- patobank_ki67_build_outputs(
     project_root = project_root,
     db_adapter = db_adapter,
@@ -499,10 +508,16 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   names(confluence_paths) <- paste0("confluence_", names(confluence_paths))
   output_paths <- c(output_paths, confluence_paths)
   if (exists("mcl_count_build_outputs", mode = "function")) {
+    mcl_count_mode <- if (exists("confluence_mcl_count_mode", mode = "function")) {
+      confluence_mcl_count_mode(db_adapter)
+    } else {
+      Sys.getenv("DALYCARE_MCL_TRIANGLE_COUNT_MODE", unset = "plan")
+    }
     mcl_triangle_count_outputs <- mcl_count_build_outputs(
       project_root = project_root,
       outputs_dir = output_dir,
-      mode = "plan",
+      mode = mcl_count_mode,
+      db_adapter = db_adapter,
       min_cell_count = atlas_min_cell_count()
     )
     mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
@@ -681,7 +696,18 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     dual_clone_validation_waterfall = safe_read_output_csv(output_paths$confluence_dual_clone_validation_waterfall, confluence_feasibility$dual_clone_validation_waterfall),
     small_cell_suppression_audit = safe_read_output_csv(output_paths$confluence_small_cell_suppression_audit, confluence_feasibility$small_cell_suppression_audit),
     utf8_quality_audit = safe_read_output_csv(output_paths$confluence_utf8_quality_audit, confluence_feasibility$utf8_quality_audit),
-    infection_endpoint_definitions = safe_read_output_csv(output_paths$confluence_infection_endpoint_definitions, confluence_feasibility$infection_endpoint_definitions)
+    infection_endpoint_definitions = safe_read_output_csv(output_paths$confluence_infection_endpoint_definitions, confluence_feasibility$infection_endpoint_definitions),
+    disease_state_person_counts = safe_read_output_csv(output_paths$confluence_disease_state_person_counts, confluence_feasibility$disease_state_person_counts),
+    first_date_availability = safe_read_output_csv(output_paths$confluence_first_date_availability, confluence_feasibility$first_date_availability),
+    infection_endpoint_code_sets = safe_read_output_csv(output_paths$confluence_infection_endpoint_code_sets, confluence_feasibility$infection_endpoint_code_sets),
+    infection_counts = safe_read_output_csv(output_paths$confluence_infection_counts, confluence_feasibility$infection_counts),
+    recurrent_infection_counts = safe_read_output_csv(output_paths$confluence_recurrent_infection_counts, confluence_feasibility$recurrent_infection_counts),
+    infection_person_time = safe_read_output_csv(output_paths$confluence_infection_person_time, confluence_feasibility$infection_person_time),
+    infection_rates = safe_read_output_csv(output_paths$confluence_infection_rates, confluence_feasibility$infection_rates),
+    microbiology_confirmation_counts = safe_read_output_csv(output_paths$confluence_microbiology_confirmation_counts, confluence_feasibility$microbiology_confirmation_counts),
+    production_query_review = safe_read_output_csv(output_paths$confluence_production_query_review, confluence_feasibility$production_query_review),
+    failed_query_audit = safe_read_output_csv(output_paths$confluence_failed_query_audit, confluence_feasibility$failed_query_audit),
+    production_execution_summary = safe_read_output_csv(output_paths$confluence_production_execution_summary, confluence_feasibility$production_execution_summary)
   )
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])

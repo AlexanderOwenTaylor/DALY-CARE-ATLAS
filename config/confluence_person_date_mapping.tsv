@@ -1,0 +1,10 @@
+source_id	db_name	schema	table	person_key_column	date_columns	code_column	source_role	linkage_confidence	usable_for_counts	notes
+patient	core	public	patient	patientid	date_death_fu		patient_frame	high	TRUE	Core DALY patient frame for death/follow-up censoring; no patient rows are exported.
+t_dalycare_diagnoses	core	public	t_dalycare_diagnoses	patientid	date_diagnosis	diagnosis	diagnosis_state_and_infection	high	TRUE	Primary diagnosis backbone for exact CLL/MBL/MGUS/MM state dates and provisional infection diagnosis events.
+diagnoses_all	core	public	diagnoses_all	patientid	date_diagnosis	diagnosis	diagnosis_state_and_infection	high	TRUE	Secondary diagnosis backbone; deduplicated by person/state/event date before aggregation.
+RKKP_CLL	import	public	RKKP_CLL	patientid	Reg_Diagnose_dt		cll_registry_support	high	TRUE	CLL registry support; contributes CLL first-date support when DB co-residency allows.
+RKKP_DaMyDa	import	public	RKKP_DaMyDa	patientid	Diagnosedato;Reg_Diagnose_dt		mm_registry_support	high	TRUE	DaMyDa registry support; contributes MM/PCD support when DB co-residency allows.
+SDS_pato	import	public	SDS_pato	patientid	d_rekvdato;d_svardato	c_snomedkode	pathology_mbl_support	high	TRUE	PATOBANK coded pathology source for exact MBL SNOMED support and CLL morphology pressure.
+SDS_t_adm	import	public	SDS_t_adm	patientid	d_inddto	c_adiag	provisional_infection_event	medium	TRUE	Admissions source; diagnosis column is used only for provisional infection endpoint aggregates.
+SDS_kontakter	import	public	SDS_kontakter	patientid	dato_start	aktionsdiagnose	provisional_infection_event	medium	TRUE	LPR3 contact source; action diagnosis is used only for provisional infection endpoint aggregates.
+SDS_diagnoser	import	public	SDS_diagnoser		datetime_created	diagnosekode	provisional_infection_event_via_contact	requires_bridge	FALSE	Requires validated join to SDS_kontakter.dw_ek_kontakt before patient-level episode logic; fail closed unless bridge is implemented.

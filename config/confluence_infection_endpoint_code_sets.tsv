@@ -1,0 +1,35 @@
+endpoint_id	endpoint_label	code_system	match_type	code_prefix	definition_status	notes
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DA	repo-derived provisional	Broad ICD infectious/parasitic disease prefix; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DB	repo-derived provisional	Broad ICD infectious/parasitic disease prefix; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG00	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG01	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG02	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG03	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG04	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG05	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG06	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG07	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG08	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DG09	repo-derived provisional	Central nervous system infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ09	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ10	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ11	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ12	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ13	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ14	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ15	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ16	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ17	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ18	repo-derived provisional	Influenza/pneumonia/lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ20	repo-derived provisional	Lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ21	repo-derived provisional	Lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ22	repo-derived provisional	Lower respiratory infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ85	repo-derived provisional	Lung abscess/necrotizing infection family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DJ86	repo-derived provisional	Pyothorax/empyema family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DK65	repo-derived provisional	Peritonitis family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DL03	repo-derived provisional	Cellulitis family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DM00	repo-derived provisional	Pyogenic arthritis family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DM86	repo-derived provisional	Osteomyelitis family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DN10	repo-derived provisional	Pyelonephritis family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DN30	repo-derived provisional	Cystitis family; feasibility endpoint only.
+serious_infection_hospitalization	Serious infection hospitalization	SKS/ICD10 normalized prefix	prefix	DN39	repo-derived provisional	Urinary tract infection family; feasibility endpoint only.

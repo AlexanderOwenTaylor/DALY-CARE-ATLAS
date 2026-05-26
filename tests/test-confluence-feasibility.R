@@ -54,7 +54,18 @@ expect_true(all(c(
   "dual_clone_validation_waterfall",
   "small_cell_suppression_audit",
   "utf8_quality_audit",
-  "infection_endpoint_definitions"
+  "infection_endpoint_definitions",
+  "disease_state_person_counts",
+  "first_date_availability",
+  "infection_endpoint_code_sets",
+  "infection_counts",
+  "recurrent_infection_counts",
+  "infection_person_time",
+  "infection_rates",
+  "microbiology_confirmation_counts",
+  "production_query_review",
+  "failed_query_audit",
+  "production_execution_summary"
 ) %in% names(outputs)), "CONFLUENCE output should expose every requested table.")
 
 disease <- outputs$disease_state_counts
@@ -170,6 +181,8 @@ expect_true(any(grepl("confluence_estimands.csv", manifest$relative_path, fixed 
 expect_true(any(grepl("confluence_code_sets.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE code sets.")
 expect_true(any(grepl("confluence_mbl_source_counts.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE MBL source tiers.")
 expect_true(any(grepl("confluence_small_cell_suppression_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE suppression audit.")
+expect_true(any(grepl("confluence_production_execution_summary.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE production execution summary.")
+expect_true(any(grepl("confluence_infection_rates.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE infection rates.")
 
 sources <- data.frame(
   table_name = "t_dalycare_diagnoses",
