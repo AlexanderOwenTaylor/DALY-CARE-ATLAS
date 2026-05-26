@@ -299,7 +299,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     clinical_concept_rows = public_rows(public_clinical_concepts, max_rows = 5000),
     domain_panel_rows = public_rows(public_domain_panels, max_rows = 500),
     panel_kpi_rows = public_rows(public_panel_kpis, max_rows = 2000),
-    panel_distribution_rows = public_rows(public_panel_distributions, max_rows = 5000),
+    panel_distribution_rows = public_rows(public_panel_distributions, max_rows = max(5000, nrow(public_panel_distributions))),
     panel_raw_field_rows = public_rows(public_panel_raw_fields, max_rows = 5000),
     panel_parity_rows = public_rows(public_panel_parity, max_rows = 500),
     legacy_cartography_audit_rows = public_rows(public_legacy_resource_audit, max_rows = 1000),
