@@ -595,6 +595,7 @@ expect_true(grepl("AEKIxxx", html, fixed = TRUE), "Ki-67 UI should show AEKI/ÆK
 expect_true(grepl("mcl_triangle_feasibility", payload, fixed = TRUE), "Payload should include the MCL/TRIANGLE feasibility view model.")
 expect_true(grepl("confluence_feasibility", payload, fixed = TRUE), "Payload should include the CONFLUENCE feasibility view model.")
 expect_true(grepl("confluence_disease_state_counts", payload, fixed = TRUE) || grepl("disease_state_counts", payload, fixed = TRUE), "Payload should include CONFLUENCE disease-state counts.")
+expect_true(grepl("source_resolution_audit", payload, fixed = TRUE), "Payload should include CONFLUENCE source-resolution audit rows.")
 expect_true(grepl("not accepted aggregate", payload, fixed = TRUE), "Payload should include CONFLUENCE not-accepted aggregate state.")
 expect_true(grepl("Feasible with biology gaps", payload, fixed = TRUE) || grepl("Partially feasible", payload, fixed = TRUE) || grepl("Not currently feasible", payload, fixed = TRUE), "Payload should include an MCL/TRIANGLE feasibility verdict.")
 expect_true(grepl("review_clinical_variables", payload, fixed = TRUE), "Payload should include the Clinical Variables view model.")
@@ -628,6 +629,7 @@ freq <- utils::read.csv(file.path(result$run_dir, "outputs", "atlas_value_freque
 expect_false(any(freq$column_name == "patientid"), "Public value frequencies must not expose patient IDs.")
 
 manifest <- utils::read.csv(file.path(result$run_dir, "outputs", "output_manifest.csv"), stringsAsFactors = FALSE)
+expect_true(all(c("module", "artifact_role", "canonical_output", "production_output", "superseded_by") %in% names(manifest)), "Manifest should include artifact classification metadata.")
 expect_true(all(c("resource_catalog", "source_resolution", "dalycare_access", "memory_plan", "db_query_log", "db_budget_actions", "action_items", "legacy_cartography_source_resolution_audit", "billeddiagnostik_del2_regression_audit", "source_resolution_plan_dry_run", "source_resolution_attempts", "source_resolution_delta_legacy_vs_current", "resource_reconciliation", "source_truth_evidence_matrix", "source_truth_summary", "sources", "columns", "column_profiles", "column_top_values", "checks", "value_frequencies", "semantic_dictionary", "semantic_value_map", "semantic_code_map", "semantic_panel_links", "clinical_concepts", "domain_panels", "panel_kpis", "panel_distributions", "panel_raw_fields", "panel_parity", "run_summary", "html", "payload", "memory_log") %in% manifest$artifact_id), "Manifest should list expected artifacts.")
 expect_true(all(c("current_run_source_map_audit", "canonical_resource_reconciliation_64", "source_map_row_to_canonical_resource_crosswalk", "legacy_reference_vs_current_profiled_evidence") %in% manifest$artifact_id), "Manifest should list canonical source-recovery artifacts.")
 expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifact_id, "Manifest should list the remaining canonical-resource activation plan.")
@@ -648,8 +650,13 @@ expect_true(all(c(
   "confluence_infection_counts", "confluence_recurrent_infection_counts",
   "confluence_infection_person_time", "confluence_infection_rates",
   "confluence_microbiology_confirmation_counts", "confluence_production_query_review",
-  "confluence_failed_query_audit", "confluence_production_execution_summary"
+  "confluence_failed_query_audit", "confluence_source_resolution_audit",
+  "confluence_production_execution_summary"
 ) %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
+canonical_confluence <- manifest[manifest$artifact_id %in% c("confluence_disease_state_person_counts", "confluence_overlap_counts_accepted", "confluence_overlap_timing_accepted", "confluence_infection_counts", "confluence_recurrent_infection_counts", "confluence_infection_person_time", "confluence_infection_rates", "confluence_source_resolution_audit", "confluence_failed_query_audit", "confluence_production_execution_summary"), , drop = FALSE]
+expect_true(nrow(canonical_confluence) == 10L && all(canonical_confluence$canonical_output) && all(canonical_confluence$production_output), "Canonical CONFLUENCE aggregate artifacts should be marked production outputs.")
+compat_confluence <- manifest[manifest$artifact_id %in% c("confluence_overlap_counts", "confluence_overlap_timing"), , drop = FALSE]
+expect_true(nrow(compat_confluence) == 2L && all(compat_confluence$artifact_role == "compatibility_reference") && all(nzchar(compat_confluence$superseded_by)), "Superseded CONFLUENCE compatibility files should point to canonical production artifacts.")
 expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
 expect_true(all(c("npu_dictionary_summary", "npu_dictionary_vectors", "npu_lab_usage_by_vector", "npu_lab_unmatched_codes", "npu_detective_code_inventory", "npu_detective_candidates", "npu_detective_source_year", "isotype_code_usage", "isotype_bucket_summary", "mm_treatment_code_counts", "mm_treatment_source_summary", "registry_clinical_summary", "damyda_clinical_profile", "damyda_numeric_fields", "lyfo_clinical_profile", "cll_clinical_profile") %in% manifest$artifact_id), "Manifest should list NPU, isotype, treatment, and registry panel artifacts.")
 expect_true(all(c("atlas_temporal_coverage", "atlas_temporal_coverage_years", "atlas_spatial_region_counts", "atlas_spatial_region_coverage", "atlas_dk_choropleth_regions") %in% manifest$artifact_id), "Manifest should list V33 coverage panel artifacts.")

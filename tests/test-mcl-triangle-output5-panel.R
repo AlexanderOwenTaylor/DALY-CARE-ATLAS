@@ -6,6 +6,26 @@ fixture_dir <- mcl_count_default_output5_fixture_dir(root)
 expect_true(nzchar(fixture_dir), "Output(5) fixture directory should be present.")
 expect_true(file.exists(file.path(fixture_dir, "mcl_triangle_execution_summary.csv")), "Output(5) fixture should include execution summary.")
 
+current_dir <- tempfile("accepted_current_outputs_")
+dir.create(current_dir, recursive = TRUE, showWarnings = FALSE)
+file.copy(list.files(fixture_dir, full.names = TRUE), current_dir, overwrite = TRUE)
+current_resolved <- mcl_count_resolve_standalone_output_source(
+  project_root = root,
+  outputs_dir = current_dir,
+  count_output_zip = "",
+  count_output_dir = ""
+)
+expect_equal(current_resolved$metadata$source_type[[1]], "current_atlas_outputs", "Resolver should prefer fresh accepted atlas outputs before the bundled fixture.")
+expect_equal(current_resolved$outputs_dir, normalizePath(current_dir, winslash = "/", mustWork = FALSE), "Resolver should select the current accepted output directory.")
+
+explicit_resolved <- mcl_count_resolve_standalone_output_source(
+  project_root = root,
+  outputs_dir = tempfile("ignored_current_outputs_"),
+  count_output_zip = "",
+  count_output_dir = current_dir
+)
+expect_equal(explicit_resolved$metadata$source_type[[1]], "explicit_dir", "Explicit MCL_TRIANGLE_COUNT_OUTPUT_DIR should still override automatic current/fallback selection.")
+
 resolved <- mcl_count_resolve_standalone_output_source(
   project_root = root,
   outputs_dir = tempfile("empty_current_outputs_"),

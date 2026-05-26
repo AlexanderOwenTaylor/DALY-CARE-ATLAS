@@ -7792,19 +7792,6 @@ mcl_count_resolve_standalone_output_source <- function(project_root = ".",
       )
     ))
   }
-  fixture <- mcl_count_default_output5_fixture_dir(project_root)
-  if (nzchar(fixture) && mcl_count_output_dir_is_accepted_production(fixture)) {
-    return(list(
-      outputs_dir = fixture,
-      metadata = mcl_count_output_source_metadata(
-        "bundled_output5_fixture",
-        fixture,
-        fixture,
-        selected = TRUE,
-        notes = "Using committed aggregate-only Output(5) fixture as the deterministic atlas fallback."
-      )
-    ))
-  }
   current <- mcl_count_find_outputs_dir(outputs_dir)
   if (nzchar(current) && mcl_count_output_dir_is_accepted_production(current)) {
     return(list(
@@ -7815,6 +7802,19 @@ mcl_count_resolve_standalone_output_source <- function(project_root = ".",
         current,
         selected = TRUE,
         notes = "Using current atlas output directory because it contains accepted production aggregate TRIANGLE outputs."
+      )
+    ))
+  }
+  fixture <- mcl_count_default_output5_fixture_dir(project_root)
+  if (nzchar(fixture) && mcl_count_output_dir_is_accepted_production(fixture)) {
+    return(list(
+      outputs_dir = fixture,
+      metadata = mcl_count_output_source_metadata(
+        "bundled_output5_fixture",
+        fixture,
+        fixture,
+        selected = TRUE,
+        notes = "Using committed aggregate-only Output(5) fixture as the deterministic atlas fallback."
       )
     ))
   }

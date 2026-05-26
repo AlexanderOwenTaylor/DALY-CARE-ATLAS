@@ -182,7 +182,11 @@ expect_true(any(grepl("confluence_code_sets.csv", manifest$relative_path, fixed 
 expect_true(any(grepl("confluence_mbl_source_counts.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE MBL source tiers.")
 expect_true(any(grepl("confluence_small_cell_suppression_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE suppression audit.")
 expect_true(any(grepl("confluence_production_execution_summary.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE production execution summary.")
+expect_true(any(grepl("confluence_source_resolution_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE source-resolution audit.")
 expect_true(any(grepl("confluence_infection_rates.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE infection rates.")
+expect_true(all(c("module", "artifact_role", "canonical_output", "production_output", "superseded_by") %in% names(manifest)), "Manifest should include artifact classification metadata.")
+prod_summary <- manifest[manifest$artifact_id == "confluence_production_execution_summary", , drop = FALSE]
+expect_true(nrow(prod_summary) == 1L && isTRUE(prod_summary$canonical_output[[1]]) && isTRUE(prod_summary$production_output[[1]]), "CONFLUENCE production execution summary should be marked canonical production output.")
 
 sources <- data.frame(
   table_name = "t_dalycare_diagnoses",

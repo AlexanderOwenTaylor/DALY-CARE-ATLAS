@@ -230,6 +230,25 @@ confluence_count_empty_outputs <- function() {
   )
 }
 
+confluence_match_empty <- function(df, empty) {
+  if (!is.data.frame(df)) df <- data.frame(stringsAsFactors = FALSE)
+  if (!is.data.frame(empty)) return(df)
+  n <- nrow(df)
+  for (nm in setdiff(names(empty), names(df))) {
+    proto <- empty[[nm]]
+    if (is.logical(proto)) {
+      df[[nm]] <- rep(FALSE, n)
+    } else if (is.integer(proto)) {
+      df[[nm]] <- rep(NA_integer_, n)
+    } else if (is.numeric(proto)) {
+      df[[nm]] <- rep(NA_real_, n)
+    } else {
+      df[[nm]] <- rep("", n)
+    }
+  }
+  df[names(empty)]
+}
+
 confluence_count_empty_endpoint_code_sets <- function() {
   empty_df(
     endpoint_id = character(),
@@ -1618,6 +1637,119 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
   outputs
 }
 
+confluence_count_production_success <- function(outputs) {
+  summary <- outputs$production_execution_summary %||% data.frame(stringsAsFactors = FALSE)
+  if (!is.data.frame(summary) || !nrow(summary) || !all(c("metric", "value") %in% names(summary))) return(FALSE)
+  hit <- summary[summary$metric == "production_query_success", , drop = FALSE]
+  any(confluence_count_bool(hit$value %||% FALSE), na.rm = TRUE)
+}
+
+confluence_count_summary_upsert <- function(summary, metric, label, value, status, count_kind, evidence_confidence, notes) {
+  if (!is.data.frame(summary)) summary <- confluence_empty_summary()
+  summary <- confluence_match_empty(summary, confluence_empty_summary())
+  row <- data.frame(
+    metric = metric,
+    label = label,
+    value = value,
+    status = status,
+    count_kind = count_kind,
+    evidence_confidence = evidence_confidence,
+    notes = notes,
+    stringsAsFactors = FALSE
+  )
+  if (metric %in% summary$metric) {
+    summary[summary$metric == metric, names(row)] <- row[rep(1L, sum(summary$metric == metric)), names(row), drop = FALSE]
+  } else {
+    summary <- bind_rows_base(list(summary, row))
+  }
+  confluence_match_empty(summary, confluence_empty_summary())
+}
+
+confluence_count_production_compat_summary <- function(summary, production) {
+  summary <- confluence_count_summary_upsert(
+    summary,
+    "panel_status",
+    "Panel status",
+    "production aggregate available",
+    "production_aggregate",
+    "aggregate patient-safe outputs",
+    "accepted production aggregate",
+    "CONFLUENCE production aggregates were generated; canonical accepted files carry public counts and route-status gates."
+  )
+  summary <- confluence_count_summary_upsert(
+    summary,
+    "overlap_acceptance_status",
+    "Overlap acceptance status",
+    "accepted aggregate output available",
+    "accepted",
+    "distinct people",
+    "production aggregate",
+    "Use confluence_overlap_counts_accepted.csv and confluence_overlap_timing_accepted.csv for canonical overlap outputs."
+  )
+  if (is.data.frame(production$infection_counts) &&
+      nrow(production$infection_counts) &&
+      any(production$infection_counts$acceptance_status == "accepted", na.rm = TRUE)) {
+    summary <- confluence_count_summary_upsert(
+      summary,
+      "infection_readiness_signals",
+      "Infection readiness signals",
+      "production aggregate available",
+      "accepted",
+      "distinct people and events",
+      "repo-derived provisional",
+      "Use confluence_infection_counts.csv, confluence_recurrent_infection_counts.csv, and confluence_infection_rates.csv for canonical provisional infection aggregates."
+    )
+  }
+  summary
+}
+
+confluence_count_production_compat_overlap_counts <- function(scaffold, accepted) {
+  if (!is.data.frame(accepted) || !nrow(accepted)) return(scaffold)
+  out <- data.frame(
+    overlap_id = accepted$overlap_id %||% character(),
+    overlap_label = accepted$overlap_label %||% character(),
+    left_state = accepted$mbl_tier %||% character(),
+    right_state = accepted$pcd_tier %||% character(),
+    count_display = accepted$count_display %||% character(),
+    n_people = accepted$n_people %||% numeric(),
+    count_kind = accepted$count_kind %||% character(),
+    evidence_status = "production aggregate available",
+    acceptance_status = accepted$acceptance_status %||% character(),
+    feasibility_status = ifelse(
+      accepted$acceptance_status %in% "accepted",
+      "accepted production aggregate",
+      accepted$acceptance_gate_status %||% "not accepted aggregate"
+    ),
+    query_status = accepted$query_status %||% character(),
+    notes = paste(
+      "Compatibility view mirrored from confluence_overlap_counts_accepted.csv;",
+      "use that canonical file for accepted production overlap counts."
+    ),
+    stringsAsFactors = FALSE
+  )
+  confluence_match_empty(out, confluence_empty_overlap_counts())
+}
+
+confluence_count_production_compat_overlap_timing <- function(scaffold, accepted) {
+  if (!is.data.frame(accepted) || !nrow(accepted)) return(scaffold)
+  out <- data.frame(
+    timing_id = accepted$timing_id %||% character(),
+    timing_label = accepted$timing_label %||% character(),
+    count_display = accepted$count_display %||% character(),
+    n_people = accepted$n_people %||% numeric(),
+    count_kind = accepted$count_kind %||% character(),
+    evidence_status = "production aggregate available",
+    acceptance_status = accepted$acceptance_status %||% character(),
+    query_status = accepted$query_status %||% character(),
+    notes = paste(
+      "Compatibility view mirrored from confluence_overlap_timing_accepted.csv;",
+      "use that canonical file for accepted production overlap timing."
+    ),
+    stringsAsFactors = FALSE
+  )
+  confluence_match_empty(out, confluence_empty_overlap_timing())
+}
+
 confluence_count_merge_outputs <- function(scaffold, production) {
   if (is.null(scaffold)) scaffold <- confluence_empty_payload()
   if (is.null(production)) production <- confluence_count_empty_outputs()
@@ -1627,6 +1759,11 @@ confluence_count_merge_outputs <- function(scaffold, production) {
     } else {
       scaffold[[nm]] <- production[[nm]]
     }
+  }
+  if (confluence_count_production_success(production)) {
+    scaffold$summary <- confluence_count_production_compat_summary(scaffold$summary, production)
+    scaffold$overlap_counts <- confluence_count_production_compat_overlap_counts(scaffold$overlap_counts, scaffold$overlap_counts_accepted)
+    scaffold$overlap_timing <- confluence_count_production_compat_overlap_timing(scaffold$overlap_timing, scaffold$overlap_timing_accepted)
   }
   scaffold
 }

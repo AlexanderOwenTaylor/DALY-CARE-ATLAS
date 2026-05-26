@@ -257,6 +257,12 @@ expect_true(any(small$suppression_status == "suppressed small cell"), "Small cel
 merged <- confluence_count_merge_outputs(build_confluence_feasibility_outputs(project_root = root), prod)
 expect_true("infection_rates" %in% names(merged), "Merged CONFLUENCE payload should include infection rates.")
 expect_true(any(merged$production_execution_summary$value == "TRUE"), "Merged CONFLUENCE payload should carry production execution summary.")
+expect_true(any(merged$summary$metric == "panel_status" & merged$summary$value == "production aggregate available"), "Merged CONFLUENCE summary should announce production aggregate availability.")
+expect_false(any(merged$summary$metric == "overlap_acceptance_status" & merged$summary$value == "query executable not run"), "Merged CONFLUENCE summary must not claim overlap was not run after accepted aggregates exist.")
+expect_false(any(merged$overlap_counts$query_status == "query executable not run"), "Compatibility overlap counts should not contradict accepted production overlap counts.")
+expect_false(any(merged$overlap_timing$query_status == "query executable not run"), "Compatibility overlap timing should not contradict accepted production overlap timing.")
+expect_true(any(grepl("confluence_overlap_counts_accepted.csv", merged$overlap_counts$notes, fixed = TRUE)), "Compatibility overlap counts should point to the canonical accepted overlap file.")
+expect_true(any(grepl("confluence_overlap_timing_accepted.csv", merged$overlap_timing$notes, fixed = TRUE)), "Compatibility overlap timing should point to the canonical accepted timing file.")
 
 tmp <- tempfile("confluence-production-")
 dir.create(tmp, recursive = TRUE, showWarnings = FALSE)

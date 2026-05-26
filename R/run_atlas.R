@@ -707,6 +707,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     microbiology_confirmation_counts = safe_read_output_csv(output_paths$confluence_microbiology_confirmation_counts, confluence_feasibility$microbiology_confirmation_counts),
     production_query_review = safe_read_output_csv(output_paths$confluence_production_query_review, confluence_feasibility$production_query_review),
     failed_query_audit = safe_read_output_csv(output_paths$confluence_failed_query_audit, confluence_feasibility$failed_query_audit),
+    source_resolution_audit = safe_read_output_csv(output_paths$confluence_source_resolution_audit, confluence_feasibility$source_resolution_audit),
     production_execution_summary = safe_read_output_csv(output_paths$confluence_production_execution_summary, confluence_feasibility$production_execution_summary)
   )
   payload_panels <- lapply(names(panels), function(panel_name) {
@@ -966,11 +967,78 @@ source_availability_panel <- function(sources) {
   )
 }
 
+output_manifest_artifact_metadata <- function(id, path = "") {
+  stem <- sub("[.][^.]*$", "", basename(path %||% ""))
+  key <- if (grepl("^(confluence|mcl_triangle|ki67|patobank_ki67|atlas|situation_report|npu|isotype|mm_|registry|damyda|lyfo)_", id)) {
+    id
+  } else if (nzchar(stem)) {
+    stem
+  } else {
+    id
+  }
+  confluence_canonical <- c(
+    "confluence_disease_state_person_counts",
+    "confluence_first_date_availability",
+    "confluence_overlap_counts_accepted",
+    "confluence_overlap_timing_accepted",
+    "confluence_mbl_validation_waterfall",
+    "confluence_mgus_validation_waterfall",
+    "confluence_dual_clone_validation_waterfall",
+    "confluence_infection_endpoint_code_sets",
+    "confluence_infection_counts",
+    "confluence_recurrent_infection_counts",
+    "confluence_infection_person_time",
+    "confluence_infection_rates",
+    "confluence_microbiology_confirmation_counts",
+    "confluence_production_query_review",
+    "confluence_failed_query_audit",
+    "confluence_source_resolution_audit",
+    "confluence_production_execution_summary"
+  )
+  confluence_superseded_by <- c(
+    confluence_summary = "confluence_production_execution_summary",
+    confluence_disease_state_counts = "confluence_disease_state_person_counts",
+    confluence_overlap_counts = "confluence_overlap_counts_accepted",
+    confluence_overlap_timing = "confluence_overlap_timing_accepted"
+  )
+  module <- if (grepl("^confluence_", key)) {
+    "confluence"
+  } else if (grepl("^mcl_triangle", key)) {
+    "mcl_triangle"
+  } else if (grepl("^(ki67|patobank_ki67)_", key)) {
+    "ki67"
+  } else {
+    "atlas"
+  }
+  mcl_count_output <- grepl("^mcl_triangle_count_", id) ||
+    (grepl("^mcl_triangle_", key) && grepl("mcl_triangle_(data_point_counts|execution_summary|failed_query_audit|count_summary|inclusion_waterfall|overlap_matrix|exposure_strata_counts|landmark_feasibility_counts|ki67_|age_proxy_counts|ibrutinib_|treatment_strategy_strata_counts|high_risk_biology_counts|answerability_)", key))
+  canonical_output <- key %in% confluence_canonical || isTRUE(mcl_count_output)
+  production_output <- canonical_output
+  superseded_by <- if (key %in% names(confluence_superseded_by)) unname(confluence_superseded_by[[key]]) else ""
+  artifact_role <- if (nzchar(superseded_by)) {
+    "compatibility_reference"
+  } else if (canonical_output && grepl("^confluence_microbiology_confirmation_counts$", key)) {
+    "canonical_fail_closed"
+  } else if (canonical_output) {
+    "canonical_production"
+  } else {
+    "supporting_output"
+  }
+  data.frame(
+    module = module,
+    artifact_role = artifact_role,
+    canonical_output = isTRUE(canonical_output),
+    production_output = isTRUE(production_output),
+    superseded_by = superseded_by,
+    stringsAsFactors = FALSE
+  )
+}
+
 output_manifest <- function(paths, run_dir) {
   rows <- lapply(names(paths), function(id) {
     path <- paths[[id]]
     info <- if (file.exists(path)) file.info(path) else NULL
-    data.frame(
+    row <- data.frame(
       artifact_id = id,
       relative_path = relative_path(path, run_dir),
       path = normalize_slashes(normalizePath(path, winslash = "/", mustWork = FALSE)),
@@ -978,6 +1046,7 @@ output_manifest <- function(paths, run_dir) {
       file_size_bytes = if (!is.null(info)) as.numeric(info$size) else NA_real_,
       stringsAsFactors = FALSE
     )
+    cbind(row, output_manifest_artifact_metadata(id, path))
   })
   bind_rows_base(rows)
 }
