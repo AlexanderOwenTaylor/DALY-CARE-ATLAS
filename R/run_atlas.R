@@ -521,6 +521,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$semantic_code_map <- write_csv(semantic_outputs$code_map, file.path(output_dir, "atlas_semantic_code_map.csv"))
   output_paths$semantic_panel_links <- write_csv(semantic_outputs$panel_links, file.path(output_dir, "atlas_semantic_panel_links.csv"))
   output_paths$semantic_unmapped_entity_overlay <- write_csv(semantic_outputs$unmapped_entity_overlay, file.path(output_dir, "atlas_semantic_unmapped_entity_overlay.csv"))
+  output_paths$semantic_overlay_lookup <- write_csv(semantic_outputs$overlay_lookup, file.path(output_dir, "atlas_semantic_overlay_lookup.csv"))
+  output_paths$curator_label_promotions <- write_csv(semantic_outputs$curator_label_promotions, file.path(output_dir, "atlas_curator_label_promotions.csv"))
+  output_paths$curator_label_promotion_lookup <- write_csv(semantic_outputs$curator_label_lookup, file.path(output_dir, "atlas_curator_label_promotion_lookup.csv"))
   output_paths$semantic_mapping_conflicts <- write_csv(semantic_outputs$mapping_conflicts, file.path(output_dir, "atlas_semantic_mapping_conflicts.csv"))
   output_paths$clinical_concepts <- write_csv(product_outputs$clinical_concepts, file.path(output_dir, "atlas_clinical_concepts.csv"))
   output_paths$domain_panels <- write_csv(product_outputs$domain_panels, file.path(output_dir, "atlas_domain_panels.csv"))
@@ -578,6 +581,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_semantic_code_map <- safe_read_output_csv(output_paths$semantic_code_map, semantic_outputs$code_map)
   payload_semantic_panel_links <- safe_read_output_csv(output_paths$semantic_panel_links, semantic_outputs$panel_links)
   payload_semantic_unmapped_entity_overlay <- safe_read_output_csv(output_paths$semantic_unmapped_entity_overlay, semantic_outputs$unmapped_entity_overlay)
+  payload_semantic_overlay_lookup <- safe_read_output_csv(output_paths$semantic_overlay_lookup, semantic_outputs$overlay_lookup)
+  payload_curator_label_promotions <- safe_read_output_csv(output_paths$curator_label_promotions, semantic_outputs$curator_label_promotions)
+  payload_curator_label_lookup <- safe_read_output_csv(output_paths$curator_label_promotion_lookup, semantic_outputs$curator_label_lookup)
   payload_semantic_mapping_conflicts <- safe_read_output_csv(output_paths$semantic_mapping_conflicts, semantic_outputs$mapping_conflicts)
   payload_clinical_concepts <- safe_read_output_csv(output_paths$clinical_concepts, product_outputs$clinical_concepts)
   payload_domain_panels <- safe_read_output_csv(output_paths$domain_panels, product_outputs$domain_panels)
@@ -697,6 +703,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     semantic_code_map = payload_semantic_code_map,
     semantic_panel_links = payload_semantic_panel_links,
     semantic_unmapped_entity_overlay = payload_semantic_unmapped_entity_overlay,
+    semantic_overlay_lookup = payload_semantic_overlay_lookup,
+    curator_label_promotions = payload_curator_label_promotions,
+    curator_label_lookup = payload_curator_label_lookup,
     semantic_mapping_conflicts = payload_semantic_mapping_conflicts,
     clinical_concepts = payload_clinical_concepts,
     domain_panels = payload_domain_panels,

@@ -896,7 +896,13 @@ expect_false(any(run_cll$raw_column == "Reg_KnoglemarvsUndersoegelse" & run_cll$
 expect_false(any(run_cll$raw_column %in% c("Reg_FISH", "Reg_Del17p", "Reg_Del11q", "Reg_Del13q14", "Reg_Trisomi12", "Reg_TP53", "Beh_TP53Mutation", "Beh_FISH_TP53", "Rec_FISH_TP53") & run_cll$clinical_concept_id == "cytogenetic_risk"), "Run semantic output must not flatten CLL FISH/del/TP53 fields to generic cytogenetic risk.")
 expect_true(any(semantic_dictionary$raw_code == "NPU02319" & semantic_dictionary$clinical_variable == "Haemoglobin"), "Semantic output should map NPU02319 to haemoglobin.")
 expect_true(any(semantic_dictionary$raw_code == "DNK35302" & grepl("eGFR", semantic_dictionary$clinical_variable, fixed = TRUE)), "Semantic output should map DNK35302 to eGFR / CKD-EPI.")
-expect_true(any(semantic_dictionary$raw_code == "NPU19748" & semantic_dictionary$clinical_variable == "Leukocytes"), "Semantic output should map NPU19748 to leukocytes.")
+expect_true(
+  any(semantic_dictionary$raw_code == "NPU19748" & (
+    semantic_dictionary$clinical_variable == "Leukocytes" |
+      semantic_dictionary$prior_display_label == "Leukocytes"
+  )),
+  "Semantic output should preserve the previous NPU19748 leukocyte label in primary display or curator-promotion lineage."
+)
 expect_true(any(semantic_dictionary$raw_code == "NPU02593" & semantic_dictionary$clinical_concept_id == "creatinine"), "Semantic output should map NPU02593 to creatinine.")
 expect_true(any(semantic_dictionary$raw_code == "NPU02636" & semantic_dictionary$clinical_concept_id == "ldh"), "Semantic output should map NPU02636 to LDH when evidenced.")
 expect_true(any(semantic_dictionary$raw_code == "NPU01349" & semantic_dictionary$clinical_concept_id == "albumin"), "Semantic output should map NPU01349 to albumin when evidenced.")
@@ -914,12 +920,13 @@ expect_false(any(grepl("^treatment_", npu_dnk_code_rows$clinical_concept_id)), "
 expect_lab_code_map <- function(code, concept_id, variable_pattern) {
   rows <- semantic_code_map[semantic_code_map$code == code, , drop = FALSE]
   if (!nrow(rows)) return(invisible(TRUE))
-  expect_true(any(rows$clinical_group == "Laboratory" & rows$clinical_concept_id == concept_id & grepl(variable_pattern, rows$clinical_variable, ignore.case = TRUE)), paste("Semantic code map should keep", code, "as", concept_id, "/ Laboratory."))
+  display_lineage <- paste(rows$clinical_variable, rows$prior_display_label)
+  expect_true(any(rows$clinical_group == "Laboratory" & rows$clinical_concept_id == concept_id & grepl(variable_pattern, display_lineage, ignore.case = TRUE)), paste("Semantic code map should keep", code, "as", concept_id, "/ Laboratory or curator-promotion lineage."))
 }
 expect_lab_code_map("NPU02319", "haemoglobin", "Haemoglobin")
 expect_lab_code_map("NPU02593", "creatinine", "Creatinine")
 expect_lab_code_map("DNK35302", "egfr", "eGFR")
-expect_lab_code_map("NPU04998", "crp", "CRP")
+expect_lab_code_map("NPU04998", "crp", "CRP|C-reactive protein")
 treatment_matrix_lab_rows <- npu_dnk_code_rows[grepl("cartography_disease_treatment_matrix", npu_dnk_code_rows$evidence_file, fixed = TRUE), , drop = FALSE]
 if (nrow(treatment_matrix_lab_rows)) {
   expect_true(all(grepl("supporting laboratory evidence; not treatment exposure", treatment_matrix_lab_rows$notes, fixed = TRUE)), "Treatment-matrix NPU/DNK rows should carry supporting-lab provenance caveat.")
@@ -1144,23 +1151,32 @@ sds_pato_snomed_dictionary <- semantic_dictionary[semantic_dictionary$source_nam
 expect_true(nrow(sds_pato_snomed_dictionary) > 0, "SDS_pato.c_snomedkode should be present in the semantic dictionary.")
 expect_true(all(sds_pato_snomed_dictionary$clinical_group == "Pathology"), "SDS_pato.c_snomedkode must map to Pathology in the semantic dictionary.")
 expect_true(all(sds_pato_snomed_dictionary$clinical_concept_id == "pathology_snomed_code"), "SDS_pato.c_snomedkode must map to pathology_snomed_code.")
-expect_true(all(sds_pato_snomed_dictionary$clinical_variable == "SNOMED pathology code"), "SDS_pato.c_snomedkode must use SNOMED pathology code as label.")
+expect_true(
+  all(sds_pato_snomed_dictionary$clinical_variable == "SNOMED pathology code" |
+    sds_pato_snomed_dictionary$prior_display_label == "SNOMED pathology code"),
+  "SDS_pato.c_snomedkode must preserve SNOMED pathology code as label or curator-promotion lineage."
+)
 expect_true(all(sds_pato_snomed_dictionary$code_system == "SNOMED"), "SDS_pato.c_snomedkode must use SNOMED code system.")
 expect_false(any(sds_pato_snomed_dictionary$clinical_group == "Treatment"), "SDS_pato.c_snomedkode must not map to Treatment.")
 expect_false(any(grepl("sks", sds_pato_snomed_dictionary$clinical_concept_id, ignore.case = TRUE)), "SDS_pato.c_snomedkode concept IDs must not contain SKS.")
 expect_false(any(grepl("SKS", sds_pato_snomed_dictionary$clinical_variable, fixed = TRUE)), "SDS_pato.c_snomedkode labels must not say SKS.")
 sds_pato_snomed_panel <- panel_raw_fields[panel_raw_fields$source_name == "SDS_pato" & panel_raw_fields$raw_column == "c_snomedkode", , drop = FALSE]
 expect_true(nrow(sds_pato_snomed_panel) > 0, "SDS_pato.c_snomedkode should flow into atlas_panel_raw_fields.csv.")
-expect_true(all(sds_pato_snomed_panel$clinical_concept_id == "pathology_snomed_code" & sds_pato_snomed_panel$clinical_variable == "SNOMED pathology code"), "SDS_pato.c_snomedkode panel raw fields should remain Pathology/SNOMED.")
+expect_true(all(sds_pato_snomed_panel$clinical_concept_id == "pathology_snomed_code"), "SDS_pato.c_snomedkode panel raw fields should remain Pathology/SNOMED.")
 expect_false(any(grepl("sks", sds_pato_snomed_panel$clinical_concept_id, ignore.case = TRUE) | grepl("SKS", sds_pato_snomed_panel$clinical_variable, fixed = TRUE)), "SDS_pato.c_snomedkode panel raw fields must not be SKS-coded treatment rows.")
 sds_pato_code_map <- semantic_code_map[semantic_code_map$source_name == "SDS_pato", , drop = FALSE]
 if (nrow(sds_pato_code_map)) {
   expect_false(any(sds_pato_code_map$clinical_group == "Treatment"), "SDS_pato code-map rows must not map to Treatment.")
   expect_false(any(sds_pato_code_map$code_system == "SKS"), "SDS_pato code-map rows must not use SKS.")
-  expect_true(any(sds_pato_code_map$clinical_group == "Pathology" & sds_pato_code_map$clinical_concept_id == "pathology_snomed_code" & sds_pato_code_map$clinical_variable == "SNOMED pathology code" & sds_pato_code_map$code_system == "SNOMED"), "SDS_pato code-map rows should include Pathology/SNOMED entries.")
+  expect_true(any(sds_pato_code_map$clinical_group == "Pathology" & sds_pato_code_map$clinical_concept_id == "pathology_snomed_code" & (sds_pato_code_map$clinical_variable == "SNOMED pathology code" | sds_pato_code_map$prior_display_label == "SNOMED pathology code") & sds_pato_code_map$code_system == "SNOMED"), "SDS_pato code-map rows should include Pathology/SNOMED entries.")
 }
 if (grepl("\"source_name\":\"SDS_pato\"", payload, fixed = TRUE) && grepl("\"raw_column\":\"c_snomedkode\"", payload, fixed = TRUE)) {
-  expect_true(grepl("\"clinical_concept_id\":\"pathology_snomed_code\"", payload, fixed = TRUE) && grepl("\"clinical_variable\":\"SNOMED pathology code\"", payload, fixed = TRUE), "DALYCARE_atlas_payload.js should carry SDS_pato.c_snomedkode as Pathology/SNOMED when that row appears in the payload slice.")
+  expect_true(
+    grepl("\"clinical_concept_id\":\"pathology_snomed_code\"", payload, fixed = TRUE) &&
+      (grepl("\"clinical_variable\":\"SNOMED pathology code\"", payload, fixed = TRUE) ||
+        grepl("\"prior_display_label\":\"SNOMED pathology code\"", payload, fixed = TRUE)),
+    "DALYCARE_atlas_payload.js should carry SDS_pato.c_snomedkode as Pathology/SNOMED when that row appears in the payload slice."
+  )
   expect_false(grepl("\"source_name\":\"SDS_pato\"[^}]*\"raw_column\":\"c_snomedkode\"[^}]*\"clinical_group\":\"Treatment\"", payload), "DALYCARE_atlas_payload.js must not carry SDS_pato.c_snomedkode as Treatment.")
   expect_false(grepl("\"source_name\":\"SDS_pato\"[^}]*\"raw_column\":\"c_snomedkode\"[^}]*\"code_system\":\"SKS\"", payload), "DALYCARE_atlas_payload.js must not carry SDS_pato.c_snomedkode as SKS.")
 }

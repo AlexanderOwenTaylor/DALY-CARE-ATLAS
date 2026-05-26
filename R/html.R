@@ -14,8 +14,8 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
   payload_path <- file.path(site_dir, "DALYCARE_atlas_payload.js")
   file.copy(template_path, html_path, overwrite = TRUE)
 
-  json <- atlas_to_json(payload)
-  writeLines(c("window.DALYCARE_ATLAS_PAYLOAD = ", json, ";"), con = payload_path, useBytes = TRUE)
+  json <- atlas_to_json(atlas_sanitize_payload_text(payload))
+  writeLines(enc2utf8(c("window.DALYCARE_ATLAS_PAYLOAD = ", json, ";")), con = payload_path, useBytes = TRUE)
   list(html = html_path, payload = payload_path)
 }
 
@@ -103,6 +103,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           semantic_dictionary = NULL, semantic_value_map = NULL,
                           semantic_code_map = NULL, semantic_panel_links = NULL,
                           semantic_unmapped_entity_overlay = NULL,
+                          semantic_overlay_lookup = NULL,
+                          curator_label_promotions = NULL,
+                          curator_label_lookup = NULL,
                           semantic_mapping_conflicts = NULL,
                           clinical_concepts = NULL, domain_panels = NULL,
                           panel_kpis_product = NULL, panel_distributions = NULL,
@@ -128,6 +131,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(semantic_code_map)) semantic_code_map <- empty_semantic_code_map()
   if (is.null(semantic_panel_links)) semantic_panel_links <- empty_semantic_panel_links()
   if (is.null(semantic_unmapped_entity_overlay)) semantic_unmapped_entity_overlay <- empty_semantic_unmapped_entity_overlay()
+  if (is.null(semantic_overlay_lookup)) semantic_overlay_lookup <- empty_semantic_overlay_lookup()
+  if (is.null(curator_label_promotions)) curator_label_promotions <- empty_curator_label_promotions()
+  if (is.null(curator_label_lookup)) curator_label_lookup <- empty_curator_label_lookup()
   if (is.null(semantic_mapping_conflicts)) semantic_mapping_conflicts <- empty_semantic_mapping_conflicts()
   if (is.null(clinical_concepts)) clinical_concepts <- empty_clinical_concepts()
   if (is.null(domain_panels)) domain_panels <- empty_domain_panels()
@@ -164,6 +170,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_semantic_code_map <- sanitize_public_frame(semantic_code_map)
   public_semantic_panel_links <- sanitize_public_frame(semantic_panel_links)
   public_semantic_unmapped_entity_overlay <- sanitize_public_frame(semantic_unmapped_entity_overlay)
+  public_semantic_overlay_lookup <- sanitize_public_frame(semantic_overlay_lookup)
+  public_curator_label_promotions <- sanitize_public_frame(curator_label_promotions)
+  public_curator_label_lookup <- sanitize_public_frame(curator_label_lookup)
   public_semantic_mapping_conflicts <- sanitize_public_frame(semantic_mapping_conflicts)
   public_clinical_concepts <- sanitize_public_frame(clinical_concepts)
   public_domain_panels <- sanitize_public_frame(domain_panels)
@@ -283,6 +292,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     semantic_code_map_rows = public_rows(public_semantic_code_map, max_rows = 5000),
     semantic_panel_links = public_rows(public_semantic_panel_links, max_rows = 5000),
     semantic_unmapped_entity_overlay_rows = public_rows(public_semantic_unmapped_entity_overlay, max_rows = 5000),
+    semantic_overlay_lookup_rows = public_rows(public_semantic_overlay_lookup, max_rows = max(5000, nrow(public_semantic_overlay_lookup))),
+    curator_label_promotion_rows = public_rows(public_curator_label_promotions, max_rows = max(5000, nrow(public_curator_label_promotions))),
+    curator_label_promotion_lookup_rows = public_rows(public_curator_label_lookup, max_rows = max(5000, nrow(public_curator_label_lookup))),
     semantic_mapping_conflict_rows = public_rows(public_semantic_mapping_conflicts, max_rows = 5000),
     clinical_concept_rows = public_rows(public_clinical_concepts, max_rows = 5000),
     domain_panel_rows = public_rows(public_domain_panels, max_rows = 500),

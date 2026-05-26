@@ -30,7 +30,7 @@ read_csv_or_empty <- function(path) {
   if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
   if (is.na(file.info(path)$size) || file.info(path)$size == 0) return(data.frame(stringsAsFactors = FALSE))
   tryCatch(
-    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE),
+    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8-BOM"),
     error = function(e) data.frame(stringsAsFactors = FALSE)
   )
 }
@@ -39,14 +39,14 @@ read_tsv_or_empty <- function(path) {
   if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
   if (is.na(file.info(path)$size) || file.info(path)$size == 0) return(data.frame(stringsAsFactors = FALSE))
   tryCatch(
-    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE),
+    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8-BOM"),
     error = function(e) data.frame(stringsAsFactors = FALSE)
   )
 }
 
 write_text <- function(lines, path) {
   dir_create(dirname(path))
-  writeLines(lines, path, useBytes = TRUE)
+  writeLines(enc2utf8(lines), path, useBytes = TRUE)
   path
 }
 
@@ -290,6 +290,11 @@ write_csv(semantic_outputs$dictionary, file.path(mock_output_dir, "atlas_semanti
 write_csv(semantic_outputs$value_map, file.path(mock_output_dir, "atlas_semantic_value_map.csv"))
 write_csv(semantic_outputs$code_map, file.path(mock_output_dir, "atlas_semantic_code_map.csv"))
 write_csv(semantic_outputs$panel_links, file.path(mock_output_dir, "atlas_semantic_panel_links.csv"))
+write_csv(semantic_outputs$unmapped_entity_overlay, file.path(mock_output_dir, "atlas_semantic_unmapped_entity_overlay.csv"))
+write_csv(semantic_outputs$overlay_lookup, file.path(mock_output_dir, "atlas_semantic_overlay_lookup.csv"))
+write_csv(semantic_outputs$curator_label_promotions, file.path(mock_output_dir, "atlas_curator_label_promotions.csv"))
+write_csv(semantic_outputs$curator_label_lookup, file.path(mock_output_dir, "atlas_curator_label_promotion_lookup.csv"))
+write_csv(semantic_outputs$mapping_conflicts, file.path(mock_output_dir, "atlas_semantic_mapping_conflicts.csv"))
 write_csv(product_outputs$clinical_concepts, file.path(mock_output_dir, "atlas_clinical_concepts.csv"))
 write_csv(product_outputs$domain_panels, file.path(mock_output_dir, "atlas_domain_panels.csv"))
 write_csv(product_outputs$panel_kpis, file.path(mock_output_dir, "atlas_panel_kpis.csv"))
@@ -384,6 +389,7 @@ ki67_discovery <- build_ki67_discovery_outputs(
   semantic_value_map = semantic_outputs$value_map,
   semantic_code_map = semantic_outputs$code_map,
   semantic_panel_links = semantic_outputs$panel_links,
+  semantic_overlay_lookup = semantic_outputs$overlay_lookup,
   clinical_concepts = product_outputs$clinical_concepts,
   domain_panels = product_outputs$domain_panels,
   panel_kpis = product_outputs$panel_kpis,
@@ -413,6 +419,22 @@ mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
   legacy_reference_vs_current = legacy_reference_vs_current,
   ki67_discovery = ki67_discovery
 )
+confluence_feasibility <- build_confluence_feasibility_outputs(
+  project_root = project_root,
+  sources = sources,
+  columns = columns,
+  column_profiles = column_profiles,
+  column_top_values = column_top_values,
+  panels = panels,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_kpis = product_outputs$panel_kpis,
+  canonical_reconciliation = canonical_reconciliation,
+  legacy_reference_vs_current = legacy_reference_vs_current,
+  min_cell_count = atlas_min_cell_count()
+)
+confluence_write_outputs(confluence_feasibility, mock_output_dir)
+
 write_csv(legacy_resource_audit, file.path(mock_output_dir, "legacy_cartography_source_resolution_audit.csv"))
 write_csv(billeddiagnostik_del2_audit, file.path(mock_output_dir, "billeddiagnostik_del2_regression_audit.csv"))
 write_csv(source_resolution_plan_dry_run, file.path(mock_output_dir, "source_resolution_plan_dry_run.csv"))
@@ -564,6 +586,11 @@ payload <- atlas_payload(
   semantic_value_map = semantic_outputs$value_map,
   semantic_code_map = semantic_outputs$code_map,
   semantic_panel_links = semantic_outputs$panel_links,
+  semantic_unmapped_entity_overlay = semantic_outputs$unmapped_entity_overlay,
+  semantic_overlay_lookup = semantic_outputs$overlay_lookup,
+  curator_label_promotions = semantic_outputs$curator_label_promotions,
+  curator_label_lookup = semantic_outputs$curator_label_lookup,
+  semantic_mapping_conflicts = semantic_outputs$mapping_conflicts,
   clinical_concepts = product_outputs$clinical_concepts,
   domain_panels = product_outputs$domain_panels,
   panel_kpis_product = product_outputs$panel_kpis,
@@ -585,7 +612,8 @@ payload <- atlas_payload(
   remaining_activation_plan = remaining_activation_plan,
   ki67_discovery = ki67_discovery,
   patobank_ki67_percent = patobank_ki67_percent,
-  mcl_triangle_feasibility = mcl_triangle_feasibility
+  mcl_triangle_feasibility = mcl_triangle_feasibility,
+  confluence_feasibility = confluence_feasibility
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 

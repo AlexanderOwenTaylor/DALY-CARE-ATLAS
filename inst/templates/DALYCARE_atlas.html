@@ -1948,12 +1948,19 @@
       const reviewInfrastructure = payload.review_infrastructure_sections || {};
       const reviewStreamingSummary = payload.review_streaming_summary || [];
       const reviewTemporalDateQuality = payload.review_temporal_date_quality || [];
-      const semanticRows = payload.semantic_dictionary_rows || [];
+      const rawSemanticRows = payload.semantic_dictionary_rows || [];
       const semanticValueRows = payload.semantic_value_map_rows || [];
-      const semanticCodeRows = payload.semantic_code_map_rows || [];
+      const rawSemanticCodeRows = payload.semantic_code_map_rows || [];
       const semanticPanelLinks = payload.semantic_panel_links || [];
       const semanticOverlayRows = payload.semantic_unmapped_entity_overlay_rows || [];
+      const semanticOverlayLookupRows = payload.semantic_overlay_lookup_rows || [];
+      const curatorLabelPromotionRows = payload.curator_label_promotion_rows || [];
+      const curatorLabelLookupRows = payload.curator_label_promotion_lookup_rows || [];
       const semanticConflictRows = payload.semantic_mapping_conflict_rows || [];
+      let curatorLabelResolverCache = null;
+      let semanticOverlayResolverCache = null;
+      const semanticRows = semanticDeriveDisplayRows(rawSemanticRows);
+      const semanticCodeRows = semanticDeriveDisplayRows(rawSemanticCodeRows);
       const semanticSummary = payload.review_semantic_summary || [];
       const clinicalConceptRows = payload.clinical_concept_rows || [];
       const domainPanelRows = payload.domain_panel_rows || [];
@@ -2278,6 +2285,270 @@
       function isGenericCodeValue(value) {
         return /^(?:\.|0|00|01|1|2|3|4|5|6|7|8|9|y|n|yes|no|unknown|unk|na|n\/a)$/i.test(text(value || "").trim());
       }
+      function semanticOverlayComparableSystem(value) {
+        const key = text(value || "").toUpperCase();
+        if (key.includes("DNK")) return "DNK";
+        if (key.includes("NPU")) return "NPU";
+        if (key.includes("ATC")) return "ATC";
+        if (key.includes("SNOMED")) return "SNOMED";
+        if (/AEKI|KI67/.test(key)) return "AEKI";
+        if (/ICD|DIAGNOS/.test(key)) return "ICD10";
+        if (/SKS|PROCEDURE|UX|BWGC|BWHA|BOHJ/.test(key)) return "SKS";
+        if (/CAUSE|DEATH/.test(key)) return "CAUSE_OF_DEATH";
+        return key.replace(/[^A-Z0-9]+/g, "_");
+      }
+      function semanticOverlayNormalizeCode(value) {
+        return text(value || "").trim().toUpperCase();
+      }
+      function semanticOverlaySplitValues(value) {
+        return text(value || "")
+          .split(/[;|]/)
+          .map(part => part.trim())
+          .filter(part => part && !/^(na|n\/a|unknown|not available)$/i.test(part));
+      }
+      function semanticOverlaySourceDisplay(row) {
+        const explicit = text(row && row.source_display).trim();
+        if (explicit && explicit !== "semantic_unmapped_entity_map") return explicit;
+        const tables = semanticOverlaySplitValues(row && row.source_tables);
+        if (tables.length === 1) return tables[0];
+        if (tables.length > 1) return "Multiple source tables";
+        return "Source context unavailable";
+      }
+      function semanticOverlayRowsForLookup() {
+        const rows = (semanticOverlayLookupRows && semanticOverlayLookupRows.length) ? semanticOverlayLookupRows : semanticOverlayRows;
+        return (rows || []).map(row => {
+          const targetSystem = row.target_code_system || row.code_system || "";
+          const code = row.normalized_code || row.entity_code || "";
+          return Object.assign({}, row, {
+            comparable_code_system: row.comparable_code_system || semanticOverlayComparableSystem(targetSystem),
+            normalized_code: semanticOverlayNormalizeCode(code),
+            display_label: row.display_label || row.fill_preferred_label || row.clinical_variable || "",
+            source_display: semanticOverlaySourceDisplay(row),
+            provenance_label: row.provenance_label || "Curated semantic overlay from config/semantic-unmapped-entity-map.tsv",
+            promotion_eligible: row.promotion_eligible || (row.overlay_action === "wired_overlay" && row.mapping_status === "wired_overlay" ? "yes" : "no")
+          });
+        });
+      }
+      function semanticOverlayResolver() {
+        if (semanticOverlayResolverCache) return semanticOverlayResolverCache;
+        const bySystemCode = {};
+        const byCode = {};
+        semanticOverlayRowsForLookup().forEach(row => {
+          const code = semanticOverlayNormalizeCode(row.normalized_code || row.entity_code);
+          if (!code) return;
+          const eligible = row.promotion_eligible === "yes" || (row.overlay_action === "wired_overlay" && row.mapping_status === "wired_overlay");
+          if (!eligible) return;
+          const system = semanticOverlayComparableSystem(row.comparable_code_system || row.target_code_system || row.code_system);
+          const key = `${system}\r${code}`;
+          if (!bySystemCode[key]) bySystemCode[key] = row;
+          if (!byCode[code]) byCode[code] = [];
+          byCode[code].push(row);
+        });
+        semanticOverlayResolverCache = { bySystemCode, byCode };
+        return semanticOverlayResolverCache;
+      }
+      function semanticOverlayResolve(codeSystem, code) {
+        const normalizedCode = semanticOverlayNormalizeCode(code);
+        if (!normalizedCode) return null;
+        const system = semanticOverlayComparableSystem(codeSystem);
+        const resolver = semanticOverlayResolver();
+        const exact = resolver.bySystemCode[`${system}\r${normalizedCode}`];
+        if (exact) return exact;
+        const codeOnly = resolver.byCode[normalizedCode] || [];
+        return codeOnly.length === 1 ? codeOnly[0] : null;
+      }
+      function semanticOverlayCodeSystemForRow(row) {
+        return firstNonEmpty(row, ["code_system", "target_code_system"]);
+      }
+      function semanticOverlayCodeForRow(row) {
+        return firstNonEmpty(row, ["raw_code", "code", "entity_code", "raw_value", "display_value"]);
+      }
+      function curatorLabelNormalizeText(value) {
+        return text(value || "").trim();
+      }
+      function curatorLabelNormalizeCode(value) {
+        return curatorLabelNormalizeText(value).toUpperCase();
+      }
+      function curatorLabelKeyPart(value) {
+        return curatorLabelNormalizeText(value).toLowerCase();
+      }
+      function curatorLabelMakeKey(parts) {
+        return (parts || []).map(curatorLabelKeyPart).join("\r");
+      }
+      function curatorLabelCodeTypesForRow(row) {
+        const raw = [
+          row && row.code_type,
+          row && row.code_system,
+          row && row.target_code_system,
+          row && row.clinical_group,
+          row && row.panel,
+          row && row.clinical_variable
+        ].map(text).filter(Boolean);
+        const hay = raw.join(" ").toUpperCase();
+        const out = new Set(raw);
+        if (/NPU/.test(hay)) out.add("NPU");
+        if (/DNK/.test(hay)) out.add("DNK");
+        if (/ATC/.test(hay)) out.add("ATC");
+        if (/SKS|PROCEDURE|UX|BWGC|BWHA|BOHJ/.test(hay)) out.add("SKS/procedure");
+        if (/SNOMED|PATHOLOGY|PATO/.test(hay)) {
+          out.add("SNOMED/pathology");
+          out.add("local_pathology_code");
+        }
+        if (/MATERIAL|SPECIMEN/.test(hay)) out.add("pathology_material_code");
+        if (/INSTITUTION|SOURCE|LAB/.test(hay) && /PATH|PATO/.test(hay)) out.add("pathology_institution_code");
+        if (/TUMOR/.test(hay)) out.add("tumor_code");
+        if (/ICD|DIAGNOS/.test(hay)) out.add("ICD10/SKS diagnosis");
+        if (/CAUSE|DEATH/.test(hay)) out.add("cause_of_death_classification");
+        return Array.from(out).map(curatorLabelNormalizeText).filter(Boolean);
+      }
+      function curatorLabelContext(row) {
+        return {
+          entityScopeKey: firstNonEmpty(row, ["entity_scope_key"]),
+          code: firstNonEmpty(row, ["raw_code", "code", "entity_code", "raw_value", "display_value"]),
+          source: firstNonEmpty(row, ["source_table_or_panel", "source_name", "object_name", "panel_id", "panel", "table_name"]),
+          column: firstNonEmpty(row, ["source_column", "raw_column", "column_name"]),
+          evidence: firstNonEmpty(row, ["evidence_file", "from_file"]),
+          codeTypes: curatorLabelCodeTypesForRow(row || {})
+        };
+      }
+      function curatorLabelRowsForLookup() {
+        const rows = (curatorLabelLookupRows && curatorLabelLookupRows.length) ? curatorLabelLookupRows : curatorLabelPromotionRows;
+        return (rows || []).map(row => {
+          const code = row.normalized_code || row.code || "";
+          const codeType = row.code_type || "";
+          const source = row.source_table_or_panel || "";
+          const column = row.source_column || "";
+          const evidence = row.evidence_file || "";
+          return Object.assign({}, row, {
+            normalized_code: curatorLabelNormalizeCode(code),
+            display_label: row.display_label || row.fill_preferred_label || "",
+            provenance_label: row.provenance_label || "Curator label promotion file",
+            promotion_eligible: row.promotion_eligible || (row.mapping_status_or_reason === "curator_filled_label_ready_for_promotion" ? "yes" : "no"),
+            lookup_key_entity_scope: row.lookup_key_entity_scope || row.entity_scope_key || "",
+            lookup_key_full: row.lookup_key_full || curatorLabelMakeKey([codeType, row.code || code, source, column, evidence]),
+            lookup_key_source_column: row.lookup_key_source_column || curatorLabelMakeKey([codeType, row.code || code, source, column]),
+            lookup_key_source: row.lookup_key_source || curatorLabelMakeKey([codeType, row.code || code, source]),
+            lookup_key_code_type_code: row.lookup_key_code_type_code || curatorLabelMakeKey([codeType, row.code || code]),
+            lookup_key_normalized_code: row.lookup_key_normalized_code || curatorLabelNormalizeCode(row.code || code)
+          });
+        });
+      }
+      function curatorLabelResolver() {
+        if (curatorLabelResolverCache) return curatorLabelResolverCache;
+        const rows = curatorLabelRowsForLookup().filter(row => row.promotion_eligible === "yes");
+        const add = (map, key, row) => {
+          const clean = text(key || "").trim();
+          if (!clean) return;
+          if (!map[clean]) map[clean] = [];
+          map[clean].push(row);
+        };
+        const maps = {
+          entityScope: {},
+          full: {},
+          sourceColumn: {},
+          source: {},
+          codeTypeCode: {},
+          normalizedCode: {}
+        };
+        rows.forEach(row => {
+          add(maps.entityScope, row.lookup_key_entity_scope, row);
+          add(maps.full, row.lookup_key_full, row);
+          add(maps.sourceColumn, row.lookup_key_source_column, row);
+          add(maps.source, row.lookup_key_source, row);
+          add(maps.codeTypeCode, row.lookup_key_code_type_code, row);
+          add(maps.normalizedCode, row.lookup_key_normalized_code, row);
+        });
+        curatorLabelResolverCache = maps;
+        return curatorLabelResolverCache;
+      }
+      function curatorLabelUniqueHit(rows) {
+        const candidates = (rows || []).filter(row => text(row.display_label || row.fill_preferred_label).trim());
+        if (!candidates.length) return null;
+        const labels = Array.from(new Set(candidates.map(row => text(row.display_label || row.fill_preferred_label).trim())));
+        return labels.length === 1 ? candidates[0] : null;
+      }
+      function curatorLabelResolveForRow(row) {
+        const ctx = curatorLabelContext(row || {});
+        const code = curatorLabelNormalizeText(ctx.code);
+        if (!code) return null;
+        const resolver = curatorLabelResolver();
+        if (ctx.entityScopeKey) {
+          const hit = curatorLabelUniqueHit(resolver.entityScope[ctx.entityScopeKey]);
+          if (hit) return hit;
+        }
+        const codeTypes = ctx.codeTypes.length ? ctx.codeTypes : [""];
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.full[curatorLabelMakeKey([codeType, code, ctx.source, ctx.column, ctx.evidence])]);
+          if (hit) return hit;
+        }
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.sourceColumn[curatorLabelMakeKey([codeType, code, ctx.source, ctx.column])]);
+          if (hit) return hit;
+        }
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.source[curatorLabelMakeKey([codeType, code, ctx.source])]);
+          if (hit) return hit;
+        }
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.codeTypeCode[curatorLabelMakeKey([codeType, code])]);
+          if (hit) return hit;
+        }
+        return curatorLabelUniqueHit(resolver.normalizedCode[curatorLabelNormalizeCode(code)]);
+      }
+      function curatorLabelDisplayForRow(row) {
+        const hit = curatorLabelResolveForRow(row);
+        if (!hit) return null;
+        const label = text(hit.display_label || hit.fill_preferred_label || "").trim();
+        return label ? Object.assign({}, hit, { display_label: label, provenance_label: "Curator label promotion file" }) : null;
+      }
+      function semanticDisplayLabelIsGeneric(label, code) {
+        const clean = text(label || "").trim();
+        const key = normalizeClinicalKey(clean);
+        const codeKey = normalizeClinicalKey(code || "");
+        if (!key) return true;
+        if (codeKey && key === codeKey) return true;
+        return /^(unmapped|codeecho|generic)/.test(key) || (codeKey && key.includes(codeKey) && /(code|kode|signal|procedure|classification)/.test(key));
+      }
+      function semanticOverlayDisplayForRow(row, currentLabel) {
+        const curatorHit = curatorLabelDisplayForRow(row);
+        if (curatorHit) return curatorHit;
+        const code = semanticOverlayCodeForRow(row);
+        const hit = semanticOverlayResolve(semanticOverlayCodeSystemForRow(row), code);
+        if (!hit) return null;
+        const label = text(hit.display_label || hit.fill_preferred_label || "").trim();
+        if (!label) return null;
+        const current = currentLabel || firstNonEmpty(row, ["code_name", "clinical_variable", "display_value", "raw_value", "label"]);
+        if (!semanticDisplayLabelIsGeneric(current, code)) return null;
+        return hit;
+      }
+      function semanticOverlaySourceForDisplay(value) {
+        const clean = text(value || "").trim();
+        if (/^(semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions)$/i.test(clean)) {
+          return "Source context retained in lineage";
+        }
+        return clean;
+      }
+      function semanticDeriveDisplayRows(rows) {
+        return (rows || []).map(row => {
+          const out = Object.assign({}, row);
+          const code = semanticOverlayCodeForRow(out);
+          const hit = semanticOverlayDisplayForRow(out);
+          if (hit) {
+            const label = hit.display_label || hit.fill_preferred_label;
+            out.overlay_previous_label = firstNonEmpty(out, ["code_name", "clinical_variable", "display_value", "raw_value", "label"]);
+            if ("code_name" in out) out.code_name = label;
+            if ("clinical_variable" in out) out.clinical_variable = label;
+            out.semantic_overlay_label = label;
+            out.semantic_overlay_provenance = hit.provenance_label;
+          }
+          if (/^(semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions)$/i.test(out.source_name || "")) {
+            const sourceHit = hit || semanticOverlayResolve(semanticOverlayCodeSystemForRow(out), code);
+            out.source_name = sourceHit ? sourceHit.source_display : "Curated semantic label overlay";
+          }
+          if (/^(semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions)$/i.test(out.object_name || "")) out.object_name = out.source_name || "Curated semantic label overlay";
+          return out;
+        });
+      }
       function scoreSearchResult(row, query, fieldGroups) {
         const terms = expandSearchTerms(query);
         if (!terms.length) return 0;
@@ -2539,7 +2810,7 @@
             grouped["Raw columns / lineage"].push(makeSearchResult(
               "Raw columns / lineage",
               semanticRawName(row) || row.semantic_id,
-              [row.clinical_variable, row.source_name, row.mapping_status].filter(Boolean).join(" - "),
+              [row.clinical_variable, semanticOverlaySourceForDisplay(row.source_name), row.mapping_status].filter(Boolean).join(" - "),
               row,
               { tab: "dictionary", sub: "dictionary-lineage" },
               { query: row.raw_column || row.clinical_variable || row.semantic_id, item: row.semantic_id, status: row.mapping_confidence || row.mapping_status, copy: fieldCopyValue(row, ["source_name", "raw_column"], ".") || row.semantic_id, score }
@@ -2548,6 +2819,7 @@
         });
         semanticCodeRows.forEach(row => {
           const codeValue = codeSearchValue(row);
+          const titleLabel = firstNonEmpty(row, ["code_name", "clinical_variable"]) || codeValue;
           const score = scoreSearchResult(row, q, {
             exact: ["raw_code", "code", "code_name", "semantic_id", "clinical_concept_id"],
             title: ["code_name", "clinical_variable", "code_system"],
@@ -2559,8 +2831,8 @@
           if (score > 0) {
             grouped["Codes"].push(makeSearchResult(
               "Codes",
-              codeValue,
-              [row.code_system, row.clinical_variable, row.source_name].filter(Boolean).join(" - "),
+              semanticDisplayLabelIsGeneric(titleLabel, codeValue) ? codeValue : titleLabel,
+              [row.code_system, codeValue, semanticOverlaySourceForDisplay(row.source_name)].filter(Boolean).join(" - "),
               row,
               { tab: "dictionary", sub: "dictionary-codes" },
               { query: codeValue, item: row.semantic_id || codeValue, status: row.mapping_status, copy: codeValue, score }
@@ -2577,11 +2849,29 @@
           if (score > 0) {
             grouped["Codes"].push(makeSearchResult(
               "Codes",
-              row.entity_code || row.entity_scope_key,
-              [row.target_code_system || row.code_system, row.fill_preferred_label, row.overlay_action].filter(Boolean).join(" - "),
+              row.fill_preferred_label || row.display_label || row.entity_code || row.entity_scope_key,
+              [row.target_code_system || row.code_system, row.entity_code, row.overlay_action].filter(Boolean).join(" - "),
               row,
               { tab: "dictionary", sub: "dictionary-codes" },
               { query: row.entity_code || row.fill_preferred_label || row.entity_scope_key, item: row.entity_scope_key, status: row.overlay_action || row.mapping_status, copy: row.entity_code || row.entity_scope_key, score }
+            ));
+          }
+        });
+        curatorLabelRowsForLookup().forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["entity_scope_key", "code", "normalized_code", "code_type"],
+            title: ["display_label", "fill_preferred_label", "code_type"],
+            source: ["source_table_or_panel", "source_column"],
+            body: ["evidence_file", "notes", "prior_display_label"]
+          });
+          if (score > 0) {
+            grouped["Codes"].push(makeSearchResult(
+              "Codes",
+              row.display_label || row.fill_preferred_label || row.code || row.entity_scope_key,
+              [row.code, row.code_type, row.source_table_or_panel].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-codes" },
+              { query: row.code || row.display_label || row.entity_scope_key, item: row.entity_scope_key || row.code, status: "curator label promotion", copy: row.code || row.entity_scope_key, score: score + 10 }
             ));
           }
         });
@@ -3402,11 +3692,13 @@
         const maxValue = Math.max(...shown.map(hBarNumericValue), 1);
         return `<div class="h-bar-list" data-scale-mode="${escapeHtml(scaleMode)}">${shown.map(row => {
           const rawLabel = row.label || row.display_value || row.raw_value || row.raw_code || row.statistic || row.clinical_variable || "";
-          const label = humanizeAtlasLabel(rawLabel);
+          const overlayHit = semanticOverlayDisplayForRow(row, rawLabel);
+          const label = overlayHit ? overlayHit.display_label : humanizeAtlasLabel(rawLabel);
           const value = row.n || row.value || row.statistic_value || row.n_rows || row.matched_rows || "";
           const pct = hBarWidth(row, scaleMode, maxValue);
           const rowTone = toneColor(row.tone || opts.rowTone || tone);
-          const secondary = text(row.secondaryLabel || row.secondary_label || rawLineageHint(row, label)).trim();
+          const overlaySecondary = overlayHit ? [semanticOverlayCodeForRow(row), semanticOverlayCodeSystemForRow(row), "curated semantic label"].filter(Boolean).join(" · ") : "";
+          const secondary = text(row.secondaryLabel || row.secondary_label || overlaySecondary || rawLineageHint(row, label)).trim();
           return `<div class="h-bar">
             <div class="label" title="${escapeHtml([label, secondary].filter(Boolean).join(" | "))}">${escapeHtml(label)}${secondary ? `<span class="label-secondary">${escapeHtml(secondary)}</span>` : ""}</div>
             <div class="track"><div class="fill" style="width:${pct}%;background:var(--${rowTone})"></div></div>
@@ -3572,7 +3864,7 @@
           row && row.raw_column,
           row && row.raw_value,
           row && row.raw_code,
-          row && row.source_name,
+          row && semanticOverlaySourceForDisplay(row.source_name),
           row && row.evidence_file
         ].map(text).filter(Boolean);
         const unique = Array.from(new Set(raw)).filter(value => normalizeClinicalKey(value) !== normalizeClinicalKey(primaryLabel));
@@ -3580,6 +3872,10 @@
       }
       function hBarNumericValue(row) {
         return numberValue(row.n || row.value || row.statistic_value || row.n_rows || row.matched_rows);
+      }
+      function percentFromRow(row, maxValue) {
+        const value = hBarNumericValue(row);
+        return maxValue > 0 && value > 0 ? Math.max(3, Math.min(100, value / maxValue * 100)) : 0;
       }
       function hBarPercentValue(row) {
         return Number(row.pct_rows || row.pct || row.percentage || row.pct_available);
@@ -5159,6 +5455,10 @@
         "L01XX45": "Carfilzomib"
       };
       function treatmentDisplayLabel(row) {
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) {
+          return overlayHit.display_label;
+        }
         const context = renderlessTreatmentContext(row);
         const code = text(row.code || row.raw_code || "").trim();
         const codeSystem = text(row.code_system || "").trim().toUpperCase();
@@ -5184,6 +5484,8 @@
           n: row.n_rows || row.n || row.matched_rows || "",
           pct: row.pct,
           source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
           evidence_file: row.evidence_file,
           clinical_concept_id: row.clinical_concept_id,
           raw_column: row.raw_column,
@@ -5428,6 +5730,8 @@
       }
       function imagingSafeLabel(row) {
         if (imagingIsDateLike(row) || imagingIsFreeText(row)) return "";
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) return overlayHit.display_label;
         const translated = imagingTranslatedCode(row);
         if (translated) return translated;
         const codeCandidate = [row.raw_code, row.code, row.raw_value, row.display_value]
@@ -5501,6 +5805,14 @@
           label: imagingSafeLabel(row) || row.raw_column || row.clinical_variable,
           n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
+          source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
+          raw_code: row.raw_code || row.code,
+          raw_value: row.raw_value || row.display_value,
+          evidence_file: row.evidence_file,
+          clinical_concept_id: row.clinical_concept_id,
+          raw_column: row.raw_column,
           count_scope: row.count_scope,
           denominator_scope: row.denominator_scope,
           profile_scope: row.profile_scope,
@@ -5728,6 +6040,8 @@
           });
       }
       function microbiologySafeLabel(row) {
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) return overlayHit.display_label;
         const label = [row.raw_value, row.raw_descriptor, row.raw_code, row.display_value]
           .map(text)
           .find(value => {
@@ -5798,6 +6112,8 @@
           n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
           source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
           evidence_file: row.evidence_file,
           clinical_concept_id: row.clinical_concept_id,
           raw_column: row.raw_column,
@@ -6022,6 +6338,10 @@
         "21": "Pathology specimen/material code 21"
       };
       function pathologyCodeDisplay(row) {
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) {
+          return overlayHit.display_label;
+        }
         const code = text(row.raw_code || row.code || "").trim();
         const value = text(row.raw_value || row.display_value || "").trim();
         const codeCandidate = code || value;
@@ -6090,6 +6410,8 @@
           n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
           source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
           evidence_file: row.evidence_file,
           clinical_concept_id: row.clinical_concept_id,
           raw_column: row.raw_column,
@@ -7952,6 +8274,11 @@
         return Array.from(new Set(codes.flatMap(value => value.split(/[;,]\s*/).filter(Boolean))));
       }
       function npuDisplayConcept(row) {
+        const firstCode = npuCodeList(row)[0];
+        const curatorHit = curatorLabelResolveForRow(Object.assign({}, row, { code_system: row.code_system || "NPU", code: firstCode }));
+        if (curatorHit) return curatorHit.display_label || curatorHit.fill_preferred_label;
+        const overlayHit = semanticOverlayResolve(row.code_system || "NPU", firstCode);
+        if (overlayHit) return overlayHit.display_label || overlayHit.fill_preferred_label;
         const explicit = [
           row.display_concept,
           row.candidate_label,
@@ -7968,7 +8295,7 @@
         if (vectorLabel) return vectorLabel;
         const surfaceLabel = humanizeNpuVector(row.surface);
         if (surfaceLabel) return surfaceLabel;
-        const code = npuCodeList(row)[0];
+        const code = firstCode;
         return code ? `Unmapped NPU code: ${code}` : "Unmapped NPU concept";
       }
       function npuDetectiveGroupedRows(rows) {
@@ -8727,6 +9054,23 @@
           .filter(el => /[_A-Za-z]{20,}/.test(el.textContent || "") && /_/.test(el.textContent || ""))
           .slice(0, 30)
           .map(el => (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160));
+        const visibleText = (document.body.innerText || "").replace(/\s+/g, " ");
+        const pseudoSourcePattern = /semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions/i;
+        const visiblePseudoSource = pseudoSourcePattern.test(visibleText);
+        const mappedUnmappedLabels = Array.from(document.querySelectorAll(".h-bar .label, .semantic-row strong, .global-search-result-title"))
+          .filter(visible)
+          .map(el => (el.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(label => /Unmapped (NPU|SNOMED|SKS|UX|BWGC|ATC|pathology)/i.test(label))
+          .slice(0, 30);
+        const curatorPromotionIssues = Array.from(document.querySelectorAll(".h-bar .label, .semantic-row strong, .global-search-result-title, .card h3"))
+          .filter(visible)
+          .map(el => (el.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(label =>
+            pseudoSourcePattern.test(label) ||
+            /^(Unmapped NPU code|Unmapped SNOMED\/pathology code|CT imaging signal|SKS antineoplastic procedure)/i.test(label) ||
+            /[a-z)](?:CT imaging signal|SKS procedure\/treatment signal|ATC medication signal)/.test(label)
+          )
+          .slice(0, 30);
         return {
           href: window.location.href,
           qaViewport: new URLSearchParams(window.location.search).get("qaViewport") || "",
@@ -8743,6 +9087,14 @@
             repeatedPrefixes,
             emptyBeforeBars,
             rawHeadingCandidates
+          },
+          semanticOverlayPromotion: {
+            visiblePseudoSource,
+            mappedUnmappedLabels
+          },
+          curatorLabelPromotion: {
+            visiblePseudoSource,
+            issues: curatorPromotionIssues
           }
         };
       }

@@ -7,7 +7,8 @@ semantic_dictionary_columns <- function() {
     "patient_id_column", "date_column", "value_column", "source_level",
     "geography", "n_rows", "n_patients", "pct_non_missing", "min_date",
     "max_date", "evidence_file", "evidence_filter", "mapping_confidence",
-    "mapping_status", "privacy_note", "clinical_caveat", "search_terms"
+    "mapping_status", "privacy_note", "clinical_caveat", "search_terms",
+    "prior_display_label", "curator_label_provenance"
   )
 }
 
@@ -25,7 +26,7 @@ semantic_code_map_columns <- function() {
     "semantic_id", "clinical_concept_id", "clinical_variable", "clinical_group",
     "source_name", "object_name", "code_system", "code", "code_name",
     "panel", "n_rows", "n_patients", "evidence_file", "mapping_confidence",
-    "notes"
+    "notes", "prior_display_label", "curator_label_provenance"
   )
 }
 
@@ -44,7 +45,8 @@ empty_semantic_data_dictionary <- function() {
     source_level = character(), geography = character(), n_rows = numeric(), n_patients = numeric(),
     pct_non_missing = numeric(), min_date = character(), max_date = character(), evidence_file = character(),
     evidence_filter = character(), mapping_confidence = character(), mapping_status = character(),
-    privacy_note = character(), clinical_caveat = character(), search_terms = character()
+    privacy_note = character(), clinical_caveat = character(), search_terms = character(),
+    prior_display_label = character(), curator_label_provenance = character()
   )
 }
 
@@ -64,7 +66,7 @@ empty_semantic_code_map <- function() {
     clinical_group = character(), source_name = character(), object_name = character(),
     code_system = character(), code = character(), code_name = character(), panel = character(),
     n_rows = numeric(), n_patients = numeric(), evidence_file = character(), mapping_confidence = character(),
-    notes = character()
+    notes = character(), prior_display_label = character(), curator_label_provenance = character()
   )
 }
 
@@ -82,7 +84,78 @@ empty_semantic_outputs <- function() {
     code_map = empty_semantic_code_map(),
     panel_links = empty_semantic_panel_links(),
     unmapped_entity_overlay = empty_semantic_unmapped_entity_overlay(),
-    mapping_conflicts = empty_semantic_mapping_conflicts()
+    mapping_conflicts = empty_semantic_mapping_conflicts(),
+    overlay_lookup = empty_semantic_overlay_lookup(),
+    curator_label_promotions = empty_curator_label_promotions(),
+    curator_label_lookup = empty_curator_label_lookup(),
+    curator_label_summary = empty_curator_label_promotion_summary(),
+    remaining_unmapped_after_curator_promotions = empty_remaining_unmapped_after_curator_promotions()
+  )
+}
+
+curator_label_promotion_columns <- function() {
+  c(
+    "code_type", "code", "fill_preferred_label", "issue_type",
+    "current_label_or_display", "existing_validated_label_if_any",
+    "uploaded_dictionary_label_if_any", "overlay_label_if_any",
+    "mapping_status_or_reason", "source_table_or_panel", "source_column",
+    "evidence_file", "observed_count", "observed_pct", "entity_scope_key",
+    "from_file", "notes"
+  )
+}
+
+curator_label_lookup_columns <- function() {
+  c(
+    "entity_scope_key", "code_type", "code", "normalized_code", "display_label",
+    "source_table_or_panel", "source_column", "evidence_file", "observed_count",
+    "observed_pct", "from_file", "prior_display_label", "provenance_label",
+    "promotion_status", "promotion_eligible", "lookup_key_entity_scope",
+    "lookup_key_full", "lookup_key_source_column", "lookup_key_source",
+    "lookup_key_code_type_code", "lookup_key_normalized_code", "ambiguity_reason",
+    "notes"
+  )
+}
+
+curator_label_promotion_summary_columns <- function() {
+  c("metric", "value", "notes")
+}
+
+remaining_unmapped_after_curator_promotions_columns <- function() {
+  c(
+    "code_type", "code", "current_display_label", "source_table_or_panel",
+    "source_column", "evidence_file", "observed_count", "reason_not_promoted"
+  )
+}
+
+empty_curator_label_promotions <- function() {
+  data.frame(
+    matrix(ncol = length(curator_label_promotion_columns()), nrow = 0,
+           dimnames = list(NULL, curator_label_promotion_columns())),
+    stringsAsFactors = FALSE
+  )
+}
+
+empty_curator_label_lookup <- function() {
+  data.frame(
+    matrix(ncol = length(curator_label_lookup_columns()), nrow = 0,
+           dimnames = list(NULL, curator_label_lookup_columns())),
+    stringsAsFactors = FALSE
+  )
+}
+
+empty_curator_label_promotion_summary <- function() {
+  data.frame(
+    matrix(ncol = length(curator_label_promotion_summary_columns()), nrow = 0,
+           dimnames = list(NULL, curator_label_promotion_summary_columns())),
+    stringsAsFactors = FALSE
+  )
+}
+
+empty_remaining_unmapped_after_curator_promotions <- function() {
+  data.frame(
+    matrix(ncol = length(remaining_unmapped_after_curator_promotions_columns()), nrow = 0,
+           dimnames = list(NULL, remaining_unmapped_after_curator_promotions_columns())),
+    stringsAsFactors = FALSE
   )
 }
 
@@ -105,7 +178,8 @@ semantic_unmapped_entity_overlay_columns <- function() {
     semantic_unmapped_entity_map_columns(),
     "target_code_system", "clinical_group", "clinical_variable", "clinical_concept_id",
     "n_rows", "n_patients", "overlay_action", "mapping_status", "conflict_reason",
-    "existing_label", "existing_mapping_confidence", "evidence_file"
+    "existing_label", "existing_mapping_confidence", "source_display", "provenance_label",
+    "evidence_file"
   )
 }
 
@@ -116,6 +190,17 @@ semantic_mapping_conflict_columns <- function() {
     "existing_clinical_concept_id", "existing_clinical_group",
     "existing_mapping_confidence", "existing_evidence_file", "mapping_status",
     "conflict_reason", "review_priority", "source_files", "notes"
+  )
+}
+
+semantic_overlay_lookup_columns <- function() {
+  c(
+    "entity_scope_key", "code_system", "entity_code", "target_code_system",
+    "comparable_code_system", "normalized_code", "display_label",
+    "clinical_group", "clinical_concept_id", "source_display",
+    "source_tables", "source_files", "provenance_label", "evidence_file",
+    "overlay_action", "mapping_status", "promotion_eligible",
+    "conflict_reason", "existing_label", "notes"
   )
 }
 
@@ -135,8 +220,60 @@ empty_semantic_mapping_conflicts <- function() {
   )
 }
 
+empty_semantic_overlay_lookup <- function() {
+  data.frame(
+    matrix(ncol = length(semantic_overlay_lookup_columns()), nrow = 0,
+           dimnames = list(NULL, semantic_overlay_lookup_columns())),
+    stringsAsFactors = FALSE
+  )
+}
+
 semantic_unmapped_entity_map_path <- function(project_root = ".") {
   file.path(project_root, "config", "semantic-unmapped-entity-map.tsv")
+}
+
+curator_label_promotions_path <- function(project_root = ".") {
+  file.path(project_root, "config", "dalycare_cycle4_curator_label_promotions.csv")
+}
+
+read_curator_label_promotions <- function(project_root = ".", validate = TRUE) {
+  path <- curator_label_promotions_path(project_root)
+  if (!file.exists(path)) return(empty_curator_label_promotions())
+  rows <- suppressWarnings(read_delimited_file(path))
+  rows <- align_semantic_frame(rows, curator_label_promotion_columns())
+  if (isTRUE(validate)) validate_curator_label_promotions(rows)
+  rows
+}
+
+validate_curator_label_promotions <- function(rows, expected_rows = 5047L) {
+  if (!is.data.frame(rows)) stop("Curator label promotion map must be a data frame.", call. = FALSE)
+  required <- c("code_type", "code", "fill_preferred_label")
+  missing <- setdiff(required, names(rows))
+  if (length(missing)) {
+    stop("Curator label promotion map is missing required columns: ", paste(missing, collapse = ", "), call. = FALSE)
+  }
+  if (!is.null(expected_rows) && nrow(rows) != expected_rows) {
+    stop("Curator label promotion map row-count mismatch: expected ", expected_rows, ", observed ", nrow(rows), call. = FALSE)
+  }
+  if (any(!nzchar(trimws(rows$fill_preferred_label %||% "")))) {
+    stop("Curator label promotion map contains blank fill_preferred_label values.", call. = FALSE)
+  }
+  text_matrix <- as.character(unlist(rows, use.names = FALSE))
+  text_matrix <- text_matrix[!is.na(text_matrix) & nzchar(text_matrix)]
+  if (any(grepl("\\b[0-9]{6}[- ]?[0-9]{4}\\b", text_matrix))) {
+    stop("Curator label promotion map contains CPR-like values.", call. = FALSE)
+  }
+  if (any(grepl("[\u00C3\u00E2\uFFFD]", text_matrix))) {
+    stop("Curator label promotion map contains mojibake markers.", call. = FALSE)
+  }
+  display_fields <- intersect(c("code", "fill_preferred_label", "current_label_or_display", "existing_validated_label_if_any", "uploaded_dictionary_label_if_any", "overlay_label_if_any"), names(rows))
+  display_values <- unlist(rows[display_fields], use.names = FALSE)
+  display_values <- trimws(as.character(display_values))
+  display_values <- display_values[!is.na(display_values) & nzchar(display_values)]
+  if (any(grepl("^((19|20)[0-9]{2}[-/][0-9]{2}[-/][0-9]{2}|[0-9]{8}|[0-9]{2}[-/][0-9]{2}[-/](19|20)[0-9]{2})$", display_values))) {
+    stop("Curator label promotion map contains raw date-like values in display fields.", call. = FALSE)
+  }
+  invisible(TRUE)
 }
 
 read_semantic_unmapped_entity_map <- function(project_root = ".", validate = TRUE) {
@@ -318,6 +455,23 @@ build_semantic_outputs <- function(project_root = ".", sources = NULL, column_pr
     code_map = code_map,
     min_cell_count = min_cell_count
   )
+  promoted <- semantic_apply_overlay_display_labels(
+    dictionary = dictionary,
+    code_map = code_map,
+    overlay = unmapped_overlay$overlay,
+    conflicts = unmapped_overlay$conflicts
+  )
+  dictionary <- promoted$dictionary
+  code_map <- promoted$code_map
+  curator_promotions <- read_curator_label_promotions(project_root, validate = TRUE)
+  curator_lookup <- curator_label_build_lookup(curator_promotions)
+  curator_promoted <- semantic_apply_curator_label_promotions(
+    dictionary = dictionary,
+    code_map = code_map,
+    lookup = curator_lookup
+  )
+  dictionary <- curator_promoted$dictionary
+  code_map <- curator_promoted$code_map
   dictionary <- semantic_dedupe_dictionary(bind_rows_base(list(dictionary, unmapped_overlay$dictionary)))
   code_map <- semantic_dedupe_code_map(bind_rows_base(list(code_map, unmapped_overlay$code_map)))
   if (!nrow(panel_links) && nrow(dictionary)) {
@@ -331,7 +485,12 @@ build_semantic_outputs <- function(project_root = ".", sources = NULL, column_pr
     code_map = align_semantic_frame(code_map, semantic_code_map_columns()),
     panel_links = align_semantic_frame(panel_links, semantic_panel_links_columns()),
     unmapped_entity_overlay = align_semantic_frame(unmapped_overlay$overlay, semantic_unmapped_entity_overlay_columns()),
-    mapping_conflicts = align_semantic_frame(unmapped_overlay$conflicts, semantic_mapping_conflict_columns())
+    mapping_conflicts = align_semantic_frame(unmapped_overlay$conflicts, semantic_mapping_conflict_columns()),
+    overlay_lookup = align_semantic_frame(unmapped_overlay$lookup, semantic_overlay_lookup_columns()),
+    curator_label_promotions = align_semantic_frame(curator_promotions, curator_label_promotion_columns()),
+    curator_label_lookup = align_semantic_frame(curator_lookup, curator_label_lookup_columns()),
+    curator_label_summary = align_semantic_frame(curator_promoted$summary, curator_label_promotion_summary_columns()),
+    remaining_unmapped_after_curator_promotions = align_semantic_frame(curator_promoted$remaining, remaining_unmapped_after_curator_promotions_columns())
   )
   normalize_semantic_source_names(out)
 }
@@ -1432,8 +1591,40 @@ semantic_overlay_subgroup <- function(group, code_system, domain) {
   first_nonblank(domain, paste("Curated", code_system, "overlay"))
 }
 
+semantic_overlay_split_values <- function(value) {
+  value <- as.character(value %||% "")
+  if (!nzchar(value)) return(character())
+  parts <- unlist(strsplit(value, "[;|]", perl = TRUE), use.names = FALSE)
+  parts <- trimws(parts)
+  parts <- parts[!is.na(parts) & nzchar(parts)]
+  parts <- parts[!tolower(parts) %in% c("na", "n/a", "unknown", "not available")]
+  unique(parts)
+}
+
 semantic_overlay_source_name <- function(row) {
-  "semantic_unmapped_entity_map"
+  tables <- semantic_overlay_split_values(row$source_tables %||% "")
+  if (length(tables) == 1L) return(tables[[1]])
+  if (length(tables) > 1L) return("Multiple source tables")
+  files <- semantic_overlay_split_values(row$source_files %||% "")
+  recovered <- first_nonblank(vapply(files, function(file) semantic_recover_source_name("", file, ""), character(1)), "")
+  if (nzchar(recovered) && !semantic_source_looks_like_evidence_file(recovered)) return(recovered)
+  "Source context unavailable"
+}
+
+semantic_overlay_provenance_label <- function() {
+  "Curated semantic overlay from config/semantic-unmapped-entity-map.tsv"
+}
+
+semantic_overlay_dictionary_raw_column <- function(row, target_system, source_display) {
+  column <- trimws(row$code_columns[[1]] %||% "")
+  if (
+    !identical(target_system, "SNOMED") &&
+      identical(source_display, "SDS_pato") &&
+      grepl("\\bc_snomedkode\\b", column, ignore.case = TRUE)
+  ) {
+    return("curated_overlay_code")
+  }
+  first_nonblank(column, "curated_overlay_code")
 }
 
 semantic_overlay_evidence_file <- function(row) {
@@ -1461,18 +1652,34 @@ semantic_overlay_labels_compatible <- function(existing_label, overlay_label) {
   FALSE
 }
 
-semantic_overlay_existing_is_generic <- function(row, code) {
+semantic_overlay_text_is_generic <- function(label, code) {
   code <- toupper(as.character(code %||% ""))
-  label <- first_nonblank(c(row$code_name, row$clinical_variable), "")
   key <- toupper(trimws(label))
   if (!nzchar(label)) return(TRUE)
   if (identical(key, code)) return(TRUE)
   if (grepl("^UNMAPPED|CODE ECHO|GENERIC", key)) return(TRUE)
-  if (grepl(paste0("\\b", gsub("([\\W])", "\\\\\\1", code), "\\b"), key) &&
+  if (nzchar(code) && grepl(code, key, fixed = TRUE) &&
       grepl("\\b(CODE|KODE|SIGNAL|PROCEDURE|CLASSIFICATION)\\b", key)) {
     return(TRUE)
   }
   FALSE
+}
+
+semantic_curator_text_is_visible_debt <- function(label, code) {
+  code <- toupper(as.character(code %||% ""))
+  key <- toupper(trimws(label %||% ""))
+  if (!nzchar(key)) return(TRUE)
+  if (nzchar(code) && identical(key, code)) return(TRUE)
+  if (grepl("^UNMAPPED|^CODE ECHO|^GENERIC", key)) return(TRUE)
+  if (grepl("SEMANTIC_UNMAPPED_ENTITY_MAP|DALYCARE_CYCLE4_COLUMN_C_FILLED_CORRECTED_READY_FOR_CODEX|DALYCARE_CYCLE4_CURATOR_LABEL_PROMOTIONS", key)) {
+    return(TRUE)
+  }
+  FALSE
+}
+
+semantic_overlay_existing_is_generic <- function(row, code) {
+  label <- first_nonblank(c(row$code_name, row$clinical_variable), "")
+  semantic_overlay_text_is_generic(label, code)
 }
 
 semantic_overlay_conflict_for_row <- function(row, code_map) {
@@ -1519,6 +1726,7 @@ semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, cod
   conflict_rows <- list()
   dictionary_rows <- list()
   code_rows <- list()
+  lookup_rows <- list()
   conflict_code_map <- code_map
   if (is.data.frame(conflict_code_map) && nrow(conflict_code_map)) {
     conflict_code_map$.semantic_overlay_comparable_system <- vapply(
@@ -1540,6 +1748,9 @@ semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, cod
     action <- if (is.null(conflict)) "wired_overlay" else "conflict_pending_review"
     conflict_reason <- if (is.null(conflict)) "" else "Curated overlay label disagrees with an existing non-generic atlas/cartography label."
     existing_label <- if (is.null(conflict)) "" else first_nonblank(c(conflict$code_name, conflict$clinical_variable), "")
+    source_display <- semantic_overlay_source_name(row)
+    evidence <- semantic_overlay_evidence_file(row)
+    provenance <- semantic_overlay_provenance_label()
     overlay_rows[[length(overlay_rows) + 1L]] <- cbind(
       row,
       data.frame(
@@ -1554,11 +1765,35 @@ semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, cod
         conflict_reason = conflict_reason,
         existing_label = existing_label,
         existing_mapping_confidence = if (is.null(conflict)) "" else conflict$mapping_confidence[[1]] %||% "",
-        evidence_file = semantic_overlay_evidence_file(row),
+        source_display = source_display,
+        provenance_label = provenance,
+        evidence_file = evidence,
         stringsAsFactors = FALSE,
         check.names = FALSE
       ),
       stringsAsFactors = FALSE
+    )
+    lookup_rows[[length(lookup_rows) + 1L]] <- semantic_overlay_lookup_row(
+      entity_scope_key = row$entity_scope_key[[1]],
+      code_system = row$code_system[[1]],
+      entity_code = code,
+      target_code_system = target_system,
+      comparable_code_system = semantic_overlay_comparable_code_system(target_system),
+      normalized_code = toupper(code),
+      display_label = label,
+      clinical_group = group,
+      clinical_concept_id = concept_id,
+      source_display = source_display,
+      source_tables = row$source_tables[[1]],
+      source_files = row$source_files[[1]],
+      provenance_label = provenance,
+      evidence_file = evidence,
+      overlay_action = action,
+      mapping_status = action,
+      promotion_eligible = if (identical(action, "wired_overlay")) "yes" else "no",
+      conflict_reason = conflict_reason,
+      existing_label = existing_label,
+      notes = semantic_terms(c(row$fill_denotation_definition[[1]], row$fill_notes_for_codex[[1]]))
     )
     if (!is.null(conflict)) {
       conflict_rows[[length(conflict_rows) + 1L]] <- data.frame(
@@ -1583,13 +1818,13 @@ semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, cod
       )
       next
     }
-    source_name <- semantic_overlay_source_name(row)
-    evidence <- semantic_overlay_evidence_file(row)
+    source_name <- source_display
     notes <- semantic_terms(c(
       trimws(row$fill_specimen_or_context[[1]] %||% ""),
       trimws(row$fill_unit_or_value_type[[1]] %||% ""),
       trimws(row$fill_validation_source_or_owner[[1]] %||% ""),
       trimws(row$fill_notes_for_codex[[1]] %||% ""),
+      provenance,
       "Curated semantic overlay for previously unmapped/code-echo entity; counts are aggregate/code-inventory context and not patient/person denominators."
     ))
     if (identical(group, "Treatment") && identical(target_system, "ATC")) {
@@ -1625,7 +1860,7 @@ semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, cod
       semantic_meaning = trimws(row$fill_denotation_definition[[1]] %||% ""),
       source_name = source_name,
       object_name = source_name,
-      raw_column = row$code_columns[[1]] %||% "",
+      raw_column = semantic_overlay_dictionary_raw_column(row, target_system, source_display),
       raw_descriptor = row$current_denotation_in_atlas_or_reference[[1]] %||% "",
       raw_code = code,
       code_system = target_system,
@@ -1647,12 +1882,461 @@ semantic_build_unmapped_entity_overlay <- function(project_root, dictionary, cod
   }
   overlay <- align_semantic_frame(bind_rows_base(overlay_rows), semantic_unmapped_entity_overlay_columns())
   conflicts <- align_semantic_frame(bind_rows_base(conflict_rows), semantic_mapping_conflict_columns())
+  overlay_dictionary <- semantic_dedupe_dictionary(bind_rows_base(dictionary_rows))
+  overlay_code_map <- semantic_dedupe_code_map(bind_rows_base(code_rows))
+  overlay_code_map <- semantic_apply_lab_source_context_code_map(overlay_code_map)
+  overlay_code_map <- semantic_apply_treatment_source_context_code_map(overlay_code_map)
+  overlay_dictionary <- semantic_apply_lab_source_context_dictionary(overlay_dictionary)
+  overlay_dictionary <- semantic_apply_treatment_source_context_dictionary(overlay_dictionary)
   list(
     overlay = overlay,
     conflicts = conflicts,
-    dictionary = semantic_dedupe_dictionary(bind_rows_base(dictionary_rows)),
-    code_map = semantic_dedupe_code_map(bind_rows_base(code_rows))
+    lookup = align_semantic_frame(bind_rows_base(lookup_rows), semantic_overlay_lookup_columns()),
+    dictionary = overlay_dictionary,
+    code_map = overlay_code_map
   )
+}
+
+semantic_overlay_lookup_row <- function(...) {
+  values <- list(...)
+  cols <- semantic_overlay_lookup_columns()
+  out <- as.list(stats::setNames(rep(NA_character_, length(cols)), cols))
+  for (nm in names(values)) out[[nm]] <- values[[nm]]
+  data.frame(out, stringsAsFactors = FALSE, check.names = FALSE)
+}
+
+semantic_overlay_display_lookup <- function(overlay) {
+  if (!is.data.frame(overlay) || !nrow(overlay)) return(list())
+  rows <- overlay[
+    overlay$overlay_action == "wired_overlay" &
+      overlay$mapping_status == "wired_overlay",
+    ,
+    drop = FALSE
+  ]
+  out <- list()
+  if (!nrow(rows)) return(out)
+  for (i in seq_len(nrow(rows))) {
+    row <- rows[i, , drop = FALSE]
+    code <- toupper(trimws(row$entity_code[[1]] %||% ""))
+    if (!nzchar(code)) next
+    system <- semantic_overlay_comparable_code_system(row$target_code_system[[1]] %||% row$code_system[[1]])
+    key <- paste(system, code, sep = "\r")
+    if (is.null(out[[key]])) out[[key]] <- row
+  }
+  out
+}
+
+semantic_overlay_lookup_hit <- function(lookup, code_system, code) {
+  code <- toupper(trimws(as.character(code %||% "")))
+  if (!nzchar(code)) return(NULL)
+  system <- semantic_overlay_comparable_code_system(code_system)
+  hit <- lookup[[paste(system, code, sep = "\r")]]
+  if (!is.null(hit)) return(hit)
+  matches <- Filter(function(row) toupper(row$entity_code[[1]] %||% "") == code, lookup)
+  if (length(matches) == 1L) matches[[1]] else NULL
+}
+
+semantic_overlay_display_label <- function(row) {
+  first_nonblank(c(row$fill_preferred_label, row$clinical_variable), "")
+}
+
+semantic_apply_overlay_display_labels <- function(dictionary, code_map, overlay, conflicts = NULL) {
+  lookup <- semantic_overlay_display_lookup(overlay)
+  if (!length(lookup)) {
+    return(list(dictionary = dictionary, code_map = code_map))
+  }
+  if (is.data.frame(code_map) && nrow(code_map)) {
+    for (i in seq_len(nrow(code_map))) {
+      code <- code_map$code[[i]] %||% ""
+      hit <- semantic_overlay_lookup_hit(lookup, code_map$code_system[[i]] %||% "", code)
+      if (is.null(hit)) next
+      if (!semantic_overlay_existing_is_generic(code_map[i, , drop = FALSE], code)) next
+      label <- semantic_overlay_display_label(hit)
+      if (!nzchar(label)) next
+      old_label <- first_nonblank(c(code_map$code_name[[i]], code_map$clinical_variable[[i]]), code)
+      code_map$code_name[[i]] <- label
+      if (semantic_overlay_text_is_generic(code_map$clinical_variable[[i]] %||% "", code)) {
+        code_map$clinical_variable[[i]] <- label
+      }
+      if ("notes" %in% names(code_map)) {
+        code_map$notes[[i]] <- semantic_append_text(
+          code_map$notes[[i]],
+          paste(
+            "Reviewer-facing label promoted from curated semantic overlay.",
+            paste0("Previous label: ", old_label, "."),
+            semantic_overlay_provenance_label()
+          )
+        )
+      }
+    }
+  }
+  if (is.data.frame(dictionary) && nrow(dictionary)) {
+    for (i in seq_len(nrow(dictionary))) {
+      code <- dictionary$raw_code[[i]] %||% ""
+      hit <- semantic_overlay_lookup_hit(lookup, dictionary$code_system[[i]] %||% "", code)
+      if (is.null(hit)) next
+      if (!semantic_overlay_existing_is_generic(dictionary[i, , drop = FALSE], code)) next
+      label <- semantic_overlay_display_label(hit)
+      if (!nzchar(label)) next
+      old_label <- first_nonblank(c(dictionary$clinical_variable[[i]], dictionary$raw_descriptor[[i]]), code)
+      dictionary$clinical_variable[[i]] <- label
+      if (!nzchar(dictionary$semantic_meaning[[i]] %||% "") ||
+          semantic_overlay_existing_is_generic(data.frame(clinical_variable = dictionary$semantic_meaning[[i]], stringsAsFactors = FALSE), code)) {
+        dictionary$semantic_meaning[[i]] <- first_nonblank(hit$fill_denotation_definition[[1]], dictionary$semantic_meaning[[i]])
+      }
+      dictionary$clinical_caveat[[i]] <- semantic_append_text(
+        dictionary$clinical_caveat[[i]],
+        paste(
+          "Reviewer-facing label promoted from curated semantic overlay.",
+          paste0("Previous label: ", old_label, "."),
+          semantic_overlay_provenance_label()
+        )
+      )
+      dictionary$search_terms[[i]] <- semantic_terms(c(
+        dictionary$search_terms[[i]],
+        label,
+        hit$fill_synonyms_or_danish_label[[1]],
+        hit$entity_scope_key[[1]]
+      ))
+    }
+  }
+  list(dictionary = dictionary, code_map = code_map)
+}
+
+curator_label_provenance_label <- function() {
+  "Curator label promotion file"
+}
+
+curator_label_normalize_text <- function(value) {
+  value <- atlas_repair_mojibake_text(as.character(value %||% ""))
+  value <- trimws(value)
+  value[is.na(value)] <- ""
+  value
+}
+
+curator_label_normalize_code <- function(value) {
+  toupper(curator_label_normalize_text(value))
+}
+
+curator_label_key_part <- function(value) {
+  tolower(curator_label_normalize_text(value))
+}
+
+curator_label_make_key <- function(...) {
+  paste(vapply(list(...), curator_label_key_part, character(1)), collapse = "\r")
+}
+
+curator_label_comparable_code_types <- function(code_type = "", code_system = "", clinical_group = "") {
+  raw <- c(code_type, code_system, clinical_group)
+  raw <- raw[nzchar(curator_label_normalize_text(raw))]
+  comparable <- c(raw)
+  system <- toupper(paste(raw, collapse = " "))
+  if (grepl("NPU", system)) comparable <- c(comparable, "NPU")
+  if (grepl("DNK", system)) comparable <- c(comparable, "DNK")
+  if (grepl("ATC", system)) comparable <- c(comparable, "ATC")
+  if (grepl("SKS|PROCEDURE", system)) comparable <- c(comparable, "SKS/procedure")
+  if (grepl("SNOMED|PATHOLOGY|PATO", system)) comparable <- c(comparable, "SNOMED/pathology", "local_pathology_code")
+  if (grepl("MATERIAL|SPECIMEN", system)) comparable <- c(comparable, "pathology_material_code")
+  if (grepl("INSTITUTION|SOURCE|LAB", system) && grepl("PATH", system)) comparable <- c(comparable, "pathology_institution_code")
+  if (grepl("TUMOR", system)) comparable <- c(comparable, "tumor_code")
+  if (grepl("ICD|DIAGNOS", system)) comparable <- c(comparable, "ICD10/SKS diagnosis")
+  if (grepl("CAUSE|DEATH", system)) comparable <- c(comparable, "cause_of_death_classification")
+  unique(curator_label_normalize_text(comparable))
+}
+
+curator_label_exact_values <- function(row, fields) {
+  values <- lapply(fields, function(field) {
+    if (is.data.frame(row) && field %in% names(row)) row[[field]] else NULL
+  })
+  unlist(values, use.names = FALSE)
+}
+
+curator_label_row_context <- function(row) {
+  list(
+    entity_scope_key = first_nonblank(curator_label_exact_values(row, "entity_scope_key"), ""),
+    code_type = first_nonblank(curator_label_exact_values(row, c("code_type", "code_system", "target_code_system")), ""),
+    code = first_nonblank(curator_label_exact_values(row, c("code", "raw_code", "entity_code", "raw_value", "display_value")), ""),
+    source_table_or_panel = first_nonblank(curator_label_exact_values(row, c("source_table_or_panel", "source_name", "object_name", "panel_id", "panel", "table_name")), ""),
+    source_column = first_nonblank(curator_label_exact_values(row, c("source_column", "raw_column", "column_name")), ""),
+    evidence_file = first_nonblank(curator_label_exact_values(row, c("evidence_file", "from_file")), ""),
+    code_system = first_nonblank(curator_label_exact_values(row, c("code_system", "target_code_system")), ""),
+    clinical_group = first_nonblank(curator_label_exact_values(row, "clinical_group"), "")
+  )
+}
+
+curator_label_build_lookup <- function(rows) {
+  if (!is.data.frame(rows) || !nrow(rows)) return(empty_curator_label_lookup())
+  out <- rows
+  out$code_type <- curator_label_normalize_text(out$code_type)
+  out$code <- curator_label_normalize_text(out$code)
+  out$fill_preferred_label <- curator_label_normalize_text(out$fill_preferred_label)
+  out$source_table_or_panel <- curator_label_normalize_text(out$source_table_or_panel)
+  out$source_column <- curator_label_normalize_text(out$source_column)
+  out$evidence_file <- curator_label_normalize_text(out$evidence_file)
+  out$entity_scope_key <- curator_label_normalize_text(out$entity_scope_key)
+  out$normalized_code <- curator_label_normalize_code(out$code)
+  lookup <- data.frame(
+    entity_scope_key = out$entity_scope_key,
+    code_type = out$code_type,
+    code = out$code,
+    normalized_code = out$normalized_code,
+    display_label = out$fill_preferred_label,
+    source_table_or_panel = out$source_table_or_panel,
+    source_column = out$source_column,
+    evidence_file = out$evidence_file,
+    observed_count = out$observed_count %||% "",
+    observed_pct = out$observed_pct %||% "",
+    from_file = out$from_file %||% "",
+    prior_display_label = out$current_label_or_display %||% "",
+    provenance_label = curator_label_provenance_label(),
+    promotion_status = out$mapping_status_or_reason %||% "",
+    promotion_eligible = ifelse(out$mapping_status_or_reason == "curator_filled_label_ready_for_promotion", "yes", "no"),
+    lookup_key_entity_scope = ifelse(nzchar(out$entity_scope_key), out$entity_scope_key, ""),
+    lookup_key_full = mapply(curator_label_make_key, out$code_type, out$code, out$source_table_or_panel, out$source_column, out$evidence_file, USE.NAMES = FALSE),
+    lookup_key_source_column = mapply(curator_label_make_key, out$code_type, out$code, out$source_table_or_panel, out$source_column, USE.NAMES = FALSE),
+    lookup_key_source = mapply(curator_label_make_key, out$code_type, out$code, out$source_table_or_panel, USE.NAMES = FALSE),
+    lookup_key_code_type_code = mapply(curator_label_make_key, out$code_type, out$code, USE.NAMES = FALSE),
+    lookup_key_normalized_code = out$normalized_code,
+    ambiguity_reason = "",
+    notes = out$notes %||% "",
+    stringsAsFactors = FALSE,
+    check.names = FALSE
+  )
+  align_semantic_frame(lookup, curator_label_lookup_columns())
+}
+
+curator_label_lookup_index <- function(lookup) {
+  if (!is.data.frame(lookup) || !nrow(lookup)) return(list())
+  rows <- lookup[lookup$promotion_eligible == "yes", , drop = FALSE]
+  index_for <- function(key_col) {
+    out <- split(seq_len(nrow(rows)), rows[[key_col]])
+    out[nzchar(names(out))]
+  }
+  list(
+    rows = rows,
+    entity_scope = index_for("lookup_key_entity_scope"),
+    full = index_for("lookup_key_full"),
+    source_column = index_for("lookup_key_source_column"),
+    source = index_for("lookup_key_source"),
+    code_type_code = index_for("lookup_key_code_type_code"),
+    normalized_code = index_for("lookup_key_normalized_code")
+  )
+}
+
+curator_label_unique_hit <- function(rows, indexes) {
+  rows <- rows[!is.na(rows) & rows > 0]
+  if (!length(rows)) return(list(hit = NULL, reason = "no_curator_label"))
+  candidate <- indexes$rows[rows, , drop = FALSE]
+  labels <- unique(candidate$display_label[nzchar(candidate$display_label)])
+  if (length(labels) != 1L) return(list(hit = NULL, reason = "ambiguous_match"))
+  list(hit = candidate[1, , drop = FALSE], reason = "")
+}
+
+curator_label_lookup_hit <- function(indexes, row) {
+  if (is.null(indexes$rows) || !nrow(indexes$rows)) return(list(hit = NULL, reason = "no_curator_label"))
+  ctx <- curator_label_row_context(row)
+  code <- curator_label_normalize_text(ctx$code)
+  if (!nzchar(code)) return(list(hit = NULL, reason = "missing_code_or_code_type"))
+  if (nzchar(ctx$entity_scope_key)) {
+    key <- ctx$entity_scope_key
+    hit <- curator_label_unique_hit(indexes$entity_scope[[key]], indexes)
+    if (!is.null(hit$hit)) return(hit)
+    if (!identical(hit$reason, "no_curator_label")) return(hit)
+  }
+  code_types <- curator_label_comparable_code_types(ctx$code_type, ctx$code_system, ctx$clinical_group)
+  if (!length(code_types)) code_types <- ""
+  for (code_type in code_types) {
+    key <- curator_label_make_key(code_type, code, ctx$source_table_or_panel, ctx$source_column, ctx$evidence_file)
+    hit <- curator_label_unique_hit(indexes$full[[key]], indexes)
+    if (!is.null(hit$hit)) return(hit)
+    if (!identical(hit$reason, "no_curator_label")) return(hit)
+  }
+  for (code_type in code_types) {
+    key <- curator_label_make_key(code_type, code, ctx$source_table_or_panel, ctx$source_column)
+    hit <- curator_label_unique_hit(indexes$source_column[[key]], indexes)
+    if (!is.null(hit$hit)) return(hit)
+    if (!identical(hit$reason, "no_curator_label")) return(hit)
+  }
+  for (code_type in code_types) {
+    key <- curator_label_make_key(code_type, code, ctx$source_table_or_panel)
+    hit <- curator_label_unique_hit(indexes$source[[key]], indexes)
+    if (!is.null(hit$hit)) return(hit)
+    if (!identical(hit$reason, "no_curator_label")) return(hit)
+  }
+  for (code_type in code_types) {
+    key <- curator_label_make_key(code_type, code)
+    hit <- curator_label_unique_hit(indexes$code_type_code[[key]], indexes)
+    if (!is.null(hit$hit)) return(hit)
+    if (!identical(hit$reason, "no_curator_label")) return(hit)
+  }
+  hit <- curator_label_unique_hit(indexes$normalized_code[[curator_label_normalize_code(code)]], indexes)
+  if (!is.null(hit$hit)) return(hit)
+  hit
+}
+
+curator_label_prior_label <- function(row) {
+  first_nonblank(curator_label_exact_values(
+    row,
+    c("code_name", "clinical_variable", "display_value", "raw_value", "raw_descriptor", "label", "code", "raw_code")
+  ), "")
+}
+
+semantic_apply_curator_label_promotions <- function(dictionary, code_map, lookup) {
+  indexes <- curator_label_lookup_index(lookup)
+  promoted_dictionary <- 0L
+  promoted_code_map <- 0L
+  skipped <- 0L
+  ambiguous <- 0L
+  before_generic <- semantic_curator_generic_count(dictionary, code_map)
+  if (is.data.frame(code_map) && nrow(code_map)) {
+    if (!"prior_display_label" %in% names(code_map)) code_map$prior_display_label <- ""
+    if (!"curator_label_provenance" %in% names(code_map)) code_map$curator_label_provenance <- ""
+    for (i in seq_len(nrow(code_map))) {
+      result <- curator_label_lookup_hit(indexes, code_map[i, , drop = FALSE])
+      if (is.null(result$hit)) {
+        skipped <- skipped + 1L
+        if (identical(result$reason, "ambiguous_match")) ambiguous <- ambiguous + 1L
+        next
+      }
+      label <- result$hit$display_label[[1]]
+      if (!nzchar(label)) next
+      old_label <- curator_label_prior_label(code_map[i, , drop = FALSE])
+      if (identical(old_label, label)) next
+      code_map$prior_display_label[[i]] <- old_label
+      code_map$code_name[[i]] <- label
+      code_map$clinical_variable[[i]] <- label
+      code_map$curator_label_provenance[[i]] <- curator_label_provenance_label()
+      if ("notes" %in% names(code_map)) {
+        code_map$notes[[i]] <- semantic_append_text(
+          code_map$notes[[i]],
+          paste(
+            "Reviewer-facing label promoted from curator label promotion file.",
+            paste0("Previous label: ", old_label, ".")
+          )
+        )
+      }
+      promoted_code_map <- promoted_code_map + 1L
+    }
+  }
+  if (is.data.frame(dictionary) && nrow(dictionary)) {
+    if (!"prior_display_label" %in% names(dictionary)) dictionary$prior_display_label <- ""
+    if (!"curator_label_provenance" %in% names(dictionary)) dictionary$curator_label_provenance <- ""
+    for (i in seq_len(nrow(dictionary))) {
+      result <- curator_label_lookup_hit(indexes, dictionary[i, , drop = FALSE])
+      if (is.null(result$hit)) {
+        skipped <- skipped + 1L
+        if (identical(result$reason, "ambiguous_match")) ambiguous <- ambiguous + 1L
+        next
+      }
+      label <- result$hit$display_label[[1]]
+      if (!nzchar(label)) next
+      old_label <- curator_label_prior_label(dictionary[i, , drop = FALSE])
+      if (identical(old_label, label)) next
+      dictionary$prior_display_label[[i]] <- old_label
+      dictionary$clinical_variable[[i]] <- label
+      dictionary$curator_label_provenance[[i]] <- curator_label_provenance_label()
+      dictionary$clinical_caveat[[i]] <- semantic_append_text(
+        dictionary$clinical_caveat[[i]],
+        paste(
+          "Reviewer-facing label promoted from curator label promotion file.",
+          paste0("Previous label: ", old_label, ".")
+        )
+      )
+      dictionary$search_terms[[i]] <- semantic_terms(c(dictionary$search_terms[[i]], label, old_label))
+      promoted_dictionary <- promoted_dictionary + 1L
+    }
+  }
+  after_generic <- semantic_curator_generic_count(dictionary, code_map)
+  list(
+    dictionary = dictionary,
+    code_map = code_map,
+    summary = curator_label_promotion_summary(
+      input_rows = if (is.data.frame(lookup)) nrow(lookup) else 0L,
+      rows_promoted = promoted_dictionary + promoted_code_map,
+      rows_skipped = skipped,
+      ambiguous_rows = ambiguous,
+      generic_before = before_generic,
+      generic_after = after_generic
+    ),
+    remaining = curator_label_remaining_unmapped(dictionary, code_map, lookup)
+  )
+}
+
+semantic_curator_generic_count <- function(dictionary, code_map) {
+  rows <- list()
+  if (is.data.frame(dictionary) && nrow(dictionary)) {
+    rows[[length(rows) + 1L]] <- data.frame(
+      label = dictionary$clinical_variable %||% "",
+      code = dictionary$raw_code %||% "",
+      stringsAsFactors = FALSE
+    )
+  }
+  if (is.data.frame(code_map) && nrow(code_map)) {
+    label <- code_map$code_name %||% rep("", nrow(code_map))
+    fallback <- code_map$clinical_variable %||% rep("", nrow(code_map))
+    label[!nzchar(label)] <- fallback[!nzchar(label)]
+    rows[[length(rows) + 1L]] <- data.frame(
+      label = label,
+      code = code_map$code %||% "",
+      stringsAsFactors = FALSE
+    )
+  }
+  all_rows <- bind_rows_base(rows)
+  if (!nrow(all_rows)) return(0L)
+  sum(mapply(semantic_curator_text_is_visible_debt, all_rows$label, all_rows$code), na.rm = TRUE)
+}
+
+curator_label_promotion_summary <- function(input_rows, rows_promoted, rows_skipped, ambiguous_rows, generic_before, generic_after) {
+  data.frame(
+    metric = c(
+      "input_rows", "rows_promoted", "rows_skipped", "ambiguous_rows",
+      "remaining_visible_unmapped_or_code_only_before", "remaining_visible_unmapped_or_code_only_after"
+    ),
+    value = as.character(c(input_rows, rows_promoted, rows_skipped, ambiguous_rows, generic_before, generic_after)),
+    notes = c(
+      "Rows loaded from config/dalycare_cycle4_curator_label_promotions.csv.",
+      "Dictionary/code-map rows with deterministic curator-label promotion.",
+      "Rows not promoted because no deterministic target row was found or label already matched.",
+      "Rows skipped because matching would be ambiguous.",
+      "Approximate generic/code-echo labels before curator promotion.",
+      "Approximate generic/code-echo labels after curator promotion."
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
+curator_label_remaining_unmapped <- function(dictionary, code_map, lookup, max_rows = 10000L) {
+  indexes <- curator_label_lookup_index(lookup)
+  rows <- list()
+  append_rows <- function(frame, kind) {
+    if (!is.data.frame(frame) || !nrow(frame)) return()
+    for (i in seq_len(nrow(frame))) {
+      row <- frame[i, , drop = FALSE]
+      code <- first_nonblank(curator_label_exact_values(row, c("code", "raw_code")), "")
+      label <- curator_label_prior_label(row)
+      if (!semantic_curator_text_is_visible_debt(label, code)) next
+      result <- curator_label_lookup_hit(indexes, row)
+      reason <- result$reason
+      if (is.null(result$hit)) {
+        ctx <- curator_label_row_context(row)
+        rows[[length(rows) + 1L]] <<- data.frame(
+          code_type = first_nonblank(c(ctx$code_type, curator_label_exact_values(row, "code_system")), ""),
+          code = code,
+          current_display_label = label,
+          source_table_or_panel = ctx$source_table_or_panel,
+          source_column = ctx$source_column,
+          evidence_file = ctx$evidence_file,
+          observed_count = first_nonblank(curator_label_exact_values(row, "n_rows"), ""),
+          reason_not_promoted = first_nonblank(reason, "no_curator_label"),
+          stringsAsFactors = FALSE
+        )
+      }
+      if (length(rows) >= max_rows) break
+    }
+  }
+  append_rows(dictionary, "dictionary")
+  append_rows(code_map, "code_map")
+  align_semantic_frame(bind_rows_base(rows), remaining_unmapped_after_curator_promotions_columns())
 }
 
 semantic_row <- function(...) {

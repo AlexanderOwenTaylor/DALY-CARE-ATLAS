@@ -73,12 +73,14 @@ expect_overlay("Danish_pathology_AEKI_Ki67_percent_code:AEKI030", "AEKI030", "Ki
 for (code in c("NPU02593", "NPU04998", "NPU19748")) {
   expect_true(any(conflicts$entity_code == code & conflicts$mapping_status == "conflict_pending_review"), paste("Expected NPU conflict audit row for", code))
 }
-expect_true(any(code_map$code == "NPU02593" & code_map$clinical_concept_id == "creatinine"), "NPU02593 should keep the current primary creatinine mapping under conflict policy.")
-expect_false(any(code_map$code == "NPU02593" & grepl("Leukocytes", code_map$code_name, fixed = TRUE)), "NPU02593 overlay leukocyte label must not silently replace current primary label.")
-expect_true(any(code_map$code == "NPU04998" & code_map$clinical_concept_id == "crp"), "NPU04998 should keep the current primary CRP mapping under conflict policy.")
-expect_false(any(code_map$code == "NPU04998" & grepl("Creatininium", code_map$code_name, fixed = TRUE)), "NPU04998 overlay creatinine label must not silently replace current primary label.")
-expect_true(any(code_map$code == "NPU19748" & code_map$clinical_variable == "Leukocytes"), "NPU19748 should keep the current primary leukocyte mapping under conflict policy.")
-expect_false(any(code_map$code == "NPU19748" & grepl("C-reactive protein", code_map$code_name, fixed = TRUE)), "NPU19748 overlay CRP label must not silently replace current primary label.")
+expect_true(
+  all(c("NPU02593", "NPU04998", "NPU19748") %in% semantic$curator_label_lookup$code),
+  "Cycle 5 curator labels should be available as the current authoritative display resolver for previously conflicted NPU codes."
+)
+expect_false(
+  any(semantic$curator_label_lookup$mapping_status_or_reason == "conflict_pending_review"),
+  "Cycle 5 approved curator rows should not be reopened as conflict-pending."
+)
 
 curated_code_rows <- code_map[grepl("^curated_overlay_", code_map$semantic_id), , drop = FALSE]
 curated_dictionary_rows <- dictionary[dictionary$data_shape == "semantic_overlay", , drop = FALSE]

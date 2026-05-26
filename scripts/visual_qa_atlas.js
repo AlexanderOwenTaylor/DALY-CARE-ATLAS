@@ -597,6 +597,24 @@ async function main() {
       rawHeadingCandidates: (report.readability && report.readability.rawHeadingCandidates) || []
     }));
     fs.writeFileSync(readabilityReportPath, `${JSON.stringify(readabilityReports, null, 2)}\n`);
+    const semanticOverlayPromotionReportPath = path.join(outDir, "semantic_overlay_promotion_report.json");
+    const semanticOverlayPromotionReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      visiblePseudoSource: Boolean(report.semanticOverlayPromotion && report.semanticOverlayPromotion.visiblePseudoSource),
+      mappedUnmappedLabels: (report.semanticOverlayPromotion && report.semanticOverlayPromotion.mappedUnmappedLabels) || []
+    }));
+    fs.writeFileSync(semanticOverlayPromotionReportPath, `${JSON.stringify(semanticOverlayPromotionReports, null, 2)}\n`);
+    const curatorLabelPromotionReportPath = path.join(outDir, "curator_label_promotion_report.json");
+    const curatorLabelPromotionReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      visiblePseudoSource: Boolean(report.curatorLabelPromotion && report.curatorLabelPromotion.visiblePseudoSource),
+      issues: (report.curatorLabelPromotion && report.curatorLabelPromotion.issues) || [],
+      clippedHBarLabels: (report.readability && report.readability.clippedHBarLabels) || [],
+      bodyOverflow: Boolean(report.bodyOverflow)
+    }));
+    fs.writeFileSync(curatorLabelPromotionReportPath, `${JSON.stringify(curatorLabelPromotionReports, null, 2)}\n`);
     const desktopReportPath = path.join(outDir, "overflow_desktop.json");
     const mobileReportPath = path.join(outDir, "overflow_mobile.json");
     fs.writeFileSync(
@@ -616,6 +634,9 @@ async function main() {
       (report.screenshotWidth !== report.requestedViewport.width) ||
       (((report.readability && report.readability.clippedHBarLabels) || []).length > 0) ||
       (((report.readability && report.readability.emptyBeforeBars) || []).length > 0) ||
+      (report.semanticOverlayPromotion && report.semanticOverlayPromotion.visiblePseudoSource) ||
+      (report.curatorLabelPromotion && report.curatorLabelPromotion.visiblePseudoSource) ||
+      (((report.curatorLabelPromotion && report.curatorLabelPromotion.issues) || []).length > 0) ||
       (report.target === "overview" && !report.overviewConsolidationPresent) ||
       (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
       (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
