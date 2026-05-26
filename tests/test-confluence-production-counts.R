@@ -110,6 +110,146 @@ expect_true(any(prod$infection_person_time$count_kind == "person-years" & prod$i
 expect_true(any(prod$infection_rates$count_kind == "rate from suppressed aggregate components"), "Rates should be rendered from aggregate components.")
 expect_true(all(prod$microbiology_confirmation_counts$acceptance_status != "accepted"), "Microbiology-confirmed infection must fail closed without deterministic patient/date/result mappings.")
 
+pathology_failed_status <- bind_rows_base(list(
+  confluence_count_route_status_row("diagnosis_first_dates", TRUE, TRUE, source_table = "diagnosis fixture"),
+  confluence_count_route_status_row(
+    "pathology_first_dates",
+    TRUE,
+    FALSE,
+    error_class = "production_aggregate_failed_query_error",
+    error_message_sanitized = "relation public.sds_pato does not exist",
+    source_table = "import.public.SDS_pato"
+  ),
+  confluence_count_route_status_row("infection_events", TRUE, TRUE, source_table = "infection fixture"),
+  confluence_count_route_status_row("patient_frame", TRUE, TRUE, source_table = "patient fixture")
+))
+pathology_failed_adapter <- list(
+  confluence_count_sets = function(min_cell_count = 5L) {
+    list(
+      sets = list(
+        patient_frame = data.frame(person_key = sprintf("p%02d", 1:8), date_death_fu = rep(NA, 8), stringsAsFactors = FALSE),
+        disease_first_dates = data.frame(
+          person_key = c(sprintf("p%02d", 1:6), sprintf("p%02d", 1:6)),
+          state_id = c(rep("cll", 6), rep("mgus", 6)),
+          first_date = as.Date(c(rep("2020-01-01", 6), rep("2020-06-01", 6))),
+          stringsAsFactors = FALSE
+        ),
+        infection_events = data.frame(
+          person_key = sprintf("p%02d", 1:6),
+          event_date = as.Date(rep("2020-08-01", 6)),
+          endpoint_id = "serious_infection_hospitalization",
+          stringsAsFactors = FALSE
+        ),
+        route_status = pathology_failed_status
+      ),
+      errors = confluence_count_failed_route_audit(pathology_failed_status)
+    )
+  }
+)
+pathology_failed <- confluence_count_build_outputs(root, pathology_failed_adapter, mode = "production_aggregate", min_cell_count = 5L)
+failed_pathology_rows <- pathology_failed$disease_state_person_counts[pathology_failed$disease_state_person_counts$state_id %in% c("pathology_mbl", "cll_morphology_pressure"), , drop = FALSE]
+expect_true(all(failed_pathology_rows$acceptance_status == "not accepted aggregate"), "Failed PATOBANK route must not accept pathology-derived rows.")
+expect_false(any(failed_pathology_rows$count_display == "0" & failed_pathology_rows$acceptance_status == "accepted"), "Failed PATOBANK route must not become accepted zero.")
+failed_mbl_steps <- pathology_failed$mbl_validation_waterfall[pathology_failed$mbl_validation_waterfall$step_order %in% c(2L, 3L), , drop = FALSE]
+expect_true(all(failed_mbl_steps$acceptance_status == "not accepted aggregate"), "Pathology-specific MBL waterfall steps must fail closed when PATOBANK fails.")
+expect_true(any(pathology_failed$failed_query_audit$query_id == "confluence_pathology_first_dates"), "Failed PATOBANK route should be visible in failed-query audit.")
+
+pathology_zero_status <- bind_rows_base(list(
+  confluence_count_route_status_row("diagnosis_first_dates", TRUE, TRUE, source_table = "diagnosis fixture"),
+  confluence_count_route_status_row("pathology_first_dates", TRUE, TRUE, source_table = "PATOBANK fixture"),
+  confluence_count_route_status_row("infection_events", TRUE, TRUE, source_table = "infection fixture"),
+  confluence_count_route_status_row("patient_frame", TRUE, TRUE, source_table = "patient fixture")
+))
+pathology_zero <- confluence_count_outputs_from_sets(
+  list(
+    patient_frame = data.frame(person_key = sprintf("p%02d", 1:6), date_death_fu = rep(NA, 6), stringsAsFactors = FALSE),
+    disease_first_dates = data.frame(
+      person_key = sprintf("p%02d", 1:6),
+      state_id = "cll",
+      first_date = as.Date(rep("2020-01-01", 6)),
+      stringsAsFactors = FALSE
+    ),
+    infection_events = data.frame(
+      person_key = sprintf("p%02d", 1:6),
+      event_date = as.Date(rep("2020-08-01", 6)),
+      endpoint_id = "serious_infection_hospitalization",
+      stringsAsFactors = FALSE
+    ),
+    route_status = pathology_zero_status
+  ),
+  project_root = root,
+  min_cell_count = 5L
+)
+zero_pathology_rows <- pathology_zero$disease_state_person_counts[pathology_zero$disease_state_person_counts$state_id %in% c("pathology_mbl", "cll_morphology_pressure"), , drop = FALSE]
+expect_true(all(zero_pathology_rows$count_display == "0" & zero_pathology_rows$acceptance_status == "accepted"), "Accepted zero is allowed when the PATOBANK route executed successfully and returned no rows.")
+
+infection_failed_status <- bind_rows_base(list(
+  confluence_count_route_status_row("diagnosis_first_dates", TRUE, TRUE, source_table = "diagnosis fixture"),
+  confluence_count_route_status_row("pathology_first_dates", TRUE, TRUE, source_table = "PATOBANK fixture"),
+  confluence_count_route_status_row(
+    "infection_events",
+    TRUE,
+    FALSE,
+    error_class = "production_aggregate_failed_query_error",
+    error_message_sanitized = "relation public.t_dalycare_diagnoses does not exist",
+    source_table = "core.public.t_dalycare_diagnoses"
+  ),
+  confluence_count_route_status_row("patient_frame", TRUE, TRUE, source_table = "patient fixture")
+))
+infection_failed <- confluence_count_outputs_from_sets(
+  list(
+    patient_frame = data.frame(person_key = sprintf("p%02d", 1:6), date_death_fu = rep(NA, 6), stringsAsFactors = FALSE),
+    disease_first_dates = data.frame(
+      person_key = c(sprintf("p%02d", 1:6), sprintf("p%02d", 1:6)),
+      state_id = c(rep("cll", 6), rep("mgus", 6)),
+      first_date = as.Date(c(rep("2020-01-01", 6), rep("2020-06-01", 6))),
+      stringsAsFactors = FALSE
+    ),
+    infection_events = data.frame(stringsAsFactors = FALSE),
+    route_status = infection_failed_status
+  ),
+  project_root = root,
+  min_cell_count = 5L
+)
+expect_true(all(infection_failed$infection_counts$acceptance_status == "not accepted aggregate"), "Failed infection route must leave infection counts not accepted.")
+expect_true(all(infection_failed$infection_rates$acceptance_status == "not accepted aggregate"), "Failed infection route must leave infection rates not accepted.")
+expect_true(any(infection_failed$failed_query_audit$query_id == "confluence_infection_events"), "Failed infection route should be visible in failed-query audit.")
+
+mixed_queries <- character()
+mixed_case_adapter <- list(
+  list_tables = function() {
+    data.frame(
+      db_name = c("core", "core", "core", "import", "import", "import"),
+      schema = "public",
+      table = c("patient", "t_dalycare_diagnoses", "diagnoses_all", "SDS_pato", "SDS_t_adm", "SDS_kontakter"),
+      stringsAsFactors = FALSE
+    )
+  },
+  confluence_query = function(sql) {
+    mixed_queries <<- c(mixed_queries, sql)
+    if (grepl("serious_infection_hospitalization", sql, fixed = TRUE)) {
+      return(empty_df(person_key = character(), event_date = as.Date(character()), endpoint_id = character()))
+    }
+    if (grepl('"SDS_pato"', sql, fixed = TRUE)) {
+      return(data.frame(person_key = "p01", state_id = "pathology_mbl", first_date = as.Date("2020-02-01"), stringsAsFactors = FALSE))
+    }
+    if (grepl('"t_dalycare_diagnoses"', sql, fixed = TRUE)) {
+      return(data.frame(person_key = "p01", state_id = "cll", first_date = as.Date("2020-01-01"), stringsAsFactors = FALSE))
+    }
+    if (grepl('"diagnoses_all"', sql, fixed = TRUE)) {
+      return(empty_df(person_key = character(), state_id = character(), first_date = as.Date(character())))
+    }
+    if (grepl('"patient"', sql, fixed = TRUE)) {
+      return(data.frame(person_key = "p01", date_death_fu = as.Date(NA_character_), stringsAsFactors = FALSE))
+    }
+    data.frame(stringsAsFactors = FALSE)
+  }
+)
+mixed_case <- confluence_count_build_outputs(root, mixed_case_adapter, mode = "production_aggregate", min_cell_count = 1L)
+expect_true(any(grepl('"SDS_pato"', mixed_queries, fixed = TRUE)), "Mixed-case PATOBANK table should be quoted in generated SQL.")
+expect_true(any(mixed_case$disease_state_person_counts$state_id == "pathology_mbl" & mixed_case$disease_state_person_counts$acceptance_status == "accepted"), "Resolved mixed-case PATOBANK table should produce accepted pathology-supported MBL rows.")
+expect_true(any(mixed_case$source_resolution_audit$source_id == "SDS_pato" & mixed_case$source_resolution_audit$resolved_table == "SDS_pato"), "CONFLUENCE source resolution audit should expose resolved mixed-case PATOBANK table.")
+
 small <- prod$disease_state_person_counts[prod$disease_state_person_counts$state_id == "cll_morphology_pressure", , drop = FALSE]
 expect_true(any(small$count_display == "<5"), "Small cells should display threshold labels.")
 expect_true(any(small$suppression_status == "suppressed small cell"), "Small cells should retain suppression status.")
@@ -132,6 +272,7 @@ for (name in c(
   "microbiology_confirmation_counts",
   "production_query_review",
   "failed_query_audit",
+  "source_resolution_audit",
   "production_execution_summary"
 )) {
   expect_true(name %in% names(paths), paste("CONFLUENCE writer should include:", name))

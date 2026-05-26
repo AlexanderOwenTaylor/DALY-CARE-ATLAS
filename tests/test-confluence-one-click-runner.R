@@ -58,7 +58,8 @@ for (name in c(
   "infection_person_time",
   "infection_rates",
   "production_execution_summary",
-  "failed_query_audit"
+  "failed_query_audit",
+  "source_resolution_audit"
 )) {
   expect_true(name %in% names(plan_result$paths), paste("Plan-mode CONFLUENCE mini-bundle should write:", name))
   expect_file(plan_result$paths[[name]])

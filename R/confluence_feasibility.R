@@ -336,6 +336,24 @@ confluence_empty_payload <- function() {
       error_message_sanitized = character(),
       notes = character()
     ),
+    source_resolution_audit = empty_df(
+      source_id = character(),
+      source_role = character(),
+      route_id = character(),
+      configured_db_name = character(),
+      configured_schema = character(),
+      configured_table = character(),
+      resolved_db_name = character(),
+      resolved_schema = character(),
+      resolved_table = character(),
+      person_key_column = character(),
+      date_columns = character(),
+      code_column = character(),
+      usable_for_counts = logical(),
+      resolution_status = character(),
+      query_executable = logical(),
+      notes = character()
+    ),
     production_execution_summary = empty_df(
       metric = character(),
       label = character(),
@@ -1404,6 +1422,7 @@ confluence_write_outputs <- function(outputs, output_dir) {
     microbiology_confirmation_counts = write_csv(outputs$microbiology_confirmation_counts %||% confluence_empty_payload()$microbiology_confirmation_counts, file.path(output_dir, "confluence_microbiology_confirmation_counts.csv")),
     production_query_review = write_csv(outputs$production_query_review %||% confluence_empty_payload()$production_query_review, file.path(output_dir, "confluence_production_query_review.csv")),
     failed_query_audit = write_csv(outputs$failed_query_audit %||% confluence_empty_payload()$failed_query_audit, file.path(output_dir, "confluence_failed_query_audit.csv")),
+    source_resolution_audit = write_csv(outputs$source_resolution_audit %||% confluence_empty_payload()$source_resolution_audit, file.path(output_dir, "confluence_source_resolution_audit.csv")),
     production_execution_summary = write_csv(outputs$production_execution_summary %||% confluence_empty_payload()$production_execution_summary, file.path(output_dir, "confluence_production_execution_summary.csv"))
   )
 }

@@ -162,6 +162,42 @@ confluence_count_empty_failed_query_audit <- function() {
   )
 }
 
+confluence_count_empty_source_resolution_audit <- function() {
+  empty_df(
+    source_id = character(),
+    source_role = character(),
+    route_id = character(),
+    configured_db_name = character(),
+    configured_schema = character(),
+    configured_table = character(),
+    resolved_db_name = character(),
+    resolved_schema = character(),
+    resolved_table = character(),
+    person_key_column = character(),
+    date_columns = character(),
+    code_column = character(),
+    usable_for_counts = logical(),
+    resolution_status = character(),
+    query_executable = logical(),
+    notes = character()
+  )
+}
+
+confluence_count_empty_route_status <- function() {
+  empty_df(
+    route_id = character(),
+    query_id = character(),
+    output_file = character(),
+    query_status = character(),
+    query_executed = logical(),
+    query_success = logical(),
+    error_class = character(),
+    error_message_sanitized = character(),
+    source_table = character(),
+    notes = character()
+  )
+}
+
 confluence_count_empty_execution_summary <- function() {
   empty_df(
     metric = character(),
@@ -189,6 +225,7 @@ confluence_count_empty_outputs <- function() {
     microbiology_confirmation_counts = confluence_count_empty_microbiology_confirmation_counts(),
     production_query_review = confluence_count_empty_query_review(),
     failed_query_audit = confluence_count_empty_failed_query_audit(),
+    source_resolution_audit = confluence_count_empty_source_resolution_audit(),
     production_execution_summary = confluence_count_empty_execution_summary()
   )
 }
@@ -237,7 +274,21 @@ confluence_count_auto_db_adapter <- function(db_adapter = NULL) {
 confluence_count_read_person_date_mapping <- function(project_root = ".") {
   path <- file.path(project_root, "config", "confluence_person_date_mapping.tsv")
   if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
-  read_delimited_file(path)
+  rows <- read_delimited_file(path)
+  needed <- c(
+    "source_id", "db_name", "schema", "table", "person_key_column",
+    "date_columns", "code_column", "source_role", "linkage_confidence",
+    "usable_for_counts", "notes"
+  )
+  if (exists("mcl_count_ensure_columns", mode = "function")) {
+    rows <- mcl_count_ensure_columns(rows, needed)
+  } else {
+    for (nm in needed) {
+      if (!nm %in% names(rows)) rows[[nm]] <- rep("", nrow(rows))
+    }
+    rows <- rows[needed]
+  }
+  rows
 }
 
 confluence_count_read_endpoint_code_sets <- function(project_root = ".") {
@@ -419,7 +470,72 @@ confluence_count_normalize_patient_frame <- function(patient_frame) {
   rows[nzchar(rows$person_key), , drop = FALSE]
 }
 
-confluence_count_state_count_rows <- function(first_dates, min_cell_count = atlas_min_cell_count()) {
+confluence_count_route_statuses <- function(count_sets) {
+  if (is.list(count_sets) && is.data.frame(count_sets$route_status) && nrow(count_sets$route_status)) {
+    return(count_sets$route_status)
+  }
+  has_frame <- function(name) is.list(count_sets) && is.data.frame(count_sets[[name]])
+  has_first <- has_frame("disease_first_dates") || has_frame("first_dates")
+  bind_rows_base(list(
+    confluence_count_route_status_row("diagnosis_first_dates", has_first, has_first, source_table = "secure aggregate hook", notes = "Legacy aggregate hook supplied disease first-date rows without route metadata."),
+    confluence_count_route_status_row("pathology_first_dates", has_first, has_first, source_table = "secure aggregate hook", notes = "Legacy aggregate hook supplied disease first-date rows without route metadata."),
+    confluence_count_route_status_row("infection_events", has_frame("infection_events"), has_frame("infection_events"), source_table = "secure aggregate hook", notes = "Legacy aggregate hook supplied infection rows without route metadata."),
+    confluence_count_route_status_row("patient_frame", has_frame("patient_frame"), has_frame("patient_frame"), source_table = "secure aggregate hook", notes = "Legacy aggregate hook supplied patient-frame rows without route metadata.")
+  ))
+}
+
+confluence_count_route_status_for <- function(route_status, route_id) {
+  if (!is.data.frame(route_status) || !nrow(route_status) || !"route_id" %in% names(route_status)) {
+    return(confluence_count_route_status_row(route_id, TRUE, TRUE, source_table = "secure aggregate hook"))
+  }
+  hit <- route_status[route_status$route_id == route_id, , drop = FALSE]
+  if (!nrow(hit)) return(confluence_count_route_status_row(route_id, TRUE, TRUE, source_table = "secure aggregate hook"))
+  hit[1, , drop = FALSE]
+}
+
+confluence_count_route_success <- function(route_status, route_id) {
+  status <- confluence_count_route_status_for(route_status, route_id)
+  confluence_count_bool(status$query_success[[1]])
+}
+
+confluence_count_route_failure_text <- function(route_status, route_id) {
+  status <- confluence_count_route_status_for(route_status, route_id)
+  msg <- status$error_message_sanitized[[1]] %||% ""
+  if (!nzchar(msg)) msg <- status$notes[[1]] %||% ""
+  if (!nzchar(msg)) msg <- paste(route_id, "route did not execute successfully.")
+  msg
+}
+
+confluence_count_append_note <- function(row, note) {
+  if (!"notes" %in% names(row) || !nzchar(note %||% "")) return(row)
+  existing <- row$notes %||% ""
+  row$notes <- ifelse(nzchar(existing), paste(existing, note), note)
+  row
+}
+
+confluence_count_apply_route_failure <- function(row, route_status, route_id) {
+  status <- confluence_count_route_status_for(route_status, route_id)
+  query_status <- status$query_status[[1]] %||% "production_aggregate_failed_mapping_unavailable"
+  reason <- confluence_count_route_failure_text(route_status, route_id)
+  if ("count_display" %in% names(row)) row$count_display <- "not accepted aggregate"
+  if ("event_count_display" %in% names(row)) row$event_count_display <- "not accepted aggregate"
+  if ("people_display" %in% names(row)) row$people_display <- "not accepted aggregate"
+  if ("person_years_display" %in% names(row)) row$person_years_display <- "not accepted aggregate"
+  if ("rate_per_100_person_years" %in% names(row)) row$rate_per_100_person_years <- "not accepted aggregate"
+  if ("n_people" %in% names(row)) row$n_people <- NA_real_
+  if ("n_events" %in% names(row)) row$n_events <- NA_real_
+  if ("person_years" %in% names(row)) row$person_years <- NA_real_
+  if ("acceptance_status" %in% names(row)) row$acceptance_status <- "not accepted aggregate"
+  if ("query_status" %in% names(row)) row$query_status <- query_status
+  if ("acceptance_gate_status" %in% names(row)) row$acceptance_gate_status <- "failed: source route did not execute successfully"
+  if ("suppression_status" %in% names(row)) row$suppression_status <- "not run"
+  if ("source_table" %in% names(row) && nzchar(status$source_table[[1]] %||% "")) row$source_table <- status$source_table[[1]]
+  confluence_count_append_note(row, paste("Source route failed closed:", reason))
+}
+
+confluence_count_pathology_state_ids <- function() c("pathology_mbl", "cll_morphology_pressure")
+
+confluence_count_state_count_rows <- function(first_dates, min_cell_count = atlas_min_cell_count(), route_status = NULL) {
   states <- confluence_count_state_labels()
   rows <- lapply(seq_len(nrow(states)), function(i) {
     spec <- states[i, , drop = FALSE]
@@ -430,7 +546,7 @@ confluence_count_state_count_rows <- function(first_dates, min_cell_count = atla
       "secure CONFLUENCE disease-state aggregate",
       mbl_tier = spec$mbl_tier[[1]]
     )
-    data.frame(
+    row <- data.frame(
       state_id = spec$state_id,
       state_label = spec$state_label,
       source_tier = spec$source_tier,
@@ -451,18 +567,24 @@ confluence_count_state_count_rows <- function(first_dates, min_cell_count = atla
       notes = "Accepted aggregate disease-state person count; no patient IDs or raw dates emitted.",
       stringsAsFactors = FALSE
     )
+    if (spec$state_id[[1]] %in% confluence_count_pathology_state_ids() && !confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_apply_route_failure(row, route_status, "pathology_first_dates")
+    } else if (identical(spec$state_id[[1]], "cll_mbl") && !confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_append_note(row, "Pathology-supported MBL route failed closed; this aggregate reflects diagnosis-coded CLL/MBL evidence only.")
+    }
+    row
   })
   bind_rows_base(rows)
 }
 
-confluence_count_first_date_rows <- function(first_dates, min_cell_count = atlas_min_cell_count()) {
+confluence_count_first_date_rows <- function(first_dates, min_cell_count = atlas_min_cell_count(), route_status = NULL) {
   states <- confluence_count_state_labels()
   rows <- lapply(seq_len(nrow(states)), function(i) {
     spec <- states[i, , drop = FALSE]
     people <- unique(first_dates$person_key[first_dates$state_id == spec$state_id[[1]]])
     count <- confluence_count_suppress(length(people), min_cell_count)
     acc <- confluence_count_acceptance_row("distinct people", "secure CONFLUENCE first-date aggregate", mbl_tier = spec$mbl_tier[[1]])
-    data.frame(
+    row <- data.frame(
       state_id = spec$state_id,
       state_label = paste(spec$state_label, "first qualifying date"),
       source_tier = spec$source_tier,
@@ -483,6 +605,12 @@ confluence_count_first_date_rows <- function(first_dates, min_cell_count = atlas
       notes = "Accepted aggregate first-date availability count; no raw dates emitted.",
       stringsAsFactors = FALSE
     )
+    if (spec$state_id[[1]] %in% confluence_count_pathology_state_ids() && !confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_apply_route_failure(row, route_status, "pathology_first_dates")
+    } else if (identical(spec$state_id[[1]], "cll_mbl") && !confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_append_note(row, "Pathology-supported MBL route failed closed; this aggregate reflects diagnosis-coded CLL/MBL first-date evidence only.")
+    }
+    row
   })
   bind_rows_base(rows)
 }
@@ -514,14 +642,14 @@ confluence_count_overlap_people <- function(first_dates, left_state, right_state
   )
 }
 
-confluence_count_overlap_count_rows <- function(first_dates, min_cell_count = atlas_min_cell_count()) {
+confluence_count_overlap_count_rows <- function(first_dates, min_cell_count = atlas_min_cell_count(), route_status = NULL) {
   specs <- confluence_count_overlap_specs()
   rows <- lapply(seq_len(nrow(specs)), function(i) {
     spec <- specs[i, , drop = FALSE]
     people <- confluence_count_overlap_people(first_dates, spec$left_state[[1]], spec$right_state[[1]])
     count <- confluence_count_suppress(nrow(people), min_cell_count)
     acc <- confluence_count_acceptance_row("distinct people", "secure CONFLUENCE overlap aggregate", mbl_tier = spec$mbl_tier[[1]])
-    data.frame(
+    row <- data.frame(
       overlap_id = spec$overlap_id,
       overlap_label = spec$overlap_label,
       mbl_tier = spec$mbl_tier,
@@ -542,11 +670,17 @@ confluence_count_overlap_count_rows <- function(first_dates, min_cell_count = at
       notes = "Accepted aggregate overlap count; overlap time starts at the later first qualifying disease-state date.",
       stringsAsFactors = FALSE
     )
+    if (any(c(spec$left_state[[1]], spec$right_state[[1]]) %in% confluence_count_pathology_state_ids()) && !confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_apply_route_failure(row, route_status, "pathology_first_dates")
+    } else if (any(c(spec$left_state[[1]], spec$right_state[[1]]) == "cll_mbl") && !confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_append_note(row, "Pathology-supported MBL route failed closed; CLL/MBL overlap is diagnosis-coded only for this run.")
+    }
+    row
   })
   bind_rows_base(rows)
 }
 
-confluence_count_overlap_timing_rows <- function(first_dates, min_cell_count = atlas_min_cell_count()) {
+confluence_count_overlap_timing_rows <- function(first_dates, min_cell_count = atlas_min_cell_count(), route_status = NULL) {
   overlap <- confluence_count_overlap_people(first_dates, "cll_mbl", "any_pcd")
   timing_levels <- data.frame(
     timing_id = c("cll_mbl_first", "pcd_first", "same_90_day_window", "same_calendar_year", "unknown_unavailable"),
@@ -566,7 +700,7 @@ confluence_count_overlap_timing_rows <- function(first_dates, min_cell_count = a
     n <- sum(timing == spec$timing_id[[1]], na.rm = TRUE)
     count <- confluence_count_suppress(n, min_cell_count)
     acc <- confluence_count_acceptance_row("distinct people", "secure CONFLUENCE overlap timing aggregate", mbl_tier = "CLL/MBL")
-    data.frame(
+    row <- data.frame(
       timing_id = spec$timing_id,
       timing_label = spec$timing_label,
       count_display = count$display,
@@ -586,6 +720,10 @@ confluence_count_overlap_timing_rows <- function(first_dates, min_cell_count = a
       notes = "Accepted aggregate timing category; raw dates are not emitted.",
       stringsAsFactors = FALSE
     )
+    if (!confluence_count_route_success(route_status, "pathology_first_dates")) {
+      row <- confluence_count_append_note(row, "Pathology-supported MBL route failed closed; CLL/MBL timing is diagnosis-coded only for this run.")
+    }
+    row
   })
   bind_rows_base(rows)
 }
@@ -786,7 +924,88 @@ confluence_count_rate_rows <- function(infection_counts, person_time, min_cell_c
   bind_rows_base(rows)
 }
 
-confluence_count_waterfall_from_sets <- function(first_dates, min_cell_count = atlas_min_cell_count()) {
+confluence_count_infection_fail_closed <- function(route_status, count_kind = "not accepted aggregate") {
+  status <- confluence_count_route_status_for(route_status, "infection_events")
+  reason <- confluence_count_route_failure_text(route_status, "infection_events")
+  data.frame(
+    group_id = "all_confluence",
+    group_label = "All CONFLUENCE disease-state groups",
+    endpoint_id = "serious_infection_hospitalization",
+    endpoint_label = "Serious infection hospitalization",
+    horizon_years = NA_integer_,
+    count_display = "not accepted aggregate",
+    n_people = NA_real_,
+    event_count_display = "not accepted aggregate",
+    n_events = NA_real_,
+    count_kind = count_kind,
+    acceptance_status = "not accepted aggregate",
+    query_status = status$query_status[[1]] %||% "production_aggregate_failed_query_error",
+    acceptance_gate_status = "failed: infection source route did not execute successfully",
+    suppression_status = "not run",
+    endpoint_definition_status = "repo-derived provisional",
+    source_table = status$source_table[[1]] %||% "",
+    code_set_version = "CONFLUENCE-v1-provisional",
+    person_key_used = "",
+    date_anchor_used = "infection event date mapping failed closed",
+    mbl_tier = "not applicable",
+    immortal_time_handling_note = "",
+    notes = paste("Infection route failed closed; no accepted zero emitted.", reason),
+    stringsAsFactors = FALSE
+  )
+}
+
+confluence_count_person_time_fail_closed <- function(route_status) {
+  status <- confluence_count_route_status_for(route_status, "patient_frame")
+  reason <- confluence_count_route_failure_text(route_status, "patient_frame")
+  data.frame(
+    group_id = "all_confluence",
+    group_label = "All CONFLUENCE disease-state groups",
+    horizon_years = NA_integer_,
+    people_display = "not accepted aggregate",
+    n_people = NA_real_,
+    person_years_display = "not accepted aggregate",
+    person_years = NA_real_,
+    count_kind = "person-years",
+    acceptance_status = "not accepted aggregate",
+    query_status = status$query_status[[1]] %||% "production_aggregate_failed_query_error",
+    acceptance_gate_status = "failed: patient-frame source route did not execute successfully",
+    suppression_status = "not run",
+    endpoint_definition_status = "not an infection endpoint",
+    source_table = status$source_table[[1]] %||% "",
+    code_set_version = "CONFLUENCE-v1-provisional",
+    person_key_used = "",
+    date_anchor_used = "patient-frame date mapping failed closed",
+    mbl_tier = "not applicable",
+    immortal_time_handling_note = "",
+    notes = paste("Person-time route failed closed; no accepted denominator emitted.", reason),
+    stringsAsFactors = FALSE
+  )
+}
+
+confluence_count_infection_rate_fail_closed <- function(route_status) {
+  status <- confluence_count_route_status_for(route_status, "infection_events")
+  reason <- confluence_count_route_failure_text(route_status, "infection_events")
+  data.frame(
+    group_id = "all_confluence",
+    group_label = "All CONFLUENCE disease-state groups",
+    endpoint_id = "serious_infection_hospitalization",
+    endpoint_label = "Serious infection hospitalization",
+    horizon_years = NA_integer_,
+    event_count_display = "not accepted aggregate",
+    person_years_display = "not accepted aggregate",
+    rate_per_100_person_years = "not accepted aggregate",
+    count_kind = "rate from suppressed aggregate components",
+    acceptance_status = "not accepted aggregate",
+    query_status = status$query_status[[1]] %||% "production_aggregate_failed_query_error",
+    acceptance_gate_status = "failed: infection source route did not execute successfully",
+    suppression_status = "not run",
+    endpoint_definition_status = "repo-derived provisional",
+    notes = paste("Infection rate route failed closed; no accepted zero emitted.", reason),
+    stringsAsFactors = FALSE
+  )
+}
+
+confluence_count_waterfall_from_sets <- function(first_dates, min_cell_count = atlas_min_cell_count(), route_status = NULL) {
   state_people <- function(state) unique(first_dates$person_key[first_dates$state_id == state])
   row <- function(entity_id, order, step, tier, people, mbl_tier = "not applicable") {
     count <- confluence_count_suppress(length(unique(people)), min_cell_count)
@@ -818,6 +1037,19 @@ confluence_count_waterfall_from_sets <- function(first_dates, min_cell_count = a
     row("mbl", 4L, "Remove overt CLL evidence", "CLL/Richter timing pressure", mbl_without_cll_pressure, "coded/pathology MBL"),
     row("mbl", 5L, "MBL with any PCD overlap", "overlap aggregate", intersect(mbl_any, pcd_any), "coded/pathology MBL")
   ))
+  if (!confluence_count_route_success(route_status, "pathology_first_dates") && nrow(mbl_waterfall)) {
+    path_rows <- mbl_waterfall$step_order %in% c(2L, 3L)
+    for (idx in which(path_rows)) {
+      mbl_waterfall[idx, ] <- confluence_count_apply_route_failure(mbl_waterfall[idx, , drop = FALSE], route_status, "pathology_first_dates")
+    }
+    note_rows <- !path_rows
+    if (any(note_rows)) {
+      mbl_waterfall$notes[note_rows] <- paste(
+        mbl_waterfall$notes[note_rows],
+        "Pathology-supported MBL route failed closed; waterfall steps using coded MBL remain diagnosis-coded only."
+      )
+    }
+  }
   mgus_without_mm <- setdiff(state_people("mgus"), state_people("mm"))
   mgus_waterfall <- bind_rows_base(list(
     row("mgus", 1L, "Diagnosis-coded MGUS", "DD472/DD472B/D472/D472B", state_people("mgus")),
@@ -834,20 +1066,39 @@ confluence_count_waterfall_from_sets <- function(first_dates, min_cell_count = a
 
 confluence_count_outputs_from_sets <- function(count_sets, project_root = ".", min_cell_count = atlas_min_cell_count()) {
   endpoint_codes <- confluence_count_read_endpoint_code_sets(project_root)
+  route_status <- confluence_count_route_statuses(count_sets)
   first_dates <- confluence_count_derive_states(count_sets$disease_first_dates %||% count_sets$first_dates)
   patient_frame <- confluence_count_normalize_patient_frame(count_sets$patient_frame %||% data.frame(stringsAsFactors = FALSE))
   infection_events <- confluence_count_normalize_events(count_sets$infection_events %||% data.frame(stringsAsFactors = FALSE))
   group_entries <- confluence_count_group_entries(first_dates)
-  person_time <- confluence_count_person_time_rows(group_entries, patient_frame, min_cell_count = min_cell_count)
-  infection_counts <- confluence_count_infection_rows(group_entries, infection_events, person_time, endpoint_codes, min_cell_count = min_cell_count)
-  recurrent <- confluence_count_recurrent_rows(group_entries, infection_events, endpoint_codes, min_cell_count = min_cell_count)
-  rates <- confluence_count_rate_rows(infection_counts, person_time, min_cell_count = min_cell_count)
-  water <- confluence_count_waterfall_from_sets(first_dates, min_cell_count = min_cell_count)
+  person_time <- if (confluence_count_route_success(route_status, "patient_frame")) {
+    confluence_count_person_time_rows(group_entries, patient_frame, min_cell_count = min_cell_count)
+  } else {
+    confluence_count_person_time_fail_closed(route_status)
+  }
+  infection_counts <- if (confluence_count_route_success(route_status, "infection_events")) {
+    confluence_count_infection_rows(group_entries, infection_events, person_time, endpoint_codes, min_cell_count = min_cell_count)
+  } else {
+    confluence_count_infection_fail_closed(route_status, "not accepted aggregate")
+  }
+  recurrent <- if (confluence_count_route_success(route_status, "infection_events")) {
+    confluence_count_recurrent_rows(group_entries, infection_events, endpoint_codes, min_cell_count = min_cell_count)
+  } else {
+    confluence_count_infection_fail_closed(route_status, "distinct recurrent episodes not accepted")
+  }
+  rates <- if (confluence_count_route_success(route_status, "infection_events")) {
+    confluence_count_rate_rows(infection_counts, person_time, min_cell_count = min_cell_count)
+  } else {
+    confluence_count_infection_rate_fail_closed(route_status)
+  }
+  water <- confluence_count_waterfall_from_sets(first_dates, min_cell_count = min_cell_count, route_status = route_status)
+  source_resolution <- count_sets$source_resolution_audit %||% confluence_count_empty_source_resolution_audit()
+  if (!is.data.frame(source_resolution)) source_resolution <- confluence_count_empty_source_resolution_audit()
   list(
-    disease_state_person_counts = confluence_count_state_count_rows(first_dates, min_cell_count = min_cell_count),
-    first_date_availability = confluence_count_first_date_rows(first_dates, min_cell_count = min_cell_count),
-    overlap_counts_accepted = confluence_count_overlap_count_rows(first_dates, min_cell_count = min_cell_count),
-    overlap_timing_accepted = confluence_count_overlap_timing_rows(first_dates, min_cell_count = min_cell_count),
+    disease_state_person_counts = confluence_count_state_count_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
+    first_date_availability = confluence_count_first_date_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
+    overlap_counts_accepted = confluence_count_overlap_count_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
+    overlap_timing_accepted = confluence_count_overlap_timing_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
     mbl_validation_waterfall = water$mbl,
     mgus_validation_waterfall = water$mgus,
     dual_clone_validation_waterfall = water$dual,
@@ -858,7 +1109,8 @@ confluence_count_outputs_from_sets <- function(count_sets, project_root = ".", m
     infection_rates = rates,
     microbiology_confirmation_counts = confluence_count_microbiology_fail_closed(mode = "production_aggregate"),
     production_query_review = confluence_count_query_review(success = TRUE, endpoint_codes = endpoint_codes),
-    failed_query_audit = confluence_count_empty_failed_query_audit(),
+    failed_query_audit = confluence_count_failed_route_audit(route_status),
+    source_resolution_audit = source_resolution,
     production_execution_summary = confluence_count_execution_summary("production_aggregate", TRUE, TRUE, first_dates, infection_events)
   )
 }
@@ -926,17 +1178,314 @@ confluence_count_date_sql <- function(expr) {
   paste0("cast(", expr, " as date)")
 }
 
-confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") {
-  endpoint_codes <- confluence_count_read_endpoint_code_sets(project_root)
-  prefix_pred <- paste0("(", paste(vapply(endpoint_codes$code_prefix, function(prefix) {
-    paste0("normalized_code like '", gsub("'", "''", prefix, fixed = TRUE), "%'")
-  }, character(1)), collapse = " or "), ")")
-  norm_expr <- function(col) paste0("regexp_replace(upper(trim(", col, "::text)), '[^A-Z0-9]', '', 'g')")
-  first_sql <- paste0(
-    "with diagnosis_rows as (\n",
-    "  select patientid::text as person_key, ", confluence_count_date_sql("date_diagnosis"), " as event_date, ", norm_expr("diagnosis"), " as normalized_code from public.t_dalycare_diagnoses\n",
-    "  union all\n",
-    "  select patientid::text as person_key, ", confluence_count_date_sql("date_diagnosis"), " as event_date, ", norm_expr("diagnosis"), " as normalized_code from public.diagnoses_all\n",
+confluence_count_bool <- function(x) {
+  if (exists("mcl_count_bool", mode = "function")) return(mcl_count_bool(x))
+  tolower(trimws(as.character(x %||% ""))) %in% c("true", "t", "1", "yes", "y")
+}
+
+confluence_count_sql_ident <- function(x) {
+  if (exists("mcl_count_sql_ident", mode = "function")) return(mcl_count_sql_ident(x))
+  paste0('"', gsub('"', '""', as.character(x %||% "")), '"')
+}
+
+confluence_count_sql_table <- function(schema, table) {
+  if (exists("mcl_count_sql_table", mode = "function")) return(mcl_count_sql_table(schema, table))
+  paste(confluence_count_sql_ident(schema %||% "public"), confluence_count_sql_ident(table), sep = ".")
+}
+
+confluence_count_mapping_usable <- function(mapping) {
+  is.data.frame(mapping) && nrow(mapping) &&
+    confluence_count_bool(mapping$usable_for_counts[[1]]) &&
+    nzchar(mapping$person_key_column[[1]] %||% "") &&
+    nzchar(mapping$table[[1]] %||% "")
+}
+
+confluence_count_mapping_route_ids <- function(source_role) {
+  role <- trimws(as.character(source_role %||% ""))
+  out <- character()
+  if (identical(role, "patient_frame")) out <- c(out, "patient_frame")
+  if (identical(role, "pathology_mbl_support")) out <- c(out, "pathology_first_dates")
+  if (identical(role, "diagnosis_state_and_infection")) out <- c(out, "diagnosis_first_dates", "infection_events")
+  if (identical(role, "provisional_infection_event")) out <- c(out, "infection_events")
+  unique(out)
+}
+
+confluence_count_route_meta <- function(route_id) {
+  route_id <- as.character(route_id %||% "")
+  query_id <- switch(
+    route_id,
+    diagnosis_first_dates = "confluence_disease_first_dates",
+    pathology_first_dates = "confluence_pathology_first_dates",
+    infection_events = "confluence_infection_events",
+    patient_frame = "confluence_patient_frame",
+    route_id
+  )
+  output_file <- switch(
+    route_id,
+    diagnosis_first_dates = "confluence_first_date_availability.csv",
+    pathology_first_dates = "confluence_mbl_validation_waterfall.csv",
+    infection_events = "confluence_infection_counts.csv",
+    patient_frame = "confluence_infection_person_time.csv",
+    "confluence_production_execution_summary.csv"
+  )
+  list(query_id = query_id, output_file = output_file)
+}
+
+confluence_count_route_status_row <- function(route_id,
+                                              query_executed,
+                                              query_success,
+                                              error_class = "",
+                                              error_message_sanitized = "",
+                                              source_table = "",
+                                              notes = "") {
+  meta <- confluence_count_route_meta(route_id)
+  status <- if (isTRUE(query_success)) {
+    "executed"
+  } else if (nzchar(error_class %||% "")) {
+    error_class
+  } else if (isTRUE(query_executed)) {
+    "production_aggregate_failed_query_error"
+  } else {
+    "production_aggregate_failed_mapping_unavailable"
+  }
+  data.frame(
+    route_id = route_id,
+    query_id = meta$query_id,
+    output_file = meta$output_file,
+    query_status = status,
+    query_executed = isTRUE(query_executed),
+    query_success = isTRUE(query_success),
+    error_class = if (isTRUE(query_success)) "" else status,
+    error_message_sanitized = error_message_sanitized %||% "",
+    source_table = source_table %||% "",
+    notes = notes %||% "",
+    stringsAsFactors = FALSE
+  )
+}
+
+confluence_count_failed_route_audit <- function(route_status) {
+  if (!is.data.frame(route_status) || !nrow(route_status)) return(confluence_count_empty_failed_query_audit())
+  failed <- route_status[!confluence_count_bool(route_status$query_success), , drop = FALSE]
+  if (!nrow(failed)) return(confluence_count_empty_failed_query_audit())
+  data.frame(
+    component = failed$query_id,
+    output_file = failed$output_file,
+    query_id = failed$query_id,
+    count_status = failed$query_status,
+    query_attempted = confluence_count_bool(failed$query_executed),
+    query_success = FALSE,
+    error_class = failed$error_class,
+    error_message_sanitized = failed$error_message_sanitized,
+    notes = ifelse(nzchar(failed$notes), failed$notes, failed$error_message_sanitized),
+    stringsAsFactors = FALSE
+  )
+}
+
+confluence_count_source_record <- function(mapping, relaxed = FALSE) {
+  data.frame(
+    table_name = mapping$source_id[[1]] %||% mapping$table[[1]] %||% "",
+    source = mapping$source_id[[1]] %||% mapping$table[[1]] %||% "",
+    source_type = "dataset",
+    db_name = if (isTRUE(relaxed)) "" else (mapping$db_name[[1]] %||% ""),
+    schema = if (isTRUE(relaxed)) "" else (mapping$schema[[1]] %||% ""),
+    table = mapping$table[[1]] %||% "",
+    known_aliases = paste(unique(c(mapping$source_id[[1]], mapping$table[[1]])), collapse = ";"),
+    stringsAsFactors = FALSE
+  )
+}
+
+confluence_count_match_source_location <- function(mapping, tables) {
+  if (!is.data.frame(tables) || !nrow(tables)) return(tables)
+  if (exists("match_table_location", mode = "function")) {
+    strict <- match_table_location(confluence_count_source_record(mapping, relaxed = FALSE), tables)
+    if (nrow(strict)) return(strict)
+    return(match_table_location(confluence_count_source_record(mapping, relaxed = TRUE), tables))
+  }
+  key <- tolower(as.character(tables$table %||% ""))
+  candidates <- unique(tolower(c(mapping$table[[1]], mapping$source_id[[1]])))
+  tables[key %in% candidates, , drop = FALSE]
+}
+
+confluence_count_resolve_source_mappings <- function(db_adapter, project_root = ".") {
+  mappings <- confluence_count_read_person_date_mapping(project_root)
+  if (!is.data.frame(mappings) || !nrow(mappings)) {
+    return(list(mappings = mappings, audit = confluence_count_empty_source_resolution_audit()))
+  }
+  tables <- if (exists("adapter_list_tables", mode = "function")) adapter_list_tables(db_adapter) else confluence_count_empty_source_resolution_audit()[FALSE, c("resolved_db_name", "resolved_schema", "resolved_table"), drop = FALSE]
+  if (!is.data.frame(tables) || !"table" %in% names(tables)) tables <- data.frame(db_name = character(), schema = character(), table = character(), stringsAsFactors = FALSE)
+  resolved <- mappings
+  for (nm in c("resolved_db_name", "resolved_schema", "resolved_table", "resolution_status", "query_executable", "resolution_notes")) {
+    resolved[[nm]] <- rep("", nrow(resolved))
+  }
+  audit <- lapply(seq_len(nrow(mappings)), function(i) {
+    row <- mappings[i, , drop = FALSE]
+    usable <- confluence_count_mapping_usable(row)
+    route_ids <- confluence_count_mapping_route_ids(row$source_role[[1]])
+    route_label <- paste(route_ids, collapse = ";")
+    status <- "not_usable_for_counts"
+    executable <- FALSE
+    notes <- row$notes[[1]] %||% ""
+    db <- row$db_name[[1]] %||% ""
+    schema <- row$schema[[1]] %||% ""
+    table <- row$table[[1]] %||% ""
+    if (isTRUE(usable)) {
+      if (!nrow(tables)) {
+        status <- "configured_unverified_no_catalog"
+        executable <- TRUE
+      } else {
+        matches <- confluence_count_match_source_location(row, tables)
+        if (nrow(matches) == 1L) {
+          db <- matches$db_name[[1]]
+          schema <- matches$schema[[1]]
+          table <- matches$table[[1]]
+          status <- "resolved_catalog"
+          executable <- TRUE
+        } else if (nrow(matches) > 1L) {
+          status <- "ambiguous_catalog_match"
+          notes <- paste("Multiple live tables matched:", paste(matches$db_name, matches$schema, matches$table, sep = ".", collapse = "; "))
+        } else {
+          status <- "missing_from_catalog"
+          notes <- "No live DB catalog table matched this configured CONFLUENCE source."
+        }
+      }
+    }
+    resolved$resolved_db_name[[i]] <<- db
+    resolved$resolved_schema[[i]] <<- schema
+    resolved$resolved_table[[i]] <<- table
+    resolved$resolution_status[[i]] <<- status
+    resolved$query_executable[[i]] <<- as.character(isTRUE(executable))
+    resolved$resolution_notes[[i]] <<- notes
+    data.frame(
+      source_id = row$source_id[[1]] %||% "",
+      source_role = row$source_role[[1]] %||% "",
+      route_id = route_label,
+      configured_db_name = row$db_name[[1]] %||% "",
+      configured_schema = row$schema[[1]] %||% "",
+      configured_table = row$table[[1]] %||% "",
+      resolved_db_name = db,
+      resolved_schema = schema,
+      resolved_table = table,
+      person_key_column = row$person_key_column[[1]] %||% "",
+      date_columns = row$date_columns[[1]] %||% "",
+      code_column = row$code_column[[1]] %||% "",
+      usable_for_counts = confluence_count_bool(row$usable_for_counts[[1]]),
+      resolution_status = status,
+      query_executable = isTRUE(executable),
+      notes = notes,
+      stringsAsFactors = FALSE
+    )
+  })
+  list(mappings = resolved, audit = bind_rows_base(audit))
+}
+
+confluence_count_split_columns <- function(x) {
+  out <- trimws(unlist(strsplit(as.character(x %||% ""), ";", fixed = TRUE), use.names = FALSE))
+  out[nzchar(out)]
+}
+
+confluence_count_date_expr_sql <- function(alias, date_columns) {
+  cols <- confluence_count_split_columns(date_columns)
+  if (!length(cols)) return("")
+  exprs <- vapply(cols, function(col) {
+    confluence_count_date_sql(paste0(alias, ".", confluence_count_sql_ident(col)))
+  }, character(1))
+  if (length(exprs) == 1L) exprs[[1]] else paste0("coalesce(", paste(exprs, collapse = ", "), ")")
+}
+
+confluence_count_norm_expr_sql <- function(alias, col) {
+  paste0("regexp_replace(upper(trim(", alias, ".", confluence_count_sql_ident(col), "::text)), '[^A-Z0-9]', '', 'g')")
+}
+
+confluence_count_source_ref <- function(mapping) {
+  confluence_count_sql_table(mapping$resolved_schema[[1]] %||% mapping$schema[[1]], mapping$resolved_table[[1]] %||% mapping$table[[1]])
+}
+
+confluence_count_source_rows_sql <- function(mapping, include_code = TRUE) {
+  alias <- "x"
+  person <- mapping$person_key_column[[1]] %||% ""
+  date_expr <- confluence_count_date_expr_sql(alias, mapping$date_columns[[1]] %||% "")
+  if (!nzchar(person) || !nzchar(date_expr)) return("")
+  code_sql <- ""
+  if (isTRUE(include_code)) {
+    code <- mapping$code_column[[1]] %||% ""
+    if (!nzchar(code)) return("")
+    code_sql <- paste0(", ", confluence_count_norm_expr_sql(alias, code), " as normalized_code")
+  }
+  paste0(
+    "select ", alias, ".", confluence_count_sql_ident(person), "::text as person_key,\n",
+    "       ", date_expr, " as event_date",
+    code_sql, "\n",
+    "from ", confluence_count_source_ref(mapping), " ", alias
+  )
+}
+
+confluence_count_query_result <- function(db_adapter, sql) {
+  if (is.function(db_adapter$confluence_query)) {
+    return(tryCatch(
+      list(data = db_adapter$confluence_query(sql), error_class = "", error_message_sanitized = ""),
+      error = function(e) list(
+        data = NULL,
+        error_class = "production_aggregate_failed_query_error",
+        error_message_sanitized = if (exists("mcl_count_sanitize_error_message", mode = "function")) mcl_count_sanitize_error_message(conditionMessage(e)) else conditionMessage(e)
+      )
+    ))
+  }
+  result <- mcl_count_db_query_result(db_adapter, sql)
+  if (nzchar(result$error_class %||% "")) result$error_class <- "production_aggregate_failed_query_error"
+  result
+}
+
+confluence_count_execute_route <- function(db_adapter, sources, route_id, sql_builder) {
+  if (!is.data.frame(sources) || !nrow(sources)) {
+    status <- confluence_count_route_status_row(
+      route_id,
+      query_executed = FALSE,
+      query_success = FALSE,
+      error_class = "production_aggregate_failed_mapping_unavailable",
+      error_message_sanitized = "No configured executable CONFLUENCE source mapping was available for this route.",
+      notes = "Route failed closed before SQL execution."
+    )
+    return(list(data = data.frame(stringsAsFactors = FALSE), status = status))
+  }
+  rows <- list()
+  failures <- character()
+  source_refs <- vapply(seq_len(nrow(sources)), function(i) {
+    paste(sources$resolved_db_name[[i]] %||% sources$db_name[[i]], sources$resolved_schema[[i]] %||% sources$schema[[i]], sources$resolved_table[[i]] %||% sources$table[[i]], sep = ".")
+  }, character(1))
+  query_attempted <- FALSE
+  for (i in seq_len(nrow(sources))) {
+    source <- sources[i, , drop = FALSE]
+    sql <- sql_builder(source)
+    if (!nzchar(sql)) {
+      failures <- c(failures, paste0(source$source_id[[1]], ": required person/date/code mapping is incomplete"))
+      next
+    }
+    query_attempted <- TRUE
+    result <- confluence_count_query_result(db_adapter, sql)
+    if (nzchar(result$error_class %||% "")) {
+      failures <- c(failures, paste0(source$source_id[[1]], ": ", result$error_message_sanitized %||% result$error_class))
+    } else if (is.data.frame(result$data)) {
+      rows[[length(rows) + 1L]] <- result$data
+    }
+  }
+  success <- !length(failures)
+  status <- confluence_count_route_status_row(
+    route_id,
+    query_executed = query_attempted,
+    query_success = success,
+    error_class = if (success) "" else if (query_attempted) "production_aggregate_failed_query_error" else "production_aggregate_failed_mapping_unavailable",
+    error_message_sanitized = if (success) "" else paste(failures, collapse = " | "),
+    source_table = paste(source_refs, collapse = ";"),
+    notes = if (success) "Route executed successfully." else "Route failed closed; related public rows must not be accepted as zero."
+  )
+  list(data = bind_rows_base(rows), status = status)
+}
+
+confluence_count_diagnosis_first_date_sql <- function(mapping) {
+  source_sql <- confluence_count_source_rows_sql(mapping, include_code = TRUE)
+  if (!nzchar(source_sql)) return("")
+  paste0(
+    "with diagnosis_rows as (\n", source_sql, "\n",
     "), coded_states as (\n",
     "  select person_key,\n",
     "    case\n",
@@ -947,59 +1496,77 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
     "      else null end as state_id,\n",
     "    event_date\n",
     "  from diagnosis_rows where event_date is not null\n",
-    "), grouped as (\n",
-    "  select person_key, state_id, min(event_date) as first_date from coded_states where state_id is not null group by person_key, state_id\n",
     ")\n",
-    "select person_key, state_id, first_date from grouped;"
+    "select person_key, state_id, min(event_date) as first_date\n",
+    "from coded_states where state_id is not null group by person_key, state_id;"
   )
-  pato_sql <- paste0(
-    "with pato as (\n",
-    "  select patientid::text as person_key, coalesce(", confluence_count_date_sql("d_rekvdato"), ", ", confluence_count_date_sql("d_svardato"), ") as event_date, ", norm_expr("c_snomedkode"), " as normalized_code from public.SDS_pato\n",
-    "), grouped as (\n",
+}
+
+confluence_count_pathology_first_date_sql <- function(mapping) {
+  source_sql <- confluence_count_source_rows_sql(mapping, include_code = TRUE)
+  if (!nzchar(source_sql)) return("")
+  paste0(
+    "with pathology_rows as (\n", source_sql, "\n",
+    "), coded_states as (\n",
     "  select person_key,\n",
-    "    case when normalized_code in ('M95911','M96121','M98231') then 'pathology_mbl' when normalized_code = 'M98233' then 'cll_morphology_pressure' else null end as state_id,\n",
-    "    min(event_date) as first_date\n",
-    "  from pato where event_date is not null group by person_key, state_id\n",
+    "    case when normalized_code in ('M95911','M96121','M98231') then 'pathology_mbl'\n",
+    "         when normalized_code = 'M98233' then 'cll_morphology_pressure'\n",
+    "         else null end as state_id,\n",
+    "    event_date\n",
+    "  from pathology_rows where event_date is not null\n",
     ")\n",
-    "select person_key, state_id, first_date from grouped where state_id is not null;"
+    "select person_key, state_id, min(event_date) as first_date\n",
+    "from coded_states where state_id is not null group by person_key, state_id;"
   )
-  infection_sql <- paste0(
-    "with infection_rows as (\n",
-    "  select patientid::text as person_key, ", confluence_count_date_sql("date_diagnosis"), " as event_date, ", norm_expr("diagnosis"), " as normalized_code from public.t_dalycare_diagnoses\n",
-    "  union all\n",
-    "  select patientid::text as person_key, ", confluence_count_date_sql("date_diagnosis"), " as event_date, ", norm_expr("diagnosis"), " as normalized_code from public.diagnoses_all\n",
-    "  union all\n",
-    "  select patientid::text as person_key, ", confluence_count_date_sql("d_inddto"), " as event_date, ", norm_expr("c_adiag"), " as normalized_code from public.SDS_t_adm\n",
-    "  union all\n",
-    "  select patientid::text as person_key, ", confluence_count_date_sql("dato_start"), " as event_date, ", norm_expr("aktionsdiagnose"), " as normalized_code from public.SDS_kontakter\n",
+}
+
+confluence_count_infection_event_sql <- function(mapping, endpoint_codes) {
+  source_sql <- confluence_count_source_rows_sql(mapping, include_code = TRUE)
+  if (!nzchar(source_sql)) return("")
+  prefix_pred <- paste0("(", paste(vapply(endpoint_codes$code_prefix, function(prefix) {
+    paste0("normalized_code like '", gsub("'", "''", prefix, fixed = TRUE), "%'")
+  }, character(1)), collapse = " or "), ")")
+  paste0(
+    "with infection_rows as (\n", source_sql, "\n",
     ")\n",
     "select distinct person_key, event_date, 'serious_infection_hospitalization' as endpoint_id\n",
     "from infection_rows where person_key is not null and event_date is not null and ", prefix_pred, ";"
   )
-  patient_sql <- paste0(
-    "select patientid::text as person_key, ", confluence_count_date_sql("date_death_fu"), " as date_death_fu from public.patient;"
+}
+
+confluence_count_patient_frame_sql <- function(mapping) {
+  source_sql <- confluence_count_source_rows_sql(mapping, include_code = FALSE)
+  if (!nzchar(source_sql)) return("")
+  paste0(
+    "with patient_rows as (\n", source_sql, "\n",
+    ")\n",
+    "select person_key, min(event_date) as date_death_fu\n",
+    "from patient_rows where person_key is not null group by person_key;"
   )
-  query <- function(sql) {
-    if (is.function(db_adapter$confluence_query)) {
-      return(tryCatch(list(data = db_adapter$confluence_query(sql), error_class = "", error_message_sanitized = ""), error = function(e) list(data = NULL, error_class = "production_aggregate_failed_query_error", error_message_sanitized = conditionMessage(e))))
-    }
-    mcl_count_db_query_result(db_adapter, sql)
-  }
-  first <- query(first_sql)
-  pato <- query(pato_sql)
-  infection <- query(infection_sql)
-  patient <- query(patient_sql)
-  errors <- bind_rows_base(list(
-    if (nzchar(first$error_class %||% "")) confluence_count_fail_closed_frame("confluence_disease_first_dates", "confluence_first_date_availability.csv", first$error_message_sanitized, "production_aggregate", first$error_class),
-    if (nzchar(pato$error_class %||% "")) confluence_count_fail_closed_frame("confluence_pathology_first_dates", "confluence_mbl_validation_waterfall.csv", pato$error_message_sanitized, "production_aggregate", pato$error_class),
-    if (nzchar(infection$error_class %||% "")) confluence_count_fail_closed_frame("confluence_infection_events", "confluence_infection_counts.csv", infection$error_message_sanitized, "production_aggregate", infection$error_class),
-    if (nzchar(patient$error_class %||% "")) confluence_count_fail_closed_frame("confluence_patient_frame", "confluence_infection_person_time.csv", patient$error_message_sanitized, "production_aggregate", patient$error_class)
-  ))
+}
+
+confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") {
+  endpoint_codes <- confluence_count_read_endpoint_code_sets(project_root)
+  resolved <- confluence_count_resolve_source_mappings(db_adapter, project_root = project_root)
+  mappings <- resolved$mappings
+  executable <- mappings[confluence_count_bool(mappings$query_executable), , drop = FALSE]
+  diagnosis_sources <- executable[executable$source_role == "diagnosis_state_and_infection" & nzchar(executable$code_column), , drop = FALSE]
+  pathology_sources <- executable[executable$source_role == "pathology_mbl_support" & nzchar(executable$code_column), , drop = FALSE]
+  infection_sources <- executable[executable$source_role %in% c("diagnosis_state_and_infection", "provisional_infection_event") & nzchar(executable$code_column), , drop = FALSE]
+  patient_sources <- executable[executable$source_role == "patient_frame", , drop = FALSE]
+  first <- confluence_count_execute_route(db_adapter, diagnosis_sources, "diagnosis_first_dates", confluence_count_diagnosis_first_date_sql)
+  pato <- confluence_count_execute_route(db_adapter, pathology_sources, "pathology_first_dates", confluence_count_pathology_first_date_sql)
+  infection <- confluence_count_execute_route(db_adapter, infection_sources, "infection_events", function(mapping) confluence_count_infection_event_sql(mapping, endpoint_codes))
+  patient <- confluence_count_execute_route(db_adapter, patient_sources, "patient_frame", confluence_count_patient_frame_sql)
+  route_status <- bind_rows_base(list(first$status, pato$status, infection$status, patient$status))
+  errors <- confluence_count_failed_route_audit(route_status)
   list(
     sets = list(
       disease_first_dates = bind_rows_base(list(first$data, pato$data)),
       infection_events = infection$data,
-      patient_frame = patient$data
+      patient_frame = patient$data,
+      route_status = route_status,
+      source_resolution_audit = resolved$audit
     ),
     errors = errors
   )
@@ -1032,7 +1599,12 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
       db_errors <<- confluence_count_fail_closed_frame("confluence_count_sets_hook", "confluence_production_execution_summary.csv", conditionMessage(e), "production_aggregate", "production_aggregate_failed_query_error")
       NULL
     })
-    if (is.list(hook)) count_sets <- hook$sets %||% hook
+    if (is.list(hook)) {
+      count_sets <- hook$sets %||% hook
+      if (is.data.frame(hook$route_status)) count_sets$route_status <- hook$route_status
+      if (is.data.frame(hook$source_resolution_audit)) count_sets$source_resolution_audit <- hook$source_resolution_audit
+      if (is.data.frame(hook$errors)) db_errors <- hook$errors
+    }
   } else {
     fetched <- confluence_count_fetch_sets_from_db(db_adapter, project_root = project_root)
     count_sets <- fetched$sets
