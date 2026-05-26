@@ -228,6 +228,12 @@ confluence_count_db_available <- function(db_adapter) {
   length(conns) > 0L
 }
 
+confluence_count_auto_db_adapter <- function(db_adapter = NULL) {
+  if (!is.null(db_adapter)) return(db_adapter)
+  if (!exists("dalycare_db_adapter", mode = "function")) return(NULL)
+  tryCatch(dalycare_db_adapter(), error = function(e) NULL)
+}
+
 confluence_count_read_person_date_mapping <- function(project_root = ".") {
   path <- file.path(project_root, "config", "confluence_person_date_mapping.tsv")
   if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
@@ -1015,6 +1021,7 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
   if (identical(mode, "plan")) {
     return(confluence_count_placeholder_outputs(mode = "plan", reason = "CONFLUENCE production aggregate mode disabled or DB adapter unavailable.", project_root = project_root))
   }
+  db_adapter <- confluence_count_auto_db_adapter(db_adapter)
   if (!confluence_count_db_available(db_adapter)) {
     return(confluence_count_placeholder_outputs(mode = "production_aggregate", reason = "No DB adapter or secure CONFLUENCE count hook was available.", error_class = "production_aggregate_failed_credentials_unavailable", project_root = project_root))
   }

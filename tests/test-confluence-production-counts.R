@@ -69,6 +69,27 @@ prod <- confluence_count_build_outputs(
   min_cell_count = 5L
 )
 
+old_dalycare_db_adapter_exists <- exists("dalycare_db_adapter", envir = .GlobalEnv, inherits = FALSE)
+old_dalycare_db_adapter <- if (old_dalycare_db_adapter_exists) get("dalycare_db_adapter", envir = .GlobalEnv, inherits = FALSE) else NULL
+assign("dalycare_db_adapter", function(...) fake_adapter, envir = .GlobalEnv)
+auto_prod <- tryCatch(
+  confluence_count_build_outputs(
+    project_root = root,
+    db_adapter = NULL,
+    mode = "production_aggregate",
+    min_cell_count = 5L
+  ),
+  finally = {
+    if (old_dalycare_db_adapter_exists) {
+      assign("dalycare_db_adapter", old_dalycare_db_adapter, envir = .GlobalEnv)
+    } else if (exists("dalycare_db_adapter", envir = .GlobalEnv, inherits = FALSE)) {
+      rm("dalycare_db_adapter", envir = .GlobalEnv)
+    }
+  }
+)
+expect_true(any(auto_prod$production_execution_summary$metric == "production_query_success" & auto_prod$production_execution_summary$value == "TRUE"), "Explicit production mode should auto-discover dalycare_db_adapter() when no adapter is supplied.")
+expect_true(any(auto_prod$overlap_counts_accepted$acceptance_status == "accepted"), "Auto-discovered CONFLUENCE adapter should feed accepted aggregate outputs.")
+
 expect_true(any(prod$production_execution_summary$metric == "production_query_success" & prod$production_execution_summary$value == "TRUE"), "Fake DB adapter should execute CONFLUENCE production aggregates.")
 expect_true(any(prod$disease_state_person_counts$state_id == "cll" & prod$disease_state_person_counts$acceptance_status == "accepted"), "CLL first-date aggregate should be accepted.")
 expect_true(any(prod$disease_state_person_counts$state_id == "coded_mbl" & prod$disease_state_person_counts$count_display == "6"), "Coded MBL person count should be computed from secure first dates.")
