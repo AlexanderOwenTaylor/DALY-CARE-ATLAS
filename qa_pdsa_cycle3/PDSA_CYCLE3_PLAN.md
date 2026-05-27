@@ -15,7 +15,7 @@ Cycle 3 is a reviewer-readability pass. It keeps DALY-CARE aggregate evidence in
 
 ## Measures
 
-- No decreases in tracked tabs, panels, details, exports, payload keys, output files, MCL/TRIANGLE rows, CONFLUENCE rows, source catalog rows, data dictionary rows, or reconciliation rows.
+- No decreases in tracked tabs, panels, details, exports, payload keys, output files, MCL/TRIANGLE rows, clinical feasibility rows, source catalog rows, data dictionary rows, or reconciliation rows.
 - No tracked panel uses mixed-denominator percent scaling by default.
 - No primary treatment/code labels hide the useful term behind repeated source prefixes.
 - Free-text availability panels are status-first and do not primarily show code inventories.

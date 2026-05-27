@@ -1,0 +1,6 @@
+source_id	db_name	schema	table	person_key_column	date_columns	code_column	source_role	linkage_confidence	usable_for_counts	notes
+t_dalycare_diagnoses	core	public	t_dalycare_diagnoses	patientid	date_diagnosis	diagnosis	provisional_infection_event	high	TRUE	Primary diagnosis backbone for provisional infection diagnosis events.
+diagnoses_all	core	public	diagnoses_all	patientid	date_diagnosis	diagnosis	provisional_infection_event	high	TRUE	Secondary diagnosis backbone for provisional infection diagnosis events; deduplicated by person/event date before aggregation.
+SDS_t_adm	import	public	SDS_t_adm	patientid	d_inddto	c_adiag	provisional_infection_event	medium	TRUE	Admissions source; diagnosis column is used only for provisional infection endpoint aggregates.
+SDS_kontakter	import	public	SDS_kontakter	patientid	dato_start	aktionsdiagnose	provisional_infection_event	medium	TRUE	LPR3 contact source; action diagnosis is used only for provisional infection endpoint aggregates.
+SDS_diagnoser	import	public	SDS_diagnoser		datetime_created	diagnosekode	provisional_infection_event_via_contact	requires_bridge	FALSE	Requires validated join to SDS_kontakter.dw_ek_kontakt before patient-level episode logic; fail closed unless bridge is implemented.

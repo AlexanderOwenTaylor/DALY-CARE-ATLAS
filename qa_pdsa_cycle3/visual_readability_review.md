@@ -7,7 +7,7 @@
 - Microbiology organism, source, antibiotic, and susceptibility panels.
 - Pathology SNOMED, specimen/material, institution/source, and free-text availability.
 - Vitals as the positive reference pattern.
-- MCL/TRIANGLE and CONFLUENCE feasibility panels.
+- MCL/TRIANGLE and feasibility feasibility panels.
 
 ## Pass Criteria
 

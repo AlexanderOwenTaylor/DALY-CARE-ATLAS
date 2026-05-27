@@ -18,7 +18,7 @@ read_snapshot_numbers <- function(path) {
   keys <- c(
     "top_level_tabs", "sub_tabs", "panels", "details_sections",
     "source_catalog_rows", "data_dictionary_rows", "resource_reconciliation_rows",
-    "payload_top_level_keys", "mcl_triangle_data_point_rows", "confluence_rows",
+    "payload_top_level_keys", "mcl_triangle_data_point_rows", "clinical_feasibility_rows",
     "output_csv_files", "rendered_export_links"
   )
   out <- setNames(integer(length(keys)), keys)

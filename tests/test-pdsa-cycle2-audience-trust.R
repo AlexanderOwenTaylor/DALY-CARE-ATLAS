@@ -17,9 +17,6 @@ for (needle in c(
 for (needle in c(
   "PI / senior investigator",
   "Data manager / QA",
-  "Disease researcher",
-  "Plasma cell disorder / MM researcher",
-  "CLL researcher",
   "Lymphoma researcher",
   "New employee onboarding",
   "Senior clinician / manager",
@@ -77,7 +74,6 @@ for (needle in c(
   "\"data manager\"",
   "\"source readiness\"",
   "feasibility:",
-  "confluence:",
   "mbl:",
   "dd479b:",
   "mm:",
@@ -91,7 +87,6 @@ for (needle in c(
 
 for (needle in c(
   "{ name: \"laboratory_diagnostics\", tab: \"laboratory\", sub: \"lab-npu\" }",
-  "{ name: \"confluence\", tab: \"clinical-feasibility\", sub: \"confluence-feasibility\" }",
   "{ name: \"npu_detective\", tab: \"laboratory\", sub: \"lab-npu\", search: \"NPU02319\" }",
   "{ name: \"microbiology\", tab: \"laboratory\", sub: \"lab-microbiology\" }",
   "{ name: \"pathology\", tab: \"laboratory\", sub: \"lab-pathology\" }",

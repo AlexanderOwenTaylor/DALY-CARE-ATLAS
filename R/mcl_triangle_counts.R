@@ -4593,8 +4593,8 @@ mcl_count_lyfo_ibrutinib_predicate_sql <- function(alias = "x") {
   )
 }
 
-mcl_count_read_confluence_person_date_mapping <- function(project_root) {
-  x <- mcl_count_read_mapping_tsv(project_root, "confluence_person_date_mapping.tsv")
+mcl_count_read_toxicity_source_mapping <- function(project_root) {
+  x <- mcl_count_read_mapping_tsv(project_root, "mcl_triangle_toxicity_source_mapping.tsv")
   needed <- c(
     "source_id", "db_name", "schema", "table", "person_key_column", "date_columns",
     "code_column", "source_role", "linkage_confidence", "usable_for_counts", "notes"
@@ -4602,14 +4602,14 @@ mcl_count_read_confluence_person_date_mapping <- function(project_root) {
   mcl_count_ensure_columns(x, needed)
 }
 
-mcl_count_read_confluence_infection_endpoint_codes <- function(project_root) {
-  x <- mcl_count_read_mapping_tsv(project_root, "confluence_infection_endpoint_code_sets.tsv")
+mcl_count_read_toxicity_endpoint_codes <- function(project_root) {
+  x <- mcl_count_read_mapping_tsv(project_root, "mcl_triangle_infection_endpoint_code_sets.tsv")
   needed <- c("endpoint_id", "endpoint_label", "code_system", "match_type", "code_prefix", "definition_status", "notes")
   mcl_count_ensure_columns(x, needed)
 }
 
 mcl_count_serious_infection_code_prefixes <- function(project_root) {
-  codes <- mcl_count_read_confluence_infection_endpoint_codes(project_root)
+  codes <- mcl_count_read_toxicity_endpoint_codes(project_root)
   if (!is.data.frame(codes) || !nrow(codes)) return(character())
   hit <- codes$endpoint_id == "serious_infection_hospitalization" & tolower(codes$match_type %||% "") == "prefix"
   unique(toupper(trimws(as.character(codes$code_prefix[hit] %||% character()))))
@@ -4625,7 +4625,7 @@ mcl_count_prefix_predicate_sql <- function(expr, prefixes) {
   paste(vapply(prefixes, function(prefix) paste0(expr, " like ", mcl_count_sql_string(paste0(prefix, "%"))), character(1)), collapse = " or ")
 }
 
-mcl_count_confluence_infection_source_sql <- function(mapping, prefixes) {
+mcl_count_toxicity_infection_source_sql <- function(mapping, prefixes) {
   if (!is.data.frame(mapping) || !nrow(mapping)) return("")
   if (!mcl_count_bool(mapping$usable_for_counts[[1]])) return("")
   person <- mapping$person_key_column[[1]] %||% ""
@@ -4646,7 +4646,7 @@ mcl_count_confluence_infection_source_sql <- function(mapping, prefixes) {
 }
 
 mcl_count_serious_infection_union_sql <- function(project_root) {
-  mappings <- mcl_count_read_confluence_person_date_mapping(project_root)
+  mappings <- mcl_count_read_toxicity_source_mapping(project_root)
   prefixes <- mcl_count_serious_infection_code_prefixes(project_root)
   if (!is.data.frame(mappings) || !nrow(mappings) || !length(prefixes)) return("")
   hit <- mappings$source_role %in% c("diagnosis_state_and_infection", "provisional_infection_event") &
@@ -4655,7 +4655,7 @@ mcl_count_serious_infection_union_sql <- function(project_root) {
     nzchar(mappings$date_columns %||% "") &
     nzchar(mappings$code_column %||% "")
   sources <- mappings[hit, , drop = FALSE]
-  pieces <- lapply(seq_len(nrow(sources)), function(i) mcl_count_confluence_infection_source_sql(sources[i, , drop = FALSE], prefixes))
+  pieces <- lapply(seq_len(nrow(sources)), function(i) mcl_count_toxicity_infection_source_sql(sources[i, , drop = FALSE], prefixes))
   pieces <- pieces[nzchar(unlist(pieces, use.names = FALSE))]
   if (!length(pieces)) return("")
   paste(vapply(pieces, identity, character(1)), collapse = "\nunion\n")
@@ -4992,11 +4992,11 @@ mcl_count_data_point_rule <- function(id, project_root, outputs_dir, person_date
   if (identical(id, "toxicity_proxies")) {
     data_sql <- mcl_count_toxicity_proxy_data_sql(lyfo, project_root, days = 365L)
     if (!nzchar(data_sql)) {
-      return(list(executable = FALSE, status = "count_not_available_requires_value_mapping", reason = "Toxicity proxy requires executable CONFLUENCE serious-infection code/source mappings.", source_tables = "CONFLUENCE provisional serious-infection sources; RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "first_line_start_to_365_days", value_rule = "serious infection diagnosis prefix within 365 days after first-line start"))
+      return(list(executable = FALSE, status = "count_not_available_requires_value_mapping", reason = "Toxicity proxy requires executable MCL/TRIANGLE serious-infection code/source mappings.", source_tables = "MCL/TRIANGLE provisional serious-infection sources; RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "first_line_start_to_365_days", value_rule = "serious infection diagnosis prefix within 365 days after first-line start"))
     }
     return(mk(
       data_sql,
-      "RKKP_LYFO; CONFLUENCE provisional serious-infection diagnosis sources",
+      "RKKP_LYFO; MCL/TRIANGLE provisional serious-infection diagnosis sources",
       lyfo$person_key_column[[1]],
       "Beh_KemoterapiStart_dt to 365 days after first-line start",
       "repo-derived provisional serious-infection code prefixes after first-line start",
@@ -5437,6 +5437,12 @@ mcl_count_db_adapter_available <- function(db_adapter) {
   if (is.function(db_adapter$mcl_triangle_query_all_connections)) return(TRUE)
   conns <- db_adapter$connections %||% list()
   length(conns) > 0L
+}
+
+mcl_count_mode <- function(db_adapter = NULL, mode = Sys.getenv("DALYCARE_MCL_TRIANGLE_COUNT_MODE", unset = "auto")) {
+  mode <- match.arg(mode, c("auto", "plan", "production_aggregate"))
+  if (!identical(mode, "auto")) return(mode)
+  if (mcl_count_db_adapter_available(db_adapter)) "production_aggregate" else "plan"
 }
 
 mcl_count_split_config <- function(x) {

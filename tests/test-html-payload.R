@@ -407,20 +407,6 @@ expect_true(all(c("clinical_concept_rows", "domain_panel_rows", "panel_kpi_rows"
 expect_true("ki67_discovery" %in% names(payload), "Payload should include the Ki-67 discovery view model.")
 expect_true(all(c("channel_summary", "aeki_validation_plan", "aeki_code_counts", "text_validation_plan") %in% names(payload$ki67_discovery)), "Payload should include Ki-67 evidence-channel and validation-plan tables.")
 expect_true("mcl_triangle_feasibility" %in% names(payload), "Payload should include the MCL/TRIANGLE feasibility view model.")
-expect_true("confluence_feasibility" %in% names(payload), "Payload should include the CONFLUENCE feasibility view model.")
-expect_true(all(c(
-  "summary", "disease_state_counts", "overlap_counts", "overlap_timing",
-  "infection_outcome_readiness", "treatment_modifier_readiness", "estimands",
-  "validation_checklist", "bias_warnings", "recommended_next_actions",
-  "code_sets", "mbl_source_counts", "mgus_source_counts",
-  "candidate_first_date_summary", "overlap_counts_accepted", "overlap_timing_accepted",
-  "mbl_validation_waterfall", "mgus_validation_waterfall", "dual_clone_validation_waterfall",
-  "small_cell_suppression_audit", "utf8_quality_audit", "infection_endpoint_definitions",
-  "disease_state_person_counts", "first_date_availability", "infection_endpoint_code_sets",
-  "infection_counts", "recurrent_infection_counts", "infection_person_time", "infection_rates",
-  "microbiology_confirmation_counts", "microbiology_confirmation_source_audit", "production_query_review", "failed_query_audit",
-  "production_execution_summary"
-) %in% names(payload$confluence_feasibility)), "Payload should include every CONFLUENCE feasibility table.")
 expect_true(all(c("review_temporal_coverage", "review_spatial_coverage", "review_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")
 expect_true(all(c("builder_credit", "review_scope_notes", "review_data_landscape", "review_module_readiness", "review_streaming_summary", "review_temporal_date_quality", "review_domain_jump_links") %in% names(payload)), "Payload should include transparent credit and neutral review metadata.")
 expect_equal(payload$builder_credit, "Built by Alexander Owen Taylor", "Payload should carry transparent generated-atlas credit.")
@@ -428,7 +414,7 @@ expect_true(length(payload$hero_metrics) > 0, "Hero metrics should be populated.
 expect_true(length(payload$review_nav) == 12L, "review navigation should expose the V33-style top-level domains plus Clinical Variables, Clinical Feasibility, and Data Dictionary.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Clinical Variables"), logical(1))), "review navigation should include Clinical Variables.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Clinical Feasibility"), logical(1))), "review navigation should include Clinical Feasibility.")
-expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Clinical Feasibility") && "CONFLUENCE" %in% row$sub_tabs, logical(1))), "Clinical Feasibility navigation should include CONFLUENCE.")
+expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Clinical Feasibility") && "MCL / TRIANGLE" %in% row$sub_tabs, logical(1))), "Clinical Feasibility navigation should include MCL/TRIANGLE.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Situation Report"), logical(1))), "review navigation should include Situation Report.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Data Dictionary"), logical(1))), "review navigation should include Data Dictionary.")
 expect_true(any(vapply(payload$review_nav, function(row) identical(row$label, "Disease Registries"), logical(1))), "review navigation should include Disease Registries.")
