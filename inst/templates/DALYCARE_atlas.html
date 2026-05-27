@@ -742,10 +742,10 @@
     }
     .h-bar {
       display: grid;
-      grid-template-columns: minmax(86px, 180px) minmax(0, 1fr) minmax(54px, 74px);
-      gap: 8px;
-      align-items: center;
-      padding: 6px 0;
+      grid-template-columns: minmax(160px, 260px) minmax(0, 1fr) minmax(54px, 86px);
+      gap: 10px;
+      align-items: start;
+      padding: 8px 0;
       border-top: 1px solid var(--surface2);
       font-size: 12px;
       min-width: 0;
@@ -753,13 +753,22 @@
     .h-bar:first-child { border-top: 0; }
     .h-bar .label {
       min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       font-weight: 750;
+      line-height: 1.22;
+      overflow-wrap: anywhere;
+      word-break: normal;
+    }
+    .h-bar .label-secondary {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font: 600 10px var(--mono);
+      line-height: 1.25;
+      overflow-wrap: anywhere;
     }
     .h-bar .track {
       height: 12px;
+      margin-top: 2px;
       background: var(--surface2);
       border-radius: 999px;
       overflow: hidden;
@@ -775,6 +784,11 @@
       font: 700 11px var(--mono);
       color: var(--muted);
       overflow-wrap: anywhere;
+    }
+    .h-bar-scale-note {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
     }
     .social-value-row {
       display: grid;
@@ -1077,7 +1091,8 @@
       .global-result-actions { justify-content: flex-start; }
       .global-result-actions .utility-button, .global-result-actions .copy-button { width: auto; max-width: 100%; }
       .global-search-group { padding: 9px; }
-      .h-bar { grid-template-columns: minmax(0, 1fr); }
+      .h-bar { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+      .h-bar .track { width: 100%; }
       .h-bar .val { text-align: left; }
       .hero-metrics, .kpi-strip { grid-template-columns: 1fr; }
     }
@@ -1624,7 +1639,7 @@
         <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Value Map</h2><p class="panel-sub">Raw categorical values mapped to display values and clinical interpretation, with small cells suppressed.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-value-search" type="search" placeholder="raw value, display value, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-values">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-value-map"></div></div></div>
       </div>
       <div class="sub-pane" id="dictionary-codes">
-        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-code-search" type="search" placeholder="code, system, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-codes">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-code-map"></div></div></div>
+        <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Code Map</h2><p class="panel-sub">NPU, ATC, SKS, SNOMED, imaging, microbiology, pathology, and biobank code-level signals from cartography.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-code-search" type="search" placeholder="code, system, source, concept"></label><button class="export-button" type="button" data-export-view="semantic-codes">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-code-map"></div><details class="lineage-block" open><summary>Curated semantic overlay</summary><p class="mini">Completed denotations for previously unmapped or code-echo entities. Conflict rows are not silently promoted.</p><div class="toolbar"><label>Search <input id="semantic-overlay-search" type="search" placeholder="overlay code, label, system, action"></label><button class="export-button" type="button" data-export-view="semantic-overlay">Export overlay CSV</button></div><div id="semantic-overlay-map"></div></details><details class="lineage-block"><summary>Semantic mapping conflicts</summary><p class="mini">Rows where the curated overlay disagrees with an existing non-generic atlas/cartography label. Current labels remain primary until review.</p><div class="toolbar"><label>Search <input id="semantic-conflict-search" type="search" placeholder="conflict code, overlay label, existing label"></label><button class="export-button" type="button" data-export-view="semantic-conflicts">Export conflict CSV</button></div><div id="semantic-conflict-map"></div></details></div></div>
       </div>
       <div class="sub-pane" id="dictionary-panels">
         <div class="panel"><div class="panel-head"><h2 class="panel-title">Semantic Panel Links</h2><p class="panel-sub">Many-to-many links between raw variables, clinical concepts, and user-facing atlas panels.</p></div><div class="panel-body"><div class="toolbar"><label>Search <input id="semantic-panel-search" type="search" placeholder="panel, concept, semantic id"></label><button class="export-button" type="button" data-export-view="semantic-panels">Export filtered CSV</button><button class="copy-button" type="button" data-copy-share-link="true">Copy share link</button></div><div id="semantic-panel-links"></div></div></div>
@@ -1655,7 +1670,7 @@
           <div class="panel-head">
             <p class="section-kicker">Feasibility / target-trial specification</p>
             <h2 class="panel-title">DALY-CARE CONFLUENCE</h2>
-            <p class="panel-sub">CLL/MBLâ€“plasma-cell disorder infection feasibility panel</p>
+            <p class="panel-sub">CLL/MBL-plasma-cell disorder infection feasibility panel</p>
           </div>
           <div class="panel-body">
             <div id="confluence-feasibility-dashboard"></div>
@@ -1933,10 +1948,19 @@
       const reviewInfrastructure = payload.review_infrastructure_sections || {};
       const reviewStreamingSummary = payload.review_streaming_summary || [];
       const reviewTemporalDateQuality = payload.review_temporal_date_quality || [];
-      const semanticRows = payload.semantic_dictionary_rows || [];
+      const rawSemanticRows = payload.semantic_dictionary_rows || [];
       const semanticValueRows = payload.semantic_value_map_rows || [];
-      const semanticCodeRows = payload.semantic_code_map_rows || [];
+      const rawSemanticCodeRows = payload.semantic_code_map_rows || [];
       const semanticPanelLinks = payload.semantic_panel_links || [];
+      const semanticOverlayRows = payload.semantic_unmapped_entity_overlay_rows || [];
+      const semanticOverlayLookupRows = payload.semantic_overlay_lookup_rows || [];
+      const curatorLabelPromotionRows = payload.curator_label_promotion_rows || [];
+      const curatorLabelLookupRows = payload.curator_label_promotion_lookup_rows || [];
+      const semanticConflictRows = payload.semantic_mapping_conflict_rows || [];
+      let curatorLabelResolverCache = null;
+      let semanticOverlayResolverCache = null;
+      const semanticRows = semanticDeriveDisplayRows(rawSemanticRows);
+      const semanticCodeRows = semanticDeriveDisplayRows(rawSemanticCodeRows);
       const semanticSummary = payload.review_semantic_summary || [];
       const clinicalConceptRows = payload.clinical_concept_rows || [];
       const domainPanelRows = payload.domain_panel_rows || [];
@@ -1958,11 +1982,15 @@
         semanticValueFilteredRows: [],
         semanticCodeFilteredRows: [],
         semanticPanelFilteredRows: [],
+        semanticOverlayFilteredRows: [],
+        semanticConflictFilteredRows: [],
         clinicalFilterActive: false,
         semanticFilterActive: false,
         semanticValueFilterActive: false,
         semanticCodeFilterActive: false,
         semanticPanelFilterActive: false,
+        semanticOverlayFilterActive: false,
+        semanticConflictFilterActive: false,
         selectedSemanticId: "",
         globalResultsExpanded: false,
         lastGlobalQuery: ""
@@ -2153,11 +2181,15 @@
         "source readiness": ["source status", "source resolution", "QA", "Infrastructure"],
         "source status": ["source resolution", "not in database", "unresolved", "QA", "source readiness"],
         feasibility: ["clinical feasibility", "MCL", "TRIANGLE", "CONFLUENCE", "study planning"],
-        confluence: ["DALY-CARE CONFLUENCE", "CLL MBL", "MGUS", "overlap", "infection", "blood culture"],
-        mbl: ["DD479B", "D47.9B", "Monoklonal B-celle lymfocytose", "CLL MBL", "CONFLUENCE"],
-        dd479b: ["MBL", "D47.9B", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
-        "d47 9b": ["MBL", "DD479B", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
-        "monoklonal b celle lymfocytose": ["MBL", "DD479B", "D47.9B", "CONFLUENCE"],
+        confluence: ["DALY-CARE CONFLUENCE", "CLL MBL", "MGUS", "overlap", "infection", "blood culture", "M95911", "M96121", "M98231", "M98233"],
+        mbl: ["DD479B", "D47.9B", "M95911", "M96121", "M98231", "Monoklonal B-celle lymfocytose", "CLL MBL", "CONFLUENCE"],
+        dd479b: ["MBL", "D47.9B", "M95911", "M96121", "M98231", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
+        "d47 9b": ["MBL", "DD479B", "M95911", "M96121", "M98231", "Monoklonal B-celle lymfocytose", "CONFLUENCE"],
+        m95911: ["MBL", "PATOBANK", "SNOMED", "non-CLL-type", "CONFLUENCE"],
+        m96121: ["MBL", "PATOBANK", "SNOMED", "NOS", "CONFLUENCE"],
+        m98231: ["MBL", "PATOBANK", "SNOMED", "CLL-type MBL", "CONFLUENCE"],
+        m98233: ["CLL morphology", "not MBL", "contamination", "exclusion pressure", "CONFLUENCE"],
+        "monoklonal b celle lymfocytose": ["MBL", "DD479B", "D47.9B", "M95911", "M96121", "M98231", "CONFLUENCE"],
         "cll mgus": ["CONFLUENCE", "overlap", "infection"],
         "cll mm": ["CONFLUENCE", "overlap", "infection"],
         "mbl mgus": ["CONFLUENCE", "DD479B", "MGUS", "overlap"],
@@ -2173,7 +2205,8 @@
         myeloma: ["myelomatose", "DaMyDa", "PCD", "plasma cell disorder"],
         myelomatose: ["myeloma", "DaMyDa", "PCD"],
         mgus: ["PCD", "plasma cell disorder", "DaMyDa", "DD472", "CONFLUENCE", "overlap"],
-        dd472: ["MGUS", "D47.2", "plasma cell disorder", "CONFLUENCE"],
+        dd472: ["MGUS", "DD472B", "D47.2", "plasma cell disorder", "CONFLUENCE"],
+        dd472b: ["MGUS", "DD472", "D47.2", "plasma cell disorder", "CONFLUENCE"],
         amyloidosis: ["PCD", "plasma cell disorder", "DaMyDa"],
         damyda: ["myeloma", "myelomatose", "PCD"],
         cll: ["chronic lymphocytic leukemia", "RKKP_CLL", "Binet", "TP53", "MBL", "CONFLUENCE"],
@@ -2252,6 +2285,270 @@
       function isGenericCodeValue(value) {
         return /^(?:\.|0|00|01|1|2|3|4|5|6|7|8|9|y|n|yes|no|unknown|unk|na|n\/a)$/i.test(text(value || "").trim());
       }
+      function semanticOverlayComparableSystem(value) {
+        const key = text(value || "").toUpperCase();
+        if (key.includes("DNK")) return "DNK";
+        if (key.includes("NPU")) return "NPU";
+        if (key.includes("ATC")) return "ATC";
+        if (key.includes("SNOMED")) return "SNOMED";
+        if (/AEKI|KI67/.test(key)) return "AEKI";
+        if (/ICD|DIAGNOS/.test(key)) return "ICD10";
+        if (/SKS|PROCEDURE|UX|BWGC|BWHA|BOHJ/.test(key)) return "SKS";
+        if (/CAUSE|DEATH/.test(key)) return "CAUSE_OF_DEATH";
+        return key.replace(/[^A-Z0-9]+/g, "_");
+      }
+      function semanticOverlayNormalizeCode(value) {
+        return text(value || "").trim().toUpperCase();
+      }
+      function semanticOverlaySplitValues(value) {
+        return text(value || "")
+          .split(/[;|]/)
+          .map(part => part.trim())
+          .filter(part => part && !/^(na|n\/a|unknown|not available)$/i.test(part));
+      }
+      function semanticOverlaySourceDisplay(row) {
+        const explicit = text(row && row.source_display).trim();
+        if (explicit && explicit !== "semantic_unmapped_entity_map") return explicit;
+        const tables = semanticOverlaySplitValues(row && row.source_tables);
+        if (tables.length === 1) return tables[0];
+        if (tables.length > 1) return "Multiple source tables";
+        return "Source context unavailable";
+      }
+      function semanticOverlayRowsForLookup() {
+        const rows = (semanticOverlayLookupRows && semanticOverlayLookupRows.length) ? semanticOverlayLookupRows : semanticOverlayRows;
+        return (rows || []).map(row => {
+          const targetSystem = row.target_code_system || row.code_system || "";
+          const code = row.normalized_code || row.entity_code || "";
+          return Object.assign({}, row, {
+            comparable_code_system: row.comparable_code_system || semanticOverlayComparableSystem(targetSystem),
+            normalized_code: semanticOverlayNormalizeCode(code),
+            display_label: row.display_label || row.fill_preferred_label || row.clinical_variable || "",
+            source_display: semanticOverlaySourceDisplay(row),
+            provenance_label: row.provenance_label || "Curated semantic overlay from config/semantic-unmapped-entity-map.tsv",
+            promotion_eligible: row.promotion_eligible || (row.overlay_action === "wired_overlay" && row.mapping_status === "wired_overlay" ? "yes" : "no")
+          });
+        });
+      }
+      function semanticOverlayResolver() {
+        if (semanticOverlayResolverCache) return semanticOverlayResolverCache;
+        const bySystemCode = {};
+        const byCode = {};
+        semanticOverlayRowsForLookup().forEach(row => {
+          const code = semanticOverlayNormalizeCode(row.normalized_code || row.entity_code);
+          if (!code) return;
+          const eligible = row.promotion_eligible === "yes" || (row.overlay_action === "wired_overlay" && row.mapping_status === "wired_overlay");
+          if (!eligible) return;
+          const system = semanticOverlayComparableSystem(row.comparable_code_system || row.target_code_system || row.code_system);
+          const key = `${system}\r${code}`;
+          if (!bySystemCode[key]) bySystemCode[key] = row;
+          if (!byCode[code]) byCode[code] = [];
+          byCode[code].push(row);
+        });
+        semanticOverlayResolverCache = { bySystemCode, byCode };
+        return semanticOverlayResolverCache;
+      }
+      function semanticOverlayResolve(codeSystem, code) {
+        const normalizedCode = semanticOverlayNormalizeCode(code);
+        if (!normalizedCode) return null;
+        const system = semanticOverlayComparableSystem(codeSystem);
+        const resolver = semanticOverlayResolver();
+        const exact = resolver.bySystemCode[`${system}\r${normalizedCode}`];
+        if (exact) return exact;
+        const codeOnly = resolver.byCode[normalizedCode] || [];
+        return codeOnly.length === 1 ? codeOnly[0] : null;
+      }
+      function semanticOverlayCodeSystemForRow(row) {
+        return firstNonEmpty(row, ["code_system", "target_code_system"]);
+      }
+      function semanticOverlayCodeForRow(row) {
+        return firstNonEmpty(row, ["raw_code", "code", "entity_code", "raw_value", "display_value"]);
+      }
+      function curatorLabelNormalizeText(value) {
+        return text(value || "").trim();
+      }
+      function curatorLabelNormalizeCode(value) {
+        return curatorLabelNormalizeText(value).toUpperCase();
+      }
+      function curatorLabelKeyPart(value) {
+        return curatorLabelNormalizeText(value).toLowerCase();
+      }
+      function curatorLabelMakeKey(parts) {
+        return (parts || []).map(curatorLabelKeyPart).join("\r");
+      }
+      function curatorLabelCodeTypesForRow(row) {
+        const raw = [
+          row && row.code_type,
+          row && row.code_system,
+          row && row.target_code_system,
+          row && row.clinical_group,
+          row && row.panel,
+          row && row.clinical_variable
+        ].map(text).filter(Boolean);
+        const hay = raw.join(" ").toUpperCase();
+        const out = new Set(raw);
+        if (/NPU/.test(hay)) out.add("NPU");
+        if (/DNK/.test(hay)) out.add("DNK");
+        if (/ATC/.test(hay)) out.add("ATC");
+        if (/SKS|PROCEDURE|UX|BWGC|BWHA|BOHJ/.test(hay)) out.add("SKS/procedure");
+        if (/SNOMED|PATHOLOGY|PATO/.test(hay)) {
+          out.add("SNOMED/pathology");
+          out.add("local_pathology_code");
+        }
+        if (/MATERIAL|SPECIMEN/.test(hay)) out.add("pathology_material_code");
+        if (/INSTITUTION|SOURCE|LAB/.test(hay) && /PATH|PATO/.test(hay)) out.add("pathology_institution_code");
+        if (/TUMOR/.test(hay)) out.add("tumor_code");
+        if (/ICD|DIAGNOS/.test(hay)) out.add("ICD10/SKS diagnosis");
+        if (/CAUSE|DEATH/.test(hay)) out.add("cause_of_death_classification");
+        return Array.from(out).map(curatorLabelNormalizeText).filter(Boolean);
+      }
+      function curatorLabelContext(row) {
+        return {
+          entityScopeKey: firstNonEmpty(row, ["entity_scope_key"]),
+          code: firstNonEmpty(row, ["raw_code", "code", "entity_code", "raw_value", "display_value"]),
+          source: firstNonEmpty(row, ["source_table_or_panel", "source_name", "object_name", "panel_id", "panel", "table_name"]),
+          column: firstNonEmpty(row, ["source_column", "raw_column", "column_name"]),
+          evidence: firstNonEmpty(row, ["evidence_file", "from_file"]),
+          codeTypes: curatorLabelCodeTypesForRow(row || {})
+        };
+      }
+      function curatorLabelRowsForLookup() {
+        const rows = (curatorLabelLookupRows && curatorLabelLookupRows.length) ? curatorLabelLookupRows : curatorLabelPromotionRows;
+        return (rows || []).map(row => {
+          const code = row.normalized_code || row.code || "";
+          const codeType = row.code_type || "";
+          const source = row.source_table_or_panel || "";
+          const column = row.source_column || "";
+          const evidence = row.evidence_file || "";
+          return Object.assign({}, row, {
+            normalized_code: curatorLabelNormalizeCode(code),
+            display_label: row.display_label || row.fill_preferred_label || "",
+            provenance_label: row.provenance_label || "Curator label promotion file",
+            promotion_eligible: row.promotion_eligible || (row.mapping_status_or_reason === "curator_filled_label_ready_for_promotion" ? "yes" : "no"),
+            lookup_key_entity_scope: row.lookup_key_entity_scope || row.entity_scope_key || "",
+            lookup_key_full: row.lookup_key_full || curatorLabelMakeKey([codeType, row.code || code, source, column, evidence]),
+            lookup_key_source_column: row.lookup_key_source_column || curatorLabelMakeKey([codeType, row.code || code, source, column]),
+            lookup_key_source: row.lookup_key_source || curatorLabelMakeKey([codeType, row.code || code, source]),
+            lookup_key_code_type_code: row.lookup_key_code_type_code || curatorLabelMakeKey([codeType, row.code || code]),
+            lookup_key_normalized_code: row.lookup_key_normalized_code || curatorLabelNormalizeCode(row.code || code)
+          });
+        });
+      }
+      function curatorLabelResolver() {
+        if (curatorLabelResolverCache) return curatorLabelResolverCache;
+        const rows = curatorLabelRowsForLookup().filter(row => row.promotion_eligible === "yes");
+        const add = (map, key, row) => {
+          const clean = text(key || "").trim();
+          if (!clean) return;
+          if (!map[clean]) map[clean] = [];
+          map[clean].push(row);
+        };
+        const maps = {
+          entityScope: {},
+          full: {},
+          sourceColumn: {},
+          source: {},
+          codeTypeCode: {},
+          normalizedCode: {}
+        };
+        rows.forEach(row => {
+          add(maps.entityScope, row.lookup_key_entity_scope, row);
+          add(maps.full, row.lookup_key_full, row);
+          add(maps.sourceColumn, row.lookup_key_source_column, row);
+          add(maps.source, row.lookup_key_source, row);
+          add(maps.codeTypeCode, row.lookup_key_code_type_code, row);
+          add(maps.normalizedCode, row.lookup_key_normalized_code, row);
+        });
+        curatorLabelResolverCache = maps;
+        return curatorLabelResolverCache;
+      }
+      function curatorLabelUniqueHit(rows) {
+        const candidates = (rows || []).filter(row => text(row.display_label || row.fill_preferred_label).trim());
+        if (!candidates.length) return null;
+        const labels = Array.from(new Set(candidates.map(row => text(row.display_label || row.fill_preferred_label).trim())));
+        return labels.length === 1 ? candidates[0] : null;
+      }
+      function curatorLabelResolveForRow(row) {
+        const ctx = curatorLabelContext(row || {});
+        const code = curatorLabelNormalizeText(ctx.code);
+        if (!code) return null;
+        const resolver = curatorLabelResolver();
+        if (ctx.entityScopeKey) {
+          const hit = curatorLabelUniqueHit(resolver.entityScope[ctx.entityScopeKey]);
+          if (hit) return hit;
+        }
+        const codeTypes = ctx.codeTypes.length ? ctx.codeTypes : [""];
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.full[curatorLabelMakeKey([codeType, code, ctx.source, ctx.column, ctx.evidence])]);
+          if (hit) return hit;
+        }
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.sourceColumn[curatorLabelMakeKey([codeType, code, ctx.source, ctx.column])]);
+          if (hit) return hit;
+        }
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.source[curatorLabelMakeKey([codeType, code, ctx.source])]);
+          if (hit) return hit;
+        }
+        for (const codeType of codeTypes) {
+          const hit = curatorLabelUniqueHit(resolver.codeTypeCode[curatorLabelMakeKey([codeType, code])]);
+          if (hit) return hit;
+        }
+        return curatorLabelUniqueHit(resolver.normalizedCode[curatorLabelNormalizeCode(code)]);
+      }
+      function curatorLabelDisplayForRow(row) {
+        const hit = curatorLabelResolveForRow(row);
+        if (!hit) return null;
+        const label = text(hit.display_label || hit.fill_preferred_label || "").trim();
+        return label ? Object.assign({}, hit, { display_label: label, provenance_label: "Curator label promotion file" }) : null;
+      }
+      function semanticDisplayLabelIsGeneric(label, code) {
+        const clean = text(label || "").trim();
+        const key = normalizeClinicalKey(clean);
+        const codeKey = normalizeClinicalKey(code || "");
+        if (!key) return true;
+        if (codeKey && key === codeKey) return true;
+        return /^(unmapped|codeecho|generic)/.test(key) || (codeKey && key.includes(codeKey) && /(code|kode|signal|procedure|classification)/.test(key));
+      }
+      function semanticOverlayDisplayForRow(row, currentLabel) {
+        const curatorHit = curatorLabelDisplayForRow(row);
+        if (curatorHit) return curatorHit;
+        const code = semanticOverlayCodeForRow(row);
+        const hit = semanticOverlayResolve(semanticOverlayCodeSystemForRow(row), code);
+        if (!hit) return null;
+        const label = text(hit.display_label || hit.fill_preferred_label || "").trim();
+        if (!label) return null;
+        const current = currentLabel || firstNonEmpty(row, ["code_name", "clinical_variable", "display_value", "raw_value", "label"]);
+        if (!semanticDisplayLabelIsGeneric(current, code)) return null;
+        return hit;
+      }
+      function semanticOverlaySourceForDisplay(value) {
+        const clean = text(value || "").trim();
+        if (/^(semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions)$/i.test(clean)) {
+          return "Source context retained in lineage";
+        }
+        return clean;
+      }
+      function semanticDeriveDisplayRows(rows) {
+        return (rows || []).map(row => {
+          const out = Object.assign({}, row);
+          const code = semanticOverlayCodeForRow(out);
+          const hit = semanticOverlayDisplayForRow(out);
+          if (hit) {
+            const label = hit.display_label || hit.fill_preferred_label;
+            out.overlay_previous_label = firstNonEmpty(out, ["code_name", "clinical_variable", "display_value", "raw_value", "label"]);
+            if ("code_name" in out) out.code_name = label;
+            if ("clinical_variable" in out) out.clinical_variable = label;
+            out.semantic_overlay_label = label;
+            out.semantic_overlay_provenance = hit.provenance_label;
+          }
+          if (/^(semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions)$/i.test(out.source_name || "")) {
+            const sourceHit = hit || semanticOverlayResolve(semanticOverlayCodeSystemForRow(out), code);
+            out.source_name = sourceHit ? sourceHit.source_display : "Curated semantic label overlay";
+          }
+          if (/^(semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions)$/i.test(out.object_name || "")) out.object_name = out.source_name || "Curated semantic label overlay";
+          return out;
+        });
+      }
       function scoreSearchResult(row, query, fieldGroups) {
         const terms = expandSearchTerms(query);
         if (!terms.length) return 0;
@@ -2324,7 +2621,7 @@
       }
       function panelRoute(panelId) {
         const id = text(panelId || "").toLowerCase();
-        if (/confluence|mbl|mgus|dd479b|dd472|d47\.?9b|d47\.?2|overlap|dual.?clone|cll mgus|cll mm|mbl mgus/.test(id)) return { tab: "clinical-feasibility", sub: "confluence-feasibility" };
+        if (/confluence|mbl|mgus|dd479b|dd472|dd472b|m95911|m96121|m98231|m98233|d47\.?9b|d47\.?2|overlap|dual.?clone|cll mgus|cll mm|mbl mgus/.test(id)) return { tab: "clinical-feasibility", sub: "confluence-feasibility" };
         if (/mcl|triangle|mantle|feasibility/.test(id)) return { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" };
         if (/damyda/.test(id)) return { tab: "registries", sub: "reg-damyda" };
         if (/lyfo/.test(id)) return { tab: "registries", sub: "reg-lyfo" };
@@ -2393,7 +2690,7 @@
           panel_id: "confluence_feasibility",
           panel_title: "DALY-CARE CONFLUENCE",
           clinical_purpose: "CLL/MBL and plasma-cell-disorder infection overlap feasibility panel with PICO, estimands, diagnosis-code anchors, readiness tables, and not-run overlap rows.",
-          search_terms: "CONFLUENCE MBL DD479B D47.9B Monoklonal B-celle lymfocytose MGUS DD472 D47.2 CLL DC911 C91.1 MM DC900 C90.0 CLL MGUS CLL MM MBL MGUS overlap infection microbiology blood culture bloodstream recurrent infection"
+          search_terms: "CONFLUENCE MBL DD479B D47.9B M95911 M96121 M98231 M98233 Monoklonal B-celle lymfocytose MGUS DD472 DD472B D47.2 CLL DC911 C91.1 MM DC900 C90.0 CLL MGUS CLL MM MBL MGUS overlap infection microbiology blood culture bloodstream recurrent infection"
         };
         const confluencePanelScore = scoreSearchResult(confluencePanelSearchRow, q, {
           exact: ["panel_id", "panel_title"],
@@ -2404,7 +2701,7 @@
           grouped["Panels"].push(makeSearchResult(
             "Panels",
             "DALY-CARE CONFLUENCE",
-            "CLL/MBL-plasma-cell disorder infection feasibility panel; scaffold-first and not accepted aggregate overlap counts.",
+            "CLL/MBL-plasma-cell disorder infection feasibility panel; scaffold-first, exact MBL SNOMED codes, and not accepted aggregate overlap counts.",
             confluencePanelSearchRow,
             { tab: "clinical-feasibility", sub: "confluence-feasibility" },
             { query: q, item: "confluence_feasibility", status: "Overlap-feasibility panel", copy: "#clinical-feasibility/confluence-feasibility", score: confluencePanelScore + 130 }
@@ -2513,7 +2810,7 @@
             grouped["Raw columns / lineage"].push(makeSearchResult(
               "Raw columns / lineage",
               semanticRawName(row) || row.semantic_id,
-              [row.clinical_variable, row.source_name, row.mapping_status].filter(Boolean).join(" - "),
+              [row.clinical_variable, semanticOverlaySourceForDisplay(row.source_name), row.mapping_status].filter(Boolean).join(" - "),
               row,
               { tab: "dictionary", sub: "dictionary-lineage" },
               { query: row.raw_column || row.clinical_variable || row.semantic_id, item: row.semantic_id, status: row.mapping_confidence || row.mapping_status, copy: fieldCopyValue(row, ["source_name", "raw_column"], ".") || row.semantic_id, score }
@@ -2522,6 +2819,7 @@
         });
         semanticCodeRows.forEach(row => {
           const codeValue = codeSearchValue(row);
+          const titleLabel = firstNonEmpty(row, ["code_name", "clinical_variable"]) || codeValue;
           const score = scoreSearchResult(row, q, {
             exact: ["raw_code", "code", "code_name", "semantic_id", "clinical_concept_id"],
             title: ["code_name", "clinical_variable", "code_system"],
@@ -2533,11 +2831,47 @@
           if (score > 0) {
             grouped["Codes"].push(makeSearchResult(
               "Codes",
-              codeValue,
-              [row.code_system, row.clinical_variable, row.source_name].filter(Boolean).join(" - "),
+              semanticDisplayLabelIsGeneric(titleLabel, codeValue) ? codeValue : titleLabel,
+              [row.code_system, codeValue, semanticOverlaySourceForDisplay(row.source_name)].filter(Boolean).join(" - "),
               row,
               { tab: "dictionary", sub: "dictionary-codes" },
               { query: codeValue, item: row.semantic_id || codeValue, status: row.mapping_status, copy: codeValue, score }
+            ));
+          }
+        });
+        semanticOverlayRows.forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["entity_scope_key", "entity_code", "target_code_system"],
+            title: ["fill_preferred_label", "clinical_variable", "code_system"],
+            source: ["source_tables", "source_files"],
+            body: ["fill_denotation_definition", "fill_notes_for_codex", "overlay_action", "conflict_reason"]
+          });
+          if (score > 0) {
+            grouped["Codes"].push(makeSearchResult(
+              "Codes",
+              row.fill_preferred_label || row.display_label || row.entity_code || row.entity_scope_key,
+              [row.target_code_system || row.code_system, row.entity_code, row.overlay_action].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-codes" },
+              { query: row.entity_code || row.fill_preferred_label || row.entity_scope_key, item: row.entity_scope_key, status: row.overlay_action || row.mapping_status, copy: row.entity_code || row.entity_scope_key, score }
+            ));
+          }
+        });
+        curatorLabelRowsForLookup().forEach(row => {
+          const score = scoreSearchResult(row, q, {
+            exact: ["entity_scope_key", "code", "normalized_code", "code_type"],
+            title: ["display_label", "fill_preferred_label", "code_type"],
+            source: ["source_table_or_panel", "source_column"],
+            body: ["evidence_file", "notes", "prior_display_label"]
+          });
+          if (score > 0) {
+            grouped["Codes"].push(makeSearchResult(
+              "Codes",
+              row.display_label || row.fill_preferred_label || row.code || row.entity_scope_key,
+              [row.code, row.code_type, row.source_table_or_panel].filter(Boolean).join(" - "),
+              row,
+              { tab: "dictionary", sub: "dictionary-codes" },
+              { query: row.code || row.display_label || row.entity_scope_key, item: row.entity_scope_key || row.code, status: "curator label promotion", copy: row.code || row.entity_scope_key, score: score + 10 }
             ));
           }
         });
@@ -2684,7 +3018,9 @@
           "semantic-lineage": appState.semanticFilterActive ? appState.semanticFilteredRows : semanticRows,
           "semantic-values": appState.semanticValueFilterActive ? appState.semanticValueFilteredRows : semanticValueRows,
           "semantic-codes": appState.semanticCodeFilterActive ? appState.semanticCodeFilteredRows : semanticCodeRows,
-          "semantic-panels": appState.semanticPanelFilterActive ? appState.semanticPanelFilteredRows : semanticPanelLinks
+          "semantic-panels": appState.semanticPanelFilterActive ? appState.semanticPanelFilteredRows : semanticPanelLinks,
+          "semantic-overlay": appState.semanticOverlayFilterActive ? appState.semanticOverlayFilteredRows : semanticOverlayRows,
+          "semantic-conflicts": appState.semanticConflictFilterActive ? appState.semanticConflictFilteredRows : semanticConflictRows
         };
         return map[viewName] || [];
       }
@@ -3073,10 +3409,15 @@
       function renderSemanticOutputQaSummary() {
         const ki67State = patobankKi67QaState();
         const headerOnlyCount = ki67State.emptyComponents.length;
+        const overlayWired = semanticOverlayRows.filter(row => row.overlay_action === "wired_overlay").length;
+        const overlayConflicts = semanticConflictRows.length;
         return renderSectionCard("Semantic output QA", `
           ${renderKpiStrip([
             { label: "PATOBANK Ki-67 status", value: ki67State.label, tone: ki67State.tone },
             { label: "header-only semantic outputs", value: headerOnlyCount, tone: headerOnlyCount ? "red" : "green" },
+            { label: "curated semantic overlay rows", value: semanticOverlayRows.length, tone: semanticOverlayRows.length ? "green" : "amber" },
+            { label: "wired overlay labels", value: overlayWired, tone: overlayWired ? "green" : "amber" },
+            { label: "mapping conflicts flagged", value: overlayConflicts, tone: overlayConflicts ? "amber" : "green" },
             { label: "atlas_reviewable", value: ki67State.atlasReviewable ? "yes" : "no", tone: ki67State.atlasReviewable ? "green" : "red" },
             { label: "production_ki67_available", value: ki67State.productionKi67Available ? "yes" : "no", tone: ki67State.productionKi67Available ? "green" : "amber" },
             { label: "shippable_without_known_semantic_failures", value: ki67State.shippableWithoutKnownSemanticFailures ? "yes" : "no", tone: ki67State.shippableWithoutKnownSemanticFailures ? "green" : "red" },
@@ -3086,6 +3427,7 @@
           ], { tone: ki67State.tone })}
           <p class="mini"><strong>QA interpretation:</strong> ${escapeHtml(ki67State.reviewLabel)}</p>
           <p class="mini">${escapeHtml(ki67State.notes)}</p>
+          <p class="mini"><strong>Curated semantic overlay:</strong> non-conflicting unmapped/code-echo entities are wired into the code map; disagreements with existing non-generic labels are retained in the semantic mapping-conflict audit and not silently promoted.</p>
           <p class="mini"><strong>Registry staging:</strong> DaMyDa and LYFO audience panels lead with registry-facing summaries; detailed cartography rows remain available below as technical lineage / raw cartography rows.</p>
           <p class="mini"><strong>Taxonomy:</strong> Microbiology and Pathology are cross-linked from Clinical Data but should be read as Laboratory & Diagnostics resources for source-coverage review.</p>
         `, ki67State.tone);
@@ -3340,30 +3682,29 @@
         }).join("");
         return `<div class="kpi-strip">${html}</div>`;
       }
-      function percentFromRow(row, maxValue) {
-        const pct = Number(row.pct_rows || row.pct || row.percentage || row.pct_available);
-        if (Number.isFinite(pct) && pct > 0) return Math.max(3, Math.min(100, pct));
-        const value = numberValue(row.n || row.value || row.statistic_value);
-        return maxValue > 0 && value > 0 ? Math.max(3, Math.min(100, value / maxValue * 100)) : 0;
-      }
       function renderHBarRows(rows, options) {
         const opts = options || {};
         const maxRows = opts.limit || 10;
         const tone = toneColor(opts.tone || "blue");
         const shown = (rows || []).slice(0, maxRows);
         if (!shown.length) return `<div class="empty">${escapeHtml(opts.empty || "not available in current aggregate output")}</div>`;
-        const maxValue = Math.max(...shown.map(row => numberValue(row.n || row.value || row.statistic_value)), 1);
-        return `<div class="h-bar-list">${shown.map(row => {
-          const label = row.label || row.display_value || row.raw_value || row.raw_code || row.statistic || row.clinical_variable || "";
-          const value = row.n || row.value || row.statistic_value || "";
-          const pct = percentFromRow(row, maxValue);
+        const scaleMode = hBarResolveScaleMode(shown, opts.scaleMode);
+        const maxValue = Math.max(...shown.map(hBarNumericValue), 1);
+        return `<div class="h-bar-list" data-scale-mode="${escapeHtml(scaleMode)}">${shown.map(row => {
+          const rawLabel = row.label || row.display_value || row.raw_value || row.raw_code || row.statistic || row.clinical_variable || "";
+          const overlayHit = semanticOverlayDisplayForRow(row, rawLabel);
+          const label = overlayHit ? overlayHit.display_label : humanizeAtlasLabel(rawLabel);
+          const value = row.n || row.value || row.statistic_value || row.n_rows || row.matched_rows || "";
+          const pct = hBarWidth(row, scaleMode, maxValue);
           const rowTone = toneColor(row.tone || opts.rowTone || tone);
+          const overlaySecondary = overlayHit ? [semanticOverlayCodeForRow(row), semanticOverlayCodeSystemForRow(row), "curated semantic label"].filter(Boolean).join(" · ") : "";
+          const secondary = text(row.secondaryLabel || row.secondary_label || overlaySecondary || rawLineageHint(row, label)).trim();
           return `<div class="h-bar">
-            <div class="label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+            <div class="label" title="${escapeHtml([label, secondary].filter(Boolean).join(" | "))}">${escapeHtml(label)}${secondary ? `<span class="label-secondary">${escapeHtml(secondary)}</span>` : ""}</div>
             <div class="track"><div class="fill" style="width:${pct}%;background:var(--${rowTone})"></div></div>
             <div class="val">${escapeHtml(formatNumber(value))}</div>
           </div>`;
-        }).join("")}</div>`;
+        }).join("")}</div>${opts.showScaleNote === false ? "" : `<p class="h-bar-scale-note">${hBarScaleNote(scaleMode)}</p>`}`;
       }
       function renderClinicalMetricCard(metric, options) {
         const opts = options || {};
@@ -3382,7 +3723,7 @@
         return `<article class="value-map-card ${escapeHtml(tone)}">
           <h3>${escapeHtml(title)}</h3>
           ${opts.subtitle ? `<p class="mini">${escapeHtml(opts.subtitle)}</p>` : ""}
-          ${renderHBarRows(rows, { tone, limit: opts.limit || 10, empty: opts.empty })}
+          ${renderHBarRows(rows, { tone, limit: opts.limit || 10, empty: opts.empty, scaleMode: opts.scaleMode || "auto" })}
           ${opts.scope ? `<p class="mini">${renderScopeChip(opts.scope)}</p>` : ""}
         </article>`;
       }
@@ -3484,6 +3825,127 @@
       function displayValue(value) {
         return text(value || "").trim() || "not available";
       }
+      const friendlyAtlasLabelMap = {
+        regknogleforandringer: "Bone lesions recorded",
+        regandreknogleundersoegelse: "Other bone/imaging investigation",
+        regknogleundersoegelserct: "CT investigation recorded",
+        regknogleundersoegelsermr: "MRI investigation recorded",
+        regknogleundersoegelsermri: "MRI investigation recorded",
+        regknogleundersoegelserpet: "PET/CT investigation recorded",
+        regknogleundersoegelserpetct: "PET/CT investigation recorded",
+        regknogleundersoegelserdexa: "DEXA investigation recorded",
+        regknogleundersoegelserscinti: "Scintigraphy investigation recorded",
+        regknogleforandringertype: "Bone lesion type",
+        behandlingskontakterdiagnoser: "Treatment contacts - diagnosis",
+        behandlingskontakterdiagnose: "Treatment contacts - diagnosis",
+        behandlingskontakterprocedure: "Treatment contacts - procedure",
+        behandlingskontakterprocedurer: "Treatment contacts - procedure",
+        y: "Yes",
+        n: "No",
+        unk: "Unknown"
+      };
+      function humanizeAtlasLabel(value) {
+        const raw = text(value || "").trim();
+        if (!raw) return "";
+        const key = normalizeClinicalKey(raw);
+        if (friendlyAtlasLabelMap[key]) return friendlyAtlasLabelMap[key];
+        const cleaned = raw
+          .replace(/^(ATC medication signals?|SKS procedure\/treatment signals?|SMR \/ in-hospital medication|Product-layer treatment distributions)\s*[-:]\s*/i, "")
+          .replace(/^Reg_/, "")
+          .replace(/_/g, " ")
+          .replace(/([a-z])([A-Z])/g, "$1 $2")
+          .replace(/\s+/g, " ")
+          .trim();
+        if (!cleaned) return raw;
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      }
+      function rawLineageHint(row, primaryLabel) {
+        const raw = [
+          row && row.raw_column,
+          row && row.raw_value,
+          row && row.raw_code,
+          row && semanticOverlaySourceForDisplay(row.source_name),
+          row && row.evidence_file
+        ].map(text).filter(Boolean);
+        const unique = Array.from(new Set(raw)).filter(value => normalizeClinicalKey(value) !== normalizeClinicalKey(primaryLabel));
+        return unique.slice(0, 3).join(" | ");
+      }
+      function hBarNumericValue(row) {
+        return numberValue(row.n || row.value || row.statistic_value || row.n_rows || row.matched_rows);
+      }
+      function percentFromRow(row, maxValue) {
+        const value = hBarNumericValue(row);
+        return maxValue > 0 && value > 0 ? Math.max(3, Math.min(100, value / maxValue * 100)) : 0;
+      }
+      function hBarPercentValue(row) {
+        return Number(row.pct_rows || row.pct || row.percentage || row.pct_available);
+      }
+      function hBarContextValue(row, field) {
+        return text(row && row[field]).trim();
+      }
+      function hBarResolveScaleMode(rows, requestedMode) {
+        const mode = requestedMode || "auto";
+        const visible = (rows || []).filter(Boolean);
+        if (mode === "count" || mode === "pct") return mode;
+        if (!visible.length) return "count";
+        const hasPct = visible.every(row => Number.isFinite(hBarPercentValue(row)));
+        if (!hasPct) return "count";
+        const denominatorIds = visible.map(row => hBarContextValue(row, "denominator_id")).filter(Boolean);
+        if (denominatorIds.length === visible.length && new Set(denominatorIds).size === 1) return "pct";
+        const fields = ["source_name", "evidence_file", "clinical_concept_id", "raw_column", "denominator_scope", "profile_scope", "count_scope"];
+        let anyContext = false;
+        for (const field of fields) {
+          const values = visible.map(row => hBarContextValue(row, field));
+          const nonblank = values.filter(Boolean);
+          if (!nonblank.length) continue;
+          anyContext = true;
+          if (nonblank.length !== visible.length || new Set(nonblank.map(normalizeClinicalKey)).size !== 1) return "count";
+        }
+        return anyContext ? "pct" : "count";
+      }
+      function hBarScaleNote(scaleMode) {
+        return scaleMode === "pct"
+          ? "Bars scaled by percent within this field."
+          : "Bars scaled by count within this displayed list.";
+      }
+      function hBarWidth(row, scaleMode, maxValue) {
+        if (scaleMode === "pct") {
+          const pct = hBarPercentValue(row);
+          if (Number.isFinite(pct) && pct > 0) return Math.max(3, Math.min(100, pct));
+        }
+        const value = hBarNumericValue(row);
+        return maxValue > 0 && value > 0 ? Math.max(3, Math.min(100, value / maxValue * 100)) : 0;
+      }
+      function hBarScopeKey(row) {
+        return ["source_name", "table_name", "object_name", "evidence_file", "clinical_concept_id", "raw_column", "denominator_id", "denominator_scope", "profile_scope", "count_scope"]
+          .map(field => normalizeClinicalKey(hBarContextValue(row, field)))
+          .join("|");
+      }
+      function groupDisplayBarRows(rows) {
+        const grouped = {};
+        (rows || []).forEach(row => {
+          const label = text(row.label || "").trim();
+          const key = `${normalizeClinicalKey(label)}|${hBarScopeKey(row)}`;
+          if (!grouped[key]) {
+            grouped[key] = Object.assign({}, row, {
+              label,
+              n: 0,
+              raw_aliases: new Set(),
+              pct: row.pct || row.pct_rows || "",
+              secondaryLabel: row.secondaryLabel || ""
+            });
+          }
+          grouped[key].n += hBarNumericValue(row);
+          [row.raw_column, row.raw_value, row.raw_code, row.label].map(text).filter(Boolean).forEach(value => grouped[key].raw_aliases.add(value));
+          if (!grouped[key].secondaryLabel && row.secondaryLabel) grouped[key].secondaryLabel = row.secondaryLabel;
+        });
+        return Object.values(grouped).map(row => {
+          const aliases = Array.from(row.raw_aliases || []).filter(value => normalizeClinicalKey(value) !== normalizeClinicalKey(row.label));
+          return Object.assign({}, row, {
+            secondaryLabel: row.secondaryLabel || (aliases.length ? `Raw aliases: ${aliases.slice(0, 3).join(" | ")}` : "")
+          });
+        }).sort((a, b) => numberValue(b.n) - numberValue(a.n) || text(a.label).localeCompare(text(b.label)));
+      }
       function statisticFromRows(rows, statistic) {
         const hit = (rows || []).find(row => text(row.statistic) === statistic);
         return hit ? displayValue(hit.statistic_value) : "not available";
@@ -3524,7 +3986,10 @@
         jumpToPanel("variables", "variables-concepts", { search: query || "", scrollId: "clinical-variable-cards" });
       }
       function rawFieldDisplay(row) {
-        return row.raw_field_label || semanticRawName(row) || row.raw_column || row.raw_code || row.source_name || "";
+        return humanizeAtlasLabel(row.raw_field_label || semanticRawName(row) || row.raw_column || row.raw_code || row.source_name || "");
+      }
+      function rawFieldOriginal(row) {
+        return row.raw_column || row.raw_code || semanticRawName(row) || row.source_name || "";
       }
       function panelTitle(panelId) {
         const panel = domainPanelRows.find(row => row.panel_id === panelId);
@@ -3557,6 +4022,7 @@
         return `<div class="lineage-list">${shown.map(row => `
           <div class="lineage-item">
             <strong>${escapeHtml(rawFieldDisplay(row))}</strong>
+            ${normalizeClinicalKey(rawFieldDisplay(row)) !== normalizeClinicalKey(rawFieldOriginal(row)) ? `<div class="mono mini">${escapeHtml(rawFieldOriginal(row))}</div>` : ""}
             <div class="mini">${escapeHtml(row.evidence_file || "")}${row.mapping_status ? " - " + escapeHtml(row.mapping_status) : ""}</div>
             ${scopeLabel(row)}
           </div>
@@ -3730,8 +4196,8 @@
           row.panel_id === "clinical_vitals" ||
           rowSourceMatches(row, ["SP_VitaleVaerdier", "SP Vitale Vaerdier", "SP Vitaleværdier"])
         );
-        const weightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Vægt", "Vaegt", "VÃ¦gt"]));
-        const heightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Højde", "Hoejde", "HÃ¸jde"]));
+        const weightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Vægt", "Vaegt"]));
+        const heightRow = firstMatchingRow(raw, row => fieldMatches(row, ["displayname"]) && descriptorMatches(row, ["Højde", "Hoejde"]));
         const numericRow = firstMatchingRow(raw, row => fieldMatches(row, ["numericvalue"]));
         const priorityRows = [weightRow, heightRow, numericRow].filter(Boolean);
         const priorityKeys = new Set(priorityRows.map(row => row.semantic_id || rawFieldDisplay(row)));
@@ -3745,8 +4211,8 @@
             <div class="source-fact"><span class="mini">Value column</span><b>numericvalue</b></div>
           </div>
           <div class="grid">
-            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt", "VÃ¦gt"], "weight", "kg")}
-            ${renderVitalsStatCard("Height", ["Højde", "Hoejde", "HÃ¸jde"], "height", "cm")}
+            ${renderVitalsStatCard("Weight", ["Vægt", "Vaegt"], "weight", "kg")}
+            ${renderVitalsStatCard("Height", ["Højde", "Hoejde"], "height", "cm")}
           </div>
           <div class="raw-lineage-card">
             <h3>Priority raw names / data lineage</h3>
@@ -3971,17 +4437,34 @@
         if (/andreknogleundersoegelse|otherimaging|other/.test(hay)) return "Other imaging";
         if (/knogleforandringertype|bonelesiontype/.test(key) || /knogleforandringertype|bonelesiontype/.test(hay)) return "Bone lesion type";
         if (/knogleforandringer|bonedisease|bonelesion/.test(key) || /knogleforandringer|bonedisease|bonelesion/.test(hay)) return "Bone lesions";
-        return row.label || row.source_column || row.facet || "Unmapped DaMyDa imaging/bone field";
+        return humanizeAtlasLabel(row.label || row.source_column || row.facet || "Unmapped DaMyDa imaging/bone field");
       }
       function groupDaMyDaFacetRows(rows, labelFn, tone) {
         const grouped = {};
         (rows || []).forEach(row => {
           const label = labelFn ? labelFn(row) : (row.label || row.source_column || row.facet || "");
-          if (!grouped[label]) grouped[label] = { label, n: 0, pct: "", tone };
-          grouped[label].n += numberValue(row.n || row.n_rows || row.statistic_value);
-          if (!grouped[label].pct && row.pct_rows) grouped[label].pct = row.pct_rows;
+          const scopeKey = hBarScopeKey(Object.assign({}, row, { raw_column: row.source_column || row.raw_column }));
+          const groupKey = `${normalizeClinicalKey(label)}|${scopeKey}`;
+          if (!grouped[groupKey]) {
+            grouped[groupKey] = Object.assign({}, row, {
+              label,
+              n: 0,
+              pct: "",
+              tone,
+              raw_aliases: new Set()
+            });
+          }
+          grouped[groupKey].n += numberValue(row.n || row.n_rows || row.statistic_value);
+          if (!grouped[groupKey].pct && row.pct_rows) grouped[groupKey].pct = row.pct_rows;
+          [row.source_column, row.raw_column, row.facet, row.raw_value, row.label].map(text).filter(Boolean).forEach(value => grouped[groupKey].raw_aliases.add(value));
         });
-        return Object.values(grouped).sort((a, b) => numberValue(b.n) - numberValue(a.n) || text(a.label).localeCompare(text(b.label)));
+        return Object.values(grouped).map(row => {
+          const aliases = Array.from(row.raw_aliases || []).filter(value => normalizeClinicalKey(value) !== normalizeClinicalKey(row.label));
+          return Object.assign({}, row, {
+            secondaryLabel: aliases.length ? `Raw lineage: ${aliases.slice(0, 3).join(" | ")}` : rawLineageHint(row, row.label),
+            raw_column: row.source_column || row.raw_column
+          });
+        }).sort((a, b) => numberValue(b.n) - numberValue(a.n) || text(a.label).localeCompare(text(b.label)));
       }
       function renderDaMyDaFacetGroup(title, keys, note, tone) {
         const cardTone = toneColor(tone || "blue");
@@ -4972,6 +5455,10 @@
         "L01XX45": "Carfilzomib"
       };
       function treatmentDisplayLabel(row) {
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) {
+          return overlayHit.display_label;
+        }
         const context = renderlessTreatmentContext(row);
         const code = text(row.code || row.raw_code || "").trim();
         const codeSystem = text(row.code_system || "").trim().toUpperCase();
@@ -4979,21 +5466,33 @@
         const name = text(row.code_name || row.clinical_variable || row.display_value || row.raw_value || row.label || "").trim();
         const semanticName = name && normalizeClinicalKey(name) !== normalizeClinicalKey(code) ? name : "";
         if (code && treatmentKnownCodeLabels[codeKey]) {
-          return [context, `${treatmentKnownCodeLabels[codeKey]} (${code})`].filter(Boolean).join(" - ");
+          return `${treatmentKnownCodeLabels[codeKey]} (${code})`;
         }
         if (semanticName) {
-          return [context, semanticName, code && !semanticName.includes(code) ? code : ""].filter(Boolean).join(" - ");
+          const label = humanizeAtlasLabel(semanticName);
+          return code && !label.includes(code) ? `${label} (${code})` : label;
         }
         if (code && codeSystem) {
-          return [context, `Unmapped ${codeSystem} code: ${code}`].filter(Boolean).join(" - ");
+          return `Unmapped ${codeSystem} code: ${code}`;
         }
-        return [context, row.raw_column, row.clinical_variable, row.display_value, row.raw_value].map(text).filter(Boolean).join(" - ") || "Treatment evidence row";
+        return humanizeAtlasLabel([row.raw_column, row.clinical_variable, row.display_value, row.raw_value].map(text).find(Boolean) || context || "Treatment evidence row");
       }
       function treatmentBarRows(rows) {
         return (rows || []).map(row => ({
           label: treatmentDisplayLabel(row),
+          secondaryLabel: renderlessTreatmentContext(row) || rawLineageHint(row, treatmentDisplayLabel(row)),
           n: row.n_rows || row.n || row.matched_rows || "",
           pct: row.pct,
+          source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
+          evidence_file: row.evidence_file,
+          clinical_concept_id: row.clinical_concept_id,
+          raw_column: row.raw_column,
+          denominator_id: row.denominator_id,
+          count_scope: row.count_scope,
+          denominator_scope: row.denominator_scope,
+          profile_scope: row.profile_scope,
           tone: treatmentSourceContext(row).tone || (row.code_system === "ATC" ? "green" : row.code_system === "SKS" ? "plum" : "blue")
         }));
       }
@@ -5003,11 +5502,11 @@
       }
       function renderTreatmentSourceCards(rows, title) {
         const shown = (rows || []).slice(0, 8);
-        if (!shown.length) return `<div class="empty">not available in current aggregate output</div>`;
+        if (!shown.length) return `<div class="empty">Source summary card not generated in this aggregate output; code-level signals may be available below.</div>`;
         return `<div class="grid grid-4">${shown.map(row => `
           <article class="clinical-card">
             ${renderBadge(treatmentSourceContext(row).label, treatmentSourceContext(row).tone)}
-            <h3>${escapeHtml(row.table_name || row.source_name || title || "Treatment source")}</h3>
+            <h3>${escapeHtml(humanizeAtlasLabel(row.table_name || row.source_name || title || "Treatment source"))}</h3>
             ${renderKpiStrip([
               { label: "rows", value: row.n_rows, tone: "blue" },
               { label: "columns", value: row.n_cols, tone: "cyan" }
@@ -5231,6 +5730,8 @@
       }
       function imagingSafeLabel(row) {
         if (imagingIsDateLike(row) || imagingIsFreeText(row)) return "";
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) return overlayHit.display_label;
         const translated = imagingTranslatedCode(row);
         if (translated) return translated;
         const codeCandidate = [row.raw_code, row.code, row.raw_value, row.display_value]
@@ -5304,6 +5805,14 @@
           label: imagingSafeLabel(row) || row.raw_column || row.clinical_variable,
           n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
+          source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
+          raw_code: row.raw_code || row.code,
+          raw_value: row.raw_value || row.display_value,
+          evidence_file: row.evidence_file,
+          clinical_concept_id: row.clinical_concept_id,
+          raw_column: row.raw_column,
           count_scope: row.count_scope,
           denominator_scope: row.denominator_scope,
           profile_scope: row.profile_scope,
@@ -5474,6 +5983,24 @@
         "HVH", "HER", "RHM", "STM", "AUH", "OUM", "NJA", "SSI", "VEM", "RGH",
         "Rigshospitalet", "Region Hovedstaden", "Herlev", "Hvidovre"
       ].map(normalizeClinicalKey));
+      const microbiologyCanonicalAliasLabels = {
+        rgh: "Rigshospitalet / RGH",
+        rigshospitalet: "Rigshospitalet / RGH",
+        her: "Herlev / HER",
+        herlev: "Herlev / HER",
+        hvh: "Hvidovre / HVH",
+        hvidovre: "Hvidovre / HVH",
+        regionhovedstaden: "Region Hovedstaden",
+        bacteria: "Bacteria",
+        bacterium: "Bacteria",
+        fungus: "Fungus",
+        fungi: "Fungus"
+      };
+      function microbiologyCanonicalDisplayLabel(value) {
+        const raw = text(value || "").trim();
+        const key = normalizeClinicalKey(raw);
+        return microbiologyCanonicalAliasLabels[key] || humanizeAtlasLabel(raw);
+      }
       function microbiologyColumnRole(row) {
         const key = normalizeClinicalKey([row.raw_column, row.field, row.raw_descriptor, row.clinical_variable, row.clinical_concept_id, row.display_value].map(text).join(" "));
         if (/antibiotic|antibiotika|antimikrob|drug|agent/.test(key)) return "antibiotic";
@@ -5513,13 +6040,15 @@
           });
       }
       function microbiologySafeLabel(row) {
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) return overlayHit.display_label;
         const label = [row.raw_value, row.raw_descriptor, row.raw_code, row.display_value]
           .map(text)
           .find(value => {
             const key = normalizeClinicalKey(value);
             return key && key !== "null" && key !== "suppressednotshown" && key !== normalizeClinicalKey(row.clinical_variable || "");
           });
-        return label || "";
+        return microbiologyCanonicalDisplayLabel(label || "");
       }
       function microbiologyPanelDistributionRows(predicate) {
         return (panelDistributionRows || [])
@@ -5577,15 +6106,25 @@
         return microbiologyRawRows(row => microbiologyLayer(row).id === layerId);
       }
       function microbiologyBarRows(rows) {
-        return (rows || []).map(row => ({
+        return groupDisplayBarRows((rows || []).map(row => ({
           label: microbiologySafeLabel(row) || row.raw_column || row.clinical_variable,
+          secondaryLabel: microbiologyLayer(row).label,
           n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
+          source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
+          evidence_file: row.evidence_file,
+          clinical_concept_id: row.clinical_concept_id,
+          raw_column: row.raw_column,
+          raw_value: row.raw_value || row.display_value,
+          raw_code: row.raw_code,
+          denominator_id: row.denominator_id,
           count_scope: row.count_scope,
           denominator_scope: row.denominator_scope,
           profile_scope: row.profile_scope,
           tone: microbiologyLayer(row).tone
-        }));
+        })));
       }
       function renderMicrobiologyAtGlance() {
         return `<div class="grid grid-3 microbiology-at-a-glance">${microbiologyAtGlanceSpecs.map(spec => {
@@ -5799,6 +6338,10 @@
         "21": "Pathology specimen/material code 21"
       };
       function pathologyCodeDisplay(row) {
+        const overlayHit = semanticOverlayDisplayForRow(row);
+        if (overlayHit) {
+          return overlayHit.display_label;
+        }
         const code = text(row.raw_code || row.code || "").trim();
         const value = text(row.raw_value || row.display_value || "").trim();
         const codeCandidate = code || value;
@@ -5861,15 +6404,25 @@
         return pathologyRawRows(row => pathologyLayer(row).id === layerId && !pathologyIsDateLike(row));
       }
       function pathologyBarRows(rows) {
-        return (rows || []).map(row => ({
+        return groupDisplayBarRows((rows || []).map(row => ({
           label: pathologySafeLabel(row) || row.raw_column || row.clinical_variable,
+          secondaryLabel: pathologyLayer(row).label,
           n: row.n || row.n_rows || row.statistic_value || "",
           pct: row.pct,
+          source_name: row.source_name,
+          code: row.code || row.raw_code,
+          code_system: row.code_system,
+          evidence_file: row.evidence_file,
+          clinical_concept_id: row.clinical_concept_id,
+          raw_column: row.raw_column,
+          raw_value: row.raw_value || row.display_value,
+          raw_code: row.raw_code || row.code,
+          denominator_id: row.denominator_id,
           count_scope: row.count_scope,
           denominator_scope: row.denominator_scope,
           profile_scope: row.profile_scope,
           tone: pathologyLayer(row).tone
-        }));
+        })));
       }
       function renderPathologySourceCoverage() {
         const wanted = ["SDS_pato", "PATOBANK", "SDS_t_mikro", "SDS_t_konk", "SDS_t_tumor", "tumor"];
@@ -6131,6 +6684,23 @@
           ${rawRows.length && !opts.noLineage ? renderCollapsedRawLineage(rawRows, { limit: 6 }) : ""}
         `;
       }
+      function renderPathologyTextAvailabilitySection(layerId, tone, textLabel) {
+        const rawRows = pathologyRawRows(row => pathologyLayer(row).id === layerId);
+        const textRows = rawRows.filter(row => pathologyIsFreeText(row));
+        const anyRows = textRows.length ? textRows : rawRows;
+        if (!anyRows.length) {
+          return `<div class="empty">Free-text route not summarized in current aggregate output.</div>`;
+        }
+        return `
+          ${renderKpiStrip([
+            { label: "free-text route", value: "present", tone },
+            { label: "raw text emitted", value: "0", tone: "green" },
+            { label: "aggregate fields", value: anyRows.length, tone: "blue" }
+          ], { tone })}
+          <p class="mini">${escapeHtml(textLabel)} availability is shown as source/readiness status. Coded pathology rows are shown separately under SNOMED, specimen/material, institution/source, and tumor-coded evidence.</p>
+          ${renderCollapsedRawLineage(anyRows, { limit: 6 })}
+        `;
+      }
       function renderPathologyRawLineageByLayer() {
         const rows = pathologyRawRows();
         if (!rows.length) return `<div class="empty">not available in current aggregate output</div>`;
@@ -6173,12 +6743,10 @@
             ${renderSectionCard("Specimen / material", renderPathologyLayerSection("specimen", "cyan"), "cyan")}
             ${renderSectionCard("Pathology institution / lab source", renderPathologyLayerSection("institution", "violet"), "violet")}
             ${renderSectionCard("Microscopy / free-text availability", `
-              <p class="mini">free-text field present; non-empty count not available in current aggregate output unless shown as aggregate evidence. Raw microscopy text is not emitted.</p>
-              ${renderPathologyLayerSection("microscopy_text", "plum", { empty: "free-text field present; non-empty count not available in current aggregate output" })}
+              ${renderPathologyTextAvailabilitySection("microscopy_text", "plum", "Microscopy/report text")}
             `, "plum")}
             ${renderSectionCard("Conclusion / report-text availability", `
-              <p class="mini">free-text field present; values not emitted. Raw conclusion text is not emitted.</p>
-              ${renderPathologyLayerSection("conclusion_text", "amber", { empty: "free-text field present; non-empty count not available in current aggregate output" })}
+              ${renderPathologyTextAvailabilitySection("conclusion_text", "amber", "Conclusion/report text")}
             `, "amber")}
             ${renderSectionCard("Tumor-coded evidence", renderPathologyLayerSection("tumor", "red"), "red")}
             ${renderSectionCard("Raw names / data lineage", renderPathologyRawLineageByLayer(), "blue")}
@@ -6767,7 +7335,7 @@
             value: rowValue,
             countKind: "not production count",
             statusLabel: "plan/mockup only",
-            note: opts.note || "Current payload value; not current accepted production evidence."
+            note: opts.note || "Current payload value; status shown above."
           };
         }
         if (fallback !== undefined && fallback !== null && text(fallback).trim()) {
@@ -6775,7 +7343,7 @@
             value: fallback,
             countKind: "fallback/reference count",
             statusLabel: "fallback reference count",
-            note: opts.fallbackNote || "Fallback/reference value; not current accepted production evidence."
+            note: opts.fallbackNote || "Fallback/reference value."
           };
         }
         return {
@@ -6828,7 +7396,7 @@
             value: fallback,
             countKind: "fallback/reference count",
             statusLabel: "fallback reference count",
-            note: opts.fallbackNote || "Fallback-derived value; not current accepted production evidence."
+            note: opts.fallbackNote || "Fallback-derived value."
           };
         }
         return {
@@ -7185,31 +7753,12 @@
         return `
           <div class="dashboard-grid mcl-triangle-dashboard">
             ${renderSectionCard("MCL/TRIANGLE-lite feasibility pre-study", `
-              <div class="callout warn"><strong>Descriptive feasibility only — not causal evidence and not a treatment recommendation.</strong></div>
-              <div class="grid">
-                <article class="card">
-                  <h3>Can say</h3>
-                  <ul>
-                    <li>Aggregate source-readiness and feasibility signals exist for a TRIANGLE-lite pre-study.</li>
-                    <li>Counts are labelled by source, count kind, validation status, and accepted/fallback state.</li>
-                    <li>Biology/risk fields and Ki-67 routes require validation before analytic extraction.</li>
-                  </ul>
-                </article>
-                <article class="card">
-                  <h3>Cannot say</h3>
-                  <ul>
-                    <li>No causal treatment-effect estimate.</li>
-                    <li>No treatment recommendation.</li>
-                    <li>No safe ASCT/HDT omission claim.</li>
-                    <li>No transplant-eligibility or validated high-risk/standard-risk classification claim.</li>
-                    <li>No validated text-derived Ki-67 extraction claim.</li>
-                  </ul>
-                </article>
-              </div>
+              <div class="callout warn"><strong>Scope:</strong> feasibility/readiness review for study planning. It can support source validation and aggregate cohort construction; it does not estimate treatment effects or recommend ASCT/HDT decisions.</div>
+              <p>Use this panel to check which TRIANGLE-lite cohort, treatment, outcome, biology, and Ki-67 signals are accepted production aggregates, fallback/reference counts, or validation blockers.</p>
             `, "red")}
             ${renderSectionCard("Clinical question", `
               <p><strong>Can younger/fit patients with newly diagnosed mantle cell lymphoma and standard-risk biology safely omit ASCT/HDT when treated with ibrutinib plus chemoimmunotherapy, while patients with high-risk biology should still receive ASCT/HDT in addition to ibrutinib?</strong></p>
-              <p class="mini">This is the motivating question only. The atlas presents aggregate feasibility and source readiness, not clinical efficacy, safety, or treatment recommendations.</p>
+              <p class="mini">Motivating question only; the current output covers aggregate feasibility and source readiness.</p>
             `, "violet")}
             ${renderSectionCard("Verdict", `
               <article class="card mcl-verdict-banner">
@@ -7218,20 +7767,14 @@
                   ${renderTrustBadge("study-planning only")}
                   ${renderTrustBadge("candidate / needs validation")}
                   ${renderTrustBadge("no raw text emitted")}
-                  ${renderTrustBadge("not causal / feasibility only")}
                 </div>
-                <h3>Feasibility template, not causal answer. Retrospective cohort construction feasible; risk-adapted TRIANGLE emulation not yet ready.</h3>
+                <h3>Cohort construction looks feasible; risk-adapted TRIANGLE emulation still needs validation.</h3>
                 <ul>
-                  <li>Aggregate feasibility only.</li>
-                  <li>Not a treatment recommendation.</li>
-                  <li>No causal treatment-effect estimate.</li>
-                  <li>No naive ever/never ASCT comparison.</li>
-                  <li>No clinical safety claim about omitting ASCT/HDT.</li>
-                  <li>Age <=65 is a younger proxy, not observed transplant eligibility.</li>
-                  <li>High-risk biology remains blocked unless validated components are available.</li>
-                  <li>Ki-67 and pathology text routes remain candidate or validation-bound unless a structured aggregate output says otherwise.</li>
+                  <li>Accepted aggregate counts support MCL cohort and treatment feasibility where labelled.</li>
+                  <li>Fallback/reference counts stay visible and labelled when production acceptance is absent.</li>
+                  <li>Age <=65 is a younger proxy; biology/risk and Ki-67 routes need validated structured evidence before analytic use.</li>
+                  <li>Any future effect analysis needs a landmark or target-trial-emulation design.</li>
                 </ul>
-                <p class="mini">If production aggregate acceptance is missing or failed, fallback values remain visible as fallback/reference counts and are not current accepted production evidence.</p>
               </article>
             `, "violet")}
             ${renderSectionCard("Current evidence state / acceptance status", renderMclOutputStatus(), "blue")}
@@ -7239,7 +7782,7 @@
               <p><strong>Retrospective feasibility: feasible for cohort construction; risk-adapted TRIANGLE emulation not yet ready.</strong></p>
               <p>This panel is a worked example of how the DALY-CARE atlas can support retrospective clinical-registry/big-data feasibility pre-studies. It starts from a trial-inspired clinical question, maps PICO elements to available DALY-CARE resources, reports aggregate cohort/exposure/outcome counts, and separates ready evidence from validation blockers.</p>
               <p><strong>Clinical question:</strong> Can younger/fit patients with newly diagnosed mantle cell lymphoma and standard-risk biology safely omit ASCT/HDT when treated with ibrutinib plus chemoimmunotherapy, while patients with high-risk biology should still receive ASCT/HDT in addition to ibrutinib?</p>
-              <p class="mini">This is the motivating question. This is a feasibility assessment only: the current atlas output answers feasibility and source readiness, not clinical efficacy, safety, or risk-adapted treatment recommendations.</p>
+              <p class="mini">The current atlas output answers feasibility and source readiness; clinical efficacy and safety require a separate validated analysis.</p>
             `, "violet")}
             ${renderSectionCard("PICO", renderMclPicoTable(), "blue")}
             ${renderSectionCard("Target estimand", `
@@ -7275,11 +7818,11 @@
                 mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "115", "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
                 mclKpiItem("age <=65 + ASCT/HDT + ibrutinib", youngBoth, "11", "violet", { note: "Descriptive stratum; no causal comparison." })
               ], { tone: "violet" })}
-              <p class="mini">Fallback/reference values are deliberately retained for reviewer orientation, but they are visually labelled and are not current accepted production evidence unless the payload metadata and row status support that claim.</p>
+              <p class="mini">Fallback/reference values are retained for orientation and labelled separately.</p>
             `, "violet")}
             ${renderSectionCard("Fallback/reference counts", `
-              <p class="mini">Fallback/reference values remain visible for orientation and are not current accepted production evidence unless the current payload state explicitly supports that claim.</p>
-              ${renderTrustBadgeRow(["fallback/reference", "descriptive feasibility only", "not causal / feasibility only"])}
+              <p class="mini">Use these as context; production status is shown in the count-kind and validation labels.</p>
+              ${renderTrustBadgeRow(["fallback/reference", "descriptive feasibility only"])}
             `, "amber")}
             ${renderSectionCard("Unavailable or blocked data points", `
               <p class="mini">Blocked or unavailable routes are validation states, not proof that the underlying clinical phenomenon is absent.</p>
@@ -7511,6 +8054,76 @@
           { key: "notes", label: "Notes" }
         ], 12);
       }
+      function renderConfluenceCodeSets() {
+        const rows = confluenceRows("code_sets");
+        return `
+          <div class="callout warn"><strong>Exact-match rule:</strong> CONFLUENCE uses exact normalized code matching. M98231 is CLL-type MBL; M98233 is CLL morphology and is contamination/exclusion-pressure evidence, not MBL.</div>
+          ${renderConfluenceTable(rows, [
+            { key: "concept_label", label: "Concept", render: row => `<strong>${escapeHtml(row.concept_label || "")}</strong><div class="mini">${escapeHtml(row.disease_family || "")}</div>` },
+            { key: "code", label: "Code", render: row => `<strong>${escapeHtml(row.code || "source pending")}</strong><div class="mini">${escapeHtml(row.code_system || "")}</div>` },
+            { key: "include_or_exclude", label: "Use", render: row => renderBadge(row.include_or_exclude || "", confluenceStatusTone(row.include_or_exclude)) },
+            { key: "validation_role", label: "Validation role" },
+            { key: "notes", label: "Notes" }
+          ], 24)}
+        `;
+      }
+      function renderConfluenceSourceTiers(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "source_tier_label", label: "Source tier", render: row => `<strong>${escapeHtml(row.source_tier_label || "")}</strong><div class="mini">${escapeHtml(row.source_role || "")}</div>` },
+          { key: "codes", label: "Codes", render: row => escapeHtml(row.codes || "source definition pending") },
+          { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "evidence_status", label: "Evidence", render: row => renderBadge(row.evidence_status || "", confluenceStatusTone(row.evidence_status)) },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "suppression_status", label: "Suppression" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceAcceptedCounts(rows, labelKey) {
+        return renderConfluenceTable(rows, [
+          { key: labelKey, label: "Accepted-count scaffold", render: row => `<strong>${escapeHtml(row[labelKey] || "")}</strong><div class="mini">${escapeHtml(row.mbl_tier || row.pcd_tier || "")}</div>` },
+          { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "acceptance_gate_status", label: "Gate" },
+          { key: "suppression_status", label: "Suppression" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceWaterfall(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "step_label", label: "Waterfall step", render: row => `<strong>${escapeHtml(row.step_order || "")}. ${escapeHtml(row.step_label || "")}</strong><div class="mini">${escapeHtml(row.source_tier || "")}</div>` },
+          { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "suppression_status", label: "Suppression" },
+          { key: "notes", label: "Notes" }
+        ], 16);
+      }
+      function renderConfluenceEndpointDefinitions() {
+        return renderConfluenceTable(confluenceRows("infection_endpoint_definitions"), [
+          { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || "")}</strong><div class="mini">${escapeHtml(row.source_layer || "")}</div>` },
+          { key: "definition_status", label: "Definition", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
+          { key: "required_code_set_status", label: "Code set" },
+          { key: "readiness_status", label: "Readiness", render: row => renderBadge(row.readiness_status || "", confluenceStatusTone(row.readiness_status)) },
+          { key: "notes", label: "Notes" }
+        ], 12);
+      }
+      function renderConfluenceQaAudits() {
+        return `
+          <h3>Small-cell suppression audit</h3>
+          ${renderConfluenceTable(confluenceRows("small_cell_suppression_audit"), [
+            { key: "audit_id", label: "Audit" },
+            { key: "count_display", label: "Public display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong>` },
+            { key: "suppression_status", label: "Suppression" },
+            { key: "public_safe", label: "Public safe", render: row => renderBadge(row.public_safe || "", confluenceStatusTone(row.public_safe)) },
+            { key: "notes", label: "Notes" }
+          ], 8)}
+          <h3>UTF-8 quality audit</h3>
+          ${renderConfluenceTable(confluenceRows("utf8_quality_audit"), [
+            { key: "pattern_code", label: "Pattern" },
+            { key: "status", label: "Status", render: row => renderBadge(row.status || "", confluenceStatusTone(row.status)) },
+            { key: "notes", label: "Notes" }
+          ], 8)}
+        `;
+      }
       function renderConfluenceOverlapRows(rows) {
         return renderConfluenceTable(rows, [
           { key: "overlap_label", label: "Overlap", render: row => `<strong>${escapeHtml(row.overlap_label || row.timing_label || "")}</strong>` },
@@ -7547,28 +8160,117 @@
         const treatment = confluenceRows("treatment_modifier_readiness");
         const actions = confluenceRows("recommended_next_actions");
         const disease = confluenceRows("disease_state_counts");
+        const codeSets = confluenceRows("code_sets");
+        const mblSourceCounts = confluenceRows("mbl_source_counts");
+        const mgusSourceCounts = confluenceRows("mgus_source_counts");
+        const firstDates = confluenceRows("candidate_first_date_summary");
+        const acceptedOverlapCounts = confluenceRows("overlap_counts_accepted");
+        const acceptedOverlapTiming = confluenceRows("overlap_timing_accepted");
+        const mblWaterfall = confluenceRows("mbl_validation_waterfall");
+        const mgusWaterfall = confluenceRows("mgus_validation_waterfall");
+        const dualCloneWaterfall = confluenceRows("dual_clone_validation_waterfall");
+        const endpoints = confluenceRows("infection_endpoint_definitions");
+        const diseasePersonCounts = confluenceRows("disease_state_person_counts");
+        const firstDateAvailability = confluenceRows("first_date_availability");
+        const endpointCodeSets = confluenceRows("infection_endpoint_code_sets");
+        const infectionCounts = confluenceRows("infection_counts");
+        const recurrentInfectionCounts = confluenceRows("recurrent_infection_counts");
+        const infectionPersonTime = confluenceRows("infection_person_time");
+        const infectionRates = confluenceRows("infection_rates");
+        const microbiologyConfirmationCounts = confluenceRows("microbiology_confirmation_counts");
+        const productionQueryReview = confluenceRows("production_query_review");
+        const failedQueryAudit = confluenceRows("failed_query_audit");
+        const productionExecutionSummary = confluenceRows("production_execution_summary");
+        const suppressionAudit = confluenceRows("small_cell_suppression_audit");
+        const utf8Audit = confluenceRows("utf8_quality_audit");
+        const productionSuccess = productionExecutionSummary.some(row => row.metric === "production_query_success" && String(row.value).toLowerCase() === "true");
         const technical = []
           .concat(summary.map(row => Object.assign({ table: "summary" }, row)))
           .concat(disease.map(row => Object.assign({ table: "disease_state_counts" }, row)))
+          .concat(diseasePersonCounts.map(row => Object.assign({ table: "disease_state_person_counts" }, row)))
+          .concat(codeSets.map(row => Object.assign({ table: "code_sets" }, row)))
+          .concat(mblSourceCounts.map(row => Object.assign({ table: "mbl_source_counts" }, row)))
+          .concat(mgusSourceCounts.map(row => Object.assign({ table: "mgus_source_counts" }, row)))
           .concat(overlapCounts.map(row => Object.assign({ table: "overlap_counts" }, row)))
-          .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)));
+          .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)))
+          .concat(firstDates.map(row => Object.assign({ table: "candidate_first_date_summary" }, row)))
+          .concat(firstDateAvailability.map(row => Object.assign({ table: "first_date_availability" }, row)))
+          .concat(acceptedOverlapCounts.map(row => Object.assign({ table: "overlap_counts_accepted" }, row)))
+          .concat(acceptedOverlapTiming.map(row => Object.assign({ table: "overlap_timing_accepted" }, row)))
+          .concat(infectionCounts.map(row => Object.assign({ table: "infection_counts" }, row)))
+          .concat(recurrentInfectionCounts.map(row => Object.assign({ table: "recurrent_infection_counts" }, row)))
+          .concat(infectionPersonTime.map(row => Object.assign({ table: "infection_person_time" }, row)))
+          .concat(infectionRates.map(row => Object.assign({ table: "infection_rates" }, row)))
+          .concat(microbiologyConfirmationCounts.map(row => Object.assign({ table: "microbiology_confirmation_counts" }, row)))
+          .concat(productionQueryReview.map(row => Object.assign({ table: "production_query_review" }, row)))
+          .concat(failedQueryAudit.map(row => Object.assign({ table: "failed_query_audit" }, row)))
+          .concat(productionExecutionSummary.map(row => Object.assign({ table: "production_execution_summary" }, row)))
+          .concat(suppressionAudit.map(row => Object.assign({ table: "small_cell_suppression_audit" }, row)))
+          .concat(utf8Audit.map(row => Object.assign({ table: "utf8_quality_audit" }, row)));
         return `
           <div class="dashboard-grid confluence-dashboard">
             ${renderSectionCard("DALY-CARE CONFLUENCE", `
-              <div class="callout"><strong>CLL/MBLâ€“plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
+              <div class="callout"><strong>CLL/MBL-plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
               <p>This panel evaluates whether DALY-CARE can support a retrospective observational study of serious and microbiologically confirmed infections in people with CLL/MBL, plasma-cell disorders, or both. It is feasibility infrastructure only. It does not estimate causal effects and does not make treatment recommendations.</p>
               ${renderTrustBadgeRow(["feasibility only", "not causal", "coded candidate cohort", "query executable not run", "not accepted aggregate"])}
             `, "cyan")}
             ${renderSectionCard("Clinical question", `
-              <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBLâ€“plasma-cell-disorder overlap states?</strong></p>
+              <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBL-plasma-cell-disorder overlap states?</strong></p>
               <p class="mini">Core design question: can we identify people with CLL or MBL, people with plasma-cell disorders, and people with overlapping B-cell and plasma-cell clonal states, then compare serious and microbiologically confirmed infection burden without diagnosis-order or surveillance-intensity bias?</p>
             `, "blue")}
             ${renderSectionCard("Current evidence state", renderConfluenceEvidenceState(), "cyan")}
+            ${renderSectionCard("Current stage: scaffold vs accepted aggregate", `
+              <p><strong>${productionSuccess ? "Production aggregates available for accepted rows." : "Scaffold/readiness mode unless production execution succeeds."}</strong> Code sets, source tiers, endpoint definitions, acceptance gates, failed-query audits, and production rows are rendered together. Only rows with passed acceptance gates are shown as accepted aggregates.</p>
+              ${renderTrustBadgeRow(productionSuccess ? ["production aggregate", "repo-derived provisional endpoints", "small-cell suppression", "privacy-safe aggregate only"] : ["scaffold first", "source validation required", "not accepted aggregate", "small-cell suppression", "privacy-safe aggregate only"])}
+            `, "amber")}
+            ${renderSectionCard("Production aggregate execution", renderConfluenceTable(productionExecutionSummary, [
+              { key: "label", label: "Metric", render: row => `<strong>${escapeHtml(row.label || row.metric || "")}</strong><div class="mini">${escapeHtml(row.metric || "")}</div>` },
+              { key: "value", label: "Value" },
+              { key: "status", label: "Status", render: row => renderBadge(row.status || "", confluenceStatusTone(row.status)) },
+              { key: "notes", label: "Notes" }
+            ], 12), productionSuccess ? "green" : "amber")}
+            ${renderSectionCard("Code sets and exact-match warnings", renderConfluenceCodeSets(), "plum")}
+            ${renderSectionCard("MBL source tiers", renderConfluenceSourceTiers(mblSourceCounts), "cyan")}
+            ${renderSectionCard("MGUS source tiers", renderConfluenceSourceTiers(mgusSourceCounts), "green")}
             ${renderSectionCard("PICO", renderConfluencePico(), "blue")}
             ${renderSectionCard("Estimands", renderConfluenceEstimands(), "plum")}
             ${renderSectionCard("Disease-state candidate counts", renderConfluenceDiseaseCounts(), "green")}
+            ${renderSectionCard("Accepted disease-state person counts", renderConfluenceAcceptedCounts(diseasePersonCounts, "state_label"), "green")}
             ${renderSectionCard("Overlap counts: not-run / not-accepted", renderConfluenceOverlapRows(overlapCounts), "amber")}
             ${renderSectionCard("Overlap timing: not-run / not-accepted", renderConfluenceOverlapRows(overlapTiming), "amber")}
+            ${renderSectionCard("First-date / overlap status", renderConfluenceTable(firstDates, [
+              { key: "state_label", label: "State", render: row => `<strong>${escapeHtml(row.state_label || "")}</strong><div class="mini">${escapeHtml(row.source_tier || "")}</div>` },
+              { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+              { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+              { key: "first_date_logic", label: "First-date logic" }
+            ], 12), "amber")}
+            ${renderSectionCard("Accepted first-date availability", renderConfluenceAcceptedCounts(firstDateAvailability, "state_label"), "green")}
+            ${renderSectionCard("Accepted overlap counts if available", renderConfluenceAcceptedCounts(acceptedOverlapCounts, "overlap_label"), "amber")}
+            ${renderSectionCard("Accepted overlap timing if available", renderConfluenceAcceptedCounts(acceptedOverlapTiming, "timing_label"), "amber")}
+            ${renderSectionCard("Validation waterfalls", `
+              <h3>MBL validation waterfall</h3>${renderConfluenceWaterfall(mblWaterfall)}
+              <h3>MGUS validation waterfall</h3>${renderConfluenceWaterfall(mgusWaterfall)}
+              <h3>Dual-clone validation waterfall</h3>${renderConfluenceWaterfall(dualCloneWaterfall)}
+            `, "blue")}
+            ${renderSectionCard("Small-cell and UTF-8 QA", renderConfluenceQaAudits(), "green")}
+            ${renderSectionCard("Infection endpoint definitions", renderConfluenceEndpointDefinitions(), "green")}
+            ${renderSectionCard("Provisional infection endpoint code sets", renderConfluenceTable(endpointCodeSets, [
+              { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || row.endpoint_id || "")}</strong><div class="mini">${escapeHtml(row.endpoint_id || "")}</div>` },
+              { key: "code_prefix", label: "Code prefix" },
+              { key: "definition_status", label: "Definition status", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
+              { key: "notes", label: "Notes" }
+            ], 20), "green")}
+            ${renderSectionCard("Provisional infection aggregates", renderConfluenceAcceptedCounts(infectionCounts, "endpoint_label"), "green")}
+            ${renderSectionCard("Recurrent infection aggregates", renderConfluenceAcceptedCounts(recurrentInfectionCounts, "endpoint_label"), "green")}
+            ${renderSectionCard("Person-time denominators", renderConfluenceAcceptedCounts(infectionPersonTime, "group_label"), "blue")}
+            ${renderSectionCard("Infection rates", renderConfluenceTable(infectionRates, [
+              { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || "")}</strong><div class="mini">${escapeHtml(row.group_label || "")} · ${escapeHtml(row.horizon_years || "")}y</div>` },
+              { key: "event_count_display", label: "Events" },
+              { key: "person_years_display", label: "Person-years" },
+              { key: "rate_per_100_person_years", label: "Rate / 100 PY" },
+              { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
+            ], 20), "blue")}
+            ${renderSectionCard("Microbiology-confirmed infection status", renderConfluenceAcceptedCounts(microbiologyConfirmationCounts, "endpoint_label"), "amber")}
             ${renderSectionCard("Validation checklist", renderConfluenceTable(validation, [
               { key: "entity_label", label: "Entity", render: row => `<strong>${escapeHtml(row.entity_label || "")}</strong><div class="mini">${escapeHtml(row.status || "")}</div>` },
               { key: "validation_step", label: "Validation step" },
@@ -7586,6 +8288,22 @@
               { key: "owner_role", label: "Owner role" },
               { key: "notes", label: "Notes" }
             ], 12), "green")}
+            ${renderSectionCard("Production query review and failed-query audit", `
+              <h3>Query review</h3>${renderConfluenceTable(productionQueryReview, [
+                { key: "query_id", label: "Query", render: row => `<strong>${escapeHtml(row.query_id || "")}</strong><div class="mini">${escapeHtml(row.output_file || "")}</div>` },
+                { key: "query_executable", label: "Executable" },
+                { key: "tables_used", label: "Tables used" },
+                { key: "endpoint_definition_status", label: "Endpoint status" },
+                { key: "reviewer_notes", label: "Reviewer notes" }
+              ], 12)}
+              <h3>Failed-query audit</h3>${renderConfluenceTable(failedQueryAudit, [
+                { key: "component", label: "Component", render: row => `<strong>${escapeHtml(row.component || "")}</strong><div class="mini">${escapeHtml(row.output_file || "")}</div>` },
+                { key: "count_status", label: "Status", render: row => renderBadge(row.count_status || "", confluenceStatusTone(row.count_status)) },
+                { key: "query_attempted", label: "Attempted" },
+                { key: "query_success", label: "Success" },
+                { key: "notes", label: "Notes" }
+              ], 12)}
+            `, failedQueryAudit.length ? "amber" : "green")}
             ${renderSectionCard("Technical raw/source disclosure", `
               <details class="lineage-block">
                 <summary>Technical CONFLUENCE scaffold rows</summary>
@@ -7619,6 +8337,11 @@
         return Array.from(new Set(codes.flatMap(value => value.split(/[;,]\s*/).filter(Boolean))));
       }
       function npuDisplayConcept(row) {
+        const firstCode = npuCodeList(row)[0];
+        const curatorHit = curatorLabelResolveForRow(Object.assign({}, row, { code_system: row.code_system || "NPU", code: firstCode }));
+        if (curatorHit) return curatorHit.display_label || curatorHit.fill_preferred_label;
+        const overlayHit = semanticOverlayResolve(row.code_system || "NPU", firstCode);
+        if (overlayHit) return overlayHit.display_label || overlayHit.fill_preferred_label;
         const explicit = [
           row.display_concept,
           row.candidate_label,
@@ -7635,7 +8358,7 @@
         if (vectorLabel) return vectorLabel;
         const surfaceLabel = humanizeNpuVector(row.surface);
         if (surfaceLabel) return surfaceLabel;
-        const code = npuCodeList(row)[0];
+        const code = firstCode;
         return code ? `Unmapped NPU code: ${code}` : "Unmapped NPU concept";
       }
       function npuDetectiveGroupedRows(rows) {
@@ -8234,10 +8957,14 @@
       renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500);
       renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500);
       renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500);
+      renderFilteredSemanticTable("semantic-overlay-map", semanticOverlayRows, "semanticOverlayFilteredRows", "semantic-overlay-search", 500);
+      renderFilteredSemanticTable("semantic-conflict-map", semanticConflictRows, "semanticConflictFilteredRows", "semantic-conflict-search", 500);
       [
         ["semantic-value-search", () => renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500)],
         ["semantic-code-search", () => renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500)],
-        ["semantic-panel-search", () => renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500)]
+        ["semantic-panel-search", () => renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500)],
+        ["semantic-overlay-search", () => renderFilteredSemanticTable("semantic-overlay-map", semanticOverlayRows, "semanticOverlayFilteredRows", "semantic-overlay-search", 500)],
+        ["semantic-conflict-search", () => renderFilteredSemanticTable("semantic-conflict-map", semanticConflictRows, "semanticConflictFilteredRows", "semantic-conflict-search", 500)]
       ].forEach(([id, fn]) => {
         const el = document.getElementById(id);
         if (el) el.addEventListener("input", fn);
@@ -8349,6 +9076,64 @@
             scrollWidth: el.scrollWidth,
             clientWidth: el.clientWidth
           }));
+        const visible = el => {
+          const r = el.getBoundingClientRect();
+          const style = getComputedStyle(el);
+          return r.width > 0 && r.height > 0 && r.bottom >= 0 && r.top <= window.innerHeight && style.display !== "none" && style.visibility !== "hidden";
+        };
+        const hBarLabels = Array.from(document.querySelectorAll(".h-bar .label")).filter(visible);
+        const clippedHBarLabels = hBarLabels
+          .filter(el => el.scrollWidth > el.clientWidth + 2 || getComputedStyle(el).textOverflow === "ellipsis")
+          .slice(0, 50)
+          .map(el => ({
+            text: (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160),
+            scrollWidth: el.scrollWidth,
+            clientWidth: el.clientWidth,
+            textOverflow: getComputedStyle(el).textOverflow
+          }));
+        const prefixCounts = {};
+        hBarLabels.forEach(el => {
+          const textValue = (el.textContent || "").replace(/\s+/g, " ").trim();
+          const prefix = (textValue.split(/\s[-:]\s/)[0] || textValue.slice(0, 32)).slice(0, 48);
+          if (prefix.length >= 8) prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+        });
+        const repeatedPrefixes = Object.entries(prefixCounts)
+          .filter(([, count]) => count >= 5)
+          .map(([prefix, count]) => ({ prefix, count }));
+        const emptyBeforeBars = Array.from(document.querySelectorAll(".panel-section, .value-map-card"))
+          .filter(visible)
+          .filter(section => {
+            const empty = section.querySelector(".empty");
+            const bars = section.querySelector(".h-bar-list");
+            return empty && bars && empty.compareDocumentPosition(bars) & Node.DOCUMENT_POSITION_FOLLOWING;
+          })
+          .slice(0, 30)
+          .map(section => ({
+            heading: ((section.querySelector("h3") || {}).textContent || "").replace(/\s+/g, " ").trim(),
+            emptyText: ((section.querySelector(".empty") || {}).textContent || "").replace(/\s+/g, " ").trim().slice(0, 160)
+          }));
+        const rawHeadingCandidates = Array.from(document.querySelectorAll(".panel-section h3, .clinical-card h3, .value-map-card h3"))
+          .filter(visible)
+          .filter(el => /[_A-Za-z]{20,}/.test(el.textContent || "") && /_/.test(el.textContent || ""))
+          .slice(0, 30)
+          .map(el => (el.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160));
+        const visibleText = (document.body.innerText || "").replace(/\s+/g, " ");
+        const pseudoSourcePattern = /semantic_unmapped_entity_map|dalycare_cycle4_column_C_filled_corrected_ready_for_codex|dalycare_cycle4_curator_label_promotions/i;
+        const visiblePseudoSource = pseudoSourcePattern.test(visibleText);
+        const mappedUnmappedLabels = Array.from(document.querySelectorAll(".h-bar .label, .semantic-row strong, .global-search-result-title"))
+          .filter(visible)
+          .map(el => (el.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(label => /Unmapped (NPU|SNOMED|SKS|UX|BWGC|ATC|pathology)/i.test(label))
+          .slice(0, 30);
+        const curatorPromotionIssues = Array.from(document.querySelectorAll(".h-bar .label, .semantic-row strong, .global-search-result-title, .card h3"))
+          .filter(visible)
+          .map(el => (el.textContent || "").replace(/\s+/g, " ").trim())
+          .filter(label =>
+            pseudoSourcePattern.test(label) ||
+            /^(Unmapped NPU code|Unmapped SNOMED\/pathology code|CT imaging signal|SKS antineoplastic procedure)/i.test(label) ||
+            /[a-z)](?:CT imaging signal|SKS procedure\/treatment signal|ATC medication signal)/.test(label)
+          )
+          .slice(0, 30);
         return {
           href: window.location.href,
           qaViewport: new URLSearchParams(window.location.search).get("qaViewport") || "",
@@ -8358,7 +9143,22 @@
           bodyScrollWidth: document.body.scrollWidth,
           documentClientWidth: document.documentElement.clientWidth,
           bodyOverflow,
-          overflowing
+          overflowing,
+          readability: {
+            clippedHBarLabels,
+            ellipsisLabelCount: clippedHBarLabels.filter(item => item.textOverflow === "ellipsis").length,
+            repeatedPrefixes,
+            emptyBeforeBars,
+            rawHeadingCandidates
+          },
+          semanticOverlayPromotion: {
+            visiblePseudoSource,
+            mappedUnmappedLabels
+          },
+          curatorLabelPromotion: {
+            visiblePseudoSource,
+            issues: curatorPromotionIssues
+          }
         };
       }
       function publishOverflowReport() {

@@ -434,8 +434,18 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panel_distributions = product_outputs$panel_distributions,
     panel_kpis = product_outputs$panel_kpis,
     canonical_reconciliation = canonical_reconciliation,
-    legacy_reference_vs_current = legacy_reference_vs_current
+    legacy_reference_vs_current = legacy_reference_vs_current,
+    min_cell_count = atlas_min_cell_count()
   )
+  if (exists("confluence_count_build_outputs", mode = "function")) {
+    confluence_count_outputs <- confluence_count_build_outputs(
+      project_root = project_root,
+      db_adapter = db_adapter,
+      mode = confluence_count_mode(db_adapter),
+      min_cell_count = atlas_min_cell_count()
+    )
+    confluence_feasibility <- confluence_count_merge_outputs(confluence_feasibility, confluence_count_outputs)
+  }
   patobank_ki67_percent <- patobank_ki67_build_outputs(
     project_root = project_root,
     db_adapter = db_adapter,
@@ -498,10 +508,16 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   names(confluence_paths) <- paste0("confluence_", names(confluence_paths))
   output_paths <- c(output_paths, confluence_paths)
   if (exists("mcl_count_build_outputs", mode = "function")) {
+    mcl_count_mode <- if (exists("confluence_mcl_count_mode", mode = "function")) {
+      confluence_mcl_count_mode(db_adapter)
+    } else {
+      Sys.getenv("DALYCARE_MCL_TRIANGLE_COUNT_MODE", unset = "plan")
+    }
     mcl_triangle_count_outputs <- mcl_count_build_outputs(
       project_root = project_root,
       outputs_dir = output_dir,
-      mode = "plan",
+      mode = mcl_count_mode,
+      db_adapter = db_adapter,
       min_cell_count = atlas_min_cell_count()
     )
     mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
@@ -519,6 +535,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$semantic_value_map <- write_csv(semantic_outputs$value_map, file.path(output_dir, "atlas_semantic_value_map.csv"))
   output_paths$semantic_code_map <- write_csv(semantic_outputs$code_map, file.path(output_dir, "atlas_semantic_code_map.csv"))
   output_paths$semantic_panel_links <- write_csv(semantic_outputs$panel_links, file.path(output_dir, "atlas_semantic_panel_links.csv"))
+  output_paths$semantic_unmapped_entity_overlay <- write_csv(semantic_outputs$unmapped_entity_overlay, file.path(output_dir, "atlas_semantic_unmapped_entity_overlay.csv"))
+  output_paths$semantic_overlay_lookup <- write_csv(semantic_outputs$overlay_lookup, file.path(output_dir, "atlas_semantic_overlay_lookup.csv"))
+  output_paths$curator_label_promotions <- write_csv(semantic_outputs$curator_label_promotions, file.path(output_dir, "atlas_curator_label_promotions.csv"))
+  output_paths$curator_label_promotion_lookup <- write_csv(semantic_outputs$curator_label_lookup, file.path(output_dir, "atlas_curator_label_promotion_lookup.csv"))
+  output_paths$semantic_mapping_conflicts <- write_csv(semantic_outputs$mapping_conflicts, file.path(output_dir, "atlas_semantic_mapping_conflicts.csv"))
   output_paths$clinical_concepts <- write_csv(product_outputs$clinical_concepts, file.path(output_dir, "atlas_clinical_concepts.csv"))
   output_paths$domain_panels <- write_csv(product_outputs$domain_panels, file.path(output_dir, "atlas_domain_panels.csv"))
   output_paths$panel_kpis <- write_csv(product_outputs$panel_kpis, file.path(output_dir, "atlas_panel_kpis.csv"))
@@ -574,6 +595,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload_semantic_value_map <- safe_read_output_csv(output_paths$semantic_value_map, semantic_outputs$value_map)
   payload_semantic_code_map <- safe_read_output_csv(output_paths$semantic_code_map, semantic_outputs$code_map)
   payload_semantic_panel_links <- safe_read_output_csv(output_paths$semantic_panel_links, semantic_outputs$panel_links)
+  payload_semantic_unmapped_entity_overlay <- safe_read_output_csv(output_paths$semantic_unmapped_entity_overlay, semantic_outputs$unmapped_entity_overlay)
+  payload_semantic_overlay_lookup <- safe_read_output_csv(output_paths$semantic_overlay_lookup, semantic_outputs$overlay_lookup)
+  payload_curator_label_promotions <- safe_read_output_csv(output_paths$curator_label_promotions, semantic_outputs$curator_label_promotions)
+  payload_curator_label_lookup <- safe_read_output_csv(output_paths$curator_label_promotion_lookup, semantic_outputs$curator_label_lookup)
+  payload_semantic_mapping_conflicts <- safe_read_output_csv(output_paths$semantic_mapping_conflicts, semantic_outputs$mapping_conflicts)
   payload_clinical_concepts <- safe_read_output_csv(output_paths$clinical_concepts, product_outputs$clinical_concepts)
   payload_domain_panels <- safe_read_output_csv(output_paths$domain_panels, product_outputs$domain_panels)
   payload_panel_kpis <- safe_read_output_csv(output_paths$panel_kpis, product_outputs$panel_kpis)
@@ -658,7 +684,32 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     estimands = safe_read_output_csv(output_paths$confluence_estimands, confluence_feasibility$estimands),
     validation_checklist = safe_read_output_csv(output_paths$confluence_validation_checklist, confluence_feasibility$validation_checklist),
     bias_warnings = safe_read_output_csv(output_paths$confluence_bias_warnings, confluence_feasibility$bias_warnings),
-    recommended_next_actions = safe_read_output_csv(output_paths$confluence_recommended_next_actions, confluence_feasibility$recommended_next_actions)
+    recommended_next_actions = safe_read_output_csv(output_paths$confluence_recommended_next_actions, confluence_feasibility$recommended_next_actions),
+    code_sets = safe_read_output_csv(output_paths$confluence_code_sets, confluence_feasibility$code_sets),
+    mbl_source_counts = safe_read_output_csv(output_paths$confluence_mbl_source_counts, confluence_feasibility$mbl_source_counts),
+    mgus_source_counts = safe_read_output_csv(output_paths$confluence_mgus_source_counts, confluence_feasibility$mgus_source_counts),
+    candidate_first_date_summary = safe_read_output_csv(output_paths$confluence_candidate_first_date_summary, confluence_feasibility$candidate_first_date_summary),
+    overlap_counts_accepted = safe_read_output_csv(output_paths$confluence_overlap_counts_accepted, confluence_feasibility$overlap_counts_accepted),
+    overlap_timing_accepted = safe_read_output_csv(output_paths$confluence_overlap_timing_accepted, confluence_feasibility$overlap_timing_accepted),
+    mbl_validation_waterfall = safe_read_output_csv(output_paths$confluence_mbl_validation_waterfall, confluence_feasibility$mbl_validation_waterfall),
+    mgus_validation_waterfall = safe_read_output_csv(output_paths$confluence_mgus_validation_waterfall, confluence_feasibility$mgus_validation_waterfall),
+    dual_clone_validation_waterfall = safe_read_output_csv(output_paths$confluence_dual_clone_validation_waterfall, confluence_feasibility$dual_clone_validation_waterfall),
+    small_cell_suppression_audit = safe_read_output_csv(output_paths$confluence_small_cell_suppression_audit, confluence_feasibility$small_cell_suppression_audit),
+    utf8_quality_audit = safe_read_output_csv(output_paths$confluence_utf8_quality_audit, confluence_feasibility$utf8_quality_audit),
+    infection_endpoint_definitions = safe_read_output_csv(output_paths$confluence_infection_endpoint_definitions, confluence_feasibility$infection_endpoint_definitions),
+    disease_state_person_counts = safe_read_output_csv(output_paths$confluence_disease_state_person_counts, confluence_feasibility$disease_state_person_counts),
+    first_date_availability = safe_read_output_csv(output_paths$confluence_first_date_availability, confluence_feasibility$first_date_availability),
+    infection_endpoint_code_sets = safe_read_output_csv(output_paths$confluence_infection_endpoint_code_sets, confluence_feasibility$infection_endpoint_code_sets),
+    infection_counts = safe_read_output_csv(output_paths$confluence_infection_counts, confluence_feasibility$infection_counts),
+    recurrent_infection_counts = safe_read_output_csv(output_paths$confluence_recurrent_infection_counts, confluence_feasibility$recurrent_infection_counts),
+    infection_person_time = safe_read_output_csv(output_paths$confluence_infection_person_time, confluence_feasibility$infection_person_time),
+    infection_rates = safe_read_output_csv(output_paths$confluence_infection_rates, confluence_feasibility$infection_rates),
+    microbiology_confirmation_counts = safe_read_output_csv(output_paths$confluence_microbiology_confirmation_counts, confluence_feasibility$microbiology_confirmation_counts),
+    microbiology_confirmation_source_audit = safe_read_output_csv(output_paths$confluence_microbiology_confirmation_source_audit, confluence_feasibility$microbiology_confirmation_source_audit),
+    production_query_review = safe_read_output_csv(output_paths$confluence_production_query_review, confluence_feasibility$production_query_review),
+    failed_query_audit = safe_read_output_csv(output_paths$confluence_failed_query_audit, confluence_feasibility$failed_query_audit),
+    source_resolution_audit = safe_read_output_csv(output_paths$confluence_source_resolution_audit, confluence_feasibility$source_resolution_audit),
+    production_execution_summary = safe_read_output_csv(output_paths$confluence_production_execution_summary, confluence_feasibility$production_execution_summary)
   )
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
@@ -679,6 +730,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     semantic_value_map = payload_semantic_value_map,
     semantic_code_map = payload_semantic_code_map,
     semantic_panel_links = payload_semantic_panel_links,
+    semantic_unmapped_entity_overlay = payload_semantic_unmapped_entity_overlay,
+    semantic_overlay_lookup = payload_semantic_overlay_lookup,
+    curator_label_promotions = payload_curator_label_promotions,
+    curator_label_lookup = payload_curator_label_lookup,
+    semantic_mapping_conflicts = payload_semantic_mapping_conflicts,
     clinical_concepts = payload_clinical_concepts,
     domain_panels = payload_domain_panels,
     panel_kpis_product = payload_panel_kpis,
@@ -872,6 +928,7 @@ skipped_source_row <- function(record, message) {
 }
 
 safe_read_output_csv <- function(path, fallback = data.frame(stringsAsFactors = FALSE)) {
+  if (is.null(path) || !length(path) || !nzchar(path[[1]] %||% "")) return(fallback)
   if (!file.exists(path)) return(fallback)
   tryCatch(read_delimited_file(path), error = function(e) fallback)
 }
@@ -912,11 +969,77 @@ source_availability_panel <- function(sources) {
   )
 }
 
+output_manifest_artifact_metadata <- function(id, path = "") {
+  stem <- sub("[.][^.]*$", "", basename(path %||% ""))
+  key <- if (grepl("^(confluence|mcl_triangle|ki67|patobank_ki67|atlas|situation_report|npu|isotype|mm_|registry|damyda|lyfo)_", id)) {
+    id
+  } else if (nzchar(stem)) {
+    stem
+  } else {
+    id
+  }
+  confluence_canonical <- c(
+    "confluence_disease_state_person_counts",
+    "confluence_first_date_availability",
+    "confluence_overlap_counts_accepted",
+    "confluence_overlap_timing_accepted",
+    "confluence_mbl_validation_waterfall",
+    "confluence_mgus_validation_waterfall",
+    "confluence_dual_clone_validation_waterfall",
+    "confluence_infection_endpoint_code_sets",
+    "confluence_infection_counts",
+    "confluence_recurrent_infection_counts",
+    "confluence_infection_person_time",
+    "confluence_infection_rates",
+    "confluence_microbiology_confirmation_counts",
+    "confluence_microbiology_confirmation_source_audit",
+    "confluence_production_query_review",
+    "confluence_failed_query_audit",
+    "confluence_source_resolution_audit",
+    "confluence_production_execution_summary"
+  )
+  confluence_superseded_by <- c(
+    confluence_summary = "confluence_production_execution_summary",
+    confluence_disease_state_counts = "confluence_disease_state_person_counts",
+    confluence_overlap_counts = "confluence_overlap_counts_accepted",
+    confluence_overlap_timing = "confluence_overlap_timing_accepted"
+  )
+  module <- if (grepl("^confluence_", key)) {
+    "confluence"
+  } else if (grepl("^mcl_triangle", key)) {
+    "mcl_triangle"
+  } else if (grepl("^(ki67|patobank_ki67)_", key)) {
+    "ki67"
+  } else {
+    "atlas"
+  }
+  mcl_count_output <- grepl("^mcl_triangle_count_", id) ||
+    (grepl("^mcl_triangle_", key) && grepl("mcl_triangle_(data_point_counts|execution_summary|failed_query_audit|count_summary|inclusion_waterfall|overlap_matrix|exposure_strata_counts|landmark_feasibility_counts|ki67_|age_proxy_counts|ibrutinib_|treatment_strategy_strata_counts|high_risk_biology_counts|answerability_)", key))
+  canonical_output <- key %in% confluence_canonical || isTRUE(mcl_count_output)
+  production_output <- canonical_output
+  superseded_by <- if (key %in% names(confluence_superseded_by)) unname(confluence_superseded_by[[key]]) else ""
+  artifact_role <- if (nzchar(superseded_by)) {
+    "compatibility_reference"
+  } else if (canonical_output) {
+    "canonical_production"
+  } else {
+    "supporting_output"
+  }
+  data.frame(
+    module = module,
+    artifact_role = artifact_role,
+    canonical_output = isTRUE(canonical_output),
+    production_output = isTRUE(production_output),
+    superseded_by = superseded_by,
+    stringsAsFactors = FALSE
+  )
+}
+
 output_manifest <- function(paths, run_dir) {
   rows <- lapply(names(paths), function(id) {
     path <- paths[[id]]
     info <- if (file.exists(path)) file.info(path) else NULL
-    data.frame(
+    row <- data.frame(
       artifact_id = id,
       relative_path = relative_path(path, run_dir),
       path = normalize_slashes(normalizePath(path, winslash = "/", mustWork = FALSE)),
@@ -924,6 +1047,7 @@ output_manifest <- function(paths, run_dir) {
       file_size_bytes = if (!is.null(info)) as.numeric(info$size) else NA_real_,
       stringsAsFactors = FALSE
     )
+    cbind(row, output_manifest_artifact_metadata(id, path))
   })
   bind_rows_base(rows)
 }

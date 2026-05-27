@@ -53,7 +53,7 @@ bind_rows_base <- function(items) {
 write_csv <- function(x, path) {
   dir_create(dirname(path))
   if (is.null(x)) x <- data.frame(stringsAsFactors = FALSE)
-  utils::write.csv(x, file = path, row.names = FALSE, na = "")
+  utils::write.csv(x, file = path, row.names = FALSE, na = "", fileEncoding = "UTF-8")
   invisible(path)
 }
 
@@ -63,7 +63,7 @@ append_csv_rows <- function(x, path) {
   if (!file.exists(path)) {
     utils::write.csv(x, file = path, row.names = FALSE, na = "")
   } else {
-    header <- names(utils::read.csv(path, nrows = 0, stringsAsFactors = FALSE, check.names = FALSE))
+    header <- names(utils::read.csv(path, nrows = 0, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8"))
     if (length(header)) {
       missing <- setdiff(header, names(x))
       for (nm in missing) x[[nm]] <- NA
@@ -78,7 +78,8 @@ append_csv_rows <- function(x, path) {
       append = TRUE,
       quote = TRUE,
       qmethod = "double",
-      na = ""
+      na = "",
+      fileEncoding = "UTF-8"
     )
   }
   invisible(path)
@@ -87,16 +88,16 @@ append_csv_rows <- function(x, path) {
 write_tsv <- function(x, path) {
   dir_create(dirname(path))
   if (is.null(x)) x <- data.frame(stringsAsFactors = FALSE)
-  utils::write.table(x, file = path, sep = "\t", row.names = FALSE, quote = FALSE, na = "")
+  utils::write.table(x, file = path, sep = "\t", row.names = FALSE, quote = FALSE, na = "", fileEncoding = "UTF-8")
   invisible(path)
 }
 
 read_delimited_file <- function(path) {
   ext <- tolower(tools::file_ext(path))
   if (ext %in% c("tsv", "txt")) {
-    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE)
+    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8-BOM")
   } else {
-    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8-BOM")
   }
 }
 
@@ -224,6 +225,73 @@ atlas_to_json <- function(x) {
     return(jsonlite::toJSON(x, auto_unbox = TRUE, dataframe = "rows", null = "null", pretty = TRUE))
   }
   atlas_json_value(x)
+}
+
+atlas_repair_mojibake_text <- function(x) {
+  if (!length(x)) return(x)
+  out <- enc2utf8(as.character(x))
+  replacements <- c(
+    "ÃƒÆ’Ã¢â‚¬Â " = "Æ",
+    "Ãƒâ€ " = "Æ",
+    "Ã†" = "Æ",
+    "Ã˜" = "Ø",
+    "Ã…" = "Å",
+    "Ã¦" = "æ",
+    "Ã¸" = "ø",
+    "Ã¥" = "å",
+    "Ã„" = "Ä",
+    "Ã–" = "Ö",
+    "Ãœ" = "Ü",
+    "Ã¤" = "ä",
+    "Ã¶" = "ö",
+    "Ã¼" = "ü",
+    "Ã©" = "é",
+    "Ã¨" = "è",
+    "Ã¡" = "á",
+    "Ã­" = "í",
+    "Ã³" = "ó",
+    "Ãº" = "ú",
+    "â€”" = "—",
+    "â€“" = "-",
+    "â€˜" = "'",
+    "â€™" = "'",
+    "â€œ" = "\"",
+    "â€�" = "\"",
+    "â€¦" = "...",
+    "Â·" = "·",
+    "Â±" = "±",
+    "Âµ" = "µ",
+    "Â°" = "°",
+    "Â" = ""
+  )
+  for (pattern in names(replacements)) {
+    out <- gsub(pattern, replacements[[pattern]], out, fixed = TRUE, useBytes = FALSE)
+  }
+  out
+}
+
+atlas_sanitize_payload_text <- function(x) {
+  if (is.null(x)) return(NULL)
+  if (is.data.frame(x)) {
+    out <- x
+    for (nm in names(out)) {
+      if (is.character(out[[nm]])) {
+        out[[nm]] <- atlas_repair_mojibake_text(out[[nm]])
+      } else if (is.factor(out[[nm]])) {
+        out[[nm]] <- atlas_repair_mojibake_text(as.character(out[[nm]]))
+      } else if (is.list(out[[nm]])) {
+        out[[nm]] <- lapply(out[[nm]], atlas_sanitize_payload_text)
+      }
+    }
+    return(out)
+  }
+  if (is.list(x)) {
+    return(lapply(x, atlas_sanitize_payload_text))
+  }
+  if (is.character(x) || is.factor(x)) {
+    return(atlas_repair_mojibake_text(as.character(x)))
+  }
+  x
 }
 
 atlas_json_value <- function(x) {

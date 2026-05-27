@@ -427,6 +427,14 @@ const normalScreenshotCaptures = [
   { file: "quick_start_mobile_375.png", name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes", viewport: normalViewports[1] },
   { file: "data_dictionary_desktop.png", name: "data_dictionary_normal", tab: "dictionary", sub: "dictionary-lineage", search: "smoking", viewport: qaViewports[0] },
   { file: "treatment_desktop.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: qaViewports[0] },
+  { file: "treatment_atc_desktop.png", name: "treatment_atc", tab: "treatment", sub: "treatment-dashboard", search: "ibrutinib", viewport: qaViewports[0] },
+  { file: "treatment_sks_desktop.png", name: "treatment_sks", tab: "treatment", sub: "treatment-dashboard", search: "BWGC1", viewport: qaViewports[0] },
+  { file: "treatment_smr_desktop.png", name: "treatment_smr", tab: "treatment", sub: "treatment-dashboard", search: "SMR", viewport: qaViewports[0] },
+  { file: "damyda_imaging_bone_desktop.png", name: "damyda_imaging_bone", tab: "registries", sub: "reg-damyda", search: "bone", viewport: qaViewports[0] },
+  { file: "microbiology_source_desktop.png", name: "microbiology_source", tab: "laboratory", sub: "lab-microbiology", search: "Rigshospitalet", viewport: qaViewports[0] },
+  { file: "microbiology_susceptibility_desktop.png", name: "microbiology_susceptibility", tab: "laboratory", sub: "lab-microbiology", search: "susceptibility", viewport: qaViewports[0] },
+  { file: "pathology_snomed_desktop.png", name: "pathology_snomed", tab: "laboratory", sub: "lab-pathology", search: "SNOMED", viewport: qaViewports[0] },
+  { file: "pathology_free_text_desktop.png", name: "pathology_free_text", tab: "laboratory", sub: "lab-pathology", search: "free-text", viewport: qaViewports[0] },
   { file: "infrastructure_catalog_desktop.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: qaViewports[0] },
   { file: "resource_catalog_normal_desktop.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: qaViewports[0] },
   { file: "resource_catalog_normal_mobile_375.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: normalViewports[1] },
@@ -462,7 +470,15 @@ const normalOverflowCaptures = [
   { name: "data_dictionary_normal", tab: "dictionary", sub: "dictionary-lineage", search: "smoking" },
   { name: "code_maps_normal", tab: "dictionary", sub: "dictionary-codes", search: "NPU02319" },
   { name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height" },
-  { name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab" }
+  { name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab" },
+  { name: "treatment_atc", tab: "treatment", sub: "treatment-dashboard", search: "ibrutinib" },
+  { name: "treatment_sks", tab: "treatment", sub: "treatment-dashboard", search: "BWGC1" },
+  { name: "treatment_smr", tab: "treatment", sub: "treatment-dashboard", search: "SMR" },
+  { name: "damyda_imaging_bone", tab: "registries", sub: "reg-damyda", search: "bone" },
+  { name: "microbiology_source", tab: "laboratory", sub: "lab-microbiology", search: "Rigshospitalet" },
+  { name: "microbiology_susceptibility", tab: "laboratory", sub: "lab-microbiology", search: "susceptibility" },
+  { name: "pathology_snomed", tab: "laboratory", sub: "lab-pathology", search: "SNOMED" },
+  { name: "pathology_free_text", tab: "laboratory", sub: "lab-pathology", search: "free-text" }
 ];
 
 const deepLinkChecks = [
@@ -515,7 +531,7 @@ async function main() {
           report.mclTrianglePanelPresent = /MCL\/TRIANGLE-lite feasibility pre-study/.test(overflowRender.dom) &&
             /Study-readiness matrix/.test(overflowRender.dom) &&
             /Treatment-timing feasibility/.test(overflowRender.dom) &&
-            /Descriptive feasibility only/.test(overflowRender.dom);
+            /feasibility\/readiness review for study planning/.test(overflowRender.dom);
         }
         if (target.name === "confluence") {
           report.confluencePanelPresent = /DALY-CARE CONFLUENCE/.test(overflowRender.dom) &&
@@ -570,6 +586,35 @@ async function main() {
 
     const reportPath = path.join(outDir, "overflow_report.json");
     fs.writeFileSync(reportPath, `${JSON.stringify(reports, null, 2)}\n`);
+    const readabilityReportPath = path.join(outDir, "reviewer_readability_report.json");
+    const readabilityReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      clippedHBarLabels: (report.readability && report.readability.clippedHBarLabels) || [],
+      ellipsisLabelCount: (report.readability && report.readability.ellipsisLabelCount) || 0,
+      repeatedPrefixes: (report.readability && report.readability.repeatedPrefixes) || [],
+      emptyBeforeBars: (report.readability && report.readability.emptyBeforeBars) || [],
+      rawHeadingCandidates: (report.readability && report.readability.rawHeadingCandidates) || []
+    }));
+    fs.writeFileSync(readabilityReportPath, `${JSON.stringify(readabilityReports, null, 2)}\n`);
+    const semanticOverlayPromotionReportPath = path.join(outDir, "semantic_overlay_promotion_report.json");
+    const semanticOverlayPromotionReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      visiblePseudoSource: Boolean(report.semanticOverlayPromotion && report.semanticOverlayPromotion.visiblePseudoSource),
+      mappedUnmappedLabels: (report.semanticOverlayPromotion && report.semanticOverlayPromotion.mappedUnmappedLabels) || []
+    }));
+    fs.writeFileSync(semanticOverlayPromotionReportPath, `${JSON.stringify(semanticOverlayPromotionReports, null, 2)}\n`);
+    const curatorLabelPromotionReportPath = path.join(outDir, "curator_label_promotion_report.json");
+    const curatorLabelPromotionReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      visiblePseudoSource: Boolean(report.curatorLabelPromotion && report.curatorLabelPromotion.visiblePseudoSource),
+      issues: (report.curatorLabelPromotion && report.curatorLabelPromotion.issues) || [],
+      clippedHBarLabels: (report.readability && report.readability.clippedHBarLabels) || [],
+      bodyOverflow: Boolean(report.bodyOverflow)
+    }));
+    fs.writeFileSync(curatorLabelPromotionReportPath, `${JSON.stringify(curatorLabelPromotionReports, null, 2)}\n`);
     const desktopReportPath = path.join(outDir, "overflow_desktop.json");
     const mobileReportPath = path.join(outDir, "overflow_mobile.json");
     fs.writeFileSync(
@@ -587,6 +632,11 @@ async function main() {
       (report.windowInnerWidth !== report.requestedViewport.width) ||
       (report.documentElementClientWidth !== report.requestedViewport.width) ||
       (report.screenshotWidth !== report.requestedViewport.width) ||
+      (((report.readability && report.readability.clippedHBarLabels) || []).length > 0) ||
+      (((report.readability && report.readability.emptyBeforeBars) || []).length > 0) ||
+      (report.semanticOverlayPromotion && report.semanticOverlayPromotion.visiblePseudoSource) ||
+      (report.curatorLabelPromotion && report.curatorLabelPromotion.visiblePseudoSource) ||
+      (((report.curatorLabelPromotion && report.curatorLabelPromotion.issues) || []).length > 0) ||
       (report.target === "overview" && !report.overviewConsolidationPresent) ||
       (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
       (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
