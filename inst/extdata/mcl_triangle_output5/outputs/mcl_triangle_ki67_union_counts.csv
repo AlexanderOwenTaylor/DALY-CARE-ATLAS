@@ -1,0 +1,2 @@
+"denominator","union_channel","distinct_person_count_display","percent_of_denominator_display","validation_status","count_status","notes"
+"all_lyfo_mcl","validated_numeric_channels","37","2.6%","ki67_known_for_risk_classification_from_aeki_only","production_aggregate_count_available","Validated numeric Ki-67 union currently includes coded AEKI only; text source-space is excluded until extraction validation."

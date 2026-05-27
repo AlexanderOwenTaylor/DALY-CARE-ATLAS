@@ -379,18 +379,26 @@ const baseUrl = pathToFileURL(htmlPath).href;
 
 const targets = [
   { name: "overview", tab: "overview", sub: "overview-summary" },
+  { name: "quick_start", tab: "quickstart", sub: "quickstart-recipes" },
   { name: "clinical_variables", tab: "variables", sub: "variables-concepts" },
   { name: "vitals", tab: "clinical", sub: "clinical-vitals" },
   { name: "social_history", tab: "clinical", sub: "clinical-social" },
+  { name: "mcl_triangle", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
+  { name: "confluence", tab: "clinical-feasibility", sub: "confluence-feasibility" },
   { name: "imaging", tab: "clinical", sub: "clinical-imaging" },
   { name: "damyda", tab: "registries", sub: "reg-damyda" },
   { name: "lyfo", tab: "registries", sub: "reg-lyfo" },
   { name: "cll", tab: "registries", sub: "reg-cll" },
   { name: "treatment", tab: "treatment", sub: "treatment-dashboard" },
   { name: "laboratory", tab: "laboratory", sub: "lab-npu" },
+  { name: "laboratory_diagnostics", tab: "laboratory", sub: "lab-npu" },
+  { name: "npu_detective", tab: "laboratory", sub: "lab-npu", search: "NPU02319" },
   { name: "biobank", tab: "laboratory", sub: "lab-biobank" },
-  { name: "microbiology", tab: "clinical", sub: "clinical-microbiology" },
-  { name: "pathology", tab: "clinical", sub: "clinical-pathology" },
+  { name: "microbiology", tab: "laboratory", sub: "lab-microbiology" },
+  { name: "microbiology_clinical_crosslink", tab: "clinical", sub: "clinical-microbiology" },
+  { name: "imaging_lab", tab: "laboratory", sub: "lab-imaging" },
+  { name: "pathology", tab: "laboratory", sub: "lab-pathology" },
+  { name: "pathology_clinical_crosslink", tab: "clinical", sub: "clinical-pathology" },
   { name: "data_dictionary", tab: "dictionary", sub: "dictionary-lineage" }
 ];
 
@@ -415,6 +423,19 @@ const normalScreenshotCaptures = [
   { file: "overview_normal_desktop.png", name: "overview_normal", tab: "overview", sub: "overview-summary", viewport: qaViewports[0] },
   { file: "run_status_normal_desktop.png", name: "run_status_normal", tab: "overview", sub: "overview-summary", viewport: qaViewports[0], scrollSelector: "#overview-run-status" },
   { file: "run_status_normal_mobile_375.png", name: "run_status_normal", tab: "overview", sub: "overview-summary", viewport: normalViewports[1], scrollSelector: "#overview-run-status" },
+  { file: "quick_start_desktop.png", name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes", viewport: qaViewports[0] },
+  { file: "quick_start_mobile_375.png", name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes", viewport: normalViewports[1] },
+  { file: "data_dictionary_desktop.png", name: "data_dictionary_normal", tab: "dictionary", sub: "dictionary-lineage", search: "smoking", viewport: qaViewports[0] },
+  { file: "treatment_desktop.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: qaViewports[0] },
+  { file: "treatment_atc_desktop.png", name: "treatment_atc", tab: "treatment", sub: "treatment-dashboard", search: "ibrutinib", viewport: qaViewports[0] },
+  { file: "treatment_sks_desktop.png", name: "treatment_sks", tab: "treatment", sub: "treatment-dashboard", search: "BWGC1", viewport: qaViewports[0] },
+  { file: "treatment_smr_desktop.png", name: "treatment_smr", tab: "treatment", sub: "treatment-dashboard", search: "SMR", viewport: qaViewports[0] },
+  { file: "damyda_imaging_bone_desktop.png", name: "damyda_imaging_bone", tab: "registries", sub: "reg-damyda", search: "bone", viewport: qaViewports[0] },
+  { file: "microbiology_source_desktop.png", name: "microbiology_source", tab: "laboratory", sub: "lab-microbiology", search: "Rigshospitalet", viewport: qaViewports[0] },
+  { file: "microbiology_susceptibility_desktop.png", name: "microbiology_susceptibility", tab: "laboratory", sub: "lab-microbiology", search: "susceptibility", viewport: qaViewports[0] },
+  { file: "pathology_snomed_desktop.png", name: "pathology_snomed", tab: "laboratory", sub: "lab-pathology", search: "SNOMED", viewport: qaViewports[0] },
+  { file: "pathology_free_text_desktop.png", name: "pathology_free_text", tab: "laboratory", sub: "lab-pathology", search: "free-text", viewport: qaViewports[0] },
+  { file: "infrastructure_catalog_desktop.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: qaViewports[0] },
   { file: "resource_catalog_normal_desktop.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: qaViewports[0] },
   { file: "resource_catalog_normal_mobile_375.png", name: "resource_catalog_normal", tab: "infrastructure", sub: "infra-catalog", viewport: normalViewports[1] },
   ...normalViewports.map(viewport => ({ file: `overview_normal_${viewport.suffix}.png`, name: "overview_normal", tab: "overview", sub: "overview-summary", viewport })),
@@ -427,15 +448,37 @@ const normalScreenshotCaptures = [
   { file: "clinical_variables_normal_mobile_375_height.png", name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height", viewport: normalViewports[1] },
   { file: "clinical_variables_normal_mobile.png", name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height", viewport: normalViewports[2] },
   { file: "treatment_normal_mobile_375_rituximab.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[1] },
-  { file: "treatment_normal_mobile.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[2] }
+  { file: "treatment_normal_mobile.png", name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab", viewport: normalViewports[2] },
+  { file: "mcl_triangle_desktop.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0] },
+  { file: "mcl_triangle_mobile_375.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1] },
+  { file: "mcl_triangle_mobile.png", name: "mcl_triangle_normal", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[2] },
+  { file: "confluence_desktop.png", name: "confluence_normal", tab: "clinical-feasibility", sub: "confluence-feasibility", viewport: qaViewports[0] },
+  { file: "confluence_mobile_375.png", name: "confluence_normal", tab: "clinical-feasibility", sub: "confluence-feasibility", viewport: normalViewports[1] },
+  { file: "confluence_mobile.png", name: "confluence_normal", tab: "clinical-feasibility", sub: "confluence-feasibility", viewport: normalViewports[2] },
+  { file: "mcl_triangle_ki67_desktop.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: qaViewports[0], scrollSelector: "#mcl-ki67-readiness" },
+  { file: "mcl_triangle_ki67_mobile_375.png", name: "mcl_triangle_ki67", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", viewport: normalViewports[1], scrollSelector: "#mcl-ki67-readiness" },
+  { file: "print_briefing_desktop.png", name: "print_mode", tab: "overview", sub: "overview-summary", viewport: qaViewports[0], scrollSelector: "#overview-clinician-print-briefing" },
+  { file: "global_search_ki67_desktop.png", name: "global_search_ki67", tab: "overview", sub: "overview-summary", search: "Ki-67", viewport: qaViewports[0], autoScroll: false },
+  { file: "global_search_aeki020_desktop.png", name: "global_search_aeki020", tab: "overview", sub: "overview-summary", search: "ÆKI020", viewport: qaViewports[0], autoScroll: false },
+  { file: "global_search_mib1_desktop.png", name: "global_search_mib1", tab: "overview", sub: "overview-summary", search: "MIB-1", viewport: qaViewports[0], autoScroll: false },
+  { file: "global_search_proliferationsindeks_desktop.png", name: "global_search_proliferationsindeks", tab: "overview", sub: "overview-summary", search: "proliferationsindeks", viewport: qaViewports[0], autoScroll: false }
 ];
 
 const normalOverflowCaptures = [
   { name: "overview_normal", tab: "overview", sub: "overview-summary" },
+  { name: "quick_start_normal", tab: "quickstart", sub: "quickstart-recipes" },
   { name: "data_dictionary_normal", tab: "dictionary", sub: "dictionary-lineage", search: "smoking" },
   { name: "code_maps_normal", tab: "dictionary", sub: "dictionary-codes", search: "NPU02319" },
   { name: "clinical_variables_normal", tab: "variables", sub: "variables-concepts", search: "height" },
-  { name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab" }
+  { name: "treatment_normal", tab: "treatment", sub: "treatment-dashboard", search: "rituximab" },
+  { name: "treatment_atc", tab: "treatment", sub: "treatment-dashboard", search: "ibrutinib" },
+  { name: "treatment_sks", tab: "treatment", sub: "treatment-dashboard", search: "BWGC1" },
+  { name: "treatment_smr", tab: "treatment", sub: "treatment-dashboard", search: "SMR" },
+  { name: "damyda_imaging_bone", tab: "registries", sub: "reg-damyda", search: "bone" },
+  { name: "microbiology_source", tab: "laboratory", sub: "lab-microbiology", search: "Rigshospitalet" },
+  { name: "microbiology_susceptibility", tab: "laboratory", sub: "lab-microbiology", search: "susceptibility" },
+  { name: "pathology_snomed", tab: "laboratory", sub: "lab-pathology", search: "SNOMED" },
+  { name: "pathology_free_text", tab: "laboratory", sub: "lab-pathology", search: "free-text" }
 ];
 
 const deepLinkChecks = [
@@ -484,6 +527,19 @@ async function main() {
         if (target.name === "biobank") {
           report.biobankPanelPresent = /Biobank sample atlas/.test(overflowRender.dom) && /Biobank evidence layers/.test(overflowRender.dom) && /Sample sources/.test(overflowRender.dom) && /Raw names \/ data lineage/.test(overflowRender.dom);
         }
+        if (target.name === "mcl_triangle") {
+          report.mclTrianglePanelPresent = /MCL\/TRIANGLE-lite feasibility pre-study/.test(overflowRender.dom) &&
+            /Study-readiness matrix/.test(overflowRender.dom) &&
+            /Treatment-timing feasibility/.test(overflowRender.dom) &&
+            /feasibility\/readiness review for study planning/.test(overflowRender.dom);
+        }
+        if (target.name === "confluence") {
+          report.confluencePanelPresent = /DALY-CARE CONFLUENCE/.test(overflowRender.dom) &&
+            /CLL\/MBL/.test(overflowRender.dom) &&
+            /query executable not run/.test(overflowRender.dom) &&
+            /not accepted aggregate/.test(overflowRender.dom) &&
+            /immortal-time bias/.test(overflowRender.dom);
+        }
         reports.push(report);
       }
     }
@@ -530,6 +586,35 @@ async function main() {
 
     const reportPath = path.join(outDir, "overflow_report.json");
     fs.writeFileSync(reportPath, `${JSON.stringify(reports, null, 2)}\n`);
+    const readabilityReportPath = path.join(outDir, "reviewer_readability_report.json");
+    const readabilityReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      clippedHBarLabels: (report.readability && report.readability.clippedHBarLabels) || [],
+      ellipsisLabelCount: (report.readability && report.readability.ellipsisLabelCount) || 0,
+      repeatedPrefixes: (report.readability && report.readability.repeatedPrefixes) || [],
+      emptyBeforeBars: (report.readability && report.readability.emptyBeforeBars) || [],
+      rawHeadingCandidates: (report.readability && report.readability.rawHeadingCandidates) || []
+    }));
+    fs.writeFileSync(readabilityReportPath, `${JSON.stringify(readabilityReports, null, 2)}\n`);
+    const semanticOverlayPromotionReportPath = path.join(outDir, "semantic_overlay_promotion_report.json");
+    const semanticOverlayPromotionReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      visiblePseudoSource: Boolean(report.semanticOverlayPromotion && report.semanticOverlayPromotion.visiblePseudoSource),
+      mappedUnmappedLabels: (report.semanticOverlayPromotion && report.semanticOverlayPromotion.mappedUnmappedLabels) || []
+    }));
+    fs.writeFileSync(semanticOverlayPromotionReportPath, `${JSON.stringify(semanticOverlayPromotionReports, null, 2)}\n`);
+    const curatorLabelPromotionReportPath = path.join(outDir, "curator_label_promotion_report.json");
+    const curatorLabelPromotionReports = reports.map(report => ({
+      target: report.target,
+      viewportName: report.viewportName,
+      visiblePseudoSource: Boolean(report.curatorLabelPromotion && report.curatorLabelPromotion.visiblePseudoSource),
+      issues: (report.curatorLabelPromotion && report.curatorLabelPromotion.issues) || [],
+      clippedHBarLabels: (report.readability && report.readability.clippedHBarLabels) || [],
+      bodyOverflow: Boolean(report.bodyOverflow)
+    }));
+    fs.writeFileSync(curatorLabelPromotionReportPath, `${JSON.stringify(curatorLabelPromotionReports, null, 2)}\n`);
     const desktopReportPath = path.join(outDir, "overflow_desktop.json");
     const mobileReportPath = path.join(outDir, "overflow_mobile.json");
     fs.writeFileSync(
@@ -547,12 +632,19 @@ async function main() {
       (report.windowInnerWidth !== report.requestedViewport.width) ||
       (report.documentElementClientWidth !== report.requestedViewport.width) ||
       (report.screenshotWidth !== report.requestedViewport.width) ||
+      (((report.readability && report.readability.clippedHBarLabels) || []).length > 0) ||
+      (((report.readability && report.readability.emptyBeforeBars) || []).length > 0) ||
+      (report.semanticOverlayPromotion && report.semanticOverlayPromotion.visiblePseudoSource) ||
+      (report.curatorLabelPromotion && report.curatorLabelPromotion.visiblePseudoSource) ||
+      (((report.curatorLabelPromotion && report.curatorLabelPromotion.issues) || []).length > 0) ||
       (report.target === "overview" && !report.overviewConsolidationPresent) ||
       (report.target === "data_dictionary" && (!report.dataDictionaryDetailStackPresent || report.dataDictionaryFullLineageTablePresent)) ||
       (report.target === "microbiology" && !report.microbiologyAtGlancePresent) ||
       (report.target === "imaging" && !report.imagingPanelPresent) ||
       (report.target === "pathology" && !report.pathologyPanelPresent) ||
-      (report.target === "biobank" && !report.biobankPanelPresent)
+      (report.target === "biobank" && !report.biobankPanelPresent) ||
+      (report.target === "mcl_triangle" && !report.mclTrianglePanelPresent) ||
+      (report.target === "confluence" && !report.confluencePanelPresent)
     );
     if (failures.length) {
       console.error(`Visual overflow QA failed for ${failures.length} rendered views. Report: ${reportPath}`);

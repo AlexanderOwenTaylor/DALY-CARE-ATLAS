@@ -6,6 +6,7 @@ if (!length(test_files)) {
 
 failures <- list()
 for (test_file in test_files) {
+  setwd(root)
   cat("Running", basename(test_file), "...\n")
   tryCatch(
     {
@@ -15,6 +16,10 @@ for (test_file in test_files) {
     error = function(e) {
       failures[[basename(test_file)]] <<- conditionMessage(e)
       cat("  FAIL:", conditionMessage(e), "\n")
+    },
+    finally = {
+      closeAllConnections()
+      setwd(root)
     }
   )
 }

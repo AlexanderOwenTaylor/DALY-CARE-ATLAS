@@ -14,8 +14,8 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
   payload_path <- file.path(site_dir, "DALYCARE_atlas_payload.js")
   file.copy(template_path, html_path, overwrite = TRUE)
 
-  json <- atlas_to_json(payload)
-  writeLines(c("window.DALYCARE_ATLAS_PAYLOAD = ", json, ";"), con = payload_path, useBytes = TRUE)
+  json <- atlas_to_json(atlas_sanitize_payload_text(payload))
+  writeLines(enc2utf8(c("window.DALYCARE_ATLAS_PAYLOAD = ", json, ";")), con = payload_path, useBytes = TRUE)
   list(html = html_path, payload = payload_path)
 }
 
@@ -102,6 +102,11 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           db_budget_actions = NULL,
                           semantic_dictionary = NULL, semantic_value_map = NULL,
                           semantic_code_map = NULL, semantic_panel_links = NULL,
+                          semantic_unmapped_entity_overlay = NULL,
+                          semantic_overlay_lookup = NULL,
+                          curator_label_promotions = NULL,
+                          curator_label_lookup = NULL,
+                          semantic_mapping_conflicts = NULL,
                           clinical_concepts = NULL, domain_panels = NULL,
                           panel_kpis_product = NULL, panel_distributions = NULL,
                           panel_raw_fields = NULL, panel_parity = NULL,
@@ -113,7 +118,11 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           canonical_resource_reconciliation = NULL,
                           source_map_crosswalk = NULL,
                           legacy_reference_vs_current = NULL,
-                          remaining_activation_plan = NULL) {
+                          remaining_activation_plan = NULL,
+                          ki67_discovery = NULL,
+                          patobank_ki67_percent = NULL,
+                          mcl_triangle_feasibility = NULL,
+                          confluence_feasibility = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -121,6 +130,11 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(semantic_value_map)) semantic_value_map <- empty_semantic_value_map()
   if (is.null(semantic_code_map)) semantic_code_map <- empty_semantic_code_map()
   if (is.null(semantic_panel_links)) semantic_panel_links <- empty_semantic_panel_links()
+  if (is.null(semantic_unmapped_entity_overlay)) semantic_unmapped_entity_overlay <- empty_semantic_unmapped_entity_overlay()
+  if (is.null(semantic_overlay_lookup)) semantic_overlay_lookup <- empty_semantic_overlay_lookup()
+  if (is.null(curator_label_promotions)) curator_label_promotions <- empty_curator_label_promotions()
+  if (is.null(curator_label_lookup)) curator_label_lookup <- empty_curator_label_lookup()
+  if (is.null(semantic_mapping_conflicts)) semantic_mapping_conflicts <- empty_semantic_mapping_conflicts()
   if (is.null(clinical_concepts)) clinical_concepts <- empty_clinical_concepts()
   if (is.null(domain_panels)) domain_panels <- empty_domain_panels()
   if (is.null(panel_kpis_product)) panel_kpis_product <- empty_panel_kpis()
@@ -140,6 +154,10 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(source_map_crosswalk)) source_map_crosswalk <- data.frame(stringsAsFactors = FALSE)
   if (is.null(legacy_reference_vs_current)) legacy_reference_vs_current <- data.frame(stringsAsFactors = FALSE)
   if (is.null(remaining_activation_plan)) remaining_activation_plan <- data.frame(stringsAsFactors = FALSE)
+  if (is.null(ki67_discovery)) ki67_discovery <- ki67_empty_payload()
+  if (is.null(patobank_ki67_percent)) patobank_ki67_percent <- patobank_ki67_empty_outputs()
+  if (is.null(mcl_triangle_feasibility)) mcl_triangle_feasibility <- mcl_triangle_empty_payload()
+  if (is.null(confluence_feasibility)) confluence_feasibility <- confluence_empty_payload()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
   public_column_profiles <- public_column_profile_rows(column_profiles)
@@ -151,6 +169,11 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_semantic_value_map <- sanitize_public_frame(semantic_value_map)
   public_semantic_code_map <- sanitize_public_frame(semantic_code_map)
   public_semantic_panel_links <- sanitize_public_frame(semantic_panel_links)
+  public_semantic_unmapped_entity_overlay <- sanitize_public_frame(semantic_unmapped_entity_overlay)
+  public_semantic_overlay_lookup <- sanitize_public_frame(semantic_overlay_lookup)
+  public_curator_label_promotions <- sanitize_public_frame(curator_label_promotions)
+  public_curator_label_lookup <- sanitize_public_frame(curator_label_lookup)
+  public_semantic_mapping_conflicts <- sanitize_public_frame(semantic_mapping_conflicts)
   public_clinical_concepts <- sanitize_public_frame(clinical_concepts)
   public_domain_panels <- sanitize_public_frame(domain_panels)
   public_panel_kpis <- sanitize_public_frame(panel_kpis_product)
@@ -170,6 +193,30 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_source_map_crosswalk <- sanitize_public_frame(source_map_crosswalk)
   public_legacy_reference_vs_current <- sanitize_public_frame(legacy_reference_vs_current)
   public_remaining_activation_plan <- sanitize_public_frame(remaining_activation_plan)
+  public_ki67_discovery <- lapply(ki67_discovery, function(x) {
+    if (is.data.frame(x)) public_rows(sanitize_public_frame(x), max_rows = 2000) else x
+  })
+  public_patobank_ki67_percent <- lapply(patobank_ki67_percent, function(x) {
+    if (is.data.frame(x)) public_rows(sanitize_public_frame(x), max_rows = 2000) else x
+  })
+  public_mcl_triangle_feasibility <- lapply(mcl_triangle_feasibility, function(x) {
+    if (is.data.frame(x)) return(public_rows(sanitize_public_frame(x), max_rows = 2000))
+    if (is.list(x)) {
+      return(lapply(x, function(y) {
+        if (is.data.frame(y)) public_rows(sanitize_public_frame(y), max_rows = 2000) else y
+      }))
+    }
+    x
+  })
+  public_confluence_feasibility <- lapply(confluence_feasibility, function(x) {
+    if (is.data.frame(x)) return(public_rows(sanitize_public_frame(x), max_rows = 2000))
+    if (is.list(x)) {
+      return(lapply(x, function(y) {
+        if (is.data.frame(y)) public_rows(sanitize_public_frame(y), max_rows = 2000) else y
+      }))
+    }
+    x
+  })
   module_readiness <- panel_or_empty(panels, "atlas_module_readiness")
   list(
     run_id = run_id,
@@ -244,10 +291,15 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     semantic_value_map_rows = public_rows(public_semantic_value_map, max_rows = 5000),
     semantic_code_map_rows = public_rows(public_semantic_code_map, max_rows = 5000),
     semantic_panel_links = public_rows(public_semantic_panel_links, max_rows = 5000),
+    semantic_unmapped_entity_overlay_rows = public_rows(public_semantic_unmapped_entity_overlay, max_rows = 5000),
+    semantic_overlay_lookup_rows = public_rows(public_semantic_overlay_lookup, max_rows = max(5000, nrow(public_semantic_overlay_lookup))),
+    curator_label_promotion_rows = public_rows(public_curator_label_promotions, max_rows = max(5000, nrow(public_curator_label_promotions))),
+    curator_label_promotion_lookup_rows = public_rows(public_curator_label_lookup, max_rows = max(5000, nrow(public_curator_label_lookup))),
+    semantic_mapping_conflict_rows = public_rows(public_semantic_mapping_conflicts, max_rows = 5000),
     clinical_concept_rows = public_rows(public_clinical_concepts, max_rows = 5000),
     domain_panel_rows = public_rows(public_domain_panels, max_rows = 500),
     panel_kpi_rows = public_rows(public_panel_kpis, max_rows = 2000),
-    panel_distribution_rows = public_rows(public_panel_distributions, max_rows = 5000),
+    panel_distribution_rows = public_rows(public_panel_distributions, max_rows = max(5000, nrow(public_panel_distributions))),
     panel_raw_field_rows = public_rows(public_panel_raw_fields, max_rows = 5000),
     panel_parity_rows = public_rows(public_panel_parity, max_rows = 500),
     legacy_cartography_audit_rows = public_rows(public_legacy_resource_audit, max_rows = 1000),
@@ -263,6 +315,10 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     source_map_crosswalk_rows = public_rows(public_source_map_crosswalk, max_rows = 1000),
     legacy_reference_vs_current_rows = public_rows(public_legacy_reference_vs_current, max_rows = 1000),
     remaining_activation_plan_rows = public_rows(public_remaining_activation_plan, max_rows = 1000),
+    ki67_discovery = public_ki67_discovery,
+    patobank_ki67_percent = public_patobank_ki67_percent,
+    mcl_triangle_feasibility = public_mcl_triangle_feasibility,
+    confluence_feasibility = public_confluence_feasibility,
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
@@ -302,6 +358,11 @@ review_nav <- function() {
       sub_tabs = c("RStudio", "Terminal", "Preflight")
     ),
     list(
+      id = "clinical-feasibility",
+      label = "Clinical Feasibility",
+      sub_tabs = c("MCL / TRIANGLE", "CONFLUENCE")
+    ),
+    list(
       id = "dictionary",
       label = "Data Dictionary",
       sub_tabs = c("Semantic lineage", "Value maps", "Code maps", "Panel links")
@@ -323,8 +384,8 @@ review_nav <- function() {
     ),
     list(
       id = "laboratory",
-      label = "Laboratory",
-      sub_tabs = c("NPU vectors", "NPU detective", "Isotypes", "Lab sources")
+      label = "Laboratory & Diagnostics",
+      sub_tabs = c("NPU vectors", "NPU detective", "Imaging", "Microbiology", "Pathology", "Isotypes", "Biobank", "Lab sources")
     ),
     list(
       id = "ehr",
@@ -391,7 +452,7 @@ review_domain_jump_links <- function() {
     list(domain = "Registries", target_tab = "registries", label = "DaMyDa, LYFO, and CLL registry review"),
     list(domain = "Clinical Data", target_tab = "clinical", label = "Diagnoses, admissions, imaging, notes, vitals, and social history"),
     list(domain = "Treatment", target_tab = "treatment", label = "MM code families, medicine, and procedures"),
-    list(domain = "Laboratory", target_tab = "laboratory", label = "NPU dictionary, detective, isotype, and lab source evidence"),
+    list(domain = "Laboratory & Diagnostics", target_tab = "laboratory", label = "NPU dictionary, diagnostics, pathology, microbiology, imaging, biobank, and lab source evidence"),
     list(domain = "EHR Modules", target_tab = "ehr", label = "SP, SDS/LPR, and DALY view source readiness"),
     list(domain = "Infrastructure", target_tab = "infrastructure", label = "Resolution, streaming, DB budget, QA, and generated panels")
   )
@@ -677,16 +738,18 @@ atlas_module_readiness <- function(sources, panels = list()) {
     list("Disease Registries", "CLL registry", c("cll", "dcllr"), c("cll", "registry_clinical")),
     list("Clinical Data", "Diagnoses and tumors", c("diagnos", "diag", "cancer", "tumor"), c("diagnos")),
     list("Clinical Data", "Admissions and ADT", c("adt", "adm", "kontakt", "contact", "skadestue", "icu"), c("situation_report")),
-    list("Clinical Data", "Imaging", c("billed", "imaging", "image", "radiolog", "scan", "ct", "mr"), character()),
+    list("Laboratory & Diagnostics", "Imaging and radiotherapy diagnostics", c("billed", "imaging", "image", "radiolog", "scan", "ct", "mr", "bwgc"), character()),
     list("Clinical Data", "Vitals", c("vital", "vaegt", "weight", "height", "bloodpressure"), character()),
     list("Clinical Data", "Notes", c("note", "journal", "epikur", "text"), character()),
     list("Clinical Data", "Social history", c("social", "smoking", "alcohol"), character()),
     list("Treatment", "MM treatment codes", c("behandling", "treatment", "procedure", "sks", "plan"), c("mm_treatment")),
     list("Treatment", "Medicine and ATC", c("medicin", "medicine", "atc", "ordered", "administered"), c("treatment")),
-    list("Laboratory", "NPU dictionary", c("lab", "laborator", "npu", "prove", "analysis", "result"), c("npu_dictionary", "npu_lab")),
-    list("Laboratory", "NPU detective", c("lab", "npu", "analysis"), c("npu_detective")),
-    list("Laboratory", "Isotype finder", c("isotype", "mspike", "m_component", "lab", "npu"), c("isotype")),
-    list("Laboratory", "Molecular, pathology, and biobank readiness", c("molecular", "patholog", "pato", "biobank", "snomed"), character()),
+    list("Laboratory & Diagnostics", "NPU dictionary", c("lab", "laborator", "npu", "prove", "analysis", "result"), c("npu_dictionary", "npu_lab")),
+    list("Laboratory & Diagnostics", "NPU detective", c("lab", "npu", "analysis"), c("npu_detective")),
+    list("Laboratory & Diagnostics", "Isotype finder", c("isotype", "mspike", "m_component", "lab", "npu"), c("isotype")),
+    list("Laboratory & Diagnostics", "Microbiology / MiBa diagnostics", c("microbiology", "miba", "culture", "resistance", "susceptibility"), character()),
+    list("Laboratory & Diagnostics", "Pathology / PATOBANK diagnostics", c("molecular", "patholog", "pato", "snomed", "biopsy"), character()),
+    list("Laboratory & Diagnostics", "Molecular, pathology, and biobank readiness", c("molecular", "patholog", "pato", "biobank", "snomed"), character()),
     list("EHR Modules", "SP modules", c("^sp_", "sp "), character()),
     list("EHR Modules", "SDS/LPR modules", c("^sds", "^lpr", "lpr3", "sksube", "procedure"), character()),
     list("EHR Modules", "DALY views", c("dalycare", "view_", "views", "survival"), character()),
@@ -1291,7 +1354,11 @@ sanitize_public_frame <- function(x) {
 }
 
 is_sensitive_payload_column <- function(name) {
-  grepl("id_column_guess|schema_signature", name, ignore.case = TRUE)
+  grepl(
+    "id_column_guess|schema_signature|patientid|patient_id|person_key|cpr|pnr|raw_date|raw_text|snippet|requisition",
+    name,
+    ignore.case = TRUE
+  )
 }
 
 redact_sensitive_text <- function(x) {

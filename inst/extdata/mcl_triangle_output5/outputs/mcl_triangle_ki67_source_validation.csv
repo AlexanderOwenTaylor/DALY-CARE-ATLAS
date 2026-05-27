@@ -1,0 +1,5 @@
+"source_channel","db_name","schema","table_or_view","column_name","validation_query_attempted","validation_query_success","validation_status","selected_for_numeric_union","error_message_sanitized","notes"
+"coded_pathology","import","public","SDS_pato","c_snomedkode",TRUE,TRUE,"coded_aeki_numeric_percent_validated_aggregate",TRUE,"","SDS_pato.c_snomedkode AEKI000-AEKI100 aggregate route; no text emitted."
+"pathology_free_text_embedded_in_pato","import","public","SDS_pato","v_fritekst",TRUE,TRUE,"text_pattern_count_available_requires_validation",FALSE,"","SDS_pato.v_fritekst text source requires approved extraction validation before classifiability use."
+"microscopy_text","import","public","SDS_t_mikro_ny","v_fritekst",TRUE,TRUE,"atlas_text_bridge_validated",FALSE,"","Text source has no direct patientid; bridge validation is required and does not itself validate text extraction."
+"conclusion_text","import","public","SDS_t_konk_ny","v_fritekst",TRUE,TRUE,"atlas_text_bridge_validated",FALSE,"","Text source has no direct patientid; bridge validation is required and does not itself validate text extraction."

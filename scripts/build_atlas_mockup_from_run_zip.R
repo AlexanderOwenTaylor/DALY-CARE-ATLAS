@@ -30,7 +30,7 @@ read_csv_or_empty <- function(path) {
   if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
   if (is.na(file.info(path)$size) || file.info(path)$size == 0) return(data.frame(stringsAsFactors = FALSE))
   tryCatch(
-    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE),
+    utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8-BOM"),
     error = function(e) data.frame(stringsAsFactors = FALSE)
   )
 }
@@ -39,14 +39,14 @@ read_tsv_or_empty <- function(path) {
   if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
   if (is.na(file.info(path)$size) || file.info(path)$size == 0) return(data.frame(stringsAsFactors = FALSE))
   tryCatch(
-    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE),
+    utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE, fileEncoding = "UTF-8-BOM"),
     error = function(e) data.frame(stringsAsFactors = FALSE)
   )
 }
 
 write_text <- function(lines, path) {
   dir_create(dirname(path))
-  writeLines(lines, path, useBytes = TRUE)
+  writeLines(enc2utf8(lines), path, useBytes = TRUE)
   path
 }
 
@@ -67,30 +67,55 @@ copy_dir_contents <- function(from, to) {
   invisible(to)
 }
 
+zip_dir_with_powershell_dotnet <- function(from, zipfile) {
+  ps <- Sys.which("powershell")
+  if (!nzchar(ps)) ps <- Sys.which("pwsh")
+  if (!nzchar(ps)) {
+    stop("Could not create ZIP: neither utils::zip nor PowerShell is available.", call. = FALSE)
+  }
+  ps_script <- c(
+    "param([string]$SourceDir, [string]$ZipPath)",
+    "Add-Type -AssemblyName System.IO.Compression",
+    "Add-Type -AssemblyName System.IO.Compression.FileSystem",
+    "if (Test-Path -LiteralPath $ZipPath) { Remove-Item -LiteralPath $ZipPath -Force }",
+    "$root = (Resolve-Path -LiteralPath $SourceDir).Path",
+    "$zip = [System.IO.Compression.ZipFile]::Open($ZipPath, [System.IO.Compression.ZipArchiveMode]::Create)",
+    "try {",
+    "  Get-ChildItem -LiteralPath $root -Recurse -File -Force | ForEach-Object {",
+    "    $rel = $_.FullName.Substring($root.Length).TrimStart([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)",
+    "    $entryName = $rel -replace '\\\\','/'",
+    "    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $entryName, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null",
+    "  }",
+    "} finally {",
+    "  $zip.Dispose()",
+    "}"
+  )
+  ps_file <- tempfile("portable_zip_", fileext = ".ps1")
+  writeLines(ps_script, ps_file, useBytes = TRUE)
+  on.exit(unlink(ps_file, force = TRUE), add = TRUE)
+  status <- system2(
+    ps,
+    c("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ps_file, from, zipfile)
+  )
+  if (!identical(status, 0L) || !file.exists(zipfile)) {
+    stop("Portable PowerShell ZIP creation failed.", call. = FALSE)
+  }
+  invisible(zipfile)
+}
+
 zip_dir <- function(from, zipfile) {
+  from <- normalizePath(from, winslash = "/", mustWork = TRUE)
+  zipfile <- normalizePath(zipfile, winslash = "/", mustWork = FALSE)
   if (file.exists(zipfile)) unlink(zipfile, force = TRUE)
   old <- setwd(from)
   on.exit(setwd(old), add = TRUE)
-  files <- list.files(".", all.files = TRUE, no.. = TRUE, recursive = TRUE)
+  files <- gsub("\\\\", "/", list.files(".", all.files = TRUE, no.. = TRUE, recursive = TRUE))
   ok <- tryCatch({
     utils::zip(zipfile = zipfile, files = files)
     file.exists(zipfile)
   }, error = function(e) FALSE)
   if (!isTRUE(ok)) {
-    ps <- Sys.which("powershell")
-    if (!nzchar(ps)) ps <- Sys.which("pwsh")
-    if (!nzchar(ps)) stop("Could not create ZIP: neither utils::zip nor PowerShell is available.", call. = FALSE)
-    cmd <- paste0(
-      "Compress-Archive -Path ",
-      shQuote(file.path(from, "*"), type = "cmd"),
-      " -DestinationPath ",
-      shQuote(zipfile, type = "cmd"),
-      " -Force"
-    )
-    status <- system2(ps, c("-NoProfile", "-Command", cmd))
-    if (!identical(status, 0L) || !file.exists(zipfile)) {
-      stop("PowerShell Compress-Archive failed.", call. = FALSE)
-    }
+    zip_dir_with_powershell_dotnet(from, zipfile)
   }
   zipfile
 }
@@ -114,6 +139,77 @@ source_map <- if (length(source_map_files)) {
 
 mock_dir <- file.path(dirname(output_zip), sub("[.]zip$", "", basename(output_zip), ignore.case = TRUE))
 copy_dir_contents(run_dir, mock_dir)
+
+copy_project_artifact <- function(relative_path) {
+  src <- file.path(project_root, relative_path)
+  if (!file.exists(src)) return(invisible(FALSE))
+  dest <- file.path(mock_dir, relative_path)
+  dir.create(dirname(dest), recursive = TRUE, showWarnings = FALSE)
+  file.copy(src, dest, overwrite = TRUE)
+  invisible(TRUE)
+}
+
+project_artifacts <- c(
+  "RUN_KI67_FINDER.R",
+  "RUN_MCL_TRIANGLE_COUNTS.R",
+  "config/mcl_triangle_feasibility_concepts.tsv",
+  "config/mcl_triangle_person_date_mapping.tsv",
+  "config/mcl_triangle_count_value_mappings.tsv",
+  "clinical_questions/ki67_extraction_spec.yml",
+  "clinical_questions/mcl_triangle_count_definitions.yml",
+  "clinical_questions/mcl_triangle_high_risk_biology_definitions.yml",
+  "MCL_TRIANGLE_EVIDENCE_MATCHING_FIX_NOTES.md",
+  "MCL_TRIANGLE_COUNTS_PRODUCTION_NOTES.md",
+  "MCL_TRIANGLE_ANSWERABILITY_COUNTS_NOTES.md",
+  "KI67_ONE_CLICK_RSTDIO_NOTES.md",
+  "KI67_DIRECT_PRODUCTION_FINDER_NOTES.md",
+  "KI67_DISCOVERY_NOTES.md",
+  "KI67_PRODUCTION_VALIDATION_PLAN.md",
+  "R/utils.R",
+  "R/dalycare_preflight.R",
+  "R/source_map.R",
+  "R/db_profile.R",
+  "R/ki67_discovery.R",
+  "R/patobank_ki67_cartography.R",
+  "R/ki67_production_finder.R",
+  "R/mcl_triangle_counts.R",
+  "R/mcl_triangle_feasibility.R",
+  "scripts/build_ki67_discovery.R",
+  "scripts/find_ki67_in_production.R",
+  "scripts/source_ki67_finder.R",
+  "scripts/source_mcl_triangle_counts.R",
+  "scripts/run_tests.R",
+  "tests/helper.R",
+  "tests/test-ki67-discovery.R",
+  "tests/test-ki67-production-finder.R",
+  "tests/test-ki67-one-click-runner.R",
+  "tests/test-mcl-triangle-counts.R",
+  "tests/test-mcl-triangle-answerability-counts.R",
+  "tests/test-mcl-triangle-feasibility.R",
+  "tests/test-mcl-triangle-evidence-filtering.R"
+)
+invisible(vapply(project_artifacts, copy_project_artifact, logical(1)))
+
+copy_mcl_triangle_count_outputs <- function(from, to) {
+  if (!dir.exists(from) || !dir.exists(to)) return(invisible(FALSE))
+  patterns <- c(
+    "^mcl_triangle_.*[.]csv$",
+    "^mcl_triangle_count_query_templates[.]sql$",
+    "^output_generation_status[.]csv$"
+  )
+  files <- unique(unlist(lapply(patterns, function(pattern) {
+    list.files(from, pattern = pattern, full.names = TRUE)
+  }), use.names = FALSE))
+  if (!length(files)) return(invisible(FALSE))
+  file.copy(files, file.path(to, basename(files)), overwrite = TRUE)
+  invisible(TRUE)
+}
+
+accepted_mcl_source <- function(source) {
+  nzchar(source$outputs_dir %||% "") &&
+    exists("mcl_count_output_dir_is_accepted_production", mode = "function") &&
+    isTRUE(mcl_count_output_dir_is_accepted_production(source$outputs_dir))
+}
 
 mock_output_dir <- file.path(mock_dir, "outputs")
 mock_panel_dir <- file.path(mock_output_dir, "panels")
@@ -194,6 +290,11 @@ write_csv(semantic_outputs$dictionary, file.path(mock_output_dir, "atlas_semanti
 write_csv(semantic_outputs$value_map, file.path(mock_output_dir, "atlas_semantic_value_map.csv"))
 write_csv(semantic_outputs$code_map, file.path(mock_output_dir, "atlas_semantic_code_map.csv"))
 write_csv(semantic_outputs$panel_links, file.path(mock_output_dir, "atlas_semantic_panel_links.csv"))
+write_csv(semantic_outputs$unmapped_entity_overlay, file.path(mock_output_dir, "atlas_semantic_unmapped_entity_overlay.csv"))
+write_csv(semantic_outputs$overlay_lookup, file.path(mock_output_dir, "atlas_semantic_overlay_lookup.csv"))
+write_csv(semantic_outputs$curator_label_promotions, file.path(mock_output_dir, "atlas_curator_label_promotions.csv"))
+write_csv(semantic_outputs$curator_label_lookup, file.path(mock_output_dir, "atlas_curator_label_promotion_lookup.csv"))
+write_csv(semantic_outputs$mapping_conflicts, file.path(mock_output_dir, "atlas_semantic_mapping_conflicts.csv"))
 write_csv(product_outputs$clinical_concepts, file.path(mock_output_dir, "atlas_clinical_concepts.csv"))
 write_csv(product_outputs$domain_panels, file.path(mock_output_dir, "atlas_domain_panels.csv"))
 write_csv(product_outputs$panel_kpis, file.path(mock_output_dir, "atlas_panel_kpis.csv"))
@@ -281,6 +382,59 @@ legacy_reference_vs_current <- build_legacy_reference_vs_current_profiled_eviden
   sources = sources,
   canonical = canonical_resources
 )
+ki67_discovery <- build_ki67_discovery_outputs(
+  project_root = project_root,
+  include_reference_files = TRUE,
+  semantic_dictionary = semantic_outputs$dictionary,
+  semantic_value_map = semantic_outputs$value_map,
+  semantic_code_map = semantic_outputs$code_map,
+  semantic_panel_links = semantic_outputs$panel_links,
+  semantic_overlay_lookup = semantic_outputs$overlay_lookup,
+  clinical_concepts = product_outputs$clinical_concepts,
+  domain_panels = product_outputs$domain_panels,
+  panel_kpis = product_outputs$panel_kpis,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  sources = sources,
+  columns = columns,
+  column_profiles = column_profiles,
+  column_top_values = column_top_values,
+  source_resolution = source_resolution,
+  canonical_reconciliation = canonical_reconciliation,
+  legacy_reference_vs_current = legacy_reference_vs_current
+)
+mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
+  project_root = project_root,
+  semantic_dictionary = semantic_outputs$dictionary,
+  semantic_value_map = semantic_outputs$value_map,
+  semantic_code_map = semantic_outputs$code_map,
+  semantic_panel_links = semantic_outputs$panel_links,
+  columns = columns,
+  column_profiles = column_profiles,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_kpis = product_outputs$panel_kpis,
+  sources = sources,
+  canonical_reconciliation = canonical_reconciliation,
+  legacy_reference_vs_current = legacy_reference_vs_current,
+  ki67_discovery = ki67_discovery
+)
+confluence_feasibility <- build_confluence_feasibility_outputs(
+  project_root = project_root,
+  sources = sources,
+  columns = columns,
+  column_profiles = column_profiles,
+  column_top_values = column_top_values,
+  panels = panels,
+  panel_raw_fields = product_outputs$panel_raw_fields,
+  panel_distributions = product_outputs$panel_distributions,
+  panel_kpis = product_outputs$panel_kpis,
+  canonical_reconciliation = canonical_reconciliation,
+  legacy_reference_vs_current = legacy_reference_vs_current,
+  min_cell_count = atlas_min_cell_count()
+)
+confluence_write_outputs(confluence_feasibility, mock_output_dir)
+
 write_csv(legacy_resource_audit, file.path(mock_output_dir, "legacy_cartography_source_resolution_audit.csv"))
 write_csv(billeddiagnostik_del2_audit, file.path(mock_output_dir, "billeddiagnostik_del2_regression_audit.csv"))
 write_csv(source_resolution_plan_dry_run, file.path(mock_output_dir, "source_resolution_plan_dry_run.csv"))
@@ -294,6 +448,92 @@ write_csv(canonical_reconciliation, file.path(mock_output_dir, "canonical_resour
 write_csv(source_map_crosswalk, file.path(mock_output_dir, "source_map_row_to_canonical_resource_crosswalk.csv"))
 write_csv(legacy_reference_vs_current, file.path(mock_output_dir, "legacy_reference_vs_current_profiled_evidence.csv"))
 write_csv(remaining_activation_plan, file.path(mock_output_dir, "remaining_canonical_resources_activation_plan.csv"))
+ki67_write_outputs(ki67_discovery, output_dir = mock_output_dir, project_root = project_root)
+patobank_ki67_percent <- patobank_ki67_read_outputs(mock_output_dir)
+patobank_file_audit <- patobank_ki67_validate_output_files(mock_output_dir)
+if (any(patobank_file_audit$status == "empty_output_error")) {
+  patobank_ki67_percent <- patobank_ki67_fail_closed_outputs(
+    reason_id = "input_patobank_ki67_header_only",
+    label = "PATOBANK Ki-67 cartography output",
+    notes = "Input atlas artifact contained header-only PATOBANK Ki-67 cartography files. Mock-up output fails closed instead of presenting empty scaffolds as completed coverage.",
+    source_table = "SDS_pato",
+    source_column = "c_snomedkode",
+    query_templates = patobank_ki67_percent$query_templates %||% character()
+  )
+  patobank_ki67_write_outputs(patobank_ki67_percent, output_dir = mock_output_dir)
+} else if (!file.exists(file.path(mock_output_dir, "patobank_ki67_percent_summary.csv"))) {
+  patobank_ki67_write_outputs(patobank_ki67_percent, output_dir = mock_output_dir)
+}
+mcl_triangle_write_outputs(mcl_triangle_feasibility, mock_output_dir)
+standalone_mcl_source <- if (exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
+  mcl_count_resolve_standalone_output_source(
+    project_root = project_root,
+    outputs_dir = mock_output_dir,
+    count_output_zip = "",
+    count_output_dir = mock_output_dir
+  )
+} else {
+  list(outputs_dir = "", metadata = mcl_triangle_empty_standalone_output_source())
+}
+if (!accepted_mcl_source(standalone_mcl_source) && exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
+  standalone_mcl_source <- mcl_count_resolve_standalone_output_source(
+    project_root = project_root,
+    outputs_dir = mock_output_dir,
+    count_output_zip = "",
+    count_output_dir = ""
+  )
+}
+if (exists("mcl_count_read_outputs", mode = "function") &&
+    accepted_mcl_source(standalone_mcl_source)) {
+  copy_mcl_triangle_count_outputs(standalone_mcl_source$outputs_dir, mock_output_dir)
+  mcl_triangle_feasibility$cohort_counts <- mcl_count_read_outputs(standalone_mcl_source$outputs_dir)
+  mcl_triangle_feasibility$standalone_output_source <- standalone_mcl_source$metadata
+  mcl_triangle_feasibility$pathology_ki67_signpost <- mcl_triangle_pathology_ki67_signpost(mcl_triangle_feasibility$cohort_counts)
+} else if (exists("mcl_count_build_outputs", mode = "function")) {
+  mcl_triangle_count_outputs <- mcl_count_build_outputs(
+    project_root = project_root,
+    outputs_dir = mock_output_dir,
+    mode = "plan",
+    min_cell_count = atlas_min_cell_count()
+  )
+  mcl_count_write_outputs(mcl_triangle_count_outputs, mock_output_dir)
+  mcl_triangle_feasibility$cohort_counts <- mcl_count_read_outputs(mock_output_dir)
+  mcl_triangle_feasibility$standalone_output_source <- if (exists("mcl_count_empty_standalone_output_source", mode = "function")) {
+    mcl_count_empty_standalone_output_source()
+  } else {
+    mcl_triangle_empty_standalone_output_source()
+  }
+  mcl_triangle_feasibility$pathology_ki67_signpost <- mcl_triangle_pathology_ki67_signpost(mcl_triangle_feasibility$cohort_counts)
+}
+
+ki67_db_files <- file.path(
+  mock_output_dir,
+  c(
+    "ki67_db_aeki_code_counts.csv",
+    "ki67_db_p16_dual_stain_counts.csv",
+    "ki67_db_text_pattern_counts.csv",
+    "ki67_db_registry_field_counts.csv",
+    "ki67_db_summary.csv",
+    "ki67_found_locations.csv"
+  )
+)
+if (any(file.exists(ki67_db_files))) {
+  ki67_db_outputs <- ki67_db_read_outputs(mock_output_dir)
+  write_csv(ki67_db_outputs$summary, file.path(mock_output_dir, "ki67_db_summary.csv"))
+  write_csv(ki67_db_outputs$found_locations, file.path(mock_output_dir, "ki67_found_locations.csv"))
+  ki67_db_apply_to_mcl_outputs(mock_output_dir, ki67_db_outputs)
+  mcl_triangle_feasibility$summary <- read_csv_or_empty(file.path(mock_output_dir, "mcl_triangle_feasibility_summary.csv"))
+  mcl_triangle_feasibility$biology_gap_analysis <- read_csv_or_empty(file.path(mock_output_dir, "mcl_triangle_biology_gap_analysis.csv"))
+  mcl_triangle_feasibility$study_readiness_matrix <- read_csv_or_empty(file.path(mock_output_dir, "mcl_triangle_study_readiness_matrix.csv"))
+  ki67_discovery$channel_summary <- read_csv_or_empty(file.path(mock_output_dir, "ki67_channel_summary.csv"))
+  ki67_discovery$db_summary <- ki67_db_outputs$summary
+  ki67_discovery$db_found_locations <- ki67_db_outputs$found_locations
+  ki67_discovery$db_aeki_code_counts <- ki67_db_outputs$aeki_code_counts
+  ki67_discovery$db_p16_dual_stain_counts <- ki67_db_outputs$p16_dual_stain_counts
+  ki67_discovery$db_text_pattern_counts <- ki67_db_outputs$text_pattern_counts
+  ki67_discovery$db_registry_field_counts <- ki67_db_outputs$registry_field_counts
+  mcl_triangle_feasibility$ki67_discovery <- ki67_discovery
+}
 
 if (nrow(run_summary) && all(c("metric", "value") %in% names(run_summary))) {
   source_recovery_metrics <- source_recovery_run_summary_metrics(
@@ -346,6 +586,11 @@ payload <- atlas_payload(
   semantic_value_map = semantic_outputs$value_map,
   semantic_code_map = semantic_outputs$code_map,
   semantic_panel_links = semantic_outputs$panel_links,
+  semantic_unmapped_entity_overlay = semantic_outputs$unmapped_entity_overlay,
+  semantic_overlay_lookup = semantic_outputs$overlay_lookup,
+  curator_label_promotions = semantic_outputs$curator_label_promotions,
+  curator_label_lookup = semantic_outputs$curator_label_lookup,
+  semantic_mapping_conflicts = semantic_outputs$mapping_conflicts,
   clinical_concepts = product_outputs$clinical_concepts,
   domain_panels = product_outputs$domain_panels,
   panel_kpis_product = product_outputs$panel_kpis,
@@ -364,7 +609,11 @@ payload <- atlas_payload(
   canonical_resource_reconciliation = canonical_reconciliation,
   source_map_crosswalk = source_map_crosswalk,
   legacy_reference_vs_current = legacy_reference_vs_current,
-  remaining_activation_plan = remaining_activation_plan
+  remaining_activation_plan = remaining_activation_plan,
+  ki67_discovery = ki67_discovery,
+  patobank_ki67_percent = patobank_ki67_percent,
+  mcl_triangle_feasibility = mcl_triangle_feasibility,
+  confluence_feasibility = confluence_feasibility
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 

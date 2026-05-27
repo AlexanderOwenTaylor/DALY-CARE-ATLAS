@@ -1,0 +1,312 @@
+denominators:
+  - denominator_id: all_lyfo_mcl
+    clinical_label: All LYFO MCL
+    notes: Primary feasibility denominator; requires validated LYFO MCL subtype/histology predicate.
+  - denominator_id: younger_mcl_proxy_age_le_65
+    clinical_label: Younger/transplant-eligible proxy MCL, age <=65
+    notes: Age <=65 is a younger proxy and must not be described as transplant eligibility by itself.
+  - denominator_id: transplant_eligible_proxy
+    clinical_label: Transplant-eligible proxy
+    notes: Optional only if explicit eligibility/proxy fields are mapped and clinically validated.
+
+data_points:
+  - data_point_id: all_lyfo_mcl
+    clinical_label: MCL cohort
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: diagnosis_date
+    valid_time_window: ever_available
+    valid_value_rule: LYFO subtype/histology indicates mantle cell lymphoma.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Primary feasibility denominator.
+  - data_point_id: younger_mcl_proxy_age_le_65
+    clinical_label: Younger/transplant-eligible proxy MCL, age <=65
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: birth_date_or_age_at_diagnosis
+    valid_time_window: near_diagnosis
+    valid_value_rule: Age <=65 at diagnosis if age/date fields are mapped.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Younger proxy only; not equivalent to transplant eligibility.
+  - data_point_id: birth_date_available
+    clinical_label: Birth date available for age proxy
+    denominator: all_lyfo_mcl
+    required_sources: [patient, RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: birth_date
+    valid_time_window: near_diagnosis
+    valid_value_rule: patient.date_birth parses as a valid date after joining to LYFO MCL by patientid.
+    source_priority: [patient, RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Aggregate diagnostic only; no birth dates are emitted.
+  - data_point_id: age_anchor_available
+    clinical_label: Diagnosis/treatment age anchor available
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: age_anchor_priority
+    valid_time_window: near_diagnosis
+    valid_value_rule: First valid date from Reg_DiagnostiskBiopsi_dt, Reg_BehandlingBeslutning_dt, then Beh_KemoterapiStart_dt.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Aggregate diagnostic only; no dates are emitted.
+  - data_point_id: age_computable
+    clinical_label: Age computable at diagnosis/treatment anchor
+    denominator: all_lyfo_mcl
+    required_sources: [patient, RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: age_anchor_priority
+    valid_time_window: near_diagnosis
+    valid_value_rule: Both patient.date_birth and the selected LYFO age anchor parse as valid dates.
+    source_priority: [patient, RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Aggregate diagnostic only; no dates are emitted.
+  - data_point_id: age_gt_65
+    clinical_label: MCL age >65 at diagnosis/treatment anchor
+    denominator: all_lyfo_mcl
+    required_sources: [patient, RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: age_anchor_priority
+    valid_time_window: near_diagnosis
+    valid_value_rule: Age at selected LYFO anchor is >=66 years.
+    source_priority: [patient, RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Aggregate diagnostic only; not a treatment eligibility label.
+  - data_point_id: age_missing_uncomputable
+    clinical_label: Age missing or uncomputable
+    denominator: all_lyfo_mcl
+    required_sources: [patient, RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: age_anchor_priority
+    valid_time_window: near_diagnosis
+    valid_value_rule: Birth date or selected LYFO age anchor is missing/malformed after guarded parsing.
+    source_priority: [patient, RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Aggregate diagnostic only; invalid dates are counted, not emitted.
+  - data_point_id: diagnosis_date
+    clinical_label: Diagnosis date
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: diagnosis_date
+    valid_time_window: near_diagnosis
+    valid_value_rule: Non-missing valid diagnosis date.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Needed for timing windows.
+  - data_point_id: first_line_treatment_date
+    clinical_label: First-line treatment date
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: first_line_treatment_start
+    valid_time_window: first_line_window
+    valid_value_rule: Non-missing valid first-line treatment date.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Needed for first-line and landmark timing.
+  - data_point_id: cit_immunochemotherapy
+    clinical_label: CIT / immunochemotherapy
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: first_line_treatment_start
+    valid_time_window: first_line_window
+    valid_value_rule: LYFO regimen or treatment fields indicate CIT/immunochemotherapy.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: [SDS procedures/medication validation only]
+    validation_status: requires_production_aggregate_validation
+    notes: Count for the all-MCL denominator first so treatment availability is not blocked by unresolved age mapping; younger-proxy intersections are handled separately.
+  - data_point_id: asct_hdt_first_line
+    clinical_label: First-line ASCT/HDT
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: first_line_treatment_start_or_stem_cell_infusion
+    valid_time_window: first_line_window
+    valid_value_rule: Beh_Hoejdosisbehandling yes, Beh_TypeAutologStamcellestoette autolog, or Beh_Stamcelleinfusion_dt valid.
+    source_priority: [RKKP_LYFO Beh_*]
+    fallback_sources: [SDS/LPR transplant procedure validation only]
+    validation_status: requires_production_aggregate_validation
+    notes: First-line ASCT/HDT must use LYFO Beh_* fields first; age-specific intersections are handled separately.
+  - data_point_id: asct_hdt_relapse_recurrence
+    clinical_label: Relapse/recurrence ASCT/HDT
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: recurrence_or_relapse_treatment_window
+    valid_time_window: follow_up_outcome
+    valid_value_rule: Rec_Hoejdosisbehandling yes or Rec_Stamcelleinfusion_dt valid; not first-line ASCT/HDT.
+    source_priority: [RKKP_LYFO Rec_*]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Relapse/recurrence transplant evidence; keep separate from first-line ASCT/HDT.
+  - data_point_id: ibrutinib_exposure
+    clinical_label: Ibrutinib exposure
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO, medication/code sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: drug_exposure_start
+    valid_time_window: first_line_window
+    valid_value_rule: Validated ibrutinib/BTK exposure field or code.
+    source_priority: [RKKP_LYFO, medication/code sources]
+    fallback_sources: [ATC/SKS/medication validation only]
+    validation_status: requires_production_aggregate_validation
+    notes: Descriptive exposure availability only; all-MCL marginal count should remain available even if age mapping is unresolved.
+  - data_point_id: os_death
+    clinical_label: OS/death
+    denominator: all_lyfo_mcl
+    required_sources: [patient/death/follow-up sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: death_or_follow_up_date
+    valid_time_window: follow_up_outcome
+    valid_value_rule: Death date/status or follow-up survival evidence.
+    source_priority: [patient/death/follow-up sources]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Outcome availability only; not survival analysis.
+  - data_point_id: relapse_progression_ffs_proxy
+    clinical_label: Relapse/progression/FFS proxy
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO, treatment-line/follow-up sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: relapse_progression_or_next_treatment_date
+    valid_time_window: follow_up_outcome
+    valid_value_rule: Relapse/progression/next-treatment/response proxy.
+    source_priority: [RKKP_LYFO]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Proxy availability only; requires clinical validation.
+  - data_point_id: ki67_aeki
+    clinical_label: Ki-67 AEKI numeric pathology code
+    denominator: all_lyfo_mcl
+    required_sources: [SDS_pato, SDS_dimpatologiskdiagnose]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: pathology_sample_date
+    valid_time_window: diagnosis_minus_180_to_plus_90_days; diagnosis_plus_minus_90_days; before_first_line_if_available
+    valid_value_rule: Valid AEKI000-AEKI100 numeric code; no row-level pathology text.
+    source_priority: [SDS_pato, SDS_dimpatologiskdiagnose]
+    fallback_sources: [pathology text validation]
+    validation_status: requires_production_aggregate_validation
+    notes: AEKI code counts are distinct-person aggregate counts, not code-row counts.
+  - data_point_id: tp53_p53_del17p
+    clinical_label: TP53 / p53 / del17p
+    denominator: all_lyfo_mcl
+    required_sources: [pathology/FISH/molecular/RKKP fields]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: pathology_or_molecular_test_date
+    valid_time_window: near_diagnosis
+    valid_value_rule: Validated TP53/p53/del17p field, code, or aggregate text-derived evidence.
+    source_priority: [pathology/FISH/molecular]
+    fallback_sources: [pathology text validation]
+    validation_status: requires_production_aggregate_validation
+    notes: Requires source-specific validation.
+  - data_point_id: blastoid_pleomorphic_morphology
+    clinical_label: Blastoid/pleomorphic morphology
+    denominator: all_lyfo_mcl
+    required_sources: [LYFO histology, PATOBANK, t_mikro, t_konk]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: diagnosis_pathology_date
+    valid_time_window: near_diagnosis
+    valid_value_rule: Validated blastoid or pleomorphic morphology field/code/text-derived aggregate.
+    source_priority: [LYFO histology, PATOBANK]
+    fallback_sources: [pathology text validation]
+    validation_status: requires_production_aggregate_validation
+    notes: Requires source-specific validation.
+  - data_point_id: mipi_mipic_components
+    clinical_label: MIPI / MIPI-c components
+    denominator: all_lyfo_mcl
+    required_sources: [RKKP_LYFO, lab fields, Ki-67]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: diagnosis_and_first_line_dates
+    valid_time_window: near_diagnosis
+    valid_value_rule: Age, performance/ECOG, LDH, leukocytes, and Ki-67 where available.
+    source_priority: [RKKP_LYFO/labs/Ki-67]
+    fallback_sources: [reconstructed MIPI/MIPI-c inputs]
+    validation_status: requires_production_aggregate_validation
+    notes: MIPI-c requires Ki-67 validation.
+  - data_point_id: toxicity_proxies
+    clinical_label: Toxicity proxies
+    denominator: younger_mcl_proxy_age_le_65
+    required_sources: [ADT, microbiology, medication, transfusion sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: toxicity_event_date
+    valid_time_window: follow_up_outcome
+    valid_value_rule: Aggregate toxicity proxy field/code/event source.
+    source_priority: [ADT/microbiology/medication/transfusion]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Safety/toxicity proxy availability only.
+  - data_point_id: alive_at_landmark
+    clinical_label: Alive at landmark
+    denominator: younger_mcl_proxy_age_le_65
+    required_sources: [RKKP_LYFO, death/follow-up sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: landmark_after_first_line_start
+    valid_time_window: pre_landmark
+    valid_value_rule: Alive at configured landmark.
+    source_priority: [death/follow-up sources]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Landmark feasibility only.
+  - data_point_id: event_free_pre_landmark
+    clinical_label: No event before landmark
+    denominator: younger_mcl_proxy_age_le_65
+    required_sources: [RKKP_LYFO, relapse/progression sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: landmark_after_first_line_start
+    valid_time_window: pre_landmark
+    valid_value_rule: No event before configured landmark if event proxy mapped.
+    source_priority: [relapse/progression sources]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Landmark feasibility only.
+  - data_point_id: asct_hdt_status_known_landmark
+    clinical_label: ASCT/HDT status known at/after landmark
+    denominator: younger_mcl_proxy_age_le_65
+    required_sources: [RKKP_LYFO Beh_* fields]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: landmark_after_first_line_start
+    valid_time_window: post_landmark
+    valid_value_rule: ASCT/HDT status known at or after landmark.
+    source_priority: [RKKP_LYFO Beh_*]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Landmark feasibility only.
+  - data_point_id: ibrutinib_status_known_landmark
+    clinical_label: Ibrutinib status known at/after landmark
+    denominator: younger_mcl_proxy_age_le_65
+    required_sources: [RKKP_LYFO, medication/code sources]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: landmark_after_first_line_start
+    valid_time_window: post_landmark
+    valid_value_rule: Ibrutinib status known at or after landmark.
+    source_priority: [RKKP_LYFO/medication/code sources]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Landmark feasibility only.
+  - data_point_id: high_risk_biology_pre_landmark
+    clinical_label: High-risk biology known before landmark
+    denominator: younger_mcl_proxy_age_le_65
+    required_sources: [Ki-67, TP53, morphology, MIPI inputs]
+    person_id_strategy: configured_source_person_key_required
+    date_anchor: landmark_after_first_line_start
+    valid_time_window: pre_landmark
+    valid_value_rule: High-risk biology known before landmark.
+    source_priority: [validated biology sources]
+    fallback_sources: []
+    validation_status: requires_production_aggregate_validation
+    notes: Landmark feasibility only.

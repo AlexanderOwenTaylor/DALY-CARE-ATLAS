@@ -1,0 +1,7 @@
+"metric","value","notes"
+"input_rows","5047","Rows loaded from config/dalycare_cycle4_curator_label_promotions.csv."
+"rows_promoted","1359","Dictionary/code-map rows with deterministic curator-label promotion."
+"rows_skipped","2369","Rows not promoted because no deterministic target row was found or label already matched."
+"ambiguous_rows","150","Rows skipped because matching would be ambiguous."
+"remaining_visible_unmapped_or_code_only_before","308","Approximate generic/code-echo labels before curator promotion."
+"remaining_visible_unmapped_or_code_only_after","0","Approximate generic/code-echo labels after curator promotion."

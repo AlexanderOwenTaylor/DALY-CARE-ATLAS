@@ -1,0 +1,19 @@
+{
+  "snapshot_id": "pdsa_cycle4_after_semantic_overlay_promotion",
+  "top_level_tabs": 12,
+  "sub_tabs": 67,
+  "panels": 313,
+  "details_sections": 49,
+  "source_catalog_rows": 6,
+  "data_dictionary_rows": 6666,
+  "semantic_dictionary_rows": 6666,
+  "semantic_code_map_rows": 5853,
+  "semantic_overlay_rows": 3902,
+  "semantic_conflict_rows": 97,
+  "resource_reconciliation_rows": 64,
+  "payload_top_level_keys": 82,
+  "mcl_triangle_data_point_rows": 25,
+  "confluence_rows": 143,
+  "output_csv_files": 130,
+  "rendered_export_links": 8
+}
