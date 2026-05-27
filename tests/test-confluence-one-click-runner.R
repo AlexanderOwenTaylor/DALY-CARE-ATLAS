@@ -57,6 +57,7 @@ for (name in c(
   "infection_counts",
   "infection_person_time",
   "infection_rates",
+  "microbiology_confirmation_source_audit",
   "production_execution_summary",
   "failed_query_audit",
   "source_resolution_audit"

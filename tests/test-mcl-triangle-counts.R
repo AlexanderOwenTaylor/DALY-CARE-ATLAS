@@ -945,6 +945,11 @@ expect_equal(ki67_summary$distinct_person_count_display[[1]], "37", "Ki-67 perso
 expect_true(nrow(prod_query_out$overlap_matrix) > 0, "Overlap output should contain explanatory rows instead of an empty file when dedicated intersections are not run.")
 expect_true(nrow(prod_query_out$exposure_strata_counts) > 0, "Exposure strata output should contain explanatory rows instead of an empty file when strata queries are not run.")
 expect_true(nrow(prod_query_out$landmark_feasibility_counts) > 0, "Landmark output should contain availability/unavailable rows instead of an empty file.")
+deep_ids <- c("toxicity_proxies", "alive_at_landmark", "event_free_pre_landmark", "asct_hdt_status_known_landmark", "ibrutinib_status_known_landmark", "high_risk_biology_pre_landmark")
+tp53_row <- prod_query_out$data_point_counts[prod_query_out$data_point_counts$data_point_id == "tp53_p53_del17p", , drop = FALSE]
+morph_row <- prod_query_out$data_point_counts[prod_query_out$data_point_counts$data_point_id == "blastoid_pleomorphic_morphology", , drop = FALSE]
+expect_true(tp53_row$count_status[[1]] == "count_not_available_requires_value_mapping" && morph_row$count_status[[1]] == "count_not_available_requires_value_mapping", "TP53 and blastoid/pleomorphic positivity must remain fail-closed without exact value rules.")
+expect_true(any(prod_query_out$query_review$data_point == "toxicity_proxies" & grepl("repo-derived provisional serious-infection", prod_query_out$query_review$value_rule_used, fixed = TRUE)), "Toxicity proxy query review should disclose the provisional CONFLUENCE serious-infection rule.")
 
 intersection_profile_dir <- tempfile("mcl_count_intersection_profile_")
 dir.create(intersection_profile_dir, recursive = TRUE, showWarnings = FALSE)
@@ -984,6 +989,10 @@ prod_intersection_out <- mcl_count_build_outputs(
   db_adapter = fake_intersection_adapter(),
   min_cell_count = 5L
 )
+deep_rows <- prod_intersection_out$data_point_counts[prod_intersection_out$data_point_counts$data_point_id %in% deep_ids, , drop = FALSE]
+expect_true(nrow(deep_rows) == length(deep_ids) && all(deep_rows$count_status %in% mcl_count_available_statuses()), "Deterministic TRIANGLE deep-mapping data points should execute as production aggregate counts when the age denominator is validated.")
+expect_true(any(prod_intersection_out$landmark_feasibility_counts$count_status %in% mcl_count_available_statuses()), "Dedicated landmark aggregate rows should be surfaced in the landmark feasibility output.")
+expect_true(any(prod_intersection_out$high_risk_biology_counts$biology_component == "any_high_risk_biology_known" & prod_intersection_out$high_risk_biology_counts$count_status %in% mcl_count_available_statuses()), "High-risk biology output should surface deterministic pre-landmark component evidence.")
 all_mcl_asct_ib <- prod_intersection_out$treatment_strategy_strata_counts[
   prod_intersection_out$treatment_strategy_strata_counts$denominator == "all_lyfo_mcl" &
     prod_intersection_out$treatment_strategy_strata_counts$ibrutinib_status == "yes" &

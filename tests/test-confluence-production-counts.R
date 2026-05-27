@@ -250,6 +250,65 @@ expect_true(any(grepl('"SDS_pato"', mixed_queries, fixed = TRUE)), "Mixed-case P
 expect_true(any(mixed_case$disease_state_person_counts$state_id == "pathology_mbl" & mixed_case$disease_state_person_counts$acceptance_status == "accepted"), "Resolved mixed-case PATOBANK table should produce accepted pathology-supported MBL rows.")
 expect_true(any(mixed_case$source_resolution_audit$source_id == "SDS_pato" & mixed_case$source_resolution_audit$resolved_table == "SDS_pato"), "CONFLUENCE source resolution audit should expose resolved mixed-case PATOBANK table.")
 
+microbiology_adapter <- function(micro_result = "positive") {
+  micro_queries <- character()
+  adapter <- list(
+    list_tables = function() {
+      data.frame(
+        db_name = c("core", "core", "import", "import"),
+        schema = "public",
+        table = c("patient", "t_dalycare_diagnoses", "SDS_pato", "SP_Bloddyrkning_del1"),
+        stringsAsFactors = FALSE
+      )
+    },
+    confluence_query = function(sql) {
+      if (grepl("microbiology_confirmed_infection", sql, fixed = TRUE)) {
+        micro_queries <<- c(micro_queries, sql)
+        if (identical(micro_result, "failed")) stop("relation public.SP_Bloddyrkning_del1 does not exist token=secret")
+        if (identical(micro_result, "zero")) {
+          return(empty_df(person_key = character(), event_date = as.Date(character()), endpoint_id = character()))
+        }
+        return(data.frame(person_key = c("p01", "p02"), event_date = as.Date(c("2020-03-01", "2020-04-01")), endpoint_id = "microbiology_confirmed_infection", stringsAsFactors = FALSE))
+      }
+      if (grepl("serious_infection_hospitalization", sql, fixed = TRUE)) {
+        return(empty_df(person_key = character(), event_date = as.Date(character()), endpoint_id = character()))
+      }
+      if (grepl('"SDS_pato"', sql, fixed = TRUE)) {
+        return(empty_df(person_key = character(), state_id = character(), first_date = as.Date(character())))
+      }
+      if (grepl('"t_dalycare_diagnoses"', sql, fixed = TRUE)) {
+        return(data.frame(
+          person_key = c("p01", "p02"),
+          state_id = c("cll", "mgus"),
+          first_date = as.Date(c("2020-01-01", "2020-02-01")),
+          stringsAsFactors = FALSE
+        ))
+      }
+      if (grepl('"patient"', sql, fixed = TRUE)) {
+        return(data.frame(person_key = c("p01", "p02"), date_death_fu = as.Date(c(NA, NA)), stringsAsFactors = FALSE))
+      }
+      data.frame(stringsAsFactors = FALSE)
+    },
+    get_micro_queries = function() micro_queries
+  )
+  adapter
+}
+
+micro_positive_adapter <- microbiology_adapter("positive")
+micro_positive <- confluence_count_build_outputs(root, micro_positive_adapter, mode = "production_aggregate", min_cell_count = 1L)
+expect_true(any(micro_positive$microbiology_confirmation_counts$acceptance_status == "accepted"), "Executed microbiology-confirmation route should emit accepted provisional counts.")
+expect_true(any(micro_positive$microbiology_confirmation_counts$endpoint_definition_status == "repo-derived provisional"), "Microbiology-confirmed counts should remain labelled repo-derived provisional.")
+expect_true(any(micro_positive$microbiology_confirmation_source_audit$query_success %in% TRUE), "Microbiology source audit should record successful source execution.")
+expect_true(any(grepl("no growth|not detected|contamin", micro_positive_adapter$get_micro_queries(), ignore.case = TRUE)), "Microbiology SQL should exclude negative/no-growth/contamination-only evidence.")
+
+micro_zero <- confluence_count_build_outputs(root, microbiology_adapter("zero"), mode = "production_aggregate", min_cell_count = 1L)
+expect_true(any(micro_zero$microbiology_confirmation_counts$acceptance_status == "accepted" & micro_zero$microbiology_confirmation_counts$count_display == "0"), "Executed microbiology route with no positive evidence may emit accepted zero.")
+
+micro_failed <- confluence_count_build_outputs(root, microbiology_adapter("failed"), mode = "production_aggregate", min_cell_count = 1L)
+expect_true(all(micro_failed$microbiology_confirmation_counts$acceptance_status == "source validation required"), "Failed microbiology route must not emit accepted zero rows.")
+expect_true(any(micro_failed$failed_query_audit$query_id == "confluence_microbiology_confirmation"), "Failed microbiology route should be visible in failed-query audit.")
+expect_true(any(micro_failed$microbiology_confirmation_source_audit$resolution_status == "production_aggregate_failed_query_error"), "Microbiology source audit should expose failed query status.")
+
 small <- prod$disease_state_person_counts[prod$disease_state_person_counts$state_id == "cll_morphology_pressure", , drop = FALSE]
 expect_true(any(small$count_display == "<5"), "Small cells should display threshold labels.")
 expect_true(any(small$suppression_status == "suppressed small cell"), "Small cells should retain suppression status.")
@@ -276,6 +335,7 @@ for (name in c(
   "infection_person_time",
   "infection_rates",
   "microbiology_confirmation_counts",
+  "microbiology_confirmation_source_audit",
   "production_query_review",
   "failed_query_audit",
   "source_resolution_audit",

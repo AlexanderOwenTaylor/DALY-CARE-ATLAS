@@ -4532,6 +4532,205 @@ mcl_count_has_validated_value_rule <- function(value_rows) {
   any(grepl("^validated|validated_", value_rows$validation_status, ignore.case = TRUE), na.rm = TRUE)
 }
 
+mcl_count_landmark_days <- function() 183L
+
+mcl_count_landmark_info <- function(lyfo, alias = "x", days = mcl_count_landmark_days()) {
+  treatment_anchor <- mcl_count_mapping_date_anchor(lyfo, "treatment")
+  if (!nzchar(treatment_anchor %||% "")) return(list(treatment_expr = "", landmark_expr = "", label = ""))
+  treatment_expr <- mcl_count_date_sql(paste0(alias, ".", mcl_count_sql_ident(treatment_anchor)))
+  list(
+    treatment_expr = treatment_expr,
+    landmark_expr = paste0("(", treatment_expr, " + ", as.integer(days), ")"),
+    label = paste0(treatment_anchor, " + ", as.integer(days), " days")
+  )
+}
+
+mcl_count_lyfo_death_expr <- function(alias = "x") {
+  paste0(
+    "coalesce(",
+    mcl_count_date_sql(paste0(alias, ".", mcl_count_sql_ident("FU_Doedsdato"))), ", ",
+    mcl_count_date_sql(paste0(alias, ".", mcl_count_sql_ident("CPR_Doedsdato"))),
+    ")"
+  )
+}
+
+mcl_count_lyfo_relapse_expr <- function(alias = "x") {
+  mcl_count_date_sql(paste0(alias, ".", mcl_count_sql_ident("Rec_RelapsProgressions_dt")))
+}
+
+mcl_count_nonempty_text_sql <- function(expr) {
+  paste0("nullif(trim(", expr, "::text), '') is not null")
+}
+
+mcl_count_any_nonempty_text_sql <- function(alias, columns) {
+  columns <- columns[nzchar(columns)]
+  if (!length(columns)) return("false")
+  paste(
+    vapply(columns, function(col) mcl_count_nonempty_text_sql(paste0(alias, ".", mcl_count_sql_ident(col))), character(1)),
+    collapse = " or "
+  )
+}
+
+mcl_count_mipi_component_predicate_sql <- function(alias = "x") {
+  mcl_count_any_nonempty_text_sql(alias, c("Reg_PerformanceStatusWHO", "Reg_LDHVaerdi", "Reg_Leukocytter"))
+}
+
+mcl_count_asct_hdt_by_landmark_predicate_sql <- function(alias = "x", landmark_expr) {
+  infusion_date <- mcl_count_date_sql(paste0(alias, ".", mcl_count_sql_ident("Beh_Stamcelleinfusion_dt")))
+  paste0(
+    "(",
+    "(", infusion_date, " is not null and ", infusion_date, " <= ", landmark_expr, ")",
+    " or upper(trim(", alias, ".", mcl_count_sql_ident("Beh_Hoejdosisbehandling"), "::text)) = 'Y'",
+    " or upper(trim(", alias, ".", mcl_count_sql_ident("Beh_TypeAutologStamcellestoette"), "::text)) in ('BEAM','OTHER','BCNU-THIOTEPA','BCNU','BEAC')",
+    ")"
+  )
+}
+
+mcl_count_lyfo_ibrutinib_predicate_sql <- function(alias = "x") {
+  paste(
+    paste0("upper(trim(", alias, ".", mcl_count_sql_ident(c("Beh_Kemoterapiregime1", "Beh_Kemoterapiregime2", "Beh_Kemoterapiregime3")), "::text)) = 'IBRUTINIB'"),
+    collapse = " or "
+  )
+}
+
+mcl_count_read_confluence_person_date_mapping <- function(project_root) {
+  x <- mcl_count_read_mapping_tsv(project_root, "confluence_person_date_mapping.tsv")
+  needed <- c(
+    "source_id", "db_name", "schema", "table", "person_key_column", "date_columns",
+    "code_column", "source_role", "linkage_confidence", "usable_for_counts", "notes"
+  )
+  mcl_count_ensure_columns(x, needed)
+}
+
+mcl_count_read_confluence_infection_endpoint_codes <- function(project_root) {
+  x <- mcl_count_read_mapping_tsv(project_root, "confluence_infection_endpoint_code_sets.tsv")
+  needed <- c("endpoint_id", "endpoint_label", "code_system", "match_type", "code_prefix", "definition_status", "notes")
+  mcl_count_ensure_columns(x, needed)
+}
+
+mcl_count_serious_infection_code_prefixes <- function(project_root) {
+  codes <- mcl_count_read_confluence_infection_endpoint_codes(project_root)
+  if (!is.data.frame(codes) || !nrow(codes)) return(character())
+  hit <- codes$endpoint_id == "serious_infection_hospitalization" & tolower(codes$match_type %||% "") == "prefix"
+  unique(toupper(trimws(as.character(codes$code_prefix[hit] %||% character()))))
+}
+
+mcl_count_normalized_code_expr_sql <- function(alias, column) {
+  paste0("regexp_replace(upper(trim(", alias, ".", mcl_count_sql_ident(column), "::text)), '[^A-Z0-9]', '', 'g')")
+}
+
+mcl_count_prefix_predicate_sql <- function(expr, prefixes) {
+  prefixes <- prefixes[nzchar(prefixes)]
+  if (!length(prefixes)) return("false")
+  paste(vapply(prefixes, function(prefix) paste0(expr, " like ", mcl_count_sql_string(paste0(prefix, "%"))), character(1)), collapse = " or ")
+}
+
+mcl_count_confluence_infection_source_sql <- function(mapping, prefixes) {
+  if (!is.data.frame(mapping) || !nrow(mapping)) return("")
+  if (!mcl_count_bool(mapping$usable_for_counts[[1]])) return("")
+  person <- mapping$person_key_column[[1]] %||% ""
+  code <- mapping$code_column[[1]] %||% ""
+  if (!nzchar(person) || !nzchar(code) || !nzchar(mapping$date_columns[[1]] %||% "")) return("")
+  alias <- "s"
+  event_date <- mcl_count_date_coalesce_sql(alias, mapping$date_columns[[1]])
+  norm_code <- mcl_count_normalized_code_expr_sql(alias, code)
+  pred <- mcl_count_prefix_predicate_sql(norm_code, prefixes)
+  paste0(
+    "select distinct ", alias, ".", mcl_count_sql_ident(person), "::text as person_key,\n",
+    "       ", event_date, " as event_date\n",
+    "from ", mcl_count_sql_table(mapping$schema[[1]], mapping$table[[1]]), " ", alias, "\n",
+    "where ", alias, ".", mcl_count_sql_ident(person), " is not null\n",
+    "  and ", event_date, " is not null\n",
+    "  and (", pred, ")"
+  )
+}
+
+mcl_count_serious_infection_union_sql <- function(project_root) {
+  mappings <- mcl_count_read_confluence_person_date_mapping(project_root)
+  prefixes <- mcl_count_serious_infection_code_prefixes(project_root)
+  if (!is.data.frame(mappings) || !nrow(mappings) || !length(prefixes)) return("")
+  hit <- mappings$source_role %in% c("diagnosis_state_and_infection", "provisional_infection_event") &
+    mcl_count_bool(mappings$usable_for_counts %||% FALSE) &
+    nzchar(mappings$person_key_column %||% "") &
+    nzchar(mappings$date_columns %||% "") &
+    nzchar(mappings$code_column %||% "")
+  sources <- mappings[hit, , drop = FALSE]
+  pieces <- lapply(seq_len(nrow(sources)), function(i) mcl_count_confluence_infection_source_sql(sources[i, , drop = FALSE], prefixes))
+  pieces <- pieces[nzchar(unlist(pieces, use.names = FALSE))]
+  if (!length(pieces)) return("")
+  paste(vapply(pieces, identity, character(1)), collapse = "\nunion\n")
+}
+
+mcl_count_toxicity_proxy_data_sql <- function(lyfo, project_root, days = 365L) {
+  info <- mcl_count_landmark_info(lyfo, alias = "r", days = 0L)
+  infection_union <- mcl_count_serious_infection_union_sql(project_root)
+  if (!nzchar(info$treatment_expr) || !nzchar(infection_union)) return("")
+  lyfo_ref <- mcl_count_sql_table(lyfo$schema[[1]], lyfo$table[[1]])
+  lyfo_key <- mcl_count_sql_ident(lyfo$person_key_column[[1]])
+  paste0(
+    "  with mcl_anchor as (\n",
+    "    select distinct r.", lyfo_key, " as person_key,\n",
+    "           ", info$treatment_expr, " as first_line_date\n",
+    "    from ", lyfo_ref, " r\n",
+    "    where upper(trim(r.", mcl_count_sql_ident("subtype"), "::text)) = 'MCL'\n",
+    "      and ", info$treatment_expr, " is not null\n",
+    "  ), infection_events as (\n",
+    "    ", gsub("\n", "\n    ", infection_union, fixed = TRUE), "\n",
+    "  )\n",
+    "  select distinct m.person_key\n",
+    "  from mcl_anchor m\n",
+    "  join infection_events e on e.person_key::text = m.person_key::text\n",
+    "  where e.event_date >= m.first_line_date\n",
+    "    and e.event_date <= (m.first_line_date + ", as.integer(days), ")"
+  )
+}
+
+mcl_count_high_risk_pre_landmark_data_sql <- function(lyfo, pato, project_root) {
+  if (!mcl_count_mapping_usable(pato)) return("")
+  info <- mcl_count_landmark_info(lyfo, alias = "r")
+  if (!nzchar(info$treatment_expr)) return("")
+  lyfo_ref <- mcl_count_sql_table(lyfo$schema[[1]], lyfo$table[[1]])
+  pato_ref <- mcl_count_sql_table(pato$schema[[1]], pato$table[[1]])
+  lyfo_key <- mcl_count_sql_ident(lyfo$person_key_column[[1]])
+  pato_key <- mcl_count_sql_ident(pato$person_key_column[[1]])
+  threshold <- mcl_count_high_risk_threshold(project_root)
+  code <- "upper(p.\"c_snomedkode\"::text)"
+  percent <- paste0("substring(", code, " from '(?:AEKI|Ã†KI|Ãƒâ€ KI)([0-9]{3})')::integer")
+  pato_anchor <- mcl_count_mapping_date_anchor(pato, "event")
+  pato_date <- if (nzchar(pato_anchor %||% "")) {
+    mcl_count_date_sql(paste0("p.", mcl_count_sql_ident(pato_anchor)))
+  } else {
+    mcl_count_date_coalesce_sql("p", pato$date_columns[[1]])
+  }
+  paste0(
+    "  with mcl_anchor as (\n",
+    "    select distinct r.", lyfo_key, " as person_key,\n",
+    "           ", info$treatment_expr, " as first_line_date,\n",
+    "           ", info$landmark_expr, " as landmark_date\n",
+    "    from ", lyfo_ref, " r\n",
+    "    where upper(trim(r.", mcl_count_sql_ident("subtype"), "::text)) = 'MCL'\n",
+    "      and ", info$treatment_expr, " is not null\n",
+    "  ), ki67_high as (\n",
+    "    select distinct m.person_key\n",
+    "    from mcl_anchor m\n",
+    "    join ", pato_ref, " p on p.", pato_key, "::text = m.person_key::text\n",
+    "    where ", pato_date, " is not null\n",
+    "      and ", pato_date, " <= m.landmark_date\n",
+    "      and ", code, " ~ '^(AEKI|Ã†KI|Ãƒâ€ KI)[0-9]{3}$'\n",
+    "      and ", percent, " >= ", as.numeric(threshold), "\n",
+    "  ), mipi_components as (\n",
+    "    select distinct r.", lyfo_key, " as person_key\n",
+    "    from ", lyfo_ref, " r\n",
+    "    where upper(trim(r.", mcl_count_sql_ident("subtype"), "::text)) = 'MCL'\n",
+    "      and ", info$treatment_expr, " is not null\n",
+    "      and (", mcl_count_mipi_component_predicate_sql("r"), ")\n",
+    "  )\n",
+    "  select person_key from ki67_high\n",
+    "  union\n",
+    "  select person_key from mipi_components"
+  )
+}
+
 mcl_count_data_point_rule <- function(id, project_root, outputs_dir, person_date_mapping, value_mappings,
                                       patient_demographics_resolver = NULL,
                                       age_source_locator = NULL,
@@ -4790,20 +4989,64 @@ mcl_count_data_point_rule <- function(id, project_root, outputs_dir, person_date
   if (identical(id, "mipi_mipic_components")) {
     return(same_lyfo("x.\"Reg_PerformanceStatusWHO\" is not null or x.\"Reg_LDHVaerdi\" is not null or x.\"Reg_Leukocytter\" is not null", mcl_count_mapping_date_anchor(lyfo, "diagnosis"), "MIPI/MIPI-c component availability", status = "aggregate_evidence_found_requires_validation"))
   }
+  if (identical(id, "toxicity_proxies")) {
+    data_sql <- mcl_count_toxicity_proxy_data_sql(lyfo, project_root, days = 365L)
+    if (!nzchar(data_sql)) {
+      return(list(executable = FALSE, status = "count_not_available_requires_value_mapping", reason = "Toxicity proxy requires executable CONFLUENCE serious-infection code/source mappings.", source_tables = "CONFLUENCE provisional serious-infection sources; RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "first_line_start_to_365_days", value_rule = "serious infection diagnosis prefix within 365 days after first-line start"))
+    }
+    return(mk(
+      data_sql,
+      "RKKP_LYFO; CONFLUENCE provisional serious-infection diagnosis sources",
+      lyfo$person_key_column[[1]],
+      "Beh_KemoterapiStart_dt to 365 days after first-line start",
+      "repo-derived provisional serious-infection code prefixes after first-line start",
+      status = "repo-derived provisional aggregate"
+    ))
+  }
   if (identical(id, "alive_at_landmark")) {
-    return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "Landmark-compatible alive status requires a dedicated first-line-date/death-date window query; ever-observed status is not used.", source_tables = "RKKP_LYFO; patient/death", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "alive at landmark date-window"))
+    info <- mcl_count_landmark_info(lyfo, alias = "x")
+    if (!nzchar(info$treatment_expr)) return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "Alive-at-landmark requires a first-line treatment date anchor.", source_tables = "RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "alive at landmark date-window"))
+    death_expr <- mcl_count_lyfo_death_expr("x")
+    pred <- paste0(info$treatment_expr, " is not null and (", death_expr, " is null or ", death_expr, " > ", info$landmark_expr, ")")
+    return(same_lyfo(pred, info$label, "first-line anchor plus LYFO death-date fields; alive at 6-month landmark if no death date before/at landmark", status = "repo-derived provisional aggregate"))
   }
   if (identical(id, "asct_hdt_status_known_landmark")) {
-    return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "ASCT/HDT status at/after landmark requires a dedicated date-window query; ever-observed ASCT status is not landmark-compatible.", source_tables = "RKKP_LYFO Beh_*", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "ASCT/HDT status at/after landmark"))
+    info <- mcl_count_landmark_info(lyfo, alias = "x")
+    if (!nzchar(info$treatment_expr)) return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "ASCT/HDT by landmark requires a first-line treatment date anchor.", source_tables = "RKKP_LYFO Beh_*", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "ASCT/HDT evidence by landmark"))
+    pred <- paste0(info$treatment_expr, " is not null and ", mcl_count_asct_hdt_by_landmark_predicate_sql("x", info$landmark_expr))
+    return(same_lyfo(pred, info$label, "LYFO Beh_* ASCT/HDT evidence present by 6-month landmark; absence is not inferred", status = "repo-derived provisional aggregate"))
   }
   if (identical(id, "ibrutinib_status_known_landmark")) {
-    return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "Ibrutinib status at/after landmark requires a dedicated medication/regimen timing query; ever-observed exposure is not landmark-compatible.", source_tables = "RKKP_LYFO; medication/code sources", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "ibrutinib status at/after landmark"))
+    info <- mcl_count_landmark_info(lyfo, alias = "x")
+    if (!nzchar(info$treatment_expr)) return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "Ibrutinib by landmark requires a first-line treatment date anchor.", source_tables = "RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "Ibrutinib exposure before/at landmark"))
+    pred <- paste0(info$treatment_expr, " is not null and (", mcl_count_lyfo_ibrutinib_predicate_sql("x"), ")")
+    return(same_lyfo(pred, info$label, "LYFO regimen field equals ibrutinib before/at 6-month landmark; absence is not inferred", status = "repo-derived provisional aggregate"))
   }
   if (identical(id, "event_free_pre_landmark")) {
-    return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "Event-free pre-landmark status requires a dedicated first-line-date/event-date window query.", source_tables = "RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "no event before landmark date-window"))
+    info <- mcl_count_landmark_info(lyfo, alias = "x")
+    if (!nzchar(info$treatment_expr)) return(list(executable = FALSE, status = "count_not_available_requires_date_mapping", reason = "Event-free pre-landmark requires a first-line treatment date anchor.", source_tables = "RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "no event before landmark date-window"))
+    death_expr <- mcl_count_lyfo_death_expr("x")
+    relapse_expr <- mcl_count_lyfo_relapse_expr("x")
+    pred <- paste0(
+      info$treatment_expr, " is not null",
+      " and (", death_expr, " is null or ", death_expr, " > ", info$landmark_expr, ")",
+      " and (", relapse_expr, " is null or ", relapse_expr, " > ", info$landmark_expr, ")"
+    )
+    return(same_lyfo(pred, info$label, "no LYFO death or relapse/progression date before/at 6-month landmark", status = "repo-derived provisional aggregate"))
   }
   if (identical(id, "high_risk_biology_pre_landmark")) {
-    return(list(executable = FALSE, status = "count_not_available_requires_value_mapping", reason = "High-risk biology before landmark requires validated component timing and classifiability rules.", source_tables = "Ki-67; TP53; morphology; MIPI inputs", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "high-risk biology classifiable before landmark"))
+    data_sql <- mcl_count_high_risk_pre_landmark_data_sql(lyfo, pato, project_root)
+    if (!nzchar(data_sql)) {
+      return(list(executable = FALSE, status = "count_not_available_requires_value_mapping", reason = "High-risk biology before landmark requires executable Ki-67 AEKI and LYFO MIPI component mappings.", source_tables = "SDS_pato; RKKP_LYFO", person_key = lyfo$person_key_column[[1]], date_anchor = "landmark_after_first_line_start", value_rule = "Ki-67 high threshold or MIPI component availability before landmark"))
+    }
+    return(mk(
+      data_sql,
+      "SDS_pato; RKKP_LYFO",
+      lyfo$person_key_column[[1]],
+      "Beh_KemoterapiStart_dt + 183 days",
+      "Ki-67 AEKI high threshold before landmark or LYFO MIPI/MIPI-c component availability; TP53 and morphology not inferred",
+      status = "repo-derived provisional aggregate"
+    ))
   }
   list(executable = FALSE, status = "count_not_available_requires_value_mapping", reason = paste("No validated value mapping for", id), source_tables = "", person_key = "", date_anchor = "", value_rule = "")
 }
@@ -5059,7 +5302,7 @@ mcl_count_unavailable_data_points <- function(defs, status = "count_not_availabl
       row_status <- mcl_count_patient_demographics_status()
     }
     if (nrow(qr) && grepl("person key", qr$reviewer_notes[[1]], ignore.case = TRUE)) row_status <- "count_not_available_requires_person_key_mapping"
-    if (nrow(qr) && grepl("date anchor|date mapping|diagnosis date|treatment date|event date|no .*date", qr$reviewer_notes[[1]], ignore.case = TRUE, perl = TRUE)) {
+    if (nrow(qr) && grepl("date anchor|date mapping|diagnosis date|treatment date|event date|no (validated )?(diagnosis|treatment|event|first[- ]line).*date", qr$reviewer_notes[[1]], ignore.case = TRUE, perl = TRUE)) {
       row_status <- "count_not_available_requires_date_mapping"
     }
     if (nrow(qr) && grepl("not applicable", qr$reviewer_notes[[1]], ignore.case = TRUE, fixed = FALSE)) {
@@ -5880,7 +6123,8 @@ mcl_count_apply_post_selection_age_source_check <- function(age_source_locator, 
 
 mcl_count_fail_closed_age_data_points <- function(data_points, error_message = "") {
   if (!is.data.frame(data_points) || !nrow(data_points)) return(data_points)
-  hit <- data_points$data_point_id %in% mcl_count_age_data_point_ids()
+  hit <- data_points$data_point_id %in% mcl_count_age_data_point_ids() |
+    data_points$denominator %in% "younger_mcl_proxy_age_le_65"
   if (!any(hit, na.rm = TRUE)) return(data_points)
   data_points$count_status[hit] <- mcl_count_patient_demographics_status()
   data_points$distinct_person_count_display[hit] <- ""
@@ -6056,7 +6300,7 @@ mcl_count_landmark_status_rows <- function(data_points) {
       distinct_person_count_display = if (available) row$distinct_person_count_display[[1]] else "",
       percent_of_denominator_display = if (available) row$percent_of_denominator_display[[1]] else "",
       notes = if (available) {
-        "Standalone aggregate availability count; true landmark compatibility requires dedicated date-window intersection queries."
+        "Dedicated aggregate date-window count for landmark feasibility; still descriptive and not a target-trial emulation."
       } else {
         "Landmark-specific count not available until date/value mappings and aggregate intersection queries are validated."
       },
@@ -6302,7 +6546,7 @@ mcl_count_high_risk_from_data_points <- function(data_points, project_root = "."
     make("mipi_high", "mipi_mipic_components", "MIPI high risk", "RKKP_LYFO/labs", "MIPI high-risk classification requires score computation.", TRUE),
     make("mipi_c_computable", "mipi_mipic_components", "MIPI-c component availability including Ki-67", "RKKP_LYFO/labs/Ki-67", "MIPI-c requires Ki-67 validation."),
     make("mipi_c_high", "mipi_mipic_components", "MIPI-c high risk", "RKKP_LYFO/labs/Ki-67", "MIPI-c high-risk classification requires score computation.", TRUE),
-    data.frame(denominator = "all_lyfo_mcl", biology_component = "any_high_risk_biology_known", timing_window = "near_diagnosis", distinct_person_count_display = "", percent_of_denominator_display = "", value_rule_used = "any high-risk biology component known", source_locations = "Ki-67; TP53; morphology; MIPI-c", validation_status = "requires_component_intersection_query", count_status = "count_not_available_requires_production_validation", notes = "Requires union of known biology components inside the database.", stringsAsFactors = FALSE),
+    make("any_high_risk_biology_known", "high_risk_biology_pre_landmark", "Ki-67 high threshold or MIPI component availability before landmark", "SDS_pato; RKKP_LYFO", "Union of deterministic Ki-67/MIPI component evidence before landmark; TP53 and morphology positivity are not inferred."),
     data.frame(denominator = "all_lyfo_mcl", biology_component = "standard_risk_biology_classifiable", timing_window = "near_diagnosis", distinct_person_count_display = "", percent_of_denominator_display = "", value_rule_used = "all required high-risk components known and negative", source_locations = "Ki-67; TP53; morphology; MIPI-c", validation_status = "requires_component_value_mapping", count_status = "count_not_available_requires_value_mapping", notes = "Missing high-risk components must not be treated as standard risk.", stringsAsFactors = FALSE),
     data.frame(denominator = "all_lyfo_mcl", biology_component = "high_risk_biology_classifiable", timing_window = "near_diagnosis", distinct_person_count_display = "", percent_of_denominator_display = "", value_rule_used = "high-risk or standard-risk classifiable", source_locations = "Ki-67; TP53; morphology; MIPI-c", validation_status = "requires_component_value_mapping", count_status = "count_not_available_requires_value_mapping", notes = "Risk biology classifiability requires component evidence and value semantics.", stringsAsFactors = FALSE)
   )
@@ -6848,7 +7092,7 @@ mcl_count_outputs_from_data_points <- function(data_points, min_cell_count = 5L,
   strata <- mcl_count_exposure_strata_status_rows(data_points)
   strata <- mcl_count_add_provenance(strata, "production_aggregate", generated_at, validation_status = "requires_dedicated_intersection_queries")
   landmark <- mcl_count_landmark_status_rows(data_points)
-  landmark <- mcl_count_add_provenance(landmark, "production_aggregate", generated_at, validation_status = "standalone_or_unavailable_landmark_counts")
+  landmark <- mcl_count_add_provenance(landmark, "production_aggregate", generated_at, validation_status = "dedicated_landmark_aggregate_sql_or_unavailable")
   ki67 <- mcl_count_ki67_summary_from_data_points(data_points)
   ki67 <- mcl_count_add_provenance(ki67, "production_aggregate", generated_at, validation_status = "ki67_from_distinct_person_aeki_count")
   age_proxy <- mcl_count_age_proxy_from_data_points(data_points)

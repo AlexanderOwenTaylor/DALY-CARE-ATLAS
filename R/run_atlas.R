@@ -705,6 +705,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     infection_person_time = safe_read_output_csv(output_paths$confluence_infection_person_time, confluence_feasibility$infection_person_time),
     infection_rates = safe_read_output_csv(output_paths$confluence_infection_rates, confluence_feasibility$infection_rates),
     microbiology_confirmation_counts = safe_read_output_csv(output_paths$confluence_microbiology_confirmation_counts, confluence_feasibility$microbiology_confirmation_counts),
+    microbiology_confirmation_source_audit = safe_read_output_csv(output_paths$confluence_microbiology_confirmation_source_audit, confluence_feasibility$microbiology_confirmation_source_audit),
     production_query_review = safe_read_output_csv(output_paths$confluence_production_query_review, confluence_feasibility$production_query_review),
     failed_query_audit = safe_read_output_csv(output_paths$confluence_failed_query_audit, confluence_feasibility$failed_query_audit),
     source_resolution_audit = safe_read_output_csv(output_paths$confluence_source_resolution_audit, confluence_feasibility$source_resolution_audit),
@@ -927,6 +928,7 @@ skipped_source_row <- function(record, message) {
 }
 
 safe_read_output_csv <- function(path, fallback = data.frame(stringsAsFactors = FALSE)) {
+  if (is.null(path) || !length(path) || !nzchar(path[[1]] %||% "")) return(fallback)
   if (!file.exists(path)) return(fallback)
   tryCatch(read_delimited_file(path), error = function(e) fallback)
 }
@@ -990,6 +992,7 @@ output_manifest_artifact_metadata <- function(id, path = "") {
     "confluence_infection_person_time",
     "confluence_infection_rates",
     "confluence_microbiology_confirmation_counts",
+    "confluence_microbiology_confirmation_source_audit",
     "confluence_production_query_review",
     "confluence_failed_query_audit",
     "confluence_source_resolution_audit",
@@ -1017,8 +1020,6 @@ output_manifest_artifact_metadata <- function(id, path = "") {
   superseded_by <- if (key %in% names(confluence_superseded_by)) unname(confluence_superseded_by[[key]]) else ""
   artifact_role <- if (nzchar(superseded_by)) {
     "compatibility_reference"
-  } else if (canonical_output && grepl("^confluence_microbiology_confirmation_counts$", key)) {
-    "canonical_fail_closed"
   } else if (canonical_output) {
     "canonical_production"
   } else {

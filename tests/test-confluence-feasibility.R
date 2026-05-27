@@ -63,8 +63,10 @@ expect_true(all(c(
   "infection_person_time",
   "infection_rates",
   "microbiology_confirmation_counts",
+  "microbiology_confirmation_source_audit",
   "production_query_review",
   "failed_query_audit",
+  "source_resolution_audit",
   "production_execution_summary"
 ) %in% names(outputs)), "CONFLUENCE output should expose every requested table.")
 
@@ -183,6 +185,7 @@ expect_true(any(grepl("confluence_mbl_source_counts.csv", manifest$relative_path
 expect_true(any(grepl("confluence_small_cell_suppression_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE suppression audit.")
 expect_true(any(grepl("confluence_production_execution_summary.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE production execution summary.")
 expect_true(any(grepl("confluence_source_resolution_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE source-resolution audit.")
+expect_true(any(grepl("confluence_microbiology_confirmation_source_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE microbiology-confirmation source audit.")
 expect_true(any(grepl("confluence_infection_rates.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE infection rates.")
 expect_true(all(c("module", "artifact_role", "canonical_output", "production_output", "superseded_by") %in% names(manifest)), "Manifest should include artifact classification metadata.")
 prod_summary <- manifest[manifest$artifact_id == "confluence_production_execution_summary", , drop = FALSE]

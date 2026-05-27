@@ -418,7 +418,7 @@ expect_true(all(c(
   "small_cell_suppression_audit", "utf8_quality_audit", "infection_endpoint_definitions",
   "disease_state_person_counts", "first_date_availability", "infection_endpoint_code_sets",
   "infection_counts", "recurrent_infection_counts", "infection_person_time", "infection_rates",
-  "microbiology_confirmation_counts", "production_query_review", "failed_query_audit",
+  "microbiology_confirmation_counts", "microbiology_confirmation_source_audit", "production_query_review", "failed_query_audit",
   "production_execution_summary"
 ) %in% names(payload$confluence_feasibility)), "Payload should include every CONFLUENCE feasibility table.")
 expect_true(all(c("review_temporal_coverage", "review_spatial_coverage", "review_dk_choropleth") %in% names(payload)), "Payload should include V33-style coverage view-model sections.")

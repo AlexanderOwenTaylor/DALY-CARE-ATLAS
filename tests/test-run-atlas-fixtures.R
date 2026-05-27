@@ -649,12 +649,13 @@ expect_true(all(c(
   "confluence_first_date_availability", "confluence_infection_endpoint_code_sets",
   "confluence_infection_counts", "confluence_recurrent_infection_counts",
   "confluence_infection_person_time", "confluence_infection_rates",
-  "confluence_microbiology_confirmation_counts", "confluence_production_query_review",
+  "confluence_microbiology_confirmation_counts", "confluence_microbiology_confirmation_source_audit",
+  "confluence_production_query_review",
   "confluence_failed_query_audit", "confluence_source_resolution_audit",
   "confluence_production_execution_summary"
 ) %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
-canonical_confluence <- manifest[manifest$artifact_id %in% c("confluence_disease_state_person_counts", "confluence_overlap_counts_accepted", "confluence_overlap_timing_accepted", "confluence_infection_counts", "confluence_recurrent_infection_counts", "confluence_infection_person_time", "confluence_infection_rates", "confluence_source_resolution_audit", "confluence_failed_query_audit", "confluence_production_execution_summary"), , drop = FALSE]
-expect_true(nrow(canonical_confluence) == 10L && all(canonical_confluence$canonical_output) && all(canonical_confluence$production_output), "Canonical CONFLUENCE aggregate artifacts should be marked production outputs.")
+canonical_confluence <- manifest[manifest$artifact_id %in% c("confluence_disease_state_person_counts", "confluence_overlap_counts_accepted", "confluence_overlap_timing_accepted", "confluence_infection_counts", "confluence_recurrent_infection_counts", "confluence_infection_person_time", "confluence_infection_rates", "confluence_microbiology_confirmation_counts", "confluence_microbiology_confirmation_source_audit", "confluence_source_resolution_audit", "confluence_failed_query_audit", "confluence_production_execution_summary"), , drop = FALSE]
+expect_true(nrow(canonical_confluence) == 12L && all(canonical_confluence$canonical_output) && all(canonical_confluence$production_output), "Canonical CONFLUENCE aggregate artifacts should be marked production outputs.")
 compat_confluence <- manifest[manifest$artifact_id %in% c("confluence_overlap_counts", "confluence_overlap_timing"), , drop = FALSE]
 expect_true(nrow(compat_confluence) == 2L && all(compat_confluence$artifact_role == "compatibility_reference") && all(nzchar(compat_confluence$superseded_by)), "Superseded CONFLUENCE compatibility files should point to canonical production artifacts.")
 expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")
