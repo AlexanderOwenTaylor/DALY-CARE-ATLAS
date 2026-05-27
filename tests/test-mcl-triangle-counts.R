@@ -949,7 +949,7 @@ deep_ids <- c("toxicity_proxies", "alive_at_landmark", "event_free_pre_landmark"
 tp53_row <- prod_query_out$data_point_counts[prod_query_out$data_point_counts$data_point_id == "tp53_p53_del17p", , drop = FALSE]
 morph_row <- prod_query_out$data_point_counts[prod_query_out$data_point_counts$data_point_id == "blastoid_pleomorphic_morphology", , drop = FALSE]
 expect_true(tp53_row$count_status[[1]] == "count_not_available_requires_value_mapping" && morph_row$count_status[[1]] == "count_not_available_requires_value_mapping", "TP53 and blastoid/pleomorphic positivity must remain fail-closed without exact value rules.")
-expect_true(any(prod_query_out$query_review$data_point == "toxicity_proxies" & grepl("repo-derived provisional serious-infection", prod_query_out$query_review$value_rule_used, fixed = TRUE)), "Toxicity proxy query review should disclose the provisional CONFLUENCE serious-infection rule.")
+expect_true(any(prod_query_out$query_review$data_point == "toxicity_proxies" & grepl("repo-derived provisional serious-infection", prod_query_out$query_review$value_rule_used, fixed = TRUE)), "Toxicity proxy query review should disclose the provisional serious-infection rule.")
 
 intersection_profile_dir <- tempfile("mcl_count_intersection_profile_")
 dir.create(intersection_profile_dir, recursive = TRUE, showWarnings = FALSE)

@@ -419,22 +419,6 @@ mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
   legacy_reference_vs_current = legacy_reference_vs_current,
   ki67_discovery = ki67_discovery
 )
-confluence_feasibility <- build_confluence_feasibility_outputs(
-  project_root = project_root,
-  sources = sources,
-  columns = columns,
-  column_profiles = column_profiles,
-  column_top_values = column_top_values,
-  panels = panels,
-  panel_raw_fields = product_outputs$panel_raw_fields,
-  panel_distributions = product_outputs$panel_distributions,
-  panel_kpis = product_outputs$panel_kpis,
-  canonical_reconciliation = canonical_reconciliation,
-  legacy_reference_vs_current = legacy_reference_vs_current,
-  min_cell_count = atlas_min_cell_count()
-)
-confluence_write_outputs(confluence_feasibility, mock_output_dir)
-
 write_csv(legacy_resource_audit, file.path(mock_output_dir, "legacy_cartography_source_resolution_audit.csv"))
 write_csv(billeddiagnostik_del2_audit, file.path(mock_output_dir, "billeddiagnostik_del2_regression_audit.csv"))
 write_csv(source_resolution_plan_dry_run, file.path(mock_output_dir, "source_resolution_plan_dry_run.csv"))
@@ -612,8 +596,7 @@ payload <- atlas_payload(
   remaining_activation_plan = remaining_activation_plan,
   ki67_discovery = ki67_discovery,
   patobank_ki67_percent = patobank_ki67_percent,
-  mcl_triangle_feasibility = mcl_triangle_feasibility,
-  confluence_feasibility = confluence_feasibility
+  mcl_triangle_feasibility = mcl_triangle_feasibility
 )
 site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
 

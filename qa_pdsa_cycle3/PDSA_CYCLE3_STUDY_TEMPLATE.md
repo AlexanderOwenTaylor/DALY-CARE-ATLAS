@@ -17,4 +17,4 @@ Reviewer-readable labels and honest bar scaling will reduce confusion without re
 - Reviewer-readability visual QA report.
 - Preservation snapshots.
 - Focused regression tests.
-- Manual screenshots for treatment, DaMyDa, microbiology, pathology, vitals, MCL/TRIANGLE, and CONFLUENCE.
+- Manual screenshots for treatment, DaMyDa, microbiology, pathology, vitals, MCL/TRIANGLE, and feasibility.

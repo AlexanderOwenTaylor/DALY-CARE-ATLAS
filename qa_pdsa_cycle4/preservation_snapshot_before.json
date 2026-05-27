@@ -1,9 +1,9 @@
 {
   "snapshot_id": "pdsa_cycle4_before_semantic_overlay_promotion",
   "top_level_tabs": 12,
-  "sub_tabs": 67,
-  "panels": 313,
-  "details_sections": 49,
+  "sub_tabs": 65,
+  "panels": 308,
+  "details_sections": 48,
   "source_catalog_rows": 6,
   "data_dictionary_rows": 6666,
   "semantic_dictionary_rows": 6666,
@@ -11,9 +11,9 @@
   "semantic_overlay_rows": 3902,
   "semantic_conflict_rows": 97,
   "resource_reconciliation_rows": 64,
-  "payload_top_level_keys": 81,
+  "payload_top_level_keys": 80,
   "mcl_triangle_data_point_rows": 25,
-  "confluence_rows": 143,
+  "clinical_feasibility_rows": 25,
   "output_csv_files": 129,
   "rendered_export_links": 8
 }
