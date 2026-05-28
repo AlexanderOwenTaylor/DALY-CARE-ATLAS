@@ -180,6 +180,11 @@ expect_true(grepl("function renderConfluenceFeasibilityPanel", html, fixed = TRU
 for (needle in c("CLL/MBL", "DD479B", "D47.9B", "DD472", "DC911 / C91.1", "DC900 / C90.0", "production aggregate available", "accepted aggregate rows", "immortal-time bias", "surveillance/testing bias")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CONFLUENCE panel should include:", needle))
 }
+for (needle in c("6 groups x 3 horizons", "Overlap infection signal", "Serious infection counts by group and horizon", "Microbiology-confirmed infection counts by group and horizon")) {
+  expect_true(grepl(needle, html, fixed = TRUE), paste("CONFLUENCE PI-facing infection summary should include:", needle))
+}
+expect_false(grepl("infection aggregate rows", html, fixed = TRUE), "CONFLUENCE headline should not present infection strata as clinical row counts.")
+expect_false(grepl("microbiology rows", html, fixed = TRUE), "CONFLUENCE headline should not present microbiology strata as clinical row counts.")
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
 expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
 expect_true(grepl("feasibility/readiness review for study planning", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")

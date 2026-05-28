@@ -7999,6 +7999,43 @@
       function confluenceAcceptedRow(rows, key, value) {
         return (rows || []).find(row => row[key] === value && row.acceptance_status === "accepted") || {};
       }
+      function confluenceAcceptedStrataLabel(rows) {
+        const accepted = (rows || []).filter(row => row.acceptance_status === "accepted");
+        const groups = Array.from(new Set(accepted.map(row => row.group_id).filter(Boolean))).length;
+        const horizons = Array.from(new Set(accepted.map(row => row.horizon_years).filter(Boolean))).length;
+        if (groups && horizons) return `${groups} groups x ${horizons} horizons`;
+        return accepted.length ? `${accepted.length} accepted strata` : "not available";
+      }
+      function confluenceOutcomeRow(rows, groupId, horizonYears) {
+        return (rows || []).find(row =>
+          row.group_id === groupId &&
+          String(row.horizon_years) === String(horizonYears) &&
+          row.acceptance_status === "accepted"
+        ) || {};
+      }
+      function confluencePeopleEventsText(row) {
+        const people = row.count_display || "not available";
+        const events = row.event_count_display || "not available";
+        return `${people} people / ${events} events`;
+      }
+      function renderConfluenceOverlapInfectionSignal(overlap, infectionCounts, microbiologyCounts) {
+        const serious = year => confluenceOutcomeRow(infectionCounts, "cll_mbl_pcd_overlap", year);
+        const micro = year => confluenceOutcomeRow(microbiologyCounts, "cll_mbl_pcd_overlap", year);
+        const kpis = [
+          { label: "Overlap group", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: "CLL/MBL + PCD" },
+          { label: "Serious infection 1y", value: confluencePeopleEventsText(serious(1)), tone: "blue", countKind: "people / events", statusLabel: "repo-derived provisional" },
+          { label: "Serious infection 2y", value: confluencePeopleEventsText(serious(2)), tone: "blue", countKind: "people / events", statusLabel: "repo-derived provisional" },
+          { label: "Serious infection 5y", value: confluencePeopleEventsText(serious(5)), tone: "blue", countKind: "people / events", statusLabel: "repo-derived provisional" },
+          { label: "Microbiology-confirmed 1y", value: confluencePeopleEventsText(micro(1)), tone: "amber", countKind: "people / events", statusLabel: "repo-derived provisional" },
+          { label: "Microbiology-confirmed 2y", value: confluencePeopleEventsText(micro(2)), tone: "amber", countKind: "people / events", statusLabel: "repo-derived provisional" },
+          { label: "Microbiology-confirmed 5y", value: confluencePeopleEventsText(micro(5)), tone: "amber", countKind: "people / events", statusLabel: "repo-derived provisional" }
+        ];
+        return `
+          <h3>Overlap infection signal</h3>
+          ${renderKpiStrip(kpis, { tone: "green" })}
+          <div class="callout"><strong>How to read these counts:</strong> 6 groups x 3 horizons is the expected production table shape, not an infected-patient count. Patient and event counts are shown by group and horizon below; all infection and microbiology endpoint definitions remain repo-derived provisional and not causal.</div>
+        `;
+      }
       function renderConfluenceEvidenceState() {
         const productionSuccess = confluenceProductionSuccess();
         const personCounts = confluenceRows("disease_state_person_counts");
@@ -8008,8 +8045,8 @@
         if (productionSuccess && personCounts.length) {
           const state = id => confluenceAcceptedRow(personCounts, "state_id", id);
           const overlap = confluenceAcceptedRow(acceptedOverlap, "overlap_id", "cll_mbl_pcd");
-          const acceptedInfectionRows = infectionCounts.filter(row => row.acceptance_status === "accepted").length;
-          const acceptedMicroRows = microbiologyCounts.filter(row => row.acceptance_status === "accepted").length;
+          const infectionStrata = confluenceAcceptedStrataLabel(infectionCounts);
+          const microStrata = confluenceAcceptedStrataLabel(microbiologyCounts);
           return `
             ${renderTrustBadgeRow(["production aggregate available", "accepted aggregate rows", "repo-derived provisional endpoints", "feasibility only", "not causal", "privacy-safe aggregate only"])}
             ${renderKpiStrip([
@@ -8019,9 +8056,10 @@
               { label: "MGUS", value: state("mgus").count_display || "not available", tone: "green", countKind: state("mgus").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DD472 / DD472B", validationStatus: "accepted production row" },
               { label: "MM", value: state("mm").count_display || "not available", tone: "green", countKind: state("mm").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DC900 / C90.0", validationStatus: "accepted production row" },
               { label: "CLL/MBL + PCD overlap", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: overlap.query_status || "executed", source: "later disease-state entry date", validationStatus: overlap.acceptance_status || "accepted" },
-              { label: "infection aggregate rows", value: acceptedInfectionRows ? String(acceptedInfectionRows) : "not available", tone: "blue", countKind: "group/horizon rows", statusLabel: "accepted provisional", source: "hospital diagnosis/contact routes", validationStatus: "repo-derived provisional" },
-              { label: "microbiology rows", value: acceptedMicroRows ? String(acceptedMicroRows) : "not available", tone: "blue", countKind: "group/horizon rows", statusLabel: "accepted provisional", source: "SP blood culture + PERSIMUNE", validationStatus: "repo-derived provisional" }
+              { label: "Serious infection strata", value: `${infectionStrata} evaluated`, tone: "blue", countKind: "not patient count", statusLabel: "accepted provisional", source: "hospital diagnosis/contact routes", validationStatus: "repo-derived provisional" },
+              { label: "Microbiology-confirmed strata", value: `${microStrata} evaluated`, tone: "blue", countKind: "not patient count", statusLabel: "accepted provisional", source: "SP blood culture + PERSIMUNE", validationStatus: "repo-derived provisional" }
             ], { tone: "green" })}
+            ${renderConfluenceOverlapInfectionSignal(overlap, infectionCounts, microbiologyCounts)}
             <div class="callout"><strong>Production status:</strong> Accepted aggregate CONFLUENCE rows are available for disease-state counts, first-date availability, overlap counts, overlap timing, infection outcomes, person-time denominators, rates, and microbiology-confirmed infection. Compatibility scaffold files remain below as reference views only.</div>
             <div class="callout warn"><strong>Clinical status:</strong> These are feasibility aggregates and provisional endpoint definitions, not causal estimates or treatment recommendations. Coded MBL remains a coded candidate tier; pathology-supported MBL is shown separately where accepted.</div>
           `;
@@ -8401,7 +8439,7 @@
               { key: "definition_status", label: "Definition status", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
               { key: "notes", label: "Notes" }
             ], 20), "green")}
-            ${renderSectionCard("Provisional infection aggregates", renderConfluenceEventCounts(infectionCounts), "green")}
+            ${renderSectionCard("Serious infection counts by group and horizon", renderConfluenceEventCounts(infectionCounts), "green")}
             ${renderSectionCard("Recurrent infection aggregates", renderConfluenceEventCounts(recurrentInfectionCounts), "green")}
             ${renderSectionCard("Person-time denominators", renderConfluencePersonTime(infectionPersonTime), "blue")}
             ${renderSectionCard("Infection rates", renderConfluenceTable(infectionRates, [
@@ -8411,7 +8449,7 @@
               { key: "rate_per_100_person_years", label: "Rate / 100 PY" },
               { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
             ], 20), "blue")}
-            ${renderSectionCard("Microbiology-confirmed infection status", renderConfluenceEventCounts(microbiologyConfirmationCounts), "amber")}
+            ${renderSectionCard("Microbiology-confirmed infection counts by group and horizon", renderConfluenceEventCounts(microbiologyConfirmationCounts), "amber")}
             ${renderSectionCard("Microbiology and source-resolution audits", `
               <h3>Microbiology confirmation sources</h3>${renderConfluenceSourceResolutionAudit(microbiologyConfirmationSourceAudit)}
               <h3>CONFLUENCE source resolution</h3>${renderConfluenceSourceResolutionAudit(sourceResolutionAudit)}
