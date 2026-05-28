@@ -2108,6 +2108,165 @@ confluence_count_production_compat_overlap_timing <- function(scaffold, accepted
   confluence_match_empty(out, confluence_empty_overlap_timing())
 }
 
+confluence_count_scalar <- function(x, default = "") {
+  if (!length(x) || is.null(x) || is.na(x[[1]])) return(default)
+  x[[1]]
+}
+
+confluence_count_person_count_row <- function(person_counts, state_id) {
+  if (!is.data.frame(person_counts) || !nrow(person_counts) || !"state_id" %in% names(person_counts)) {
+    return(data.frame(stringsAsFactors = FALSE))
+  }
+  person_counts[person_counts$state_id == state_id, , drop = FALSE][1L, , drop = FALSE]
+}
+
+confluence_count_production_compat_first_dates <- function(scaffold, accepted) {
+  if (!is.data.frame(accepted) || !nrow(accepted)) return(scaffold)
+  out <- data.frame(
+    state_id = accepted$state_id %||% character(),
+    state_label = accepted$state_label %||% character(),
+    source_tier = accepted$source_tier %||% character(),
+    count_display = accepted$count_display %||% character(),
+    n_people = accepted$n_people %||% numeric(),
+    count_kind = accepted$count_kind %||% character(),
+    acceptance_status = accepted$acceptance_status %||% character(),
+    query_status = accepted$query_status %||% character(),
+    first_date_logic = accepted$first_date_logic %||% character(),
+    notes = paste(
+      "Compatibility view mirrored from confluence_first_date_availability.csv;",
+      "use that canonical file for accepted production first-date availability."
+    ),
+    stringsAsFactors = FALSE
+  )
+  confluence_match_empty(out, confluence_empty_candidate_first_date_summary())
+}
+
+confluence_count_update_source_row_from_state <- function(rows, source_tier_id, state, notes) {
+  if (!is.data.frame(rows) || !nrow(rows) || !nrow(state) || !(source_tier_id %in% rows$source_tier_id)) return(rows)
+  idx <- rows$source_tier_id == source_tier_id
+  rows$count_display[idx] <- as.character(confluence_count_scalar(state$count_display, rows$count_display[idx][[1]]))
+  rows$n_records[idx] <- suppressWarnings(as.numeric(confluence_count_scalar(state$n_people, rows$n_records[idx][[1]])))
+  rows$count_kind[idx] <- as.character(confluence_count_scalar(state$count_kind, "distinct people"))
+  rows$evidence_status[idx] <- "production aggregate available"
+  rows$acceptance_status[idx] <- as.character(confluence_count_scalar(state$acceptance_status, "accepted"))
+  rows$evidence_confidence[idx] <- "accepted production aggregate"
+  rows$source_table[idx] <- as.character(confluence_count_scalar(state$source_table, "secure CONFLUENCE disease-state aggregate"))
+  rows$source_column[idx] <- as.character(confluence_count_scalar(state$date_anchor_used, "first qualifying disease-state date"))
+  rows$suppression_status[idx] <- as.character(confluence_count_scalar(state$suppression_status, "not suppressed"))
+  rows$validation_needed[idx] <- "Protocol review still required before causal or treatment-effect use."
+  rows$notes[idx] <- notes
+  rows
+}
+
+confluence_count_mark_source_row_combined_only <- function(rows, source_tier_id, notes) {
+  if (!is.data.frame(rows) || !nrow(rows) || !(source_tier_id %in% rows$source_tier_id)) return(rows)
+  idx <- rows$source_tier_id == source_tier_id
+  rows$count_display[idx] <- "not separately split in production aggregate"
+  rows$n_records[idx] <- NA_real_
+  rows$count_kind[idx] <- "code-specific split not emitted"
+  rows$evidence_status[idx] <- "combined production aggregate available"
+  rows$acceptance_status[idx] <- "not accepted aggregate"
+  rows$evidence_confidence[idx] <- "superseded by combined accepted aggregate"
+  rows$suppression_status[idx] <- "not separately reported"
+  rows$validation_needed[idx] <- "Use the combined pathology-supported MBL aggregate unless protocol-owned code-specific splits are added."
+  rows$notes[idx] <- notes
+  rows
+}
+
+confluence_count_production_compat_mbl_source_counts <- function(rows, person_counts) {
+  if (!is.data.frame(rows) || !nrow(rows) || !is.data.frame(person_counts) || !nrow(person_counts)) return(rows)
+  coded_mbl <- confluence_count_person_count_row(person_counts, "coded_mbl")
+  pathology_mbl <- confluence_count_person_count_row(person_counts, "pathology_mbl")
+  cll_pressure <- confluence_count_person_count_row(person_counts, "cll_morphology_pressure")
+  rows <- confluence_count_update_source_row_from_state(
+    rows,
+    "diagnosis_coded_mbl",
+    coded_mbl,
+    "Compatibility source-tier view updated from accepted production coded-MBL person count; coded MBL remains a candidate tier, not all biologic MBL."
+  )
+  rows <- confluence_count_update_source_row_from_state(
+    rows,
+    "patobank_mbl_any",
+    pathology_mbl,
+    "Compatibility source-tier view updated from accepted production pathology-supported MBL aggregate using exact M95911/M96121/M98231 logic."
+  )
+  rows <- confluence_count_mark_source_row_combined_only(
+    rows,
+    "patobank_mbl_cll_type",
+    "The accepted production output reports combined exact PATOBANK MBL support; M98231-specific splits are not emitted in this public aggregate."
+  )
+  rows <- confluence_count_mark_source_row_combined_only(
+    rows,
+    "patobank_mbl_non_cll_type",
+    "The accepted production output reports combined exact PATOBANK MBL support; M95911-specific splits are not emitted in this public aggregate."
+  )
+  rows <- confluence_count_mark_source_row_combined_only(
+    rows,
+    "patobank_mbl_nos",
+    "The accepted production output reports combined exact PATOBANK MBL support; M96121-specific splits are not emitted in this public aggregate."
+  )
+  rows <- confluence_count_update_source_row_from_state(
+    rows,
+    "patobank_cll_morphology_pressure",
+    cll_pressure,
+    "Compatibility source-tier view updated from accepted production CLL morphology-pressure aggregate. M98233 remains CLL pressure and must never be classified as MBL."
+  )
+  confluence_match_empty(rows, confluence_empty_source_counts())
+}
+
+confluence_count_production_compat_actions <- function(actions, production) {
+  if (!is.data.frame(actions) || !nrow(actions)) return(actions)
+  update_action <- function(action_id, status, priority, notes) {
+    idx <- actions$action_id == action_id
+    if (!any(idx)) return(invisible(NULL))
+    actions$status[idx] <<- status
+    actions$priority[idx] <<- priority
+    actions$notes[idx] <<- notes
+    invisible(NULL)
+  }
+  if (is.data.frame(production$first_date_availability) &&
+      nrow(production$first_date_availability) &&
+      any(production$first_date_availability$acceptance_status == "accepted", na.rm = TRUE)) {
+    update_action(
+      "deduplicate_first_dates",
+      "completed in production aggregate",
+      "complete",
+      "Accepted first-date availability aggregates were generated; next work is clinical validation and protocol review, not another scaffold execution."
+    )
+  }
+  if (is.data.frame(production$overlap_counts_accepted) &&
+      nrow(production$overlap_counts_accepted) &&
+      any(production$overlap_counts_accepted$acceptance_status == "accepted", na.rm = TRUE)) {
+    update_action(
+      "run_overlap_counts",
+      "completed in production aggregate",
+      "complete",
+      "Accepted overlap counts and timing were generated with overlap entry anchored at the later first qualifying disease-state date."
+    )
+  }
+  if (is.data.frame(production$infection_counts) &&
+      nrow(production$infection_counts) &&
+      any(production$infection_counts$acceptance_status == "accepted", na.rm = TRUE)) {
+    update_action(
+      "map_infection_outcomes",
+      "accepted provisional aggregate available",
+      "P1",
+      "Serious/recurrent infection aggregates executed using repo-derived provisional endpoints; final endpoint definitions still need protocol ownership."
+    )
+  }
+  if (is.data.frame(production$microbiology_confirmation_counts) &&
+      nrow(production$microbiology_confirmation_counts) &&
+      any(production$microbiology_confirmation_counts$acceptance_status == "accepted", na.rm = TRUE)) {
+    update_action(
+      "classify_microbiology_roles",
+      "accepted provisional aggregate available",
+      "P1",
+      "Microbiology-confirmation aggregates executed from mapped SP blood-culture and PERSIMUNE culture/microscopy routes; organism/result text is not emitted."
+    )
+  }
+  confluence_match_empty(actions, confluence_empty_recommended_next_actions())
+}
+
 confluence_count_merge_outputs <- function(scaffold, production) {
   if (is.null(scaffold)) scaffold <- confluence_empty_payload()
   if (is.null(production)) production <- confluence_count_empty_outputs()
@@ -2122,6 +2281,9 @@ confluence_count_merge_outputs <- function(scaffold, production) {
     scaffold$summary <- confluence_count_production_compat_summary(scaffold$summary, production)
     scaffold$overlap_counts <- confluence_count_production_compat_overlap_counts(scaffold$overlap_counts, scaffold$overlap_counts_accepted)
     scaffold$overlap_timing <- confluence_count_production_compat_overlap_timing(scaffold$overlap_timing, scaffold$overlap_timing_accepted)
+    scaffold$candidate_first_date_summary <- confluence_count_production_compat_first_dates(scaffold$candidate_first_date_summary, scaffold$first_date_availability)
+    scaffold$mbl_source_counts <- confluence_count_production_compat_mbl_source_counts(scaffold$mbl_source_counts, scaffold$disease_state_person_counts)
+    scaffold$recommended_next_actions <- confluence_count_production_compat_actions(scaffold$recommended_next_actions, production)
   }
   scaffold
 }

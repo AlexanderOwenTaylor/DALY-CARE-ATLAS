@@ -322,6 +322,11 @@ expect_false(any(merged$overlap_counts$query_status == "query executable not run
 expect_false(any(merged$overlap_timing$query_status == "query executable not run"), "Compatibility overlap timing should not contradict accepted production overlap timing.")
 expect_true(any(grepl("confluence_overlap_counts_accepted.csv", merged$overlap_counts$notes, fixed = TRUE)), "Compatibility overlap counts should point to the canonical accepted overlap file.")
 expect_true(any(grepl("confluence_overlap_timing_accepted.csv", merged$overlap_timing$notes, fixed = TRUE)), "Compatibility overlap timing should point to the canonical accepted timing file.")
+expect_false(any(merged$candidate_first_date_summary$query_status == "query executable not run"), "Compatibility first-date rows should not claim not-run after accepted first-date availability exists.")
+expect_true(any(grepl("confluence_first_date_availability.csv", merged$candidate_first_date_summary$notes, fixed = TRUE)), "Compatibility first-date rows should point to canonical accepted first-date output.")
+expect_true(any(merged$mbl_source_counts$source_tier_id == "patobank_mbl_any" & merged$mbl_source_counts$acceptance_status == "accepted"), "MBL source tiers should surface accepted pathology-supported MBL production counts.")
+expect_true(any(merged$mbl_source_counts$source_tier_id == "patobank_cll_morphology_pressure" & merged$mbl_source_counts$acceptance_status == "accepted"), "MBL source tiers should surface accepted CLL morphology-pressure production counts.")
+expect_true(any(merged$recommended_next_actions$action_id == "run_overlap_counts" & merged$recommended_next_actions$status == "completed in production aggregate"), "Completed overlap production work should no longer appear as not-run next action.")
 
 tmp <- tempfile("confluence-production-")
 dir.create(tmp, recursive = TRUE, showWarnings = FALSE)

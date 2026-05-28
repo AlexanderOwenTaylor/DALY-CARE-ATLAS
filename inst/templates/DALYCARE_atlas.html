@@ -7992,7 +7992,40 @@
       function confluenceSummaryMetric(metricId) {
         return confluenceRows("summary").find(row => row.metric === metricId) || {};
       }
+      function confluenceProductionSuccess() {
+        return confluenceRows("production_execution_summary")
+          .some(row => row.metric === "production_query_success" && String(row.value).toLowerCase() === "true");
+      }
+      function confluenceAcceptedRow(rows, key, value) {
+        return (rows || []).find(row => row[key] === value && row.acceptance_status === "accepted") || {};
+      }
       function renderConfluenceEvidenceState() {
+        const productionSuccess = confluenceProductionSuccess();
+        const personCounts = confluenceRows("disease_state_person_counts");
+        const acceptedOverlap = confluenceRows("overlap_counts_accepted");
+        const infectionCounts = confluenceRows("infection_counts");
+        const microbiologyCounts = confluenceRows("microbiology_confirmation_counts");
+        if (productionSuccess && personCounts.length) {
+          const state = id => confluenceAcceptedRow(personCounts, "state_id", id);
+          const overlap = confluenceAcceptedRow(acceptedOverlap, "overlap_id", "cll_mbl_pcd");
+          const acceptedInfectionRows = infectionCounts.filter(row => row.acceptance_status === "accepted").length;
+          const acceptedMicroRows = microbiologyCounts.filter(row => row.acceptance_status === "accepted").length;
+          return `
+            ${renderTrustBadgeRow(["production aggregate available", "accepted aggregate rows", "repo-derived provisional endpoints", "feasibility only", "not causal", "privacy-safe aggregate only"])}
+            ${renderKpiStrip([
+              { label: "CLL", value: state("cll").count_display || "not available", tone: "green", countKind: state("cll").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "secure disease-state aggregate", validationStatus: "accepted production row" },
+              { label: "coded MBL", value: state("coded_mbl").count_display || "not available", tone: "green", countKind: state("coded_mbl").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DD479B / D47.9B candidate", validationStatus: "coded MBL tier" },
+              { label: "pathology-supported MBL", value: state("pathology_mbl").count_display || "not available", tone: "green", countKind: state("pathology_mbl").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "M95911 / M96121 / M98231", validationStatus: "pathology-supported tier" },
+              { label: "MGUS", value: state("mgus").count_display || "not available", tone: "green", countKind: state("mgus").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DD472 / DD472B", validationStatus: "accepted production row" },
+              { label: "MM", value: state("mm").count_display || "not available", tone: "green", countKind: state("mm").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DC900 / C90.0", validationStatus: "accepted production row" },
+              { label: "CLL/MBL + PCD overlap", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: overlap.query_status || "executed", source: "later disease-state entry date", validationStatus: overlap.acceptance_status || "accepted" },
+              { label: "infection aggregate rows", value: acceptedInfectionRows ? String(acceptedInfectionRows) : "not available", tone: "blue", countKind: "group/horizon rows", statusLabel: "accepted provisional", source: "hospital diagnosis/contact routes", validationStatus: "repo-derived provisional" },
+              { label: "microbiology rows", value: acceptedMicroRows ? String(acceptedMicroRows) : "not available", tone: "blue", countKind: "group/horizon rows", statusLabel: "accepted provisional", source: "SP blood culture + PERSIMUNE", validationStatus: "repo-derived provisional" }
+            ], { tone: "green" })}
+            <div class="callout"><strong>Production status:</strong> Accepted aggregate CONFLUENCE rows are available for disease-state counts, first-date availability, overlap counts, overlap timing, infection outcomes, person-time denominators, rates, and microbiology-confirmed infection. Compatibility scaffold files remain below as reference views only.</div>
+            <div class="callout warn"><strong>Clinical status:</strong> These are feasibility aggregates and provisional endpoint definitions, not causal estimates or treatment recommendations. Coded MBL remains a coded candidate tier; pathology-supported MBL is shown separately where accepted.</div>
+          `;
+        }
         const disease = confluenceRows("disease_state_counts");
         const anchor = id => disease.find(row => row.entity_id === id) || {};
         const mbl = anchor("mbl_candidate");
@@ -8014,10 +8047,11 @@
         `;
       }
       function renderConfluencePico() {
+        const productionSuccess = confluenceProductionSuccess();
         const rows = [
           ["Population", "Adults in DALY-CARE with candidate or validated evidence of CLL, MBL, MGUS, SMM, MM, or related plasma-cell disorders.", "candidate/source validation required"],
-          ["Exposure", "Time-varying clonal disease state: CLL only, MBL only, MGUS/SMM/MM only, CLL + MGUS/SMM/MM, or MBL + MGUS/SMM/MM.", "not accepted aggregate"],
-          ["Comparator", "Primary: overlap versus CLL/MBL without plasma-cell disorder. Secondary: overlap versus plasma-cell disorder without CLL/MBL.", "query executable not run"],
+          ["Exposure", "Time-varying clonal disease state: CLL only, MBL only, MGUS/SMM/MM only, CLL + MGUS/SMM/MM, or MBL + MGUS/SMM/MM.", productionSuccess ? "accepted production aggregate available" : "not accepted aggregate"],
+          ["Comparator", "Primary: overlap versus CLL/MBL without plasma-cell disorder. Secondary: overlap versus plasma-cell disorder without CLL/MBL.", productionSuccess ? "accepted overlap aggregate available" : "query executable not run"],
           ["Outcomes", "First serious infection, infection-related hospitalization, recurrent serious infection, microbiology-confirmed infection, bloodstream infection, resistant organism signal, and infection-related mortality.", "source validation required"],
           ["Time horizon", "1, 2, and 5 years after disease-state entry; separate pre-treatment and post-treatment periods.", "protocol validation required"],
           ["Setting", "Danish nationwide register/EHR-linked DALY-CARE resource with registry, diagnosis, treatment, lab, microbiology, and hospital-contact layers.", "feasibility only"]
@@ -8080,13 +8114,116 @@
       }
       function renderConfluenceAcceptedCounts(rows, labelKey) {
         return renderConfluenceTable(rows, [
-          { key: labelKey, label: "Accepted-count scaffold", render: row => `<strong>${escapeHtml(row[labelKey] || "")}</strong><div class="mini">${escapeHtml(row.mbl_tier || row.pcd_tier || "")}</div>` },
+          { key: labelKey, label: "Aggregate row", render: row => `<strong>${escapeHtml(row[labelKey] || "")}</strong><div class="mini">${escapeHtml(row.mbl_tier || row.pcd_tier || "")}</div>` },
           { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
           { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
           { key: "acceptance_gate_status", label: "Gate" },
           { key: "suppression_status", label: "Suppression" },
           { key: "notes", label: "Notes" }
         ], 16);
+      }
+      function renderConfluenceEventCounts(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || "")}</strong><div class="mini">${escapeHtml(row.endpoint_definition_status || "")}</div>` },
+          { key: "group_label", label: "Group / horizon", render: row => `<strong>${escapeHtml(row.group_label || "")}</strong><div class="mini">${escapeHtml(row.horizon_years || "")} year(s)</div>` },
+          { key: "count_display", label: "People", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "event_count_display", label: "Events / episodes", render: row => `<strong>${escapeHtml(row.event_count_display || "")}</strong>` },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "acceptance_gate_status", label: "Gate" },
+          { key: "notes", label: "Notes" }
+        ], 24);
+      }
+      function renderConfluencePersonTime(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "group_label", label: "Group / horizon", render: row => `<strong>${escapeHtml(row.group_label || "")}</strong><div class="mini">${escapeHtml(row.horizon_years || "")} year(s)</div>` },
+          { key: "people_display", label: "People", render: row => `<strong>${escapeHtml(row.people_display || "")}</strong>` },
+          { key: "person_years_display", label: "Person-years", render: row => `<strong>${escapeHtml(row.person_years_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
+          { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+          { key: "acceptance_gate_status", label: "Gate" },
+          { key: "notes", label: "Notes" }
+        ], 24);
+      }
+      function renderConfluenceSourceResolutionAudit(rows) {
+        return renderConfluenceTable(rows, [
+          { key: "source_id", label: "Source", render: row => `<strong>${escapeHtml(row.source_id || "")}</strong><div class="mini">${escapeHtml(row.source_role || row.route_id || "")}</div>` },
+          { key: "resolved_table", label: "Resolved table", render: row => escapeHtml([row.resolved_db_name, row.resolved_schema, row.resolved_table].filter(Boolean).join(".") || "not resolved") },
+          { key: "usable_for_counts", label: "Usable", render: row => renderBadge(String(row.usable_for_counts || row.include_in_confirmed_union || ""), confluenceStatusTone(String(row.usable_for_counts || row.include_in_confirmed_union || ""))) },
+          { key: "resolution_status", label: "Resolution", render: row => renderBadge(row.resolution_status || "", confluenceStatusTone(row.resolution_status)) },
+          { key: "query_executable", label: "Executable" },
+          { key: "notes", label: "Notes" }
+        ], 20);
+      }
+      function confluenceProductionFirstDateRows(rows) {
+        const accepted = confluenceRows("first_date_availability");
+        if (!confluenceProductionSuccess() || !accepted.length) return rows;
+        return accepted.map(row => Object.assign({}, row, {
+          notes: "Compatibility view mirrored from confluence_first_date_availability.csv; use that canonical file for accepted production first-date availability."
+        }));
+      }
+      function confluenceProductionMblSourceRows(rows) {
+        if (!confluenceProductionSuccess()) return rows;
+        const state = id => confluenceAcceptedRow(confluenceRows("disease_state_person_counts"), "state_id", id);
+        const updateFromState = (row, stateRow, notes) => Object.assign({}, row, {
+          count_display: stateRow.count_display || row.count_display,
+          n_records: stateRow.n_people || row.n_records,
+          count_kind: stateRow.count_kind || "distinct people",
+          evidence_status: "production aggregate available",
+          acceptance_status: stateRow.acceptance_status || "accepted",
+          evidence_confidence: "accepted production aggregate",
+          source_table: stateRow.source_table || "secure CONFLUENCE disease-state aggregate",
+          source_column: stateRow.date_anchor_used || "first qualifying disease-state date",
+          suppression_status: stateRow.suppression_status || "not suppressed",
+          validation_needed: "Protocol review still required before causal or treatment-effect use.",
+          notes
+        });
+        const combinedOnly = (row, notes) => Object.assign({}, row, {
+          count_display: "not separately split in production aggregate",
+          n_records: "",
+          count_kind: "code-specific split not emitted",
+          evidence_status: "combined production aggregate available",
+          acceptance_status: "not accepted aggregate",
+          evidence_confidence: "superseded by combined accepted aggregate",
+          suppression_status: "not separately reported",
+          validation_needed: "Use the combined pathology-supported MBL aggregate unless protocol-owned code-specific splits are added.",
+          notes
+        });
+        return (rows || []).map(row => {
+          if (row.source_tier_id === "diagnosis_coded_mbl") {
+            return updateFromState(row, state("coded_mbl"), "Compatibility source-tier view updated from accepted production coded-MBL person count; coded MBL remains a candidate tier, not all biologic MBL.");
+          }
+          if (row.source_tier_id === "patobank_mbl_any") {
+            return updateFromState(row, state("pathology_mbl"), "Compatibility source-tier view updated from accepted production pathology-supported MBL aggregate using exact M95911/M96121/M98231 logic.");
+          }
+          if (["patobank_mbl_cll_type", "patobank_mbl_non_cll_type", "patobank_mbl_nos"].includes(row.source_tier_id)) {
+            return combinedOnly(row, "The accepted production output reports combined exact PATOBANK MBL support; code-specific splits are not emitted in this public aggregate.");
+          }
+          if (row.source_tier_id === "patobank_cll_morphology_pressure") {
+            return updateFromState(row, state("cll_morphology_pressure"), "Compatibility source-tier view updated from accepted production CLL morphology-pressure aggregate. M98233 remains CLL pressure and must never be classified as MBL.");
+          }
+          return row;
+        });
+      }
+      function confluenceProductionActionRows(rows) {
+        if (!confluenceProductionSuccess()) return rows;
+        const firstDatesAccepted = confluenceRows("first_date_availability").some(row => row.acceptance_status === "accepted");
+        const overlapsAccepted = confluenceRows("overlap_counts_accepted").some(row => row.acceptance_status === "accepted");
+        const infectionAccepted = confluenceRows("infection_counts").some(row => row.acceptance_status === "accepted");
+        const microbiologyAccepted = confluenceRows("microbiology_confirmation_counts").some(row => row.acceptance_status === "accepted");
+        return (rows || []).map(row => {
+          if (row.action_id === "deduplicate_first_dates" && firstDatesAccepted) {
+            return Object.assign({}, row, { priority: "complete", status: "completed in production aggregate", notes: "Accepted first-date availability aggregates were generated; next work is clinical validation and protocol review, not another scaffold execution." });
+          }
+          if (row.action_id === "run_overlap_counts" && overlapsAccepted) {
+            return Object.assign({}, row, { priority: "complete", status: "completed in production aggregate", notes: "Accepted overlap counts and timing were generated with overlap entry anchored at the later first qualifying disease-state date." });
+          }
+          if (row.action_id === "map_infection_outcomes" && infectionAccepted) {
+            return Object.assign({}, row, { status: "accepted provisional aggregate available", notes: "Serious/recurrent infection aggregates executed using repo-derived provisional endpoints; final endpoint definitions still need protocol ownership." });
+          }
+          if (row.action_id === "classify_microbiology_roles" && microbiologyAccepted) {
+            return Object.assign({}, row, { status: "accepted provisional aggregate available", notes: "Microbiology-confirmation aggregates executed from mapped SP blood-culture and PERSIMUNE culture/microscopy routes; organism/result text is not emitted." });
+          }
+          return row;
+        });
       }
       function renderConfluenceWaterfall(rows) {
         return renderConfluenceTable(rows, [
@@ -8158,12 +8295,12 @@
         const validation = confluenceRows("validation_checklist");
         const infection = confluenceRows("infection_outcome_readiness");
         const treatment = confluenceRows("treatment_modifier_readiness");
-        const actions = confluenceRows("recommended_next_actions");
+        const actions = confluenceProductionActionRows(confluenceRows("recommended_next_actions"));
         const disease = confluenceRows("disease_state_counts");
         const codeSets = confluenceRows("code_sets");
-        const mblSourceCounts = confluenceRows("mbl_source_counts");
+        const mblSourceCounts = confluenceProductionMblSourceRows(confluenceRows("mbl_source_counts"));
         const mgusSourceCounts = confluenceRows("mgus_source_counts");
-        const firstDates = confluenceRows("candidate_first_date_summary");
+        const firstDates = confluenceProductionFirstDateRows(confluenceRows("candidate_first_date_summary"));
         const acceptedOverlapCounts = confluenceRows("overlap_counts_accepted");
         const acceptedOverlapTiming = confluenceRows("overlap_timing_accepted");
         const mblWaterfall = confluenceRows("mbl_validation_waterfall");
@@ -8178,12 +8315,14 @@
         const infectionPersonTime = confluenceRows("infection_person_time");
         const infectionRates = confluenceRows("infection_rates");
         const microbiologyConfirmationCounts = confluenceRows("microbiology_confirmation_counts");
+        const microbiologyConfirmationSourceAudit = confluenceRows("microbiology_confirmation_source_audit");
         const productionQueryReview = confluenceRows("production_query_review");
         const failedQueryAudit = confluenceRows("failed_query_audit");
+        const sourceResolutionAudit = confluenceRows("source_resolution_audit");
         const productionExecutionSummary = confluenceRows("production_execution_summary");
         const suppressionAudit = confluenceRows("small_cell_suppression_audit");
         const utf8Audit = confluenceRows("utf8_quality_audit");
-        const productionSuccess = productionExecutionSummary.some(row => row.metric === "production_query_success" && String(row.value).toLowerCase() === "true");
+        const productionSuccess = confluenceProductionSuccess();
         const technical = []
           .concat(summary.map(row => Object.assign({ table: "summary" }, row)))
           .concat(disease.map(row => Object.assign({ table: "disease_state_counts" }, row)))
@@ -8202,8 +8341,10 @@
           .concat(infectionPersonTime.map(row => Object.assign({ table: "infection_person_time" }, row)))
           .concat(infectionRates.map(row => Object.assign({ table: "infection_rates" }, row)))
           .concat(microbiologyConfirmationCounts.map(row => Object.assign({ table: "microbiology_confirmation_counts" }, row)))
+          .concat(microbiologyConfirmationSourceAudit.map(row => Object.assign({ table: "microbiology_confirmation_source_audit" }, row)))
           .concat(productionQueryReview.map(row => Object.assign({ table: "production_query_review" }, row)))
           .concat(failedQueryAudit.map(row => Object.assign({ table: "failed_query_audit" }, row)))
+          .concat(sourceResolutionAudit.map(row => Object.assign({ table: "source_resolution_audit" }, row)))
           .concat(productionExecutionSummary.map(row => Object.assign({ table: "production_execution_summary" }, row)))
           .concat(suppressionAudit.map(row => Object.assign({ table: "small_cell_suppression_audit" }, row)))
           .concat(utf8Audit.map(row => Object.assign({ table: "utf8_quality_audit" }, row)));
@@ -8212,7 +8353,7 @@
             ${renderSectionCard("DALY-CARE CONFLUENCE", `
               <div class="callout"><strong>CLL/MBL-plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
               <p>This panel evaluates whether DALY-CARE can support a retrospective observational study of serious and microbiologically confirmed infections in people with CLL/MBL, plasma-cell disorders, or both. It is feasibility infrastructure only. It does not estimate causal effects and does not make treatment recommendations.</p>
-              ${renderTrustBadgeRow(["feasibility only", "not causal", "coded candidate cohort", "query executable not run", "not accepted aggregate"])}
+              ${renderTrustBadgeRow(productionSuccess ? ["feasibility only", "not causal", "production aggregate available", "accepted aggregate rows", "repo-derived provisional endpoints"] : ["feasibility only", "not causal", "coded candidate cohort", "query executable not run", "not accepted aggregate"])}
             `, "cyan")}
             ${renderSectionCard("Clinical question", `
               <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBL-plasma-cell-disorder overlap states?</strong></p>
@@ -8234,16 +8375,16 @@
             ${renderSectionCard("MGUS source tiers", renderConfluenceSourceTiers(mgusSourceCounts), "green")}
             ${renderSectionCard("PICO", renderConfluencePico(), "blue")}
             ${renderSectionCard("Estimands", renderConfluenceEstimands(), "plum")}
-            ${renderSectionCard("Disease-state candidate counts", renderConfluenceDiseaseCounts(), "green")}
+            ${renderSectionCard(productionSuccess ? "Disease-state scaffold/reference anchors" : "Disease-state candidate counts", renderConfluenceDiseaseCounts(), productionSuccess ? "amber" : "green")}
             ${renderSectionCard("Accepted disease-state person counts", renderConfluenceAcceptedCounts(diseasePersonCounts, "state_label"), "green")}
-            ${renderSectionCard("Overlap counts: not-run / not-accepted", renderConfluenceOverlapRows(overlapCounts), "amber")}
-            ${renderSectionCard("Overlap timing: not-run / not-accepted", renderConfluenceOverlapRows(overlapTiming), "amber")}
-            ${renderSectionCard("First-date / overlap status", renderConfluenceTable(firstDates, [
+            ${renderSectionCard(productionSuccess ? "Overlap counts: accepted production aggregates" : "Overlap counts: not-run / not-accepted", renderConfluenceOverlapRows(overlapCounts), productionSuccess ? "green" : "amber")}
+            ${renderSectionCard(productionSuccess ? "Overlap timing: accepted production aggregates" : "Overlap timing: not-run / not-accepted", renderConfluenceOverlapRows(overlapTiming), productionSuccess ? "green" : "amber")}
+            ${renderSectionCard(productionSuccess ? "First-date compatibility view, superseded by accepted availability" : "First-date / overlap status", renderConfluenceTable(firstDates, [
               { key: "state_label", label: "State", render: row => `<strong>${escapeHtml(row.state_label || "")}</strong><div class="mini">${escapeHtml(row.source_tier || "")}</div>` },
               { key: "count_display", label: "Display", render: row => `<strong>${escapeHtml(row.count_display || "")}</strong><div class="mini">${escapeHtml(row.count_kind || "")}</div>` },
               { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
               { key: "first_date_logic", label: "First-date logic" }
-            ], 12), "amber")}
+            ], 12), productionSuccess ? "green" : "amber")}
             ${renderSectionCard("Accepted first-date availability", renderConfluenceAcceptedCounts(firstDateAvailability, "state_label"), "green")}
             ${renderSectionCard("Accepted overlap counts if available", renderConfluenceAcceptedCounts(acceptedOverlapCounts, "overlap_label"), "amber")}
             ${renderSectionCard("Accepted overlap timing if available", renderConfluenceAcceptedCounts(acceptedOverlapTiming, "timing_label"), "amber")}
@@ -8260,9 +8401,9 @@
               { key: "definition_status", label: "Definition status", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
               { key: "notes", label: "Notes" }
             ], 20), "green")}
-            ${renderSectionCard("Provisional infection aggregates", renderConfluenceAcceptedCounts(infectionCounts, "endpoint_label"), "green")}
-            ${renderSectionCard("Recurrent infection aggregates", renderConfluenceAcceptedCounts(recurrentInfectionCounts, "endpoint_label"), "green")}
-            ${renderSectionCard("Person-time denominators", renderConfluenceAcceptedCounts(infectionPersonTime, "group_label"), "blue")}
+            ${renderSectionCard("Provisional infection aggregates", renderConfluenceEventCounts(infectionCounts), "green")}
+            ${renderSectionCard("Recurrent infection aggregates", renderConfluenceEventCounts(recurrentInfectionCounts), "green")}
+            ${renderSectionCard("Person-time denominators", renderConfluencePersonTime(infectionPersonTime), "blue")}
             ${renderSectionCard("Infection rates", renderConfluenceTable(infectionRates, [
               { key: "endpoint_label", label: "Endpoint", render: row => `<strong>${escapeHtml(row.endpoint_label || "")}</strong><div class="mini">${escapeHtml(row.group_label || "")} · ${escapeHtml(row.horizon_years || "")}y</div>` },
               { key: "event_count_display", label: "Events" },
@@ -8270,7 +8411,11 @@
               { key: "rate_per_100_person_years", label: "Rate / 100 PY" },
               { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
             ], 20), "blue")}
-            ${renderSectionCard("Microbiology-confirmed infection status", renderConfluenceAcceptedCounts(microbiologyConfirmationCounts, "endpoint_label"), "amber")}
+            ${renderSectionCard("Microbiology-confirmed infection status", renderConfluenceEventCounts(microbiologyConfirmationCounts), "amber")}
+            ${renderSectionCard("Microbiology and source-resolution audits", `
+              <h3>Microbiology confirmation sources</h3>${renderConfluenceSourceResolutionAudit(microbiologyConfirmationSourceAudit)}
+              <h3>CONFLUENCE source resolution</h3>${renderConfluenceSourceResolutionAudit(sourceResolutionAudit)}
+            `, "blue")}
             ${renderSectionCard("Validation checklist", renderConfluenceTable(validation, [
               { key: "entity_label", label: "Entity", render: row => `<strong>${escapeHtml(row.entity_label || "")}</strong><div class="mini">${escapeHtml(row.status || "")}</div>` },
               { key: "validation_step", label: "Validation step" },

@@ -177,7 +177,7 @@ for (needle in c("Find clinical variables", "Vitals and anthropometrics", "Smoki
 }
 expect_true(grepl("function renderMclTriangleFeasibilityPanel", html, fixed = TRUE), "HTML should include the MCL/TRIANGLE feasibility renderer.")
 expect_true(grepl("function renderConfluenceFeasibilityPanel", html, fixed = TRUE), "HTML should include the CONFLUENCE feasibility renderer.")
-for (needle in c("CLL/MBL", "DD479B", "D47.9B", "DD472", "DC911 / C91.1", "DC900 / C90.0", "query executable not run", "not accepted aggregate", "immortal-time bias", "surveillance/testing bias")) {
+for (needle in c("CLL/MBL", "DD479B", "D47.9B", "DD472", "DC911 / C91.1", "DC900 / C90.0", "production aggregate available", "accepted aggregate rows", "immortal-time bias", "surveillance/testing bias")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CONFLUENCE panel should include:", needle))
 }
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
@@ -596,7 +596,7 @@ expect_true(grepl("mcl_triangle_feasibility", payload, fixed = TRUE), "Payload s
 expect_true(grepl("confluence_feasibility", payload, fixed = TRUE), "Payload should include the CONFLUENCE feasibility view model.")
 expect_true(grepl("confluence_disease_state_counts", payload, fixed = TRUE) || grepl("disease_state_counts", payload, fixed = TRUE), "Payload should include CONFLUENCE disease-state counts.")
 expect_true(grepl("source_resolution_audit", payload, fixed = TRUE), "Payload should include CONFLUENCE source-resolution audit rows.")
-expect_true(grepl("not accepted aggregate", payload, fixed = TRUE), "Payload should include CONFLUENCE not-accepted aggregate state.")
+expect_true(grepl("accepted production aggregate", payload, fixed = TRUE) || grepl("production aggregate available", payload, fixed = TRUE), "Payload should include CONFLUENCE production aggregate state.")
 expect_true(grepl("Feasible with biology gaps", payload, fixed = TRUE) || grepl("Partially feasible", payload, fixed = TRUE) || grepl("Not currently feasible", payload, fixed = TRUE), "Payload should include an MCL/TRIANGLE feasibility verdict.")
 expect_true(grepl("review_clinical_variables", payload, fixed = TRUE), "Payload should include the Clinical Variables view model.")
 expect_true(grepl("review_semantic_summary", payload, fixed = TRUE), "Payload should include semantic summary rows.")
