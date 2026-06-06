@@ -227,6 +227,16 @@ confluence_count_empty_outputs <- function() {
     first_date_availability = confluence_count_empty_first_date_availability(),
     overlap_counts_accepted = confluence_empty_overlap_counts_accepted(),
     overlap_timing_accepted = confluence_empty_overlap_timing_accepted(),
+    clone_route_manifest = confluence_clone_empty_route_manifest(),
+    clone_source_resolution = confluence_clone_empty_source_resolution(),
+    bcell_clone_evidence_counts = confluence_clone_empty_evidence_counts(),
+    pcd_clone_evidence_counts = confluence_clone_empty_evidence_counts(),
+    paraprotein_ambiguity_counts = confluence_clone_empty_ambiguity_counts(),
+    mgus_reclassification_waterfall = confluence_clone_empty_mgus_waterfall(),
+    dual_clone_overlap_counts = confluence_clone_empty_overlap_counts(),
+    dual_clone_overlap_timing = confluence_clone_empty_overlap_timing(),
+    primary_overlap_exclusion_reasons = confluence_clone_empty_exclusion_reasons(),
+    clone_availability_protocol_runway = confluence_clone_empty_protocol_runway(),
     mbl_validation_waterfall = confluence_empty_validation_waterfall(),
     mgus_validation_waterfall = confluence_empty_validation_waterfall(),
     dual_clone_validation_waterfall = confluence_empty_validation_waterfall(),
@@ -1173,10 +1183,28 @@ confluence_count_outputs_from_sets <- function(count_sets, project_root = ".", m
   endpoint_codes <- confluence_count_read_endpoint_code_sets(project_root)
   route_status <- confluence_count_route_statuses(count_sets)
   first_dates <- confluence_count_derive_states(count_sets$disease_first_dates %||% count_sets$first_dates)
+  clone_routes <- confluence_clone_read_sources(project_root)
+  supplied_clone_evidence <- is.data.frame(count_sets$clone_evidence) && nrow(count_sets$clone_evidence)
+  if (isTRUE(supplied_clone_evidence)) {
+    clone_evidence <- count_sets$clone_evidence
+    clone_manifest <- count_sets$clone_route_manifest %||% confluence_clone_hook_manifest(clone_routes, clone_evidence)
+  } else {
+    clone_evidence <- confluence_clone_legacy_evidence_from_first_dates(first_dates)
+    clone_manifest <- confluence_clone_hook_manifest(clone_routes, clone_evidence)
+  }
+  clone_outputs <- confluence_clone_outputs_from_evidence(
+    clone_evidence,
+    clone_routes,
+    clone_manifest,
+    min_cell_count = min_cell_count
+  )
   patient_frame <- confluence_count_normalize_patient_frame(count_sets$patient_frame %||% data.frame(stringsAsFactors = FALSE))
   infection_events <- confluence_count_normalize_events(count_sets$infection_events %||% data.frame(stringsAsFactors = FALSE))
   microbiology_events <- confluence_count_normalize_events(count_sets$microbiology_confirmation_events %||% count_sets$microbiology_events %||% data.frame(stringsAsFactors = FALSE))
-  group_entries <- confluence_count_group_entries(first_dates)
+  group_entries <- confluence_clone_group_entries(clone_outputs$internal_person_summary)
+  if (!nrow(group_entries)) {
+    group_entries <- confluence_count_group_entries(first_dates)
+  }
   person_time <- if (confluence_count_route_success(route_status, "patient_frame")) {
     confluence_count_person_time_rows(group_entries, patient_frame, min_cell_count = min_cell_count)
   } else {
@@ -1212,8 +1240,18 @@ confluence_count_outputs_from_sets <- function(count_sets, project_root = ".", m
   list(
     disease_state_person_counts = confluence_count_state_count_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
     first_date_availability = confluence_count_first_date_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
-    overlap_counts_accepted = confluence_count_overlap_count_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
-    overlap_timing_accepted = confluence_count_overlap_timing_rows(first_dates, min_cell_count = min_cell_count, route_status = route_status),
+    overlap_counts_accepted = clone_outputs$dual_clone_overlap_counts,
+    overlap_timing_accepted = clone_outputs$dual_clone_overlap_timing,
+    clone_route_manifest = clone_outputs$clone_route_manifest,
+    clone_source_resolution = clone_outputs$clone_source_resolution,
+    bcell_clone_evidence_counts = clone_outputs$bcell_clone_evidence_counts,
+    pcd_clone_evidence_counts = clone_outputs$pcd_clone_evidence_counts,
+    paraprotein_ambiguity_counts = clone_outputs$paraprotein_ambiguity_counts,
+    mgus_reclassification_waterfall = clone_outputs$mgus_reclassification_waterfall,
+    dual_clone_overlap_counts = clone_outputs$dual_clone_overlap_counts,
+    dual_clone_overlap_timing = clone_outputs$dual_clone_overlap_timing,
+    primary_overlap_exclusion_reasons = clone_outputs$primary_overlap_exclusion_reasons,
+    clone_availability_protocol_runway = clone_outputs$clone_availability_protocol_runway,
     mbl_validation_waterfall = water$mbl,
     mgus_validation_waterfall = water$mgus,
     dual_clone_validation_waterfall = water$dual,
@@ -1272,13 +1310,13 @@ confluence_count_microbiology_fail_closed <- function(mode = "plan", reason = ""
 
 confluence_count_query_review <- function(success = FALSE, endpoint_codes = confluence_count_empty_endpoint_code_sets()) {
   data.frame(
-    query_id = c("confluence_disease_first_dates", "confluence_overlap_counts", "confluence_provisional_infection_counts", "confluence_microbiology_confirmation", "confluence_person_time"),
-    output_file = c("confluence_first_date_availability.csv", "confluence_overlap_counts_accepted.csv", "confluence_infection_counts.csv", "confluence_microbiology_confirmation_counts.csv", "confluence_infection_person_time.csv"),
+    query_id = c("confluence_clone_route_manifest", "confluence_dual_clone_overlap_counts", "confluence_provisional_infection_counts", "confluence_microbiology_confirmation", "confluence_person_time"),
+    output_file = c("confluence_clone_route_manifest.csv", "confluence_dual_clone_overlap_counts.csv", "confluence_infection_counts.csv", "confluence_microbiology_confirmation_counts.csv", "confluence_infection_person_time.csv"),
     query_executable = success,
-    tables_used = c("patient; t_dalycare_diagnoses; diagnoses_all; RKKP_CLL; RKKP_DaMyDa; SDS_pato", "secure disease-state first-date aggregate", "t_dalycare_diagnoses; diagnoses_all; SDS_t_adm; SDS_kontakter", "SP blood culture; PERSIMUNE culture/microscopy", "patient; secure disease-state first-date aggregate"),
+    tables_used = c("configured CONFLUENCE clone route manifest", "secure clone-evidence aggregate", "t_dalycare_diagnoses; diagnoses_all; SDS_t_adm; SDS_kontakter", "SP blood culture; PERSIMUNE culture/microscopy", "patient; secure clone-evidence entry aggregate"),
     person_key_used = "patientid",
-    date_anchor_used = c("first qualifying disease-state date", "later first qualifying disease-state date", "provisional infection event date", "microbiology sample/result date", "entry to death/follow-up/horizon"),
-    value_rule_used = c("exact CLL/MBL/MGUS/MM and SNOMED code sets", "intersection of first-date state sets", paste(unique(endpoint_codes$code_prefix %||% ""), collapse = ";"), "nonblank organism/result evidence excluding negative/no-growth/not-detected/cancelled/invalid/contamination-only patterns", "1, 2, and 5 year horizons"),
+    date_anchor_used = c("route-specific first qualifying evidence date", "later accepted clone date", "provisional infection event date", "microbiology sample/result date", "entry to death/follow-up/horizon"),
+    value_rule_used = c("configured route IDs must resolve or fail closed", "accepted B-cell clone plus accepted plasma-cell clone; MGUS code-only and IgM-only routes cannot enter primary", paste(unique(endpoint_codes$code_prefix %||% ""), collapse = ";"), "nonblank organism/result evidence excluding negative/no-growth/not-detected/cancelled/invalid/contamination-only patterns", "1, 2, and 5 year horizons"),
     endpoint_definition_status = c("not an infection endpoint", "not an infection endpoint", "repo-derived provisional", "repo-derived provisional", "not an infection endpoint"),
     emits_only_aggregate_counts = TRUE,
     reviewer_notes = "CONFLUENCE production aggregate query emits only public-safe aggregate counts.",
@@ -1919,6 +1957,7 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
   endpoint_codes <- confluence_count_read_endpoint_code_sets(project_root)
   resolved <- confluence_count_resolve_source_mappings(db_adapter, project_root = project_root)
   micro_resolved <- confluence_count_resolve_microbiology_mappings(db_adapter, project_root = project_root)
+  clone_resolved <- confluence_clone_resolve_routes(db_adapter, project_root = project_root)
   mappings <- resolved$mappings
   executable <- mappings[confluence_count_bool(mappings$query_executable), , drop = FALSE]
   micro_mappings <- micro_resolved$mappings
@@ -1932,6 +1971,7 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
   infection <- confluence_count_execute_route(db_adapter, infection_sources, "infection_events", function(mapping) confluence_count_infection_event_sql(mapping, endpoint_codes))
   patient <- confluence_count_execute_route(db_adapter, patient_sources, "patient_frame", confluence_count_patient_frame_sql)
   microbiology <- confluence_count_execute_microbiology_route(db_adapter, micro_executable, micro_resolved$audit)
+  clone_evidence <- confluence_clone_execute_routes(db_adapter, clone_resolved$routes, clone_resolved$manifest)
   route_status <- bind_rows_base(list(first$status, pato$status, infection$status, patient$status, microbiology$status))
   errors <- confluence_count_failed_route_audit(route_status)
   list(
@@ -1939,6 +1979,8 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
       disease_first_dates = bind_rows_base(list(first$data, pato$data)),
       infection_events = infection$data,
       microbiology_confirmation_events = microbiology$data,
+      clone_evidence = clone_evidence,
+      clone_route_manifest = clone_resolved$manifest,
       patient_frame = patient$data,
       route_status = route_status,
       source_resolution_audit = resolved$audit,
@@ -1950,6 +1992,8 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
 
 confluence_count_placeholder_outputs <- function(mode = "plan", reason = "CONFLUENCE production aggregate query did not run.", error_class = "", project_root = ".") {
   outputs <- confluence_count_empty_outputs()
+  clone_outputs <- confluence_clone_placeholder_outputs(project_root = project_root, min_cell_count = atlas_min_cell_count())
+  for (nm in names(clone_outputs)) outputs[[nm]] <- clone_outputs[[nm]]
   outputs$infection_endpoint_code_sets <- confluence_count_read_endpoint_code_sets(project_root)
   outputs$microbiology_confirmation_counts <- confluence_count_microbiology_fail_closed(mode = mode)
   outputs$failed_query_audit <- confluence_count_fail_closed_frame("confluence_production_aggregate", "confluence_production_execution_summary.csv", reason, mode = mode, error_class = error_class)
@@ -1980,6 +2024,8 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
       if (is.data.frame(hook$route_status)) count_sets$route_status <- hook$route_status
       if (is.data.frame(hook$source_resolution_audit)) count_sets$source_resolution_audit <- hook$source_resolution_audit
       if (is.data.frame(hook$microbiology_confirmation_source_audit)) count_sets$microbiology_confirmation_source_audit <- hook$microbiology_confirmation_source_audit
+      if (is.data.frame(hook$clone_evidence)) count_sets$clone_evidence <- hook$clone_evidence
+      if (is.data.frame(hook$clone_route_manifest)) count_sets$clone_route_manifest <- hook$clone_route_manifest
       if (is.data.frame(hook$errors)) db_errors <- hook$errors
     }
   } else {
@@ -1987,8 +2033,13 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
     count_sets <- fetched$sets
     db_errors <- fetched$errors
   }
-  if (!is.list(count_sets) || !is.data.frame(count_sets$disease_first_dates) || !nrow(count_sets$disease_first_dates)) {
+  has_first_dates <- is.list(count_sets) && is.data.frame(count_sets$disease_first_dates) && nrow(count_sets$disease_first_dates)
+  has_clone_evidence <- is.list(count_sets) && is.data.frame(count_sets$clone_evidence) && nrow(count_sets$clone_evidence)
+  if (!is.list(count_sets) || (!has_first_dates && !has_clone_evidence)) {
     return(confluence_count_placeholder_outputs(mode = "production_aggregate", reason = "No disease-state first-date rows were available after production aggregate query.", error_class = "production_aggregate_failed_mapping_unavailable", project_root = project_root))
+  }
+  if (!has_first_dates) {
+    count_sets$disease_first_dates <- empty_df(person_key = character(), state_id = character(), first_date = as.Date(character()))
   }
   outputs <- confluence_count_outputs_from_sets(count_sets, project_root = project_root, min_cell_count = min_cell_count)
   if (nrow(db_errors)) outputs$failed_query_audit <- db_errors
@@ -2032,7 +2083,7 @@ confluence_count_production_compat_summary <- function(summary, production) {
     "production_aggregate",
     "aggregate patient-safe outputs",
     "accepted production aggregate",
-    "CONFLUENCE production aggregates were generated; canonical accepted files carry public counts and route-status gates."
+    "CONFLUENCE production aggregates were generated; canonical accepted files carry public clone-evidence counts and route-status gates."
   )
   summary <- confluence_count_summary_upsert(
     summary,
@@ -2042,7 +2093,7 @@ confluence_count_production_compat_summary <- function(summary, production) {
     "accepted",
     "distinct people",
     "production aggregate",
-    "Use confluence_overlap_counts_accepted.csv and confluence_overlap_timing_accepted.csv for canonical overlap outputs."
+    "Use confluence_dual_clone_overlap_counts.csv, confluence_overlap_counts_accepted.csv, and confluence_overlap_timing_accepted.csv for canonical dual-clone outputs."
   )
   if (is.data.frame(production$infection_counts) &&
       nrow(production$infection_counts) &&
@@ -2090,15 +2141,23 @@ confluence_count_production_compat_overlap_counts <- function(scaffold, accepted
 
 confluence_count_production_compat_overlap_timing <- function(scaffold, accepted) {
   if (!is.data.frame(accepted) || !nrow(accepted)) return(scaffold)
+  n <- nrow(accepted)
+  col_or_default <- function(name, default = "") {
+    if (name %in% names(accepted)) {
+      value <- accepted[[name]]
+      if (length(value) == n) return(value)
+    }
+    rep(default, n)
+  }
   out <- data.frame(
-    timing_id = accepted$timing_id %||% character(),
-    timing_label = accepted$timing_label %||% character(),
-    count_display = accepted$count_display %||% character(),
-    n_people = accepted$n_people %||% numeric(),
-    count_kind = accepted$count_kind %||% character(),
+    timing_id = col_or_default("timing_id"),
+    timing_label = col_or_default("timing_label"),
+    count_display = col_or_default("count_display"),
+    n_people = col_or_default("n_people", NA_real_),
+    count_kind = col_or_default("count_kind"),
     evidence_status = "production aggregate available",
-    acceptance_status = accepted$acceptance_status %||% character(),
-    query_status = accepted$query_status %||% character(),
+    acceptance_status = col_or_default("acceptance_status"),
+    query_status = col_or_default("query_status", "executed"),
     notes = paste(
       "Compatibility view mirrored from confluence_overlap_timing_accepted.csv;",
       "use that canonical file for accepted production overlap timing."
@@ -2285,5 +2344,5 @@ confluence_count_merge_outputs <- function(scaffold, production) {
     scaffold$mbl_source_counts <- confluence_count_production_compat_mbl_source_counts(scaffold$mbl_source_counts, scaffold$disease_state_person_counts)
     scaffold$recommended_next_actions <- confluence_count_production_compat_actions(scaffold$recommended_next_actions, production)
   }
-  scaffold
+  confluence_attach_story_layer(scaffold)
 }

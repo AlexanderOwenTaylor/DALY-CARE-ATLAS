@@ -63,6 +63,16 @@ expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_treatment_invento
 expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_outcome_inventory.csv"))
 expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_biology_gap_analysis.csv"))
 expect_file(file.path(result$run_dir, "outputs", "mcl_triangle_study_readiness_matrix.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_clone_route_manifest.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_clone_source_resolution.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_bcell_clone_evidence_counts.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_pcd_clone_evidence_counts.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_paraprotein_ambiguity_counts.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_mgus_reclassification_waterfall.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_dual_clone_overlap_counts.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_dual_clone_overlap_timing.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_primary_overlap_exclusion_reasons.csv"))
+expect_file(file.path(result$run_dir, "outputs", "confluence_clone_availability_protocol_runway.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "lab_npu_code_coverage.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "npu_dictionary_summary.csv"))
 expect_file(file.path(result$run_dir, "outputs", "panels", "npu_dictionary_vectors.csv"))
@@ -180,11 +190,22 @@ expect_true(grepl("function renderConfluenceFeasibilityPanel", html, fixed = TRU
 for (needle in c("CLL/MBL", "DD479B", "D47.9B", "DD472", "DC911 / C91.1", "DC900 / C90.0", "production aggregate available", "accepted aggregate rows", "immortal-time bias", "surveillance/testing bias")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CONFLUENCE panel should include:", needle))
 }
-for (needle in c("6 groups x 3 horizons", "Overlap infection signal", "Serious infection counts by group and horizon", "Microbiology-confirmed infection counts by group and horizon")) {
+for (needle in c("7 groups x 3 horizons", "Overlap infection signal", "Serious infection counts by group and horizon", "Microbiology-confirmed infection counts by group and horizon", "What the atlas has already assembled", "Question-to-evidence spine", "Overlap infection signal, read as feasibility only", "Data ingredients", "Protocol hardening path")) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("CONFLUENCE PI-facing infection summary should include:", needle))
 }
+expect_false(grepl("Current stage: scaffold vs accepted aggregate", html, fixed = TRUE), "CONFLUENCE should use production/provisional wording instead of scaffold-stage wording.")
 expect_false(grepl("infection aggregate rows", html, fixed = TRUE), "CONFLUENCE headline should not present infection strata as clinical row counts.")
 expect_false(grepl("microbiology rows", html, fixed = TRUE), "CONFLUENCE headline should not present microbiology strata as clinical row counts.")
+for (stale_copy in c(
+  "without new production overlap counts",
+  "CONFLUENCE overlap rows are not accepted aggregates",
+  "before any overlap query is accepted",
+  "not-run overlap rows",
+  "no production overlap queries accepted yet",
+  "not accepted aggregate overlap counts"
+)) {
+  expect_false(grepl(stale_copy, html, fixed = TRUE), paste("CONFLUENCE static copy should not contradict accepted aggregate rows:", stale_copy))
+}
 expect_true(grepl("Study-readiness matrix", html, fixed = TRUE), "MCL/TRIANGLE panel should render the study-readiness matrix.")
 expect_true(grepl("Treatment-timing feasibility", html, fixed = TRUE), "MCL/TRIANGLE panel should include treatment-timing feasibility.")
 expect_true(grepl("feasibility/readiness review for study planning", html, fixed = TRUE), "MCL/TRIANGLE panel should explicitly be feasibility only.")
@@ -600,6 +621,8 @@ expect_true(grepl("AEKIxxx", html, fixed = TRUE), "Ki-67 UI should show AEKI/ÆK
 expect_true(grepl("mcl_triangle_feasibility", payload, fixed = TRUE), "Payload should include the MCL/TRIANGLE feasibility view model.")
 expect_true(grepl("confluence_feasibility", payload, fixed = TRUE), "Payload should include the CONFLUENCE feasibility view model.")
 expect_true(grepl("confluence_disease_state_counts", payload, fixed = TRUE) || grepl("disease_state_counts", payload, fixed = TRUE), "Payload should include CONFLUENCE disease-state counts.")
+expect_true(grepl("clone_route_manifest", payload, fixed = TRUE), "Payload should include CONFLUENCE clone route manifest.")
+expect_true(grepl("dual_clone_overlap_counts", payload, fixed = TRUE), "Payload should include CONFLUENCE dual-clone overlap counts.")
 expect_true(grepl("source_resolution_audit", payload, fixed = TRUE), "Payload should include CONFLUENCE source-resolution audit rows.")
 expect_true(grepl("accepted production aggregate", payload, fixed = TRUE) || grepl("production aggregate available", payload, fixed = TRUE), "Payload should include CONFLUENCE production aggregate state.")
 expect_true(grepl("Feasible with biology gaps", payload, fixed = TRUE) || grepl("Partially feasible", payload, fixed = TRUE) || grepl("Not currently feasible", payload, fixed = TRUE), "Payload should include an MCL/TRIANGLE feasibility verdict.")
@@ -641,6 +664,13 @@ expect_true("remaining_canonical_resources_activation_plan" %in% manifest$artifa
 expect_true(all(c("ki67_search_inventory", "ki67_registry_field_candidates", "ki67_pathology_code_candidates", "ki67_text_pattern_candidates", "ki67_channel_summary", "ki67_aeki_validation_plan", "ki67_aeki_code_counts", "ki67_text_validation_plan") %in% manifest$artifact_id), "Manifest should list Ki-67 discovery artifacts.")
 expect_true(all(c(
   "confluence_summary", "confluence_disease_state_counts", "confluence_overlap_counts",
+  "confluence_story_cards", "confluence_evidence_spine", "confluence_overlap_signal_summary",
+  "confluence_ingredient_map", "confluence_protocol_runway",
+  "confluence_clone_route_manifest", "confluence_clone_source_resolution",
+  "confluence_bcell_clone_evidence_counts", "confluence_pcd_clone_evidence_counts",
+  "confluence_paraprotein_ambiguity_counts", "confluence_mgus_reclassification_waterfall",
+  "confluence_dual_clone_overlap_counts", "confluence_dual_clone_overlap_timing",
+  "confluence_primary_overlap_exclusion_reasons", "confluence_clone_availability_protocol_runway",
   "confluence_overlap_timing", "confluence_infection_outcome_readiness",
   "confluence_treatment_modifier_readiness", "confluence_estimands",
   "confluence_validation_checklist", "confluence_bias_warnings",
@@ -659,8 +689,8 @@ expect_true(all(c(
   "confluence_failed_query_audit", "confluence_source_resolution_audit",
   "confluence_production_execution_summary"
 ) %in% manifest$artifact_id), "Manifest should list CONFLUENCE feasibility artifacts.")
-canonical_confluence <- manifest[manifest$artifact_id %in% c("confluence_disease_state_person_counts", "confluence_overlap_counts_accepted", "confluence_overlap_timing_accepted", "confluence_infection_counts", "confluence_recurrent_infection_counts", "confluence_infection_person_time", "confluence_infection_rates", "confluence_microbiology_confirmation_counts", "confluence_microbiology_confirmation_source_audit", "confluence_source_resolution_audit", "confluence_failed_query_audit", "confluence_production_execution_summary"), , drop = FALSE]
-expect_true(nrow(canonical_confluence) == 12L && all(canonical_confluence$canonical_output) && all(canonical_confluence$production_output), "Canonical CONFLUENCE aggregate artifacts should be marked production outputs.")
+canonical_confluence <- manifest[manifest$artifact_id %in% c("confluence_disease_state_person_counts", "confluence_first_date_availability", "confluence_clone_route_manifest", "confluence_clone_source_resolution", "confluence_bcell_clone_evidence_counts", "confluence_pcd_clone_evidence_counts", "confluence_paraprotein_ambiguity_counts", "confluence_mgus_reclassification_waterfall", "confluence_dual_clone_overlap_counts", "confluence_dual_clone_overlap_timing", "confluence_primary_overlap_exclusion_reasons", "confluence_clone_availability_protocol_runway", "confluence_overlap_counts_accepted", "confluence_overlap_timing_accepted", "confluence_mbl_validation_waterfall", "confluence_mgus_validation_waterfall", "confluence_dual_clone_validation_waterfall", "confluence_infection_endpoint_code_sets", "confluence_infection_counts", "confluence_recurrent_infection_counts", "confluence_infection_person_time", "confluence_infection_rates", "confluence_microbiology_confirmation_counts", "confluence_microbiology_confirmation_source_audit", "confluence_production_query_review", "confluence_source_resolution_audit", "confluence_failed_query_audit", "confluence_production_execution_summary"), , drop = FALSE]
+expect_true(nrow(canonical_confluence) == 28L && all(canonical_confluence$canonical_output) && all(canonical_confluence$production_output), "Canonical CONFLUENCE aggregate artifacts should be marked production outputs.")
 compat_confluence <- manifest[manifest$artifact_id %in% c("confluence_overlap_counts", "confluence_overlap_timing"), , drop = FALSE]
 expect_true(nrow(compat_confluence) == 2L && all(compat_confluence$artifact_role == "compatibility_reference") && all(nzchar(compat_confluence$superseded_by)), "Superseded CONFLUENCE compatibility files should point to canonical production artifacts.")
 expect_true(all(c("mcl_triangle_summary", "mcl_triangle_variable_inventory", "mcl_triangle_treatment_inventory", "mcl_triangle_outcome_inventory", "mcl_triangle_biology_gap_analysis", "mcl_triangle_study_readiness_matrix", "mcl_triangle_false_positive_exclusions") %in% manifest$artifact_id), "Manifest should list MCL/TRIANGLE feasibility artifacts.")

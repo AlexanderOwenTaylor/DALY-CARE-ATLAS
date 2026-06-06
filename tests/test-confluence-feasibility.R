@@ -34,6 +34,21 @@ outputs <- build_confluence_feasibility_outputs(
 
 expect_true(all(c(
   "summary",
+  "clone_route_manifest",
+  "clone_source_resolution",
+  "bcell_clone_evidence_counts",
+  "pcd_clone_evidence_counts",
+  "paraprotein_ambiguity_counts",
+  "mgus_reclassification_waterfall",
+  "dual_clone_overlap_counts",
+  "dual_clone_overlap_timing",
+  "primary_overlap_exclusion_reasons",
+  "clone_availability_protocol_runway",
+  "story_cards",
+  "evidence_spine",
+  "overlap_signal_summary",
+  "ingredient_map",
+  "protocol_runway",
   "disease_state_counts",
   "overlap_counts",
   "overlap_timing",
@@ -69,6 +84,32 @@ expect_true(all(c(
   "source_resolution_audit",
   "production_execution_summary"
 ) %in% names(outputs)), "CONFLUENCE output should expose every requested table.")
+
+for (table_name in c("story_cards", "evidence_spine", "overlap_signal_summary", "ingredient_map", "protocol_runway")) {
+  expect_true(is.data.frame(outputs[[table_name]]), paste("CONFLUENCE should expose story table:", table_name))
+}
+expect_true(all(c(
+  "overlap_identifiable",
+  "denominator_separated",
+  "mgus_candidate_gate",
+  "ambiguity_hierarchy",
+  "overlap_clock_defined",
+  "infection_two_routes",
+  "person_time_under_signal",
+  "bias_controls_named",
+  "completed_aggregate_checks",
+  "next_protocol_moves"
+) %in% outputs$story_cards$card_id), "Story cards should cover overlap, clone denominators, ambiguity gates, clock, infection routes, person-time, bias, completed checks, and protocol moves.")
+expect_true(any(outputs$story_cards$headline == "Clone-evidence denominators are separated from diagnosis anchors"), "Story cards should use clinician-facing clone denominator copy.")
+expect_true(any(grepl("MGUS diagnosis-code overlap is a candidate signal, not accepted evidence", paste(outputs$story_cards$submetric_display, outputs$story_cards$interpretation), fixed = TRUE)), "Story cards should keep the MGUS candidate-only gate visible.")
+expect_true(any(grepl("Aggregate feasibility only; not causal", outputs$story_cards$caveat, fixed = TRUE)), "Story cards should keep feasibility-only/not-causal caveats visible.")
+expect_true(any(grepl("provisional", paste(outputs$story_cards$caveat, outputs$story_cards$evidence_status), ignore.case = TRUE)), "Story cards should keep provisional endpoint language visible.")
+expect_true(any(outputs$evidence_spine$spine_id == "overlap_entry_date"), "Evidence spine should include overlap entry timing.")
+expect_true(any(outputs$evidence_spine$spine_id == "microbiology_confirmed_endpoint"), "Evidence spine should include microbiology confirmation.")
+expect_true(all(c("cll_mbl_axis", "pcd_axis", "route_manifest_gate", "ambiguity_hierarchy", "hospital_serious_infection", "microbiology_confirmation", "treatment_modifiers", "death_followup_censoring", "source_resolution_fail_closed", "small_cell_suppression") %in% outputs$ingredient_map$ingredient_id), "Ingredient map should include clone axes, route validation, ambiguity hierarchy, infection, microbiology, treatment, censoring, source-resolution, and privacy rows.")
+expect_true(all(c("mbl_validation", "mgus_validation", "smm_definition", "infection_endpoint_ownership", "microbiology_roles", "treatment_timing", "testing_intensity", "death_progression", "small_cell_precheck") %in% outputs$protocol_runway$runway_id), "Protocol runway should include the expected hardening workstreams.")
+expect_true(all(c("route_manifest", "snomed_validation_gate", "ambiguity_hierarchy") %in% outputs$clone_availability_protocol_runway$runway_id), "Clone protocol runway should include route manifest, pathology validation, and ambiguity hardening workstreams.")
+expect_true(nrow(outputs$overlap_signal_summary) == 0L, "Scaffold-only overlap signal summary should stay empty when accepted production rows are missing.")
 
 disease <- outputs$disease_state_counts
 mbl <- disease[disease$entity_id == "mbl_candidate", , drop = FALSE]
@@ -179,6 +220,11 @@ expect_true(all(file.exists(unlist(paths))), "All CONFLUENCE output CSVs should 
 names(paths) <- paste0("confluence_", names(paths))
 manifest <- output_manifest(paths, run_dir = tmp)
 expect_true(any(grepl("confluence_disease_state_counts.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE disease-state counts.")
+expect_true(any(grepl("confluence_story_cards.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE story cards.")
+expect_true(any(grepl("confluence_evidence_spine.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE evidence spine.")
+expect_true(any(grepl("confluence_overlap_signal_summary.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE overlap signal summary.")
+expect_true(any(grepl("confluence_ingredient_map.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE ingredient map.")
+expect_true(any(grepl("confluence_protocol_runway.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE protocol runway.")
 expect_true(any(grepl("confluence_estimands.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE estimands.")
 expect_true(any(grepl("confluence_code_sets.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE code sets.")
 expect_true(any(grepl("confluence_mbl_source_counts.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE MBL source tiers.")
@@ -187,6 +233,20 @@ expect_true(any(grepl("confluence_production_execution_summary.csv", manifest$re
 expect_true(any(grepl("confluence_source_resolution_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE source-resolution audit.")
 expect_true(any(grepl("confluence_microbiology_confirmation_source_audit.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE microbiology-confirmation source audit.")
 expect_true(any(grepl("confluence_infection_rates.csv", manifest$relative_path, fixed = TRUE)), "Manifest should include CONFLUENCE infection rates.")
+for (clone_csv in c(
+  "confluence_clone_route_manifest.csv",
+  "confluence_clone_source_resolution.csv",
+  "confluence_bcell_clone_evidence_counts.csv",
+  "confluence_pcd_clone_evidence_counts.csv",
+  "confluence_paraprotein_ambiguity_counts.csv",
+  "confluence_mgus_reclassification_waterfall.csv",
+  "confluence_dual_clone_overlap_counts.csv",
+  "confluence_dual_clone_overlap_timing.csv",
+  "confluence_primary_overlap_exclusion_reasons.csv",
+  "confluence_clone_availability_protocol_runway.csv"
+)) {
+  expect_true(any(grepl(clone_csv, manifest$relative_path, fixed = TRUE)), paste("Manifest should include clone evidence output:", clone_csv))
+}
 expect_true(all(c("module", "artifact_role", "canonical_output", "production_output", "superseded_by") %in% names(manifest)), "Manifest should include artifact classification metadata.")
 prod_summary <- manifest[manifest$artifact_id == "confluence_production_execution_summary", , drop = FALSE]
 expect_true(nrow(prod_summary) == 1L && isTRUE(prod_summary$canonical_output[[1]]) && isTRUE(prod_summary$production_output[[1]]), "CONFLUENCE production execution summary should be marked canonical production output.")
@@ -221,6 +281,10 @@ payload <- atlas_payload(
 )
 expect_true("confluence_feasibility" %in% names(payload), "Payload should include confluence_feasibility.")
 expect_true(length(payload$confluence_feasibility$estimands) == 4L, "Payload should preserve CONFLUENCE estimands.")
+expect_true(length(payload$confluence_feasibility$story_cards) >= 8L, "Payload should preserve CONFLUENCE story cards.")
+expect_true(length(payload$confluence_feasibility$evidence_spine) >= 10L, "Payload should preserve CONFLUENCE evidence spine.")
+expect_true(length(payload$confluence_feasibility$ingredient_map) >= 10L, "Payload should preserve CONFLUENCE ingredient map.")
+expect_true(length(payload$confluence_feasibility$protocol_runway) >= 9L, "Payload should preserve CONFLUENCE protocol runway.")
 expect_true(length(payload$confluence_feasibility$code_sets) >= 16L, "Payload should include CONFLUENCE code sets.")
 expect_true(length(payload$confluence_feasibility$mbl_source_counts) >= 6L, "Payload should include CONFLUENCE MBL source tiers.")
 
@@ -239,7 +303,19 @@ for (needle in c(
   "MGUS",
   "query executable not run",
   "not accepted aggregate",
+  "What the atlas has already assembled",
+  "Question-to-evidence spine",
+  "Overlap infection signal, read as feasibility only",
+  "Accepted dual-clone cohort",
+  "MGUS diagnosis-code overlap is a candidate signal",
+  "Clone route manifest",
+  "Clone evidence counts",
+  "Ambiguity and exclusion cartography",
+  "Data ingredients",
+  "Protocol hardening path",
+  "What is accepted aggregate vs still provisional",
   "function renderConfluenceFeasibilityPanel",
+  "function renderConfluenceStoryHero",
   "confluence_feasibility"
 )) {
   expect_true(grepl(needle, html, fixed = TRUE), paste("HTML/template should include:", needle))
@@ -249,6 +325,23 @@ for (term in c("DD479B", "M95911", "M96121", "M98231", "M98233", "MBL", "MGUS", 
 }
 
 all_text <- paste(unlist(outputs, recursive = TRUE, use.names = FALSE), collapse = " ")
+story_text <- paste(unlist(outputs[c("story_cards", "evidence_spine", "overlap_signal_summary", "ingredient_map", "protocol_runway")], recursive = TRUE, use.names = FALSE), collapse = " ")
+for (forbidden in c("p-value", "confidence interval", "hazard ratio", "adjusted risk", "causal effect", "survival curve", "model output", "raw microbiology text", "pathology narrative", "CPR")) {
+  expect_false(grepl(forbidden, story_text, ignore.case = TRUE), paste("CONFLUENCE story layer must not contain forbidden analytic/raw wording:", forbidden))
+}
+expect_true(grepl("accepted provisional endpoint aggregate", html, fixed = TRUE), "Top CONFLUENCE story UI should distinguish provisional endpoint aggregates.")
+expect_true(grepl(".join(\" \")", html, fixed = TRUE), "Badge rows should retain text fallback spacing between rendered pills.")
+expect_false(grepl("Rate/100 PY: ${escapeHtml(row.rate_per_100_person_years || \"not available\")", html, fixed = TRUE), "Top overlap signal should not render unavailable rate lines as if they were metrics.")
+for (stale_copy in c(
+  "without new production overlap counts",
+  "CONFLUENCE overlap rows are not accepted aggregates",
+  "before any overlap query is accepted",
+  "not-run overlap rows",
+  "no production overlap queries accepted yet",
+  "not accepted aggregate overlap counts"
+)) {
+  expect_false(grepl(stale_copy, html, fixed = TRUE), paste("CONFLUENCE static copy should not contradict accepted aggregate rows:", stale_copy))
+}
 expect_false(grepl("\\b[0-3][0-9]{5}-[0-9]{4}\\b", all_text), "CONFLUENCE outputs must not contain CPR-like values.")
 expect_false(grepl("\\b\\d{4}-\\d{2}-\\d{2}\\b", all_text), "CONFLUENCE scaffold outputs must not contain raw dates.")
 expect_false(grepl("raw free text|snippet|row preview", all_text, ignore.case = TRUE), "CONFLUENCE scaffold outputs must not expose raw text/snippets/row previews.")

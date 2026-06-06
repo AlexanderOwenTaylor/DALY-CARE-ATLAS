@@ -18,6 +18,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/patobank_ki67_cartography.R",
     "R/mcl_triangle_counts.R",
     "R/mcl_triangle_feasibility.R",
+    "R/confluence_clone_evidence.R",
     "R/confluence_feasibility.R",
     "R/confluence_counts.R",
     "R/html.R",

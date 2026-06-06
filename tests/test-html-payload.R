@@ -409,7 +409,13 @@ expect_true(all(c("channel_summary", "aeki_validation_plan", "aeki_code_counts",
 expect_true("mcl_triangle_feasibility" %in% names(payload), "Payload should include the MCL/TRIANGLE feasibility view model.")
 expect_true("confluence_feasibility" %in% names(payload), "Payload should include the CONFLUENCE feasibility view model.")
 expect_true(all(c(
-  "summary", "disease_state_counts", "overlap_counts", "overlap_timing",
+  "summary",
+  "clone_route_manifest", "clone_source_resolution", "bcell_clone_evidence_counts",
+  "pcd_clone_evidence_counts", "paraprotein_ambiguity_counts", "mgus_reclassification_waterfall",
+  "dual_clone_overlap_counts", "dual_clone_overlap_timing", "primary_overlap_exclusion_reasons",
+  "clone_availability_protocol_runway",
+  "disease_state_counts", "overlap_counts", "overlap_timing",
+  "story_cards", "evidence_spine", "overlap_signal_summary", "ingredient_map", "protocol_runway",
   "infection_outcome_readiness", "treatment_modifier_readiness", "estimands",
   "validation_checklist", "bias_warnings", "recommended_next_actions",
   "code_sets", "mbl_source_counts", "mgus_source_counts",

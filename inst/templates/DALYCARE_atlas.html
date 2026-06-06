@@ -270,6 +270,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
+      align-items: center;
       margin: 8px 0 12px;
     }
     .trust-legend-grid {
@@ -1329,7 +1330,7 @@
             <div class="callout"><strong>Privacy boundary:</strong> the static atlas is aggregate-only. It should not emit patient identifiers, CPR values, raw dates, raw free text, or unsafe row previews.</div>
             <div class="grid">
               <article class="card"><h3>Clinical feasibility</h3><p class="mini">Use the TRIANGLE-lite panel as a feasibility-template example, not as a causal answer.</p><button class="sub-tab" type="button" data-jump-tab="clinical-feasibility" data-jump-sub="mcl-triangle-feasibility">Open feasibility</button></article>
-              <article class="card"><h3>CONFLUENCE</h3><p class="mini">Use the CLL/MBL and plasma-cell-disorder infection pre-study to scope overlap states, infection endpoints, and bias warnings without new production overlap counts.</p><button class="sub-tab" type="button" data-jump-tab="clinical-feasibility" data-jump-sub="confluence-feasibility">Open CONFLUENCE</button></article>
+              <article class="card"><h3>CONFLUENCE</h3><p class="mini">Use the CLL/MBL and plasma-cell-disorder infection pre-study to review accepted aggregate overlap states, provisional infection endpoints, and bias warnings.</p><button class="sub-tab" type="button" data-jump-tab="clinical-feasibility" data-jump-sub="confluence-feasibility">Open CONFLUENCE</button></article>
               <article class="card"><h3>Data dictionary</h3><p class="mini">Find source, raw column, confidence, caveat, and evidence file before analysis planning.</p><button class="sub-tab" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-lineage">Open dictionary</button></article>
               <article class="card"><h3>Infrastructure and QA</h3><p class="mini">Check source resolution, special/manual resources, run status, and unresolved action items.</p><button class="sub-tab" type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Open infrastructure</button></article>
             </div>
@@ -2000,7 +2001,7 @@
       const audienceRouteCards = [
         { audience: "PI / senior investigator", question: "What can DALY-CARE support now, and what needs validation before a protocol?", firstTab: "Clinical Feasibility", nextTabs: ["Overview briefing", "Infrastructure QA"], caveat: "Feasibility panels are descriptive and not treatment-effect evidence.", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", tone: "violet", search: "pi briefing" },
         { audience: "Data manager / QA", question: "Which sources, fields, and validation actions need attention first?", firstTab: "Infrastructure / Source Catalogue", nextTabs: ["Data Dictionary", "Clinical Feasibility"], caveat: "Unknown status must stay unknown/needs validation until source-owner evidence exists.", tab: "infrastructure", sub: "infra-catalog", tone: "blue", search: "data manager QA source readiness" },
-        { audience: "Disease researcher", question: "Where do I start for disease-specific cohort and evidence review?", firstTab: "Disease Registries", nextTabs: ["Clinical Feasibility", "Laboratory & Diagnostics"], caveat: "Registry indicators are source evidence; CONFLUENCE overlap rows are not accepted aggregates.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "plum", search: "disease researcher feasibility CONFLUENCE overlap" },
+        { audience: "Disease researcher", question: "Where do I start for disease-specific cohort and evidence review?", firstTab: "Disease Registries", nextTabs: ["Clinical Feasibility", "Laboratory & Diagnostics"], caveat: "Registry indicators are source evidence; CONFLUENCE separates accepted aggregate rows, provisional endpoints, and protocol-hardening needs.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "plum", search: "disease researcher feasibility CONFLUENCE overlap" },
         { audience: "Plasma cell disorder / MM researcher", question: "Where are DaMyDa, PCD overlap, infection, treatment, and biobank routes?", firstTab: "DaMyDa", nextTabs: ["CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DaMyDa fields and MGUS/MM overlap states need study-specific definitions before extraction.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "green", search: "PCD MM myeloma DaMyDa CONFLUENCE MGUS infection" },
         { audience: "CLL researcher", question: "Where are CLL/MBL registry, overlap, infection, IGHV/FISH/TP53, and treatment signals?", firstTab: "CLL", nextTabs: ["CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DD479B / D47.9B is coded-candidate MBL, not validated biologic MBL.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "cyan", search: "CLL MBL DD479B CONFLUENCE infection overlap" },
         { audience: "Lymphoma researcher", question: "Where are LYFO, MCL/TRIANGLE, pathology, treatment, and outcome routes?", firstTab: "LYFO", nextTabs: ["Clinical Feasibility", "Pathology / PATOBANK"], caveat: "MCL/TRIANGLE-lite is descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", tone: "plum", search: "lymphoma LYFO MCL feasibility" },
@@ -2028,7 +2029,7 @@
         { title: "Smoking and alcohol", status: "EHR evidence", tone: "blue", bestFor: "Reviewing social-history smoking and alcohol evidence.", evidence: "EHR social-history categories", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
         { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
         { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Walking from a trial-inspired lymphoma question to aggregate feasibility counts, design warnings, and a validation plan.", evidence: "Production aggregate cohort, exposure, outcome, age-proxy, Ibrutinib, and Ki-67 feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
-        { title: "DALY-CARE CONFLUENCE", status: "Overlap-feasibility panel", tone: "cyan", bestFor: "Scoping CLL/MBL, MGUS/SMM/MM, converging clonal states, infection outcomes, and bias structure before any overlap query is accepted.", evidence: "Candidate diagnosis anchors, PICO, estimands, readiness tables, validation logic, and not-run overlap rows", examples: ["MBL", "DD479B", "MGUS", "infection"], tab: "clinical-feasibility", sub: "confluence-feasibility" },
+        { title: "DALY-CARE CONFLUENCE", status: "Overlap-feasibility panel", tone: "cyan", bestFor: "Scoping CLL/MBL, MGUS/SMM/MM, converging clonal states, infection outcomes, and bias structure before protocol claims are made.", evidence: "Accepted aggregate rows, provisional endpoint definitions, validation logic, and protocol hardening path", examples: ["MBL", "DD479B", "MGUS", "infection"], tab: "clinical-feasibility", sub: "confluence-feasibility" },
         { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "laboratory", sub: "lab-microbiology" },
@@ -2050,7 +2051,7 @@
         { panel: "Pathology/PATOBANK", status: "restored", note: "SNOMED cleanup passed", tone: "green" },
         { panel: "Biobank", status: "restored", note: "identifier/date and low-count safeguards in place", tone: "green" },
         { panel: "MCL / TRIANGLE feasibility", status: "added", note: "aggregate feasibility panel; no causal or treatment recommendation claims", tone: "violet" },
-        { panel: "DALY-CARE CONFLUENCE", status: "added", note: "overlap-feasibility scaffold; no production overlap queries accepted yet", tone: "cyan" },
+        { panel: "DALY-CARE CONFLUENCE", status: "added", note: "overlap-feasibility panel with accepted aggregate rows, provisional endpoints, and no causal claims", tone: "cyan" },
         { panel: "Clinical Variables", status: "restored", note: "clinician-first concept ordering", tone: "green" },
         { panel: "Data Dictionary", status: "restored", note: "stacked raw-lineage detail pane", tone: "green" }
       ];
@@ -2689,7 +2690,7 @@
         const confluencePanelSearchRow = {
           panel_id: "confluence_feasibility",
           panel_title: "DALY-CARE CONFLUENCE",
-          clinical_purpose: "CLL/MBL and plasma-cell-disorder infection overlap feasibility panel with PICO, estimands, diagnosis-code anchors, readiness tables, and not-run overlap rows.",
+          clinical_purpose: "CLL/MBL and plasma-cell-disorder infection overlap feasibility panel with PICO, estimands, diagnosis-code anchors, accepted aggregate rows, provisional endpoints, and protocol-hardening path.",
           search_terms: "CONFLUENCE MBL DD479B D47.9B M95911 M96121 M98231 M98233 Monoklonal B-celle lymfocytose MGUS DD472 DD472B D47.2 CLL DC911 C91.1 MM DC900 C90.0 CLL MGUS CLL MM MBL MGUS overlap infection microbiology blood culture bloodstream recurrent infection"
         };
         const confluencePanelScore = scoreSearchResult(confluencePanelSearchRow, q, {
@@ -2701,7 +2702,7 @@
           grouped["Panels"].push(makeSearchResult(
             "Panels",
             "DALY-CARE CONFLUENCE",
-            "CLL/MBL-plasma-cell disorder infection feasibility panel; scaffold-first, exact MBL SNOMED codes, and not accepted aggregate overlap counts.",
+            "CLL/MBL-plasma-cell disorder infection feasibility panel; accepted aggregate rows, exact MBL SNOMED codes, and provisional endpoint guardrails.",
             confluencePanelSearchRow,
             { tab: "clinical-feasibility", sub: "confluence-feasibility" },
             { query: q, item: "confluence_feasibility", status: "Overlap-feasibility panel", copy: "#clinical-feasibility/confluence-feasibility", score: confluencePanelScore + 130 }
@@ -3754,7 +3755,7 @@
         return renderBadge(display, tone);
       }
       function renderTrustBadgeRow(labels) {
-        return `<div class="trust-badge-row">${(labels || []).map(renderTrustBadge).join("")}</div>`;
+        return `<div class="trust-badge-row">${(labels || []).map(renderTrustBadge).join(" ")}</div>`;
       }
       function renderInterpretationLead(config) {
         const cfg = config || {};
@@ -7973,6 +7974,9 @@
       function confluenceRows(name) {
         return (confluenceFeasibility && confluenceFeasibility[name]) || [];
       }
+      function confluenceStoryRows(name) {
+        return confluenceRows(name);
+      }
       function confluenceStatusTone(status) {
         const s = text(status || "").toLowerCase();
         if (/accepted|validated|present|required|privacy-safe/.test(s) && !/not accepted|validation required/.test(s)) return "green";
@@ -8019,10 +8023,10 @@
         return `${people} people / ${events} events`;
       }
       function renderConfluenceOverlapInfectionSignal(overlap, infectionCounts, microbiologyCounts) {
-        const serious = year => confluenceOutcomeRow(infectionCounts, "cll_mbl_pcd_overlap", year);
-        const micro = year => confluenceOutcomeRow(microbiologyCounts, "cll_mbl_pcd_overlap", year);
+        const serious = year => confluenceOutcomeRow(infectionCounts, "accepted_dual_clone_overlap", year);
+        const micro = year => confluenceOutcomeRow(microbiologyCounts, "accepted_dual_clone_overlap", year);
         const kpis = [
-          { label: "Overlap group", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: "CLL/MBL + PCD" },
+          { label: "Accepted dual clone", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: "accepted B-cell clone + accepted plasma-cell clone" },
           { label: "Serious infection 1y", value: confluencePeopleEventsText(serious(1)), tone: "blue", countKind: "people / events", statusLabel: "repo-derived provisional" },
           { label: "Serious infection 2y", value: confluencePeopleEventsText(serious(2)), tone: "blue", countKind: "people / events", statusLabel: "repo-derived provisional" },
           { label: "Serious infection 5y", value: confluencePeopleEventsText(serious(5)), tone: "blue", countKind: "people / events", statusLabel: "repo-derived provisional" },
@@ -8031,37 +8035,149 @@
           { label: "Microbiology-confirmed 5y", value: confluencePeopleEventsText(micro(5)), tone: "amber", countKind: "people / events", statusLabel: "repo-derived provisional" }
         ];
         return `
-          <h3>Overlap infection signal</h3>
+          <h3>Overlap infection signal, before modelling</h3>
           ${renderKpiStrip(kpis, { tone: "green" })}
-          <div class="callout"><strong>How to read these counts:</strong> 6 groups x 3 horizons is the expected production table shape, not an infected-patient count. Patient and event counts are shown by group and horizon below; all infection and microbiology endpoint definitions remain repo-derived provisional and not causal.</div>
+          <div class="callout"><strong>How to read these counts:</strong> 7 groups x 3 horizons is the expected production table shape, not an infected-patient count. Patient and event counts are shown by group and horizon below; all infection and microbiology endpoint definitions remain repo-derived provisional and not causal.</div>
         `;
+      }
+      function renderConfluenceStoryHero() {
+        const rows = confluenceStoryRows("story_cards")
+          .slice()
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+        if (!rows.length) return `<div class="empty">No CONFLUENCE story cards were generated.</div>`;
+        return `
+          ${renderTrustBadgeRow(["aggregate feasibility only", "accepted aggregate rows where shown", "accepted provisional endpoint aggregate", "not causal", "source validation required"])}
+          <div class="grid grid-3">${rows.map(row => `
+            <article class="clinical-card" data-row-search-key="${escapeHtml(rowHay(row))}">
+              ${renderTrustBadge(row.evidence_status || "aggregate feasibility only", confluenceStatusTone(row.evidence_status || row.tone))}
+              <h3>${escapeHtml(row.headline || "")}</h3>
+              <p><strong>${escapeHtml(row.metric_display || "not available")}</strong></p>
+              <p class="mini">${escapeHtml(row.submetric_display || "")}</p>
+              <p>${escapeHtml(row.interpretation || "")}</p>
+              <p class="mini"><strong>Evidence:</strong> ${escapeHtml(row.evidence_table || "")}</p>
+              <p class="mini"><strong>Caveat:</strong> ${escapeHtml(row.caveat || "")}</p>
+            </article>
+          `).join("")}</div>
+        `;
+      }
+      function renderConfluenceEvidenceSpine() {
+        const rows = confluenceStoryRows("evidence_spine")
+          .slice()
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+        if (!rows.length) return `<div class="empty">No CONFLUENCE evidence spine rows were generated.</div>`;
+        return `<div class="grid grid-2">${rows.map(row => `
+          <article class="clinical-card" data-row-search-key="${escapeHtml(rowHay(row))}">
+            ${renderTrustBadge(row.status || "", confluenceStatusTone(row.status))}
+            <h3>${escapeHtml(row.study_component || "")}</h3>
+            <p><strong>Question:</strong> ${escapeHtml(row.question_it_answers || "")}</p>
+            <p>${escapeHtml(row.current_evidence || "")}</p>
+            <p class="mini"><strong>Output:</strong> ${escapeHtml(row.source_tables_or_outputs || "")}</p>
+            <p class="mini"><strong>Unresolved edge:</strong> ${escapeHtml(row.unresolved_edge || "")}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderConfluenceOverlapSignalSummary() {
+        const rows = confluenceStoryRows("overlap_signal_summary")
+          .filter(row => row.group_id === "accepted_dual_clone_overlap")
+          .sort((a, b) => String(a.endpoint_family || "").localeCompare(String(b.endpoint_family || "")) || Number(a.horizon_years || 0) - Number(b.horizon_years || 0));
+        if (!rows.length) return `<div class="empty">No accepted overlap infection signal rows were generated.</div>`;
+        const endpoints = Array.from(new Set(rows.map(row => row.endpoint_family || "Endpoint")));
+        const horizons = ["1", "2", "5"];
+        const cell = (endpoint, horizon) => rows.find(row => row.endpoint_family === endpoint && String(row.horizon_years) === String(horizon)) || {};
+        const hasTopRate = value => {
+          const v = text(value || "").trim();
+          return v && !/^not available$/i.test(v) && !/^rate row not emitted/i.test(v);
+        };
+        const hasDisplayLine = value => {
+          const v = text(value || "").trim();
+          return v && !/^not available$/i.test(v);
+        };
+        return `
+          <div class="callout"><strong>How to read this section:</strong> rows/strata are table structure, not infected-patient counts. Patient/event counts are shown by horizon; all endpoint definitions remain provisional and not causal.</div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Endpoint family</th>${horizons.map(h => `<th>${h} year(s)</th>`).join("")}</tr></thead>
+            <tbody>${endpoints.map(endpoint => `<tr>
+              <td><strong>${escapeHtml(endpoint)}</strong><div class="mini">accepted dual-clone overlap</div></td>
+              ${horizons.map(h => {
+                const row = cell(endpoint, h);
+                const rateLine = hasTopRate(row.rate_per_100_person_years) ? `<div class="mini">Rate/100 PY: ${escapeHtml(row.rate_per_100_person_years)}</div>` : "";
+                const contrastLine = hasDisplayLine(row.descriptive_contrast_vs_cll_only) ? `<div class="mini">${escapeHtml(row.descriptive_contrast_vs_cll_only)}</div>` : "";
+                return `<td>
+                  <strong>${escapeHtml(row.people_display || "not available")} people</strong>
+                  <div class="mini">${escapeHtml(row.event_count_display || "not available")} events/episodes</div>
+                  <div class="mini">${escapeHtml(row.person_years_display || "not available")} person-years</div>
+                  ${rateLine}
+                  ${contrastLine}
+                </td>`;
+              }).join("")}
+            </tr>`).join("")}</tbody>
+          </table></div>
+          <p class="mini">Display-only contrasts are shown only when accepted, unsuppressed aggregate rates exist. They are not adjusted and not causal.</p>
+        `;
+      }
+      function renderConfluenceIngredientMap() {
+        const rows = confluenceStoryRows("ingredient_map")
+          .slice()
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+        if (!rows.length) return `<div class="empty">No CONFLUENCE ingredient rows were generated.</div>`;
+        return `<div class="grid grid-3">${rows.map(row => `
+          <article class="clinical-card" data-row-search-key="${escapeHtml(rowHay(row))}">
+            ${renderTrustBadge(row.accepted_or_provisional || "", confluenceStatusTone(row.accepted_or_provisional))}
+            <h3>${escapeHtml(row.ingredient || "")}</h3>
+            <p>${escapeHtml(row.what_it_contributes || "")}</p>
+            <p class="mini"><strong>Current source:</strong> ${escapeHtml(row.current_source || "")}</p>
+            <p class="mini"><strong>Validation needed:</strong> ${escapeHtml(row.validation_needed || "")}</p>
+            <p class="mini">${escapeHtml(row.why_it_matters || "")}</p>
+          </article>
+        `).join("")}</div>`;
+      }
+      function renderConfluenceProtocolRunway() {
+        const rows = confluenceStoryRows("protocol_runway")
+          .slice()
+          .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
+        if (!rows.length) return `<div class="empty">No CONFLUENCE protocol runway rows were generated.</div>`;
+        return `<div class="grid grid-2">${rows.map(row => `
+          <article class="clinical-card" data-row-search-key="${escapeHtml(rowHay(row))}">
+            ${renderTrustBadge([row.priority, row.blocker_type].filter(Boolean).join(" - "), confluenceStatusTone(row.blocker_type))}
+            <h3>${escapeHtml(row.workstream || "")}</h3>
+            <p><strong>Already available:</strong> ${escapeHtml(row.already_available || "")}</p>
+            <p><strong>Next protocol move:</strong> ${escapeHtml(row.next_protocol_move || "")}</p>
+            <p class="mini">${escapeHtml(row.caveat || "")}</p>
+          </article>
+        `).join("")}</div>`;
       }
       function renderConfluenceEvidenceState() {
         const productionSuccess = confluenceProductionSuccess();
         const personCounts = confluenceRows("disease_state_person_counts");
+        const bcellCloneCounts = confluenceRows("bcell_clone_evidence_counts");
+        const pcdCloneCounts = confluenceRows("pcd_clone_evidence_counts");
+        const ambiguityCounts = confluenceRows("paraprotein_ambiguity_counts");
+        const exclusionReasons = confluenceRows("primary_overlap_exclusion_reasons");
         const acceptedOverlap = confluenceRows("overlap_counts_accepted");
         const infectionCounts = confluenceRows("infection_counts");
         const microbiologyCounts = confluenceRows("microbiology_confirmation_counts");
         if (productionSuccess && personCounts.length) {
           const state = id => confluenceAcceptedRow(personCounts, "state_id", id);
-          const overlap = confluenceAcceptedRow(acceptedOverlap, "overlap_id", "cll_mbl_pcd");
+          const cloneState = (rows, id) => (rows || []).find(row => row.state_id === id) || {};
+          const reason = id => (exclusionReasons || []).find(row => row.exclusion_reason === id) || {};
+          const ambiguity = id => (ambiguityCounts || []).find(row => row.ambiguity_id === id) || {};
+          const overlap = confluenceAcceptedRow(acceptedOverlap, "overlap_id", "accepted_dual_clone_overlap");
           const infectionStrata = confluenceAcceptedStrataLabel(infectionCounts);
           const microStrata = confluenceAcceptedStrataLabel(microbiologyCounts);
           return `
             ${renderTrustBadgeRow(["production aggregate available", "accepted aggregate rows", "repo-derived provisional endpoints", "feasibility only", "not causal", "privacy-safe aggregate only"])}
             ${renderKpiStrip([
-              { label: "CLL", value: state("cll").count_display || "not available", tone: "green", countKind: state("cll").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "secure disease-state aggregate", validationStatus: "accepted production row" },
-              { label: "coded MBL", value: state("coded_mbl").count_display || "not available", tone: "green", countKind: state("coded_mbl").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DD479B / D47.9B candidate", validationStatus: "coded MBL tier" },
-              { label: "pathology-supported MBL", value: state("pathology_mbl").count_display || "not available", tone: "green", countKind: state("pathology_mbl").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "M95911 / M96121 / M98231", validationStatus: "pathology-supported tier" },
-              { label: "MGUS", value: state("mgus").count_display || "not available", tone: "green", countKind: state("mgus").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DD472 / DD472B", validationStatus: "accepted production row" },
-              { label: "MM", value: state("mm").count_display || "not available", tone: "green", countKind: state("mm").count_kind || "distinct people", statusLabel: "accepted aggregate", source: "DC900 / C90.0", validationStatus: "accepted production row" },
-              { label: "CLL/MBL + PCD overlap", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: overlap.query_status || "executed", source: "later disease-state entry date", validationStatus: overlap.acceptance_status || "accepted" },
+              { label: "Accepted B-cell clone", value: cloneState(bcellCloneCounts, "bcell_cll_diagnosis_accepted").count_display || state("cll").count_display || "not available", tone: "green", countKind: "distinct people", statusLabel: "accepted clone evidence", source: "RKKP_CLL / exact CLL routes", validationStatus: "route-manifest gated" },
+              { label: "Accepted plasma-cell clone", value: cloneState(pcdCloneCounts, "pcd_direct_clone_supported").count_display || "not available", tone: "green", countKind: "distinct people", statusLabel: "direct or registry-supported clone", source: "DaMyDa direct fields / validated routes", validationStatus: "route-manifest gated" },
+              { label: "Accepted dual clone", value: overlap.count_display || "not available", tone: "green", countKind: overlap.count_kind || "distinct people", statusLabel: overlap.query_status || "executed", source: "later accepted clone entry date", validationStatus: overlap.acceptance_status || "accepted" },
+              { label: "MGUS code-only exclusions", value: reason("mgus_code_only").count_display || "not available", tone: "amber", countKind: reason("mgus_code_only").count_kind || "distinct people", statusLabel: "candidate only", source: "DD472 / DD472B", validationStatus: "not primary evidence" },
+              { label: "IgM ambiguity", value: ambiguity("ambiguous_bcell_paraprotein_classified").count_display || "not available", tone: "amber", countKind: "distinct people", statusLabel: "ambiguous B-cell paraprotein", source: "IgM paraprotein route", validationStatus: "not primary PCD evidence" },
               { label: "Serious infection strata", value: `${infectionStrata} evaluated`, tone: "blue", countKind: "not patient count", statusLabel: "accepted provisional", source: "hospital diagnosis/contact routes", validationStatus: "repo-derived provisional" },
               { label: "Microbiology-confirmed strata", value: `${microStrata} evaluated`, tone: "blue", countKind: "not patient count", statusLabel: "accepted provisional", source: "SP blood culture + PERSIMUNE", validationStatus: "repo-derived provisional" }
             ], { tone: "green" })}
             ${renderConfluenceOverlapInfectionSignal(overlap, infectionCounts, microbiologyCounts)}
-            <div class="callout"><strong>Production status:</strong> Accepted aggregate CONFLUENCE rows are available for disease-state counts, first-date availability, overlap counts, overlap timing, infection outcomes, person-time denominators, rates, and microbiology-confirmed infection. Compatibility scaffold files remain below as reference views only.</div>
-            <div class="callout warn"><strong>Clinical status:</strong> These are feasibility aggregates and provisional endpoint definitions, not causal estimates or treatment recommendations. Coded MBL remains a coded candidate tier; pathology-supported MBL is shown separately where accepted.</div>
+            <div class="callout"><strong>Production status:</strong> Accepted aggregate CONFLUENCE rows are available for clone evidence, overlap counts, overlap timing, infection outcomes, person-time denominators, rates, and microbiology-confirmed infection. Compatibility scaffold files remain below as reference views only.</div>
+            <div class="callout warn"><strong>Clinical status:</strong> MGUS diagnosis-code overlap is a candidate signal, not accepted evidence of an independent plasma-cell clone. IgM paraprotein in CLL/MBL remains ambiguous unless independent plasma-cell clone evidence is present.</div>
           `;
         }
         const disease = confluenceRows("disease_state_counts");
@@ -8081,7 +8197,8 @@
             { label: "raw patient rows", value: "0", tone: "green", countKind: "not patient count", statusLabel: "aggregate-only" }
           ], { tone: "cyan" })}
           <div class="callout warn"><strong>MBL cohort status:</strong> DD479B / D47.9B is displayed as a coded candidate cohort and diagnosis-atlas records, not as validated biologic MBL and not as validated persons.</div>
-          <div class="callout"><strong>Overlap status:</strong> CONFLUENCE is scaffold-first. Overlap rows are query executable not run and not accepted aggregate until a future aggregate execution returns accepted outputs.</div>
+          <div class="callout warn"><strong>MGUS gate:</strong> MGUS diagnosis-code overlap is a candidate signal, not accepted evidence of an independent plasma-cell clone.</div>
+          <div class="callout"><strong>Overlap status:</strong> CONFLUENCE is scaffold-first. Accepted dual-clone rows require accepted B-cell clone plus accepted plasma-cell clone evidence and a usable route manifest.</div>
         `;
       }
       function renderConfluencePico() {
@@ -8090,7 +8207,7 @@
           ["Population", "Adults in DALY-CARE with candidate or validated evidence of CLL, MBL, MGUS, SMM, MM, or related plasma-cell disorders.", "candidate/source validation required"],
           ["Exposure", "Time-varying clonal disease state: CLL only, MBL only, MGUS/SMM/MM only, CLL + MGUS/SMM/MM, or MBL + MGUS/SMM/MM.", productionSuccess ? "accepted production aggregate available" : "not accepted aggregate"],
           ["Comparator", "Primary: overlap versus CLL/MBL without plasma-cell disorder. Secondary: overlap versus plasma-cell disorder without CLL/MBL.", productionSuccess ? "accepted overlap aggregate available" : "query executable not run"],
-          ["Outcomes", "First serious infection, infection-related hospitalization, recurrent serious infection, microbiology-confirmed infection, bloodstream infection, resistant organism signal, and infection-related mortality.", "source validation required"],
+          ["Outcomes", "First serious infection, infection-related hospitalization, recurrent serious infection, microbiology-confirmed infection, bloodstream infection, resistant organism signal, and infection-related mortality.", productionSuccess ? "accepted provisional endpoint aggregate; protocol validation required" : "source validation required"],
           ["Time horizon", "1, 2, and 5 years after disease-state entry; separate pre-treatment and post-treatment periods.", "protocol validation required"],
           ["Setting", "Danish nationwide register/EHR-linked DALY-CARE resource with registry, diagnosis, treatment, lab, microbiology, and hospital-contact layers.", "feasibility only"]
         ];
@@ -8338,6 +8455,16 @@
         const codeSets = confluenceRows("code_sets");
         const mblSourceCounts = confluenceProductionMblSourceRows(confluenceRows("mbl_source_counts"));
         const mgusSourceCounts = confluenceRows("mgus_source_counts");
+        const cloneRouteManifest = confluenceRows("clone_route_manifest");
+        const cloneSourceResolution = confluenceRows("clone_source_resolution");
+        const bcellCloneEvidenceCounts = confluenceRows("bcell_clone_evidence_counts");
+        const pcdCloneEvidenceCounts = confluenceRows("pcd_clone_evidence_counts");
+        const paraproteinAmbiguityCounts = confluenceRows("paraprotein_ambiguity_counts");
+        const mgusReclassificationWaterfall = confluenceRows("mgus_reclassification_waterfall");
+        const dualCloneOverlapCounts = confluenceRows("dual_clone_overlap_counts");
+        const dualCloneOverlapTiming = confluenceRows("dual_clone_overlap_timing");
+        const primaryOverlapExclusionReasons = confluenceRows("primary_overlap_exclusion_reasons");
+        const cloneAvailabilityProtocolRunway = confluenceRows("clone_availability_protocol_runway");
         const firstDates = confluenceProductionFirstDateRows(confluenceRows("candidate_first_date_summary"));
         const acceptedOverlapCounts = confluenceRows("overlap_counts_accepted");
         const acceptedOverlapTiming = confluenceRows("overlap_timing_accepted");
@@ -8368,6 +8495,16 @@
           .concat(codeSets.map(row => Object.assign({ table: "code_sets" }, row)))
           .concat(mblSourceCounts.map(row => Object.assign({ table: "mbl_source_counts" }, row)))
           .concat(mgusSourceCounts.map(row => Object.assign({ table: "mgus_source_counts" }, row)))
+          .concat(cloneRouteManifest.map(row => Object.assign({ table: "clone_route_manifest" }, row)))
+          .concat(cloneSourceResolution.map(row => Object.assign({ table: "clone_source_resolution" }, row)))
+          .concat(bcellCloneEvidenceCounts.map(row => Object.assign({ table: "bcell_clone_evidence_counts" }, row)))
+          .concat(pcdCloneEvidenceCounts.map(row => Object.assign({ table: "pcd_clone_evidence_counts" }, row)))
+          .concat(paraproteinAmbiguityCounts.map(row => Object.assign({ table: "paraprotein_ambiguity_counts" }, row)))
+          .concat(mgusReclassificationWaterfall.map(row => Object.assign({ table: "mgus_reclassification_waterfall" }, row)))
+          .concat(dualCloneOverlapCounts.map(row => Object.assign({ table: "dual_clone_overlap_counts" }, row)))
+          .concat(dualCloneOverlapTiming.map(row => Object.assign({ table: "dual_clone_overlap_timing" }, row)))
+          .concat(primaryOverlapExclusionReasons.map(row => Object.assign({ table: "primary_overlap_exclusion_reasons" }, row)))
+          .concat(cloneAvailabilityProtocolRunway.map(row => Object.assign({ table: "clone_availability_protocol_runway" }, row)))
           .concat(overlapCounts.map(row => Object.assign({ table: "overlap_counts" }, row)))
           .concat(overlapTiming.map(row => Object.assign({ table: "overlap_timing" }, row)))
           .concat(firstDates.map(row => Object.assign({ table: "candidate_first_date_summary" }, row)))
@@ -8389,16 +8526,22 @@
         return `
           <div class="dashboard-grid confluence-dashboard">
             ${renderSectionCard("DALY-CARE CONFLUENCE", `
-              <div class="callout"><strong>CLL/MBL-plasma-cell disorder infection feasibility panel.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with CLL/MBL, MGUS/SMM/MM, or converging clonal disease states.</div>
-              <p>This panel evaluates whether DALY-CARE can support a retrospective observational study of serious and microbiologically confirmed infections in people with CLL/MBL, plasma-cell disorders, or both. It is feasibility infrastructure only. It does not estimate causal effects and does not make treatment recommendations.</p>
+              <div class="callout"><strong>Accepted dual-clone cohort: accepted B-cell clone + accepted plasma-cell clone.</strong> A feasibility and target-trial-specification panel for studying serious, recurrent, and microbiologically confirmed infections among individuals with accepted or candidate B-cell and plasma-cell clone evidence.</div>
+              <p>This panel evaluates whether DALY-CARE can support a retrospective observational study of serious and microbiologically confirmed infections in accepted dual-clone, probable sensitivity, ambiguous paraprotein, candidate overlap, and single-axis groups. It is feasibility infrastructure only. It does not estimate causal effects and does not make treatment recommendations.</p>
+              <div class="callout warn"><strong>Primary gate:</strong> MGUS diagnosis-code overlap is a candidate signal, not accepted evidence of an independent plasma-cell clone.</div>
               ${renderTrustBadgeRow(productionSuccess ? ["feasibility only", "not causal", "production aggregate available", "accepted aggregate rows", "repo-derived provisional endpoints"] : ["feasibility only", "not causal", "coded candidate cohort", "query executable not run", "not accepted aggregate"])}
             `, "cyan")}
             ${renderSectionCard("Clinical question", `
-              <p><strong>Can DALY-CARE quantify infection vulnerability in CLL/MBL-plasma-cell-disorder overlap states?</strong></p>
-              <p class="mini">Core design question: can we identify people with CLL or MBL, people with plasma-cell disorders, and people with overlapping B-cell and plasma-cell clonal states, then compare serious and microbiologically confirmed infection burden without diagnosis-order or surveillance-intensity bias?</p>
+              <p><strong>Can DALY-CARE quantify infection vulnerability in accepted B-cell plus accepted plasma-cell dual-clone states?</strong></p>
+              <p class="mini">Core design question: can we identify accepted dual-clone, probable sensitivity, ambiguous B-cell paraprotein, candidate diagnosis overlap, and single-axis groups, then compare serious and microbiologically confirmed infection burden without diagnosis-order or surveillance-intensity bias?</p>
             `, "blue")}
+            ${renderSectionCard("What the atlas has already assembled", renderConfluenceStoryHero(), "green")}
+            ${renderSectionCard("Question-to-evidence spine", renderConfluenceEvidenceSpine(), "blue")}
+            ${renderSectionCard("Overlap infection signal, read as feasibility only", renderConfluenceOverlapSignalSummary(), "cyan")}
+            ${renderSectionCard("Data ingredients", renderConfluenceIngredientMap(), "plum")}
+            ${renderSectionCard("Protocol hardening path", renderConfluenceProtocolRunway(), "amber")}
             ${renderSectionCard("Current evidence state", renderConfluenceEvidenceState(), "cyan")}
-            ${renderSectionCard("Current stage: scaffold vs accepted aggregate", `
+            ${renderSectionCard("What is accepted aggregate vs still provisional", `
               <p><strong>${productionSuccess ? "Production aggregates available for accepted rows." : "Scaffold/readiness mode unless production execution succeeds."}</strong> Code sets, source tiers, endpoint definitions, acceptance gates, failed-query audits, and production rows are rendered together. Only rows with passed acceptance gates are shown as accepted aggregates.</p>
               ${renderTrustBadgeRow(productionSuccess ? ["production aggregate", "repo-derived provisional endpoints", "small-cell suppression", "privacy-safe aggregate only"] : ["scaffold first", "source validation required", "not accepted aggregate", "small-cell suppression", "privacy-safe aggregate only"])}
             `, "amber")}
@@ -8408,6 +8551,36 @@
               { key: "status", label: "Status", render: row => renderBadge(row.status || "", confluenceStatusTone(row.status)) },
               { key: "notes", label: "Notes" }
             ], 12), productionSuccess ? "green" : "amber")}
+            ${renderSectionCard("Clone route manifest", renderConfluenceTable(cloneRouteManifest, [
+              { key: "route_id", label: "Route", render: row => `<strong>${escapeHtml(row.route_id || "")}</strong><div class="mini">${escapeHtml(row.axis || "")} / ${escapeHtml(row.state_id || "")}</div>` },
+              { key: "route_status", label: "Status", render: row => renderBadge(row.route_status || "", confluenceStatusTone(row.route_status)) },
+              { key: "table", label: "Table" },
+              { key: "missing_required_columns", label: "Missing columns" },
+              { key: "fail_closed_reason", label: "Fail-closed reason" }
+            ], 30), "cyan")}
+            ${renderSectionCard("Clone evidence counts", `
+              <h3>B-cell clone evidence</h3>${renderConfluenceAcceptedCounts(bcellCloneEvidenceCounts, "state_id")}
+              <h3>Plasma-cell clone evidence</h3>${renderConfluenceAcceptedCounts(pcdCloneEvidenceCounts, "state_id")}
+            `, "green")}
+            ${renderSectionCard("Ambiguity and exclusion cartography", `
+              <h3>Paraprotein ambiguity</h3>${renderConfluenceTable(paraproteinAmbiguityCounts, [
+                { key: "ambiguity_id", label: "Ambiguity" },
+                { key: "count_display", label: "Display" },
+                { key: "overlap_basis", label: "Basis" },
+                { key: "caveat", label: "Caveat" }
+              ], 12)}
+              <h3>Primary cohort exclusion reasons</h3>${renderConfluenceTable(primaryOverlapExclusionReasons, [
+                { key: "reason_label", label: "Reason", render: row => `<strong>${escapeHtml(row.reason_label || "")}</strong><div class="mini">${escapeHtml(row.exclusion_reason || "")}</div>` },
+                { key: "count_display", label: "Display" },
+                { key: "count_kind", label: "Kind" },
+                { key: "caveat", label: "Caveat" }
+              ], 16)}
+            `, "amber")}
+            ${renderSectionCard("MGUS reclassification and dual-clone timing", `
+              <h3>MGUS reclassification waterfall</h3>${renderConfluenceWaterfall(mgusReclassificationWaterfall)}
+              <h3>Dual-clone overlap hierarchy</h3>${renderConfluenceAcceptedCounts(dualCloneOverlapCounts, "overlap_label")}
+              <h3>Dual-clone timing by route</h3>${renderConfluenceAcceptedCounts(dualCloneOverlapTiming, "timing_label")}
+            `, "blue")}
             ${renderSectionCard("Code sets and exact-match warnings", renderConfluenceCodeSets(), "plum")}
             ${renderSectionCard("MBL source tiers", renderConfluenceSourceTiers(mblSourceCounts), "cyan")}
             ${renderSectionCard("MGUS source tiers", renderConfluenceSourceTiers(mgusSourceCounts), "green")}

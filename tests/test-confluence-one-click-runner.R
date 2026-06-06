@@ -51,6 +51,21 @@ plan_result <- run_confluence_sourceable(list(
 expect_true(is.list(plan_result) && all(c("outputs", "paths") %in% names(plan_result)), "CONFLUENCE one-click result should expose outputs and paths.")
 for (name in c(
   "summary",
+  "story_cards",
+  "evidence_spine",
+  "overlap_signal_summary",
+  "ingredient_map",
+  "protocol_runway",
+  "clone_route_manifest",
+  "clone_source_resolution",
+  "bcell_clone_evidence_counts",
+  "pcd_clone_evidence_counts",
+  "paraprotein_ambiguity_counts",
+  "mgus_reclassification_waterfall",
+  "dual_clone_overlap_counts",
+  "dual_clone_overlap_timing",
+  "primary_overlap_exclusion_reasons",
+  "clone_availability_protocol_runway",
   "disease_state_counts",
   "overlap_counts_accepted",
   "infection_endpoint_code_sets",
@@ -98,6 +113,12 @@ fake_adapter <- list(
         )),
         stringsAsFactors = FALSE
       ),
+      clone_evidence = data.frame(
+        person_key = c(sprintf("p%02d", 1:8), sprintf("p%02d", 1:8)),
+        route_id = c(rep("bcell_diag_cll_icd_c911", 8), rep("pcd_damyda_clonal_pc_percent", 8)),
+        evidence_date = as.Date(c(rep("2020-01-01", 8), rep("2020-06-01", 8))),
+        stringsAsFactors = FALSE
+      ),
       infection_events = data.frame(
         person_key = c("p01", "p02", "p03", "p04", "p05", "p06", "p07", "p08", "p09", "p10"),
         event_date = as.Date(c("2020-07-01", "2020-07-02", "2020-07-03", "2020-07-04", "2020-07-05", "2020-07-06", "2020-07-07", "2020-07-08", "2021-02-01", "2021-02-02")),
@@ -121,7 +142,7 @@ prod_result <- run_confluence_sourceable(list(
 ))
 
 expect_true(any(prod_result$outputs$production_execution_summary$metric == "production_query_success" & prod_result$outputs$production_execution_summary$value == "TRUE"), "Fake production adapter should populate CONFLUENCE production execution summary.")
-expect_true(any(prod_result$outputs$overlap_counts_accepted$acceptance_status == "accepted"), "Fake production adapter should produce accepted overlap rows.")
+expect_true(any(prod_result$outputs$overlap_counts_accepted$overlap_id == "accepted_dual_clone_overlap" & prod_result$outputs$overlap_counts_accepted$count_display == "8" & prod_result$outputs$overlap_counts_accepted$acceptance_status == "accepted"), "Fake production adapter should produce a nonzero accepted dual-clone overlap row.")
 expect_true(any(prod_result$outputs$infection_person_time$acceptance_status == "accepted"), "Fake production adapter should produce accepted person-time rows.")
 expect_true(any(prod_result$outputs$infection_counts$endpoint_definition_status == "repo-derived provisional"), "Fake production adapter should produce provisional infection endpoint aggregates.")
 

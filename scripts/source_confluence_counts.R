@@ -46,6 +46,7 @@ confluence_count_sourceable_source_required(project_root, file.path("R", "source
 confluence_count_sourceable_source_required(project_root, file.path("R", "profiler.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "db_profile.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_counts.R"))
+confluence_count_sourceable_source_required(project_root, file.path("R", "confluence_clone_evidence.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "confluence_feasibility.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "confluence_counts.R"))
 

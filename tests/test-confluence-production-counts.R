@@ -48,6 +48,12 @@ fake_adapter <- list(
         )),
         stringsAsFactors = FALSE
       ),
+      clone_evidence = data.frame(
+        person_key = c(sprintf("p%02d", 1:12), sprintf("p%02d", 1:12)),
+        route_id = c(rep("bcell_diag_cll_icd_c911", 12), rep("pcd_damyda_clonal_pc_percent", 12)),
+        evidence_date = as.Date(c(rep("2020-01-01", 12), rep("2020-06-01", 12))),
+        stringsAsFactors = FALSE
+      ),
       infection_events = data.frame(
         person_key = c("p01", "p01", "p02", "p03", "p04", "p05", "p05", "p06", "p07", "p08", "p09", "p10", "p11", "p12", "p13", "p14"),
         event_date = as.Date(c(
@@ -96,12 +102,13 @@ expect_true(any(prod$disease_state_person_counts$state_id == "coded_mbl" & prod$
 expect_false(any(prod$disease_state_person_counts$state_id == "cll_morphology_pressure" & grepl("MBL", prod$disease_state_person_counts$state_label) & prod$disease_state_person_counts$acceptance_status == "accepted"), "M98233 pressure must never become an accepted MBL cohort.")
 
 overlap <- prod$overlap_counts_accepted
-expect_true(any(overlap$overlap_id == "coded_mbl_mgus" & overlap$count_display == "6" & overlap$acceptance_status == "accepted"), "Coded MBL + MGUS overlap should be accepted when gate proofs exist.")
-expect_true(all(grepl("later first qualifying", overlap$date_anchor_used, ignore.case = TRUE)), "Overlap date anchor should be the later disease-state first date.")
+expect_true(any(overlap$overlap_id == "accepted_dual_clone_overlap" & overlap$count_display == "12" & overlap$acceptance_status == "accepted"), "Accepted dual-clone overlap should require accepted B-cell plus accepted direct plasma-cell clone evidence.")
+expect_false(any(overlap$overlap_id == "candidate_diagnosis_overlap" & overlap$acceptance_status == "accepted"), "Code-only candidate diagnosis overlap must not become accepted primary overlap.")
+expect_true(all(grepl("later accepted", overlap$date_anchor_used[overlap$overlap_id == "accepted_dual_clone_overlap"], ignore.case = TRUE)), "Overlap date anchor should be the later accepted clone first date.")
 expect_false(any(overlap$acceptance_status == "accepted" & overlap$acceptance_gate_status != "passed"), "Accepted overlap rows must pass the acceptance gate.")
 
 timing <- prod$overlap_timing_accepted
-expect_true(any(timing$timing_id == "cll_mbl_first" & timing$count_display == "12"), "Timing should classify CLL/MBL first when the B-cell state precedes PCD.")
+expect_true(any(timing$timing_id == "bcell_first" & timing$count_display == "12"), "Timing should classify B-cell first when accepted B-cell clone evidence precedes accepted PCD clone evidence.")
 
 expect_true(any(prod$infection_endpoint_code_sets$definition_status == "repo-derived provisional"), "Infection endpoint code sets should be labelled provisional.")
 expect_true(any(prod$infection_counts$endpoint_definition_status == "repo-derived provisional" & prod$infection_counts$acceptance_status == "accepted"), "Provisional infection counts should be accepted only as provisional endpoint aggregates.")
@@ -327,11 +334,44 @@ expect_true(any(grepl("confluence_first_date_availability.csv", merged$candidate
 expect_true(any(merged$mbl_source_counts$source_tier_id == "patobank_mbl_any" & merged$mbl_source_counts$acceptance_status == "accepted"), "MBL source tiers should surface accepted pathology-supported MBL production counts.")
 expect_true(any(merged$mbl_source_counts$source_tier_id == "patobank_cll_morphology_pressure" & merged$mbl_source_counts$acceptance_status == "accepted"), "MBL source tiers should surface accepted CLL morphology-pressure production counts.")
 expect_true(any(merged$recommended_next_actions$action_id == "run_overlap_counts" & merged$recommended_next_actions$status == "completed in production aggregate"), "Completed overlap production work should no longer appear as not-run next action.")
+expect_true(all(c("story_cards", "evidence_spine", "overlap_signal_summary", "ingredient_map", "protocol_runway") %in% names(merged)), "Merged CONFLUENCE payload should include the clinical story layer.")
+expect_true(any(merged$story_cards$card_id == "overlap_identifiable" & merged$story_cards$metric_display != "not available" & merged$story_cards$evidence_status == "accepted aggregate row"), "Story cards should be regenerated from merged accepted production rows.")
+expect_true(any(merged$story_cards$headline == "Clone-evidence denominators are separated from diagnosis anchors"), "Story cards should use clinician-facing clone denominator copy.")
+expect_true(all(c("completed_aggregate_checks", "next_protocol_moves") %in% merged$story_cards$card_id), "Story cards should split completed aggregate checks from next protocol moves.")
+expect_true(any(merged$story_cards$card_id == "infection_two_routes" & merged$story_cards$evidence_status == "accepted provisional endpoint aggregate"), "Provisional endpoint story card should not use a generic accepted-aggregate badge.")
+expect_true(all(merged$evidence_spine$status[merged$evidence_spine$spine_id %in% c("serious_infection_endpoint", "recurrent_infection_endpoint")] == "accepted provisional endpoint aggregate"), "Accepted endpoint spine rows should distinguish provisional endpoint aggregates.")
+expect_true(any(merged$evidence_spine$spine_id == "microbiology_confirmed_endpoint" & merged$evidence_spine$status %in% c("accepted provisional endpoint aggregate", "source validation required")), "Microbiology endpoint spine status should reflect whether the route was accepted in this fixture.")
+overlap_signal <- merged$overlap_signal_summary[merged$overlap_signal_summary$group_id == "accepted_dual_clone_overlap", , drop = FALSE]
+expect_true(all(c("1", "2", "5") %in% as.character(overlap_signal$horizon_years)), "Overlap signal summary should include accepted dual-clone rows for 1, 2, and 5 years.")
+expect_true(all(overlap_signal$evidence_status == "accepted provisional endpoint aggregate"), "Overlap endpoint signal rows should use the accepted provisional endpoint aggregate status.")
+expect_true(any(overlap_signal$endpoint_family != "Serious infection hospitalization" & overlap_signal$rate_per_100_person_years == "rate row not emitted for this endpoint family"), "Endpoint families without emitted rate rows should carry an explicit display reason.")
+contrast_text <- paste(overlap_signal$descriptive_contrast_vs_cll_only, overlap_signal$descriptive_contrast_vs_pcd_only, collapse = " ")
+expect_false(grepl("hazard ratio|p-value|confidence interval", contrast_text, ignore.case = TRUE), "Overlap signal contrasts must not become inferential statistics.")
+expect_equal(confluence_safe_rate_contrast(2, 1), "2.00x (display-only aggregate rate contrast; not adjusted; not causal)", "Descriptive contrasts should be labelled display-only, not adjusted, and not causal when computable.")
+story_text <- paste(unlist(merged[c("story_cards", "evidence_spine", "overlap_signal_summary", "ingredient_map", "protocol_runway")], recursive = TRUE, use.names = FALSE), collapse = " ")
+for (forbidden in c("p-value", "confidence interval", "hazard ratio", "adjusted risk", "causal effect", "survival curve", "model output", "raw microbiology text", "pathology narrative", "CPR", "patientid")) {
+  expect_false(grepl(forbidden, story_text, ignore.case = TRUE), paste("CONFLUENCE story layer must not create forbidden analytic/raw wording:", forbidden))
+}
 
 tmp <- tempfile("confluence-production-")
 dir.create(tmp, recursive = TRUE, showWarnings = FALSE)
 paths <- confluence_write_outputs(merged, tmp)
 for (name in c(
+  "story_cards",
+  "evidence_spine",
+  "overlap_signal_summary",
+  "ingredient_map",
+  "protocol_runway",
+  "clone_route_manifest",
+  "clone_source_resolution",
+  "bcell_clone_evidence_counts",
+  "pcd_clone_evidence_counts",
+  "paraprotein_ambiguity_counts",
+  "mgus_reclassification_waterfall",
+  "dual_clone_overlap_counts",
+  "dual_clone_overlap_timing",
+  "primary_overlap_exclusion_reasons",
+  "clone_availability_protocol_runway",
   "disease_state_person_counts",
   "first_date_availability",
   "infection_endpoint_code_sets",
