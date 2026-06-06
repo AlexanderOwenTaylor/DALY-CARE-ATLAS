@@ -620,6 +620,7 @@ confluence_story_cards <- function(outputs) {
   first_dates <- confluence_story_table(outputs, "first_date_availability")
   overlap <- confluence_story_table(outputs, "overlap_counts_accepted")
   timing <- confluence_story_table(outputs, "overlap_timing_accepted")
+  route_manifest <- confluence_story_table(outputs, "clone_route_manifest")
   bcell_clone <- confluence_story_table(outputs, "bcell_clone_evidence_counts")
   pcd_clone <- confluence_story_table(outputs, "pcd_clone_evidence_counts")
   ambiguity <- confluence_story_table(outputs, "paraprotein_ambiguity_counts")
@@ -635,6 +636,10 @@ confluence_story_cards <- function(outputs) {
   timing_count <- function(id) confluence_story_count(timing, "timing_id", id)
   clone_state_count <- function(df, id) confluence_story_count(df, "state_id", id)
   exclusion_count <- function(id) confluence_story_count(exclusions, "exclusion_reason", id)
+  display_available <- function(x) {
+    x <- as.character(x %||% "")
+    nzchar(x) && !tolower(x) %in% c("0", "not available", "na", "n/a")
+  }
 
   denominator_lines <- c(
     confluence_story_line("accepted B-cell clone", clone_state_count(bcell_clone, "bcell_cll_diagnosis_accepted")),
@@ -666,6 +671,69 @@ confluence_story_cards <- function(outputs) {
   } else {
     character()
   }
+  accepted_overlap_display <- overlap_count("accepted_dual_clone_overlap")
+  accepted_overlap_available <- confluence_story_has_accepted(overlap) && display_available(accepted_overlap_display)
+  manifest_has_rows <- is.data.frame(route_manifest) && nrow(route_manifest)
+  direct_bcell_rows <- route_manifest
+  if (manifest_has_rows && "axis" %in% names(route_manifest)) {
+    direct_bcell_rows <- route_manifest[tolower(as.character(route_manifest$axis)) == "bcell", , drop = FALSE]
+  }
+  direct_pcd_rows <- route_manifest
+  if (manifest_has_rows && "state_id" %in% names(route_manifest)) {
+    direct_pcd_rows <- route_manifest[as.character(route_manifest$state_id) %in% c(
+      "pcd_direct_clone_supported",
+      "pcd_flow_pathological_plasma_cells",
+      "pcd_validated_plasma_cell_pathology",
+      "pcd_plasmacytoma_support",
+      "pcd_marrow_plasma_cell_infiltration"
+    ), , drop = FALSE]
+  } else {
+    direct_pcd_rows <- route_manifest[FALSE, , drop = FALSE]
+  }
+  primary_usable <- function(df) {
+    primary_flags <- if (is.data.frame(df) && "usable_for_primary_overlap" %in% names(df)) {
+      df$usable_for_primary_overlap %in% TRUE |
+        tolower(as.character(df$usable_for_primary_overlap)) %in% c("true", "t", "1", "yes", "y")
+    } else {
+      logical()
+    }
+    is.data.frame(df) && nrow(df) &&
+      all(c("route_status", "usable_for_primary_overlap") %in% names(df)) &&
+      any(tolower(as.character(df$route_status)) == "usable" & primary_flags, na.rm = TRUE)
+  }
+  accepted_route_executable <- primary_usable(direct_bcell_rows) && primary_usable(direct_pcd_rows)
+  accepted_route_failed_closed <- manifest_has_rows && !accepted_route_executable
+  candidate_or_ambiguous_available <- any(vapply(c(
+    overlap_count("probable_dual_clone_sensitivity"),
+    overlap_count("candidate_diagnosis_overlap"),
+    overlap_count("ambiguous_bcell_paraprotein")
+  ), display_available, logical(1)))
+  overlap_headline <- if (accepted_overlap_available) {
+    "Accepted dual-clone cohort route is available"
+  } else if (candidate_or_ambiguous_available) {
+    "Candidate/ambiguous overlap mapped; primary cohort not yet accepted"
+  } else if (accepted_route_failed_closed) {
+    "Accepted dual-clone cohort not yet executable"
+  } else {
+    "Accepted dual-clone cohort is awaiting route validation"
+  }
+  overlap_status <- if (accepted_overlap_available) {
+    "accepted aggregate row"
+  } else if (candidate_or_ambiguous_available) {
+    "candidate/ambiguous mapping only"
+  } else if (accepted_route_failed_closed) {
+    "accepted route failed closed"
+  } else {
+    "source validation required"
+  }
+  overlap_interpretation <- if (accepted_overlap_available) {
+    "Primary CONFLUENCE is accepted B-cell clone plus direct or validated plasma-cell clone evidence, with weak routes blocked from the headline cohort."
+  } else if (candidate_or_ambiguous_available) {
+    "Candidate and ambiguous overlap is mapped for cartography, but primary CONFLUENCE remains blocked until accepted B-cell plus direct or validated plasma-cell clone evidence is executable."
+  } else {
+    "Primary CONFLUENCE remains failed closed until accepted B-cell plus direct or validated plasma-cell clone routes resolve as usable."
+  }
+  overlap_tone <- if (accepted_overlap_available) "green" else if (candidate_or_ambiguous_available) "amber" else "red"
 
   rows <- data.frame(
     card_id = c(
@@ -682,7 +750,7 @@ confluence_story_cards <- function(outputs) {
     ),
     sort_order = seq_len(10L),
     headline = c(
-      "Accepted dual-clone cohort is identifiable",
+      overlap_headline,
       "Clone-evidence denominators are separated from diagnosis anchors",
       "MGUS code overlap is candidate only",
       "IgM paraprotein ambiguity is isolated",
@@ -694,7 +762,7 @@ confluence_story_cards <- function(outputs) {
       "Next protocol moves"
     ),
     metric_display = c(
-      overlap_count("accepted_dual_clone_overlap"),
+      accepted_overlap_display,
       confluence_story_collapse(denominator_lines),
       exclusion_count("mgus_code_only"),
       confluence_story_count(ambiguity, "ambiguity_id", "ambiguous_bcell_paraprotein_classified"),
@@ -730,7 +798,7 @@ confluence_story_cards <- function(outputs) {
       if (length(next_actions)) confluence_story_collapse(next_actions) else "source validation, endpoint ownership, microbiology roles, treatment timing"
     ),
     interpretation = c(
-      "Primary CONFLUENCE is accepted B-cell clone plus accepted plasma-cell clone, with weak routes blocked from the headline cohort.",
+      overlap_interpretation,
       "Route-level evidence counts and first-date availability are separated from scaffold/reference diagnosis anchors.",
       "MGUS diagnosis-code overlap is a candidate signal, not accepted evidence of an independent plasma-cell clone.",
       "IgM paraprotein can be a B-cell clone signal in CLL/MBL; the hierarchy prevents that from masquerading as independent PCD.",
@@ -754,7 +822,7 @@ confluence_story_cards <- function(outputs) {
       "confluence_recommended_next_actions.csv"
     ),
     evidence_status = c(
-      if (confluence_story_has_accepted(overlap)) "accepted aggregate row" else "not accepted aggregate",
+      overlap_status,
       if (nrow(bcell_clone) || nrow(pcd_clone)) "route-level aggregate evidence" else "source validation required",
       "candidate-only gate",
       "ambiguity gate",
@@ -777,7 +845,7 @@ confluence_story_cards <- function(outputs) {
       "Completed checks remain aggregate feasibility outputs; not causal.",
       "Do not call anything final until validation passes."
     ),
-    tone = c("green", "green", "amber", "amber", "blue", "blue", "cyan", "amber", "green", "amber"),
+    tone = c(overlap_tone, "green", "amber", "amber", "blue", "blue", "cyan", "amber", "green", "amber"),
     stringsAsFactors = FALSE
   )
   confluence_story_conform(rows, confluence_empty_story_cards())

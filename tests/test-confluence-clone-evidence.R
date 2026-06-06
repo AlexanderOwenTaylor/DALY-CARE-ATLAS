@@ -52,7 +52,9 @@ clone_fixture_adapter <- list(
           "p03", "p03",
           "p04", "p04",
           "p05",
-          "p06", "p06", "p06"
+          "p06", "p06", "p06",
+          "p07", "p07", "p07",
+          "p08", "p08"
         ),
         route_id = c(
           "bcell_rkkp_cll_registry_diagnosis_date", "pcd_damyda_clonal_pc_percent",
@@ -60,7 +62,9 @@ clone_fixture_adapter <- list(
           "bcell_diag_cll_icd_c911", "pcd_lab_sds_mspike_igm_ambiguous",
           "bcell_diag_mbl_icd_d479b", "pcd_diag_mgus_candidate",
           "pcd_damyda_clonal_pc_percent",
-          "bcell_diag_cll_icd_c911", "pcd_diag_mgus_candidate", "pcd_damyda_clonal_pc_percent"
+          "bcell_diag_cll_icd_c911", "pcd_diag_mgus_candidate", "pcd_damyda_clonal_pc_percent",
+          "bcell_diag_cll_icd_c911", "pcd_damyda_registry_supported", "pcd_damyda_typed_mcomponent_flc",
+          "bcell_diag_cll_icd_c911", "pcd_pato_plasma_m97323"
         ),
         evidence_date = as.Date(c(
           "2020-01-01", "2020-06-01",
@@ -68,7 +72,9 @@ clone_fixture_adapter <- list(
           "2020-01-01", "2020-04-01",
           "2020-01-01", "2020-03-01",
           "2020-02-01",
-          "2020-01-01", "2019-01-01", "2021-01-01"
+          "2020-01-01", "2019-01-01", "2021-01-01",
+          "2020-01-01", "2020-02-01", "2020-03-01",
+          "2020-01-01", "2020-04-01"
         )),
         stringsAsFactors = FALSE
       ),
@@ -85,9 +91,9 @@ clone_fixture_adapter <- list(
 prod <- confluence_count_build_outputs(root, clone_fixture_adapter, mode = "production_aggregate", min_cell_count = 1L)
 expect_true(any(prod$clone_route_manifest$route_id == "pcd_diag_mgus_candidate" & prod$clone_route_manifest$route_status == "usable"), "Hook evidence should create a route-level manifest for observed routes.")
 expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "accepted_dual_clone_overlap" & prod$dual_clone_overlap_counts$count_display == "2" & prod$dual_clone_overlap_counts$acceptance_status == "accepted"), "Only direct/accepted plasma-cell evidence should enter accepted dual clone.")
-expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "probable_dual_clone_sensitivity" & prod$dual_clone_overlap_counts$count_display == "1"), "Non-IgM M-component/FLC support should enter probable sensitivity.")
+expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "probable_dual_clone_sensitivity" & prod$dual_clone_overlap_counts$count_display == "2"), "Non-IgM M-component/FLC support and registry-plus-typed support should enter probable sensitivity.")
 expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "ambiguous_bcell_paraprotein" & prod$dual_clone_overlap_counts$count_display == "1"), "CLL plus IgM-only paraprotein should remain ambiguous.")
-expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "candidate_diagnosis_overlap" & prod$dual_clone_overlap_counts$count_display == "1"), "MBL code plus MGUS code should remain candidate overlap.")
+expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "candidate_diagnosis_overlap" & prod$dual_clone_overlap_counts$count_display == "2"), "MBL code plus MGUS code and unvalidated plasma-cell pathology should remain candidate overlap.")
 expect_true(any(prod$dual_clone_overlap_counts$overlap_id == "pcd_only" & prod$dual_clone_overlap_counts$count_display == "1"), "PCD-only evidence should not become dual clone.")
 expect_false(any(prod$dual_clone_overlap_counts$overlap_id == "accepted_dual_clone_overlap" & grepl("candidate|ambiguous|unvalidated|unavailable", prod$dual_clone_overlap_counts$evidence_tier, ignore.case = TRUE)), "Accepted dual clone must not be labelled candidate, ambiguous, unavailable, or unvalidated.")
 expect_true(any(prod$dual_clone_overlap_timing$classification_id == "accepted_dual_clone_overlap" & prod$dual_clone_overlap_timing$bcell_entry_route_id == "bcell_diag_cll_icd_c911" & prod$dual_clone_overlap_timing$pcd_entry_route_id == "pcd_damyda_clonal_pc_percent"), "Timing should expose route IDs for accepted entry routes.")
@@ -97,6 +103,31 @@ expect_true(any(prod$mgus_reclassification_waterfall$step_label == "Remaining MG
 expect_true(any(prod$paraprotein_ambiguity_counts$ambiguity_id == "ambiguous_bcell_paraprotein_classified"), "Ambiguity output should include deterministic post-hierarchy count.")
 expect_true(any(prod$infection_person_time$group_id == "accepted_dual_clone_overlap"), "Person-time should use new accepted dual-clone group IDs.")
 expect_true(any(prod$infection_counts$group_id == "accepted_dual_clone_overlap"), "Infection counts should use new accepted dual-clone group IDs.")
+
+flow_routes <- routes[routes$route_id %in% c("bcell_diag_cll_icd_c911", "pcd_flow_pathological_pc_pct"), , drop = FALSE]
+flow_evidence <- data.frame(
+  person_key = c("p09", "p09"),
+  route_id = c("bcell_diag_cll_icd_c911", "pcd_flow_pathological_pc_pct"),
+  evidence_date = as.Date(c("2020-01-01", "2020-02-01")),
+  stringsAsFactors = FALSE
+)
+flow_unvalidated <- confluence_clone_outputs_from_evidence(
+  flow_evidence,
+  flow_routes,
+  confluence_clone_hook_manifest(flow_routes, flow_evidence),
+  min_cell_count = 1L
+)
+expect_false(any(flow_unvalidated$dual_clone_overlap_counts$overlap_id == "accepted_dual_clone_overlap" & flow_unvalidated$dual_clone_overlap_counts$count_display == "1"), "Flow PCD cannot enter accepted overlap before route validation permits primary use.")
+flow_validated_routes <- flow_routes
+flow_validated_routes$local_validation_status[flow_validated_routes$route_id == "pcd_flow_pathological_pc_pct"] <- "validated_primary"
+flow_validated_routes$usable_for_primary_overlap[flow_validated_routes$route_id == "pcd_flow_pathological_pc_pct"] <- TRUE
+flow_validated <- confluence_clone_outputs_from_evidence(
+  flow_evidence,
+  flow_validated_routes,
+  confluence_clone_hook_manifest(flow_validated_routes, flow_evidence),
+  min_cell_count = 1L
+)
+expect_true(any(flow_validated$dual_clone_overlap_counts$overlap_id == "accepted_dual_clone_overlap" & flow_validated$dual_clone_overlap_counts$count_display == "1"), "Flow PCD can enter accepted overlap after validated_primary route validation.")
 
 small_prod <- confluence_count_build_outputs(root, clone_fixture_adapter, mode = "production_aggregate", min_cell_count = 5L)
 accepted_small <- small_prod$dual_clone_overlap_counts[small_prod$dual_clone_overlap_counts$overlap_id == "accepted_dual_clone_overlap", , drop = FALSE]

@@ -272,7 +272,66 @@ confluence_clone_allowed_validation <- function() {
   c("validated_primary", "validated_supporting", "candidate_review", "excluded", "not_applicable")
 }
 
-confluence_clone_lint_sources <- function(routes, fail = FALSE) {
+confluence_clone_allowed_query_modes <- function() {
+  c(
+    "manifest_only", "table_first_date", "diagnosis_exact", "pathology_exact",
+    "numeric_positive_any", "categorical_yes_any", "flow_bcell_support",
+    "flow_pcd_support", "damyda_nonigm_mcomponent_support",
+    "damyda_igm_mcomponent_ambiguity", "lab_npu_vector"
+  )
+}
+
+confluence_clone_cartography_columns <- function(project_root = ".") {
+  path <- file.path(project_root, "config", "cartography-reference", "files", "cartography_columns.tsv")
+  if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
+  tryCatch(read_delimited_file(path), error = function(e) data.frame(stringsAsFactors = FALSE))
+}
+
+confluence_clone_source_map <- function(project_root = ".") {
+  path <- file.path(project_root, "config", "source-map.dalycare64.production.tsv")
+  if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
+  tryCatch(read_delimited_file(path), error = function(e) data.frame(stringsAsFactors = FALSE))
+}
+
+confluence_clone_npu_dictionary <- function(project_root = ".") {
+  path <- file.path(project_root, "config", "npu-consensus-dictionary.tsv")
+  if (!file.exists(path)) return(data.frame(stringsAsFactors = FALSE))
+  tryCatch(read_delimited_file(path), error = function(e) data.frame(stringsAsFactors = FALSE))
+}
+
+confluence_clone_route_source_aliases <- function(route, source_map = data.frame(stringsAsFactors = FALSE)) {
+  aliases <- unique(confluence_clone_split(paste(c(route$source_id[[1]], route$table[[1]]), collapse = ";")))
+  if (is.data.frame(source_map) && nrow(source_map)) {
+    key_cols <- intersect(c("table_name", "source", "table", "expected_resource_id", "display_name", "current_source_key", "known_aliases"), names(source_map))
+    for (i in seq_len(nrow(source_map))) {
+      row_values <- unique(unlist(source_map[i, key_cols, drop = FALSE], use.names = FALSE))
+      row_aliases <- unique(confluence_clone_split(paste(row_values, collapse = ";")))
+      if (length(intersect(tolower(aliases), tolower(row_aliases)))) {
+        aliases <- unique(c(aliases, row_aliases))
+      }
+    }
+  }
+  aliases[nzchar(aliases)]
+}
+
+confluence_clone_cartography_column_set <- function(route, cartography, source_map = data.frame(stringsAsFactors = FALSE)) {
+  if (!is.data.frame(cartography) || !nrow(cartography)) return(character())
+  aliases <- tolower(confluence_clone_route_source_aliases(route, source_map))
+  source_cols <- intersect(c("source_name", "object_name", "table_name"), names(cartography))
+  if (!length(source_cols) || !"column_name" %in% names(cartography)) return(character())
+  hit <- Reduce(`|`, lapply(source_cols, function(nm) tolower(as.character(cartography[[nm]])) %in% aliases))
+  unique(as.character(cartography$column_name[hit]))
+}
+
+confluence_clone_route_columns_for_lint <- function(route) {
+  unique(confluence_clone_split(paste(
+    c(route$person_key_column[[1]], route$date_columns[[1]], route$code_column[[1]],
+    route$required_columns[[1]], route$optional_columns[[1]]),
+    collapse = ";"
+  )))
+}
+
+confluence_clone_lint_sources <- function(routes, fail = FALSE, project_root = NULL, check_cartography = FALSE) {
   rows <- list()
   add <- function(route_id, field, message, lint_id = field) {
     rows[[length(rows) + 1L]] <<- data.frame(
@@ -288,6 +347,14 @@ confluence_clone_lint_sources <- function(routes, fail = FALSE) {
   if (!is.data.frame(routes) || !nrow(routes)) {
     add("", "config", "config/confluence_clone_evidence_sources.tsv is missing or empty.")
   } else {
+    cartography <- if (isTRUE(check_cartography) && !is.null(project_root)) confluence_clone_cartography_columns(project_root) else data.frame(stringsAsFactors = FALSE)
+    source_map <- if (isTRUE(check_cartography) && !is.null(project_root)) confluence_clone_source_map(project_root) else data.frame(stringsAsFactors = FALSE)
+    npu_dictionary <- if (isTRUE(check_cartography) && !is.null(project_root)) confluence_clone_npu_dictionary(project_root) else data.frame(stringsAsFactors = FALSE)
+    placeholder_columns <- c(
+      "SAMPLE_DATE", "RESULT_DATE", "NPU_CODE", "PATHOLOGICAL_PC_PCT",
+      "KAPPA", "LAMBDA", "ABNORMAL_BCELL", "Reg_Mkomptype", "Reg_FLCratio",
+      "Reg_1_linieBeh", "Reg_1_linieBeh_anden"
+    )
     required <- names(confluence_clone_empty_sources())
     missing <- setdiff(required, names(routes))
     for (nm in missing) add("", nm, paste("Config is missing required column:", nm), "missing_column")
@@ -300,8 +367,13 @@ confluence_clone_lint_sources <- function(routes, fail = FALSE) {
         if (!row$axis[[1]] %in% confluence_clone_allowed_axes()) add(route_id, "axis", "axis is not allowed.")
         if (!row$evidence_tier[[1]] %in% confluence_clone_allowed_tiers()) add(route_id, "evidence_tier", "evidence_tier is not allowed.")
         if (!row$local_validation_status[[1]] %in% confluence_clone_allowed_validation()) add(route_id, "local_validation_status", "local_validation_status is not allowed.")
+        if (!row$route_query_mode[[1]] %in% confluence_clone_allowed_query_modes()) add(route_id, "route_query_mode", "route_query_mode is not in the CONFLUENCE clone route allowlist.")
         for (nm in c("source_id", "table", "person_key_column", "date_columns", "required_columns", "fail_closed_behavior")) {
           if (!nzchar(row[[nm]][[1]] %||% "")) add(route_id, nm, paste(nm, "must not be empty."))
+        }
+        if (identical(row$route_query_mode[[1]], "manifest_only") &&
+            (isTRUE(row$usable_for_primary_overlap[[1]]) || isTRUE(row$usable_for_sensitivity_overlap[[1]]))) {
+          add(route_id, "route_query_mode", "manifest_only routes cannot contribute evidence to primary or sensitivity cohorts.", "manifest_only_contributes")
         }
         state <- tolower(paste(route_id, row$state_id[[1]], row$route_label[[1]], collapse = " "))
         if (isTRUE(row$usable_for_primary_overlap[[1]]) &&
@@ -312,6 +384,38 @@ confluence_clone_lint_sources <- function(routes, fail = FALSE) {
         used_text <- any(tolower(confluence_clone_split(paste(row$required_columns, row$optional_columns, collapse = ";"))) %in% tolower(raw_text_cols))
         if (used_text && (!isTRUE(row$aggregate_only[[1]]) || !isTRUE(row$text_suppression_required[[1]]))) {
           add(route_id, "text_suppression_required", "Routes touching raw/text-like fields must be aggregate-only and text-suppressed.")
+        }
+        if (isTRUE(check_cartography)) {
+          route_cols <- confluence_clone_route_columns_for_lint(row)
+          route_cols <- route_cols[!tolower(route_cols) %in% c("patientid", "pnr", "cpr", "person_key")]
+          observed <- confluence_clone_cartography_column_set(row, cartography, source_map)
+          missing_observed <- setdiff(route_cols, route_cols[tolower(route_cols) %in% tolower(observed)])
+          bad_placeholders <- intersect(route_cols, placeholder_columns)
+          bad_placeholders <- bad_placeholders[!tolower(bad_placeholders) %in% tolower(observed)]
+          for (col in bad_placeholders) {
+            add(route_id, "required_columns", paste("Placeholder clone-route column is not present in cartography:", col), "placeholder_column")
+          }
+          if (!identical(row$route_query_mode[[1]], "manifest_only")) {
+            for (col in missing_observed) {
+              add(route_id, "required_columns", paste("Clone-route column is not present in cartography for this source:", col), "cartography_column_missing")
+            }
+          } else if (length(missing_observed) && !nzchar(row$caveat[[1]] %||% "")) {
+            add(route_id, "caveat", "manifest_only routes with unresolved cartography columns require an explicit caveat.", "manifest_only_caveat")
+          }
+          if (identical(row$route_query_mode[[1]], "lab_npu_vector")) {
+            code_col <- row$code_column[[1]] %||% ""
+            vectors <- confluence_clone_split(row$code_values[[1]])
+            if (!nzchar(code_col)) add(route_id, "code_column", "lab_npu_vector routes require a source code column.")
+            if (!is.data.frame(npu_dictionary) || !"Code" %in% names(npu_dictionary) || !"Consensus vector" %in% names(npu_dictionary)) {
+              add(route_id, "code_values", "NPU dictionary must expose Code and Consensus vector columns.")
+            } else {
+              observed_vectors <- unique(as.character(npu_dictionary[["Consensus vector"]]))
+              missing_vectors <- setdiff(vectors, vectors[vectors %in% observed_vectors])
+              for (vector in missing_vectors) {
+                add(route_id, "code_values", paste("NPU consensus vector is not present in dictionary:", vector), "npu_vector_missing")
+              }
+            }
+          }
         }
       }
     }
@@ -482,7 +586,8 @@ confluence_clone_hook_manifest <- function(routes, evidence = data.frame(strings
   observed <- unique(as.character(evidence$route_id %||% character()))
   rows <- lapply(seq_len(nrow(routes)), function(i) {
     route <- routes[i, , drop = FALSE]
-    usable <- route$route_id[[1]] %in% observed
+    manifest_only <- identical(route$route_query_mode[[1]] %||% "", "manifest_only")
+    usable <- route$route_id[[1]] %in% observed && !isTRUE(manifest_only)
     data.frame(
       route_id = route$route_id,
       axis = route$axis,
@@ -502,7 +607,13 @@ confluence_clone_hook_manifest <- function(routes, evidence = data.frame(strings
       route_status = if (usable) "usable" else "unavailable",
       usable_for_primary_overlap = isTRUE(route$usable_for_primary_overlap[[1]]) && usable,
       usable_for_sensitivity_overlap = isTRUE(route$usable_for_sensitivity_overlap[[1]]) && usable,
-      fail_closed_reason = if (usable) "Secure aggregate hook supplied route-level evidence." else "No secure hook evidence was supplied for this route.",
+      fail_closed_reason = if (usable) {
+        "Secure aggregate hook supplied route-level evidence."
+      } else if (manifest_only && route$route_id[[1]] %in% observed) {
+        "Route is manifest-only and cannot contribute evidence."
+      } else {
+        "No secure hook evidence was supplied for this route."
+      },
       stringsAsFactors = FALSE
     )
   })
@@ -555,7 +666,8 @@ confluence_clone_normalize_evidence <- function(evidence, routes, manifest) {
       axis = character(), state_id = character(), route_family = character(), evidence_tier = character()
     ))
   }
-  usable_routes <- manifest$route_id[manifest$route_status == "usable"]
+  route_modes <- routes$route_query_mode[match(manifest$route_id, routes$route_id)]
+  usable_routes <- manifest$route_id[manifest$route_status == "usable" & !route_modes %in% "manifest_only"]
   rows <- evidence[nzchar(as.character(evidence$person_key)) & evidence$route_id %in% usable_routes, , drop = FALSE]
   if (!nrow(rows)) {
     return(empty_df(
@@ -627,10 +739,11 @@ confluence_clone_person_summary <- function(evidence) {
     tier <- as.character(ev$evidence_tier)
     state <- as.character(ev$state_id)
     axis <- as.character(ev$axis)
+    validation <- as.character(ev$local_validation_status %||% "")
     bcell_accepted_ix <- axis == "bcell" & primary & tier %in% c("accepted", "direct_clone_supported")
     bcell_sens_ix <- axis == "bcell" & (primary | sensitivity) & tier %in% c("accepted", "direct_clone_supported", "supporting", "probable", "registry_supported")
     bcell_candidate_ix <- axis == "bcell" & tier == "candidate"
-    pcd_strict_ix <- axis == "pcd" & primary & (tier %in% c("accepted", "direct_clone_supported") | state %in% c("pcd_flow_pathological_plasma_cells", "pcd_validated_plasma_cell_pathology", "pcd_plasmacytoma_support", "pcd_marrow_plasma_cell_infiltration"))
+    pcd_strict_ix <- axis == "pcd" & primary & validation == "validated_primary" & (tier %in% c("accepted", "direct_clone_supported") | state %in% c("pcd_flow_pathological_plasma_cells", "pcd_validated_plasma_cell_pathology", "pcd_plasmacytoma_support", "pcd_marrow_plasma_cell_infiltration", "pcd_direct_clone_supported"))
     pcd_registry_ix <- axis == "pcd" & state == "pcd_registry_supported" & sensitivity
     pcd_support_ix <- axis == "pcd" & sensitivity & tier %in% c("supporting", "probable", "direct_clone_supported", "accepted") & !pcd_registry_ix
     pcd_candidate_ix <- axis == "pcd" & tier %in% c("candidate", "unvalidated")
@@ -650,10 +763,9 @@ confluence_clone_person_summary <- function(evidence) {
     accepted_pcd_date <- pcd_strict$date
     accepted_pcd_route <- pcd_strict$route_id
     accepted_pcd_basis <- "strict direct clone support"
-    if (is.na(accepted_pcd_date) && registry_supported) {
-      accepted_pcd_date <- registry_supported_date
-      accepted_pcd_route <- paste(registry$route_id, support$route_id, sep = "+")
-      accepted_pcd_basis <- "registry-supported plus independent support"
+    if (is.na(pcd_probable$date) && registry_supported) {
+      pcd_probable$date <- registry_supported_date
+      pcd_probable$route_id <- paste(registry$route_id, support$route_id, sep = "+")
     }
     pcd_any <- !is.na(accepted_pcd_date) || !is.na(pcd_probable$date) || !is.na(pcd_candidate$date) || !is.na(igm_ambiguous$date) || !is.na(registry$date)
     bcell_any <- !is.na(bcell_sens$date)
@@ -1067,9 +1179,108 @@ confluence_clone_placeholder_outputs <- function(project_root = ".", min_cell_co
   out
 }
 
-confluence_clone_route_sql <- function(route) {
+confluence_clone_route_predicate_columns <- function(route) {
+  cols <- confluence_clone_split(paste(c(route$required_columns[[1]], route$optional_columns[[1]]), collapse = ";"))
+  excluded <- unique(c(route$person_key_column[[1]], confluence_clone_split(route$date_columns[[1]]), route$code_column[[1]]))
+  cols <- setdiff(cols, excluded[nzchar(excluded)])
+  cols[nzchar(cols)]
+}
+
+confluence_clone_sql_numeric_expr <- function(alias, col) {
+  raw <- paste0("replace(", alias, ".", confluence_count_sql_ident(col), "::text, ',', '.')")
+  cleaned <- paste0("regexp_replace(", raw, ", '[^0-9.+-]', '', 'g')")
+  paste0(
+    "(case when ", cleaned, " ~ '^[+-]?[0-9]+([.][0-9]+)?$' ",
+    "then ", cleaned, "::numeric else null end)"
+  )
+}
+
+confluence_clone_sql_numeric_positive <- function(alias, col) {
+  paste0(confluence_clone_sql_numeric_expr(alias, col), " > 0")
+}
+
+confluence_clone_sql_numeric_positive_any <- function(alias, cols) {
+  cols <- cols[nzchar(cols)]
+  if (!length(cols)) return("")
+  paste(vapply(cols, function(col) confluence_clone_sql_numeric_positive(alias, col), character(1)), collapse = " or ")
+}
+
+confluence_clone_sql_categorical_positive <- function(alias, col) {
+  paste0(confluence_count_norm_expr_sql(alias, col), " in ('Y', 'YES', 'JA', '1', 'TRUE', 'T')")
+}
+
+confluence_clone_sql_categorical_positive_any <- function(alias, cols) {
+  cols <- cols[nzchar(cols)]
+  if (!length(cols)) return("")
+  paste(vapply(cols, function(col) confluence_clone_sql_categorical_positive(alias, col), character(1)), collapse = " or ")
+}
+
+confluence_clone_sql_panel_in <- function(alias, values) {
+  paste0(confluence_count_norm_expr_sql(alias, "PANEL"), " in (", confluence_count_sql_quote_values(values), ")")
+}
+
+confluence_clone_sql_material_marrow <- function(alias) {
+  material <- confluence_count_norm_expr_sql(alias, "MATERIAL")
+  paste0(
+    "(coalesce(trim(", alias, ".", confluence_count_sql_ident("MATERIAL"), "::text), '') = '' or ",
+    material, " in ('KNOGLEMARV', 'MARV', 'BONEMARROW'))"
+  )
+}
+
+confluence_clone_sql_flow_bcell <- function(alias) {
+  bcell_count <- confluence_clone_sql_numeric_positive_any(alias, c("B_CELLER_ABNORMALE", "B_CELLER_ABNORMALE_PCT"))
+  ratio <- confluence_clone_sql_numeric_expr(alias, "K_L_ratio")
+  kappa <- confluence_clone_sql_numeric_expr(alias, "Kappa_positive_PCT")
+  lambda <- confluence_clone_sql_numeric_expr(alias, "Lambda_positive_PCT")
+  restriction <- paste0(
+    "(", ratio, " > 3 or ", ratio, " < 0.3 or ",
+    "(", kappa, " >= 80 and ", lambda, " <= 20) or ",
+    "(", lambda, " >= 80 and ", kappa, " <= 20) or ",
+    "abs(", kappa, " - ", lambda, ") >= 60)"
+  )
+  paste0("(", confluence_clone_sql_panel_in(alias, c("BCLPD", "BLIM")), ") and (", bcell_count, " or ", restriction, ")")
+}
+
+confluence_clone_sql_flow_pcd <- function(alias) {
+  pcd_cols <- c("PC_PATOLOGISKE", "PC_PATOLOGISKE_PCT", "PC_MULIGE_PATOLOGISKE", "PC_MULIGE_PATOLOGISKE_PCT")
+  paste0(
+    "(", confluence_clone_sql_panel_in(alias, c("PCD", "MYELOM")), ") and ",
+    confluence_clone_sql_material_marrow(alias), " and (",
+    confluence_clone_sql_numeric_positive_any(alias, pcd_cols), ")"
+  )
+}
+
+confluence_clone_damyda_nonigm_columns <- function() {
+  c(
+    "Reg_PlasmaMKomp_IgA_Kappa", "Reg_PlasmaMKomp_IgA_Lambda",
+    "Reg_PlasmaMKomp_IgG_Kappa", "Reg_PlasmaMKomp_IgG_Lambda",
+    "Reg_PlasmaMKomp_IgD_Kappa", "Reg_PlasmaMKomp_IgD_Lambda",
+    "Reg_PlasmaMKomp_IgE_kappa", "Reg_PlasmaMKomp_IgE_lambda",
+    "Reg_PlasmaMKomp_Kappa", "Reg_PlasmaMKomp_Lambda"
+  )
+}
+
+confluence_clone_damyda_igm_columns <- function() {
+  c("Reg_PlasmaMKomp_IgM_Kappa", "Reg_PlasmaMKomp_IgM_Lambda")
+}
+
+confluence_clone_npu_values_sql <- function(route, project_root = ".") {
+  dict <- confluence_clone_npu_dictionary(project_root)
+  if (!is.data.frame(dict) || !all(c("Code", "Consensus vector") %in% names(dict))) return("")
+  vectors <- confluence_clone_split(route$code_values[[1]])
+  if (!length(vectors)) return("")
+  rows <- dict[dict[["Consensus vector"]] %in% vectors & nzchar(as.character(dict$Code)), c("Code", "Consensus vector"), drop = FALSE]
+  if (!nrow(rows)) return("")
+  rows <- unique(rows)
+  paste(vapply(seq_len(nrow(rows)), function(i) {
+    paste0("('", gsub("'", "''", rows$Code[[i]], fixed = TRUE), "', '", gsub("'", "''", rows[["Consensus vector"]][[i]], fixed = TRUE), "')")
+  }, character(1)), collapse = ", ")
+}
+
+confluence_clone_route_sql <- function(route, project_root = ".") {
   mode <- route$route_query_mode[[1]] %||% "manifest_only"
   if (identical(mode, "manifest_only")) return("")
+  if (!mode %in% confluence_clone_allowed_query_modes()) return("")
   person <- route$person_key_column[[1]] %||% ""
   date_expr <- confluence_count_date_expr_sql("x", route$date_columns[[1]] %||% "")
   if (!nzchar(person) || !nzchar(date_expr)) return("")
@@ -1082,17 +1293,52 @@ confluence_clone_route_sql <- function(route) {
     code_expr <- confluence_count_norm_expr_sql("x", code_col)
     where <- c(where, paste0(code_expr, " in (", confluence_count_sql_quote_values(values), ")"))
   }
+  if (identical(mode, "numeric_positive_any")) {
+    pred <- confluence_clone_sql_numeric_positive_any("x", confluence_clone_route_predicate_columns(route))
+    if (!nzchar(pred)) return("")
+    where <- c(where, paste0("(", pred, ")"))
+  }
+  if (identical(mode, "categorical_yes_any")) {
+    pred <- confluence_clone_sql_categorical_positive_any("x", confluence_clone_route_predicate_columns(route))
+    if (!nzchar(pred)) return("")
+    where <- c(where, paste0("(", pred, ")"))
+  }
+  if (identical(mode, "flow_bcell_support")) {
+    where <- c(where, confluence_clone_sql_flow_bcell("x"))
+  }
+  if (identical(mode, "flow_pcd_support")) {
+    where <- c(where, confluence_clone_sql_flow_pcd("x"))
+  }
+  if (identical(mode, "damyda_nonigm_mcomponent_support")) {
+    pred <- confluence_clone_sql_categorical_positive_any("x", confluence_clone_damyda_nonigm_columns())
+    where <- c(where, paste0("(", pred, ")"))
+  }
+  if (identical(mode, "damyda_igm_mcomponent_ambiguity")) {
+    pred <- confluence_clone_sql_categorical_positive_any("x", confluence_clone_damyda_igm_columns())
+    where <- c(where, paste0("(", pred, ")"))
+  }
+  npu_join <- ""
+  if (identical(mode, "lab_npu_vector")) {
+    code_col <- route$code_column[[1]] %||% ""
+    values_sql <- confluence_clone_npu_values_sql(route, project_root = project_root)
+    if (!nzchar(code_col) || !nzchar(values_sql)) return("")
+    npu_join <- paste0(
+      "\njoin (values ", values_sql, ") as npu(code, consensus_vector)\n",
+      "  on ", confluence_count_norm_expr_sql("x", code_col), " = regexp_replace(upper(trim(npu.code)), '[^A-Z0-9]', '', 'g')"
+    )
+    where <- c(where, paste0("npu.consensus_vector in (", confluence_count_sql_quote_values(confluence_clone_split(route$code_values[[1]])), ")"))
+  }
   paste0(
     "select x.", confluence_count_sql_ident(person), "::text as person_key,\n",
     "       '", gsub("'", "''", route$route_id[[1]], fixed = TRUE), "'::text as route_id,\n",
     "       min(", date_expr, ") as evidence_date\n",
-    "from ", source_ref, " x\n",
+    "from ", source_ref, " x", npu_join, "\n",
     "where ", paste(where, collapse = "\n  and "), "\n",
     "group by x.", confluence_count_sql_ident(person), "::text;"
   )
 }
 
-confluence_clone_execute_routes <- function(db_adapter, routes, manifest) {
+confluence_clone_execute_routes <- function(db_adapter, routes, manifest, project_root = ".") {
   usable <- routes[routes$route_id %in% manifest$route_id[manifest$route_status == "usable"], , drop = FALSE]
   if (!nrow(usable)) return(data.frame(stringsAsFactors = FALSE))
   rows <- list()
@@ -1103,7 +1349,7 @@ confluence_clone_execute_routes <- function(db_adapter, routes, manifest) {
     route$resolved_db_name <- match$db_name[[1]]
     route$resolved_schema <- match$schema[[1]]
     route$resolved_table <- match$table[[1]]
-    sql <- confluence_clone_route_sql(route)
+    sql <- confluence_clone_route_sql(route, project_root = project_root)
     if (!nzchar(sql)) next
     result <- confluence_count_query_result(db_adapter, sql)
     if (!nzchar(result$error_class %||% "") && is.data.frame(result$data) && nrow(result$data)) {

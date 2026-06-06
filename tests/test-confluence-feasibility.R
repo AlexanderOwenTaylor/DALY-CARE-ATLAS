@@ -100,6 +100,10 @@ expect_true(all(c(
   "completed_aggregate_checks",
   "next_protocol_moves"
 ) %in% outputs$story_cards$card_id), "Story cards should cover overlap, clone denominators, ambiguity gates, clock, infection routes, person-time, bias, completed checks, and protocol moves.")
+overlap_story <- outputs$story_cards[outputs$story_cards$card_id == "overlap_identifiable", , drop = FALSE]
+expect_equal(nrow(overlap_story), 1L, "Story cards should have one primary overlap status card.")
+expect_false(identical(overlap_story$headline[[1]], "Accepted dual-clone cohort is identifiable"), "Scaffold story copy must not overclaim that the accepted primary cohort is identifiable.")
+expect_true(overlap_story$evidence_status[[1]] %in% c("accepted route failed closed", "candidate/ambiguous mapping only", "source validation required"), "Scaffold story status should distinguish failed-closed, candidate/ambiguous-only, or validation-required states.")
 expect_true(any(outputs$story_cards$headline == "Clone-evidence denominators are separated from diagnosis anchors"), "Story cards should use clinician-facing clone denominator copy.")
 expect_true(any(grepl("MGUS diagnosis-code overlap is a candidate signal, not accepted evidence", paste(outputs$story_cards$submetric_display, outputs$story_cards$interpretation), fixed = TRUE)), "Story cards should keep the MGUS candidate-only gate visible.")
 expect_true(any(grepl("Aggregate feasibility only; not causal", outputs$story_cards$caveat, fixed = TRUE)), "Story cards should keep feasibility-only/not-causal caveats visible.")

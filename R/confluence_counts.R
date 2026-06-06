@@ -1971,7 +1971,7 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
   infection <- confluence_count_execute_route(db_adapter, infection_sources, "infection_events", function(mapping) confluence_count_infection_event_sql(mapping, endpoint_codes))
   patient <- confluence_count_execute_route(db_adapter, patient_sources, "patient_frame", confluence_count_patient_frame_sql)
   microbiology <- confluence_count_execute_microbiology_route(db_adapter, micro_executable, micro_resolved$audit)
-  clone_evidence <- confluence_clone_execute_routes(db_adapter, clone_resolved$routes, clone_resolved$manifest)
+  clone_evidence <- confluence_clone_execute_routes(db_adapter, clone_resolved$routes, clone_resolved$manifest, project_root = project_root)
   route_status <- bind_rows_base(list(first$status, pato$status, infection$status, patient$status, microbiology$status))
   errors <- confluence_count_failed_route_audit(route_status)
   list(
