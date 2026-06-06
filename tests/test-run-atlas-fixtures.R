@@ -1,16 +1,26 @@
 root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
 Sys.setenv(DALYCARE_MIN_CELL_COUNT = "1")
 source(file.path(root, "tests", "helper.R"))
+fixture_progress <- function(label) {
+  cat("[test-run-atlas-fixtures] ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " ", label, "\n", sep = "")
+  flush.console()
+}
+
+fixture_progress("sourcing runtime")
 source_test_runtime(root)
+fixture_progress("runtime sourced")
 
 out_root <- tempfile("atlas_runs_")
+fixture_progress("starting run_atlas")
 result <- run_atlas(
   project_root = root,
   source_map_path = file.path(root, "config", "source-map.example.tsv"),
   output_root = out_root,
   mode = "report"
 )
+fixture_progress("run_atlas returned")
 
+fixture_progress("checking generated files")
 expect_file(file.path(result$run_dir, "outputs", "atlas_resource_catalog.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_source_resolution.csv"))
 expect_file(file.path(result$run_dir, "outputs", "atlas_dalycare_access.csv"))
@@ -99,6 +109,7 @@ expect_file(file.path(result$run_dir, "logs", "atlas_memory_log.tsv"))
 expect_file(result$html)
 expect_file(result$payload)
 
+fixture_progress("checking generated html")
 html <- paste(readLines(result$html, warn = FALSE), collapse = "\n")
 expect_true(grepl("DALYCARE_atlas_payload.js", html, fixed = TRUE), "HTML should reference external payload JS.")
 expect_false(grepl("window.DALYCARE_ATLAS_PAYLOAD =", html, fixed = TRUE), "HTML should not embed the full payload.")
@@ -533,6 +544,7 @@ expect_true(grepl("dk-region", html, fixed = TRUE), "HTML should include clickab
 expect_true(grepl("situation-cards", html, fixed = TRUE), "HTML should include Situation Report card containers.")
 expect_true(grepl("of cohort", html, fixed = TRUE), "Situation Report cards should show patient counts as a share of the cohort.")
 expect_true(grepl("data as of", html, fixed = TRUE), "Situation Report cards should label source dates as data-as-of anchors.")
+fixture_progress("checking payload")
 payload <- paste(readLines(result$payload, warn = FALSE), collapse = "\n")
 expect_true(grepl("damyda_clinical_profile", payload, fixed = TRUE), "Payload should include the DaMyDa clinical profile panel.")
 expect_true(grepl("lyfo_clinical_profile", payload, fixed = TRUE), "Payload should include the LYFO clinical profile panel.")

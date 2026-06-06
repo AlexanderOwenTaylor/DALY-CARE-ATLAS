@@ -721,6 +721,12 @@ mcl_count_empty_outputs <- function() {
     ibrutinib_source_counts = mcl_count_empty_ibrutinib_source_counts(),
     ibrutinib_union_counts = mcl_count_empty_ibrutinib_union_counts(),
     ibrutinib_overlap_by_source = mcl_count_empty_ibrutinib_overlap_by_source(),
+    asct_hdt_source_resolution = mcl_asct_empty_source_resolution(),
+    asct_hdt_primary_vs_conditioning_counts = mcl_asct_empty_primary_vs_conditioning_counts(),
+    asct_hdt_validation_matrix = mcl_asct_empty_validation_matrix(),
+    triangle_arm_proxy_counts = mcl_asct_empty_triangle_arm_proxy_counts(),
+    asct_hdt_evidence_timing = mcl_asct_empty_evidence_timing(),
+    asct_hdt_protocol_runway = mcl_asct_empty_protocol_runway(),
     atlas_input_audit = mcl_count_empty_atlas_input_audit(),
     failed_query_audit = mcl_count_empty_failed_query_audit(),
     execution_summary = mcl_count_empty_execution_summary(),
@@ -977,12 +983,37 @@ mcl_count_extra_default_definitions <- function(template) {
       stringsAsFactors = FALSE
     )
   }
+  make_lyfo_row <- function(id, label, date_anchor, valid_time_window, rule, notes) {
+    data.frame(
+      data_point_id = id,
+      clinical_label = label,
+      denominator = "all_lyfo_mcl",
+      required_sources = "RKKP_LYFO",
+      person_id_strategy = "configured_source_person_key_required",
+      date_anchor = date_anchor,
+      valid_time_window = valid_time_window,
+      valid_value_rule = rule,
+      source_priority = "RKKP_LYFO Beh_*",
+      fallback_sources = "SDS/LPR transplant procedure validation only",
+      validation_status = "requires_production_aggregate_validation",
+      notes = notes,
+      stringsAsFactors = FALSE
+    )
+  }
   rows <- list(
     make_row("birth_date_available", "Birth date available for age proxy", "patient.date_birth parses as a valid date after joining to LYFO MCL by patientid.", "Aggregate diagnostic only; no birth dates are emitted."),
     make_row("age_anchor_available", "Diagnosis/treatment age anchor available", "First valid date from Reg_DiagnostiskBiopsi_dt, Reg_BehandlingBeslutning_dt, then Beh_KemoterapiStart_dt.", "Aggregate diagnostic only; no dates are emitted."),
     make_row("age_computable", "Age computable at diagnosis/treatment anchor", "Both patient.date_birth and the selected LYFO age anchor parse as valid dates.", "Aggregate diagnostic only; no dates are emitted."),
     make_row("age_gt_65", "MCL age >65 at diagnosis/treatment anchor", "Age at selected LYFO anchor is >=66 years.", "Aggregate diagnostic only; not a treatment eligibility label."),
-    make_row("age_missing_uncomputable", "Age missing or uncomputable", "Birth date or selected LYFO age anchor is missing/malformed after guarded parsing.", "Aggregate diagnostic only; invalid dates are counted, not emitted.")
+    make_row("age_missing_uncomputable", "Age missing or uncomputable", "Birth date or selected LYFO age anchor is missing/malformed after guarded parsing.", "Aggregate diagnostic only; invalid dates are counted, not emitted."),
+    make_lyfo_row(
+      "asct_hdt_primary_lyfo",
+      "Primary first-line LYFO ASCT/HDT",
+      "first_line_treatment_start_or_stem_cell_infusion",
+      "first_line_window",
+      "Beh_Hoejdosisbehandling yes or Beh_TypeAutologStamcellestoette autolog or Beh_Stamcelleinfusion_dt valid",
+      "Alias for the preserved first-line LYFO Beh_* primary ASCT/HDT definition; conditioning evidence remains validation/sensitivity only."
+    )
   )
   bind_rows_base(rows)[names(template)]
 }
@@ -1056,6 +1087,8 @@ mcl_count_percent_display <- function(n, denom, min_cell_count = 5L) {
 
 mcl_count_set <- function(sets, id) {
   x <- sets[[id]] %||% character()
+  if (!length(x) && identical(id, "asct_hdt_primary_lyfo")) x <- sets[["asct_hdt_first_line"]] %||% character()
+  if (!length(x) && identical(id, "asct_hdt_first_line")) x <- sets[["asct_hdt_primary_lyfo"]] %||% character()
   unique(as.character(x[!(is.na(x) | trimws(as.character(x)) == "")]))
 }
 
@@ -4927,7 +4960,7 @@ mcl_count_data_point_rule <- function(id, project_root, outputs_dir, person_date
     pred <- paste0("upper(trim(x.\"Beh_ErDerForetagetKemo\"::text)) = 'Y' or ", regimen_pred, " or ", immuno_pred)
     return(same_lyfo(pred, mcl_count_mapping_date_anchor(lyfo, "treatment"), "LYFO chemo Y, regimen, or immunotherapy mapped from full-atlas value evidence"))
   }
-  if (identical(id, "asct_hdt_first_line")) {
+  if (id %in% c("asct_hdt_first_line", "asct_hdt_primary_lyfo")) {
     pred <- paste0(
       mcl_count_date_sql("x.\"Beh_Stamcelleinfusion_dt\""), " is not null",
       " or upper(trim(x.\"Beh_Hoejdosisbehandling\"::text)) = 'Y'",
@@ -6357,7 +6390,10 @@ mcl_count_high_risk_threshold <- function(project_root = ".") {
 }
 
 mcl_count_set_available <- function(sets, id) {
-  is.list(sets) && id %in% names(sets)
+  if (!is.list(sets)) return(FALSE)
+  id %in% names(sets) ||
+    (identical(id, "asct_hdt_primary_lyfo") && "asct_hdt_first_line" %in% names(sets)) ||
+    (identical(id, "asct_hdt_first_line") && "asct_hdt_primary_lyfo" %in% names(sets))
 }
 
 mcl_count_people_count_row <- function(people, denom_people, min_cell_count = 5L) {
@@ -7581,6 +7617,13 @@ mcl_count_build_outputs <- function(project_root = ".",
   } else {
     mcl_count_empty_ibrutinib_source_validation()
   }
+  asct_hdt_sources <- mcl_asct_read_evidence_sources(project_root)
+  asct_hdt_source_resolution <- mcl_asct_source_resolution(
+    asct_hdt_sources,
+    pdm,
+    db_adapter = if (identical(mode, "production_aggregate") && db_available && !is.function(db_adapter$mcl_triangle_count_sets)) db_adapter else NULL,
+    min_cell_count = min_cell_count
+  )
   plan <- mcl_count_build_query_plan(
     defs,
     project_root = project_root,
@@ -7599,9 +7642,17 @@ mcl_count_build_outputs <- function(project_root = ".",
     plan$sql <- paste(plan$sql, ki67_templates, sep = "\n")
   }
   person_key_audit <- mcl_count_person_key_audit(defs, count_sets = count_sets, outputs_dir = outputs_dir, project_root = project_root)
+  asct_hdt_outputs <- NULL
   if (is.list(count_sets) && length(count_sets)) {
     count_outputs <- mcl_count_outputs_from_sets(defs, count_sets, ki67_percent_counts = ki67_percent_counts, min_cell_count = min_cell_count)
     count_outputs <- lapply(count_outputs, function(x) mcl_count_add_provenance(x, "production_aggregate", generated_at, validation_status = "direct_aggregate_count_hook"))
+    asct_hdt_outputs <- mcl_asct_build_outputs(
+      project_root = project_root,
+      person_date_mapping = pdm,
+      count_sets = count_sets,
+      source_resolution = asct_hdt_source_resolution,
+      min_cell_count = min_cell_count
+    )
   } else if (identical(mode, "production_aggregate") && db_available) {
     data_points <- mcl_count_execute_data_point_counts(
       defs,
@@ -7671,6 +7722,15 @@ mcl_count_build_outputs <- function(project_root = ".",
     count_outputs$ibrutinib_union_counts <- mcl_count_add_provenance(count_outputs$ibrutinib_union_counts, "production_aggregate", generated_at, validation_status = "ibrutinib_union_from_validated_sources")
     count_outputs$ibrutinib_overlap_by_source <- mcl_count_execute_ibrutinib_source_overlap_sql(ibrutinib_source_validation, treatment_code_mappings, count_outputs$data_point_counts, db_adapter, min_cell_count)
     count_outputs$ibrutinib_overlap_by_source <- mcl_count_add_provenance(count_outputs$ibrutinib_overlap_by_source, "production_aggregate", generated_at, validation_status = "ibrutinib_source_overlap")
+    asct_hdt_outputs <- mcl_asct_build_outputs(
+      project_root = project_root,
+      person_date_mapping = pdm,
+      db_adapter = db_adapter,
+      source_resolution = asct_hdt_source_resolution,
+      ibrutinib_source_validation = ibrutinib_source_validation,
+      treatment_code_mappings = treatment_code_mappings,
+      min_cell_count = min_cell_count
+    )
     if (!any(data_points$count_source == "production_aggregate_sql", na.rm = TRUE) && !nzchar(failure_reason)) {
       failure_reason <- "production_aggregate_failed_query_error"
     }
@@ -7706,7 +7766,22 @@ mcl_count_build_outputs <- function(project_root = ".",
       count_outputs$exposure_strata_counts
     )
     count_outputs <- lapply(count_outputs, function(x) mcl_count_add_provenance(x, mode, generated_at, validation_status = "plan_or_mapping_gap"))
+    asct_hdt_outputs <- mcl_asct_build_outputs(
+      project_root = project_root,
+      person_date_mapping = pdm,
+      source_resolution = asct_hdt_source_resolution,
+      min_cell_count = min_cell_count
+    )
   }
+  if (!is.list(asct_hdt_outputs)) {
+    asct_hdt_outputs <- mcl_asct_build_outputs(
+      project_root = project_root,
+      person_date_mapping = pdm,
+      source_resolution = asct_hdt_source_resolution,
+      min_cell_count = min_cell_count
+    )
+  }
+  count_outputs <- c(count_outputs, asct_hdt_outputs)
   if (is.null(count_outputs$ibrutinib_source_counts)) {
     count_outputs$ibrutinib_source_counts <- mcl_count_empty_ibrutinib_source_counts()
   }
@@ -7715,6 +7790,16 @@ mcl_count_build_outputs <- function(project_root = ".",
   }
   if (is.null(count_outputs$ibrutinib_overlap_by_source)) {
     count_outputs$ibrutinib_overlap_by_source <- mcl_count_empty_ibrutinib_overlap_by_source()
+  }
+  for (nm in c(
+    "asct_hdt_source_resolution",
+    "asct_hdt_primary_vs_conditioning_counts",
+    "asct_hdt_validation_matrix",
+    "triangle_arm_proxy_counts",
+    "asct_hdt_evidence_timing",
+    "asct_hdt_protocol_runway"
+  )) {
+    if (is.null(count_outputs[[nm]])) count_outputs[[nm]] <- mcl_count_empty_outputs()[[nm]]
   }
   for (nm in c(
     "ki67_source_validation",
@@ -7824,6 +7909,7 @@ mcl_count_write_outputs <- function(outputs, output_dir) {
     failed_query_audit = write_csv(outputs$failed_query_audit %||% mcl_count_empty_failed_query_audit(), file.path(output_dir, "mcl_triangle_failed_query_audit.csv")),
     execution_summary = write_csv(outputs$execution_summary %||% mcl_count_empty_execution_summary(), file.path(output_dir, "mcl_triangle_execution_summary.csv"))
   )
+  paths <- c(paths, mcl_asct_write_outputs(outputs, output_dir))
   template_path <- file.path(output_dir, "mcl_triangle_count_query_templates.sql")
   writeLines(outputs$query_templates %||% "", con = template_path, useBytes = TRUE)
   paths$query_templates <- template_path
@@ -7858,6 +7944,12 @@ mcl_count_read_outputs <- function(output_dir) {
     ibrutinib_source_counts = read_or_empty("mcl_triangle_ibrutinib_source_counts.csv", mcl_count_empty_ibrutinib_source_counts()),
     ibrutinib_union_counts = read_or_empty("mcl_triangle_ibrutinib_union_counts.csv", mcl_count_empty_ibrutinib_union_counts()),
     ibrutinib_overlap_by_source = read_or_empty("mcl_triangle_ibrutinib_overlap_by_source.csv", mcl_count_empty_ibrutinib_overlap_by_source()),
+    asct_hdt_source_resolution = read_or_empty("mcl_triangle_asct_hdt_source_resolution.csv", mcl_asct_empty_source_resolution()),
+    asct_hdt_primary_vs_conditioning_counts = read_or_empty("mcl_triangle_asct_hdt_primary_vs_conditioning_counts.csv", mcl_asct_empty_primary_vs_conditioning_counts()),
+    asct_hdt_validation_matrix = read_or_empty("mcl_triangle_asct_hdt_validation_matrix.csv", mcl_asct_empty_validation_matrix()),
+    triangle_arm_proxy_counts = read_or_empty("mcl_triangle_triangle_arm_proxy_counts.csv", mcl_asct_empty_triangle_arm_proxy_counts()),
+    asct_hdt_evidence_timing = read_or_empty("mcl_triangle_asct_hdt_evidence_timing.csv", mcl_asct_empty_evidence_timing()),
+    asct_hdt_protocol_runway = read_or_empty("mcl_triangle_asct_hdt_protocol_runway.csv", mcl_asct_empty_protocol_runway()),
     query_review = read_or_empty("mcl_triangle_count_query_review.csv", mcl_count_empty_query_review()),
     data_point_counts = read_or_empty("mcl_triangle_data_point_counts.csv", mcl_count_empty_data_point_counts()),
     inclusion_waterfall = read_or_empty("mcl_triangle_inclusion_waterfall.csv", mcl_count_empty_inclusion_waterfall()),

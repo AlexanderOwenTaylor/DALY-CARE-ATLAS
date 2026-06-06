@@ -16,6 +16,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/product_layer.R",
     "R/ki67_discovery.R",
     "R/patobank_ki67_cartography.R",
+    "R/mcl_triangle_asct_hdt_evidence.R",
     "R/mcl_triangle_counts.R",
     "R/mcl_triangle_feasibility.R",
     "R/html.R",
@@ -31,6 +32,7 @@ source_ki67_test_runtime <- function(root = normalizePath(file.path(getwd()), wi
   files <- c(
     "R/utils.R",
     "R/ki67_discovery.R",
+    "R/mcl_triangle_asct_hdt_evidence.R",
     "R/mcl_triangle_counts.R",
     "R/mcl_triangle_feasibility.R",
     "R/source_map.R",

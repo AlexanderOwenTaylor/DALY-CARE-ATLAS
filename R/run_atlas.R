@@ -26,8 +26,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
       stringsAsFactors = FALSE
     )
   }
+  progress <- function(label) {
+    cat("[run_atlas] ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), " ", label, "\n", sep = "")
+    flush.console()
+  }
 
   generated_at <- atlas_timestamp()
+  progress(paste("starting run", run_id))
   log_event("info", "", paste("Starting DALY-CARE atlas run", run_id))
   source_map <- read_source_map(source_map_path, project_root = project_root)
   production_source_map <- read_production_source_recovery_map(project_root = project_root)
@@ -254,6 +259,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     flush.console()
   }
 
+  progress("source profiling complete; reading streamed outputs")
   sources <- safe_read_output_csv(stream_paths$sources, bind_rows_base(source_rows))
   columns <- safe_read_output_csv(stream_paths$columns, bind_rows_base(column_rows))
   column_profiles <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_profiles, bind_rows_base(column_profile_rows)), sources)
@@ -276,6 +282,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   if (!nrow(db_query_log)) db_query_log <- empty_db_query_log()
   db_budget_actions <- bind_rows_base(db_budget_action_rows)
   if (!nrow(db_budget_actions)) db_budget_actions <- empty_db_budget_actions()
+  progress("building coverage panels")
   panels <- build_coverage_panels(
     sources = sources,
     column_profiles = column_profiles,
@@ -284,6 +291,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   )
   panels$atlas_streaming_progress_summary <- atlas_streaming_progress_summary(db_query_log, sources)
   panels$source_availability_drift <- source_availability_panel(sources)
+  progress("building situation report panels")
   situation_panels <- build_situation_report_panels(
     source_resolution = source_resolution,
     db_adapter = db_adapter,
@@ -295,6 +303,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels[[panel_name]] <- situation_panels[[panel_name]]
   }
   panels$atlas_module_readiness <- atlas_module_readiness(sources, panels)
+  progress("building semantic outputs")
   semantic_outputs <- build_semantic_outputs(
     project_root = project_root,
     sources = sources,
@@ -302,6 +311,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels = panels,
     min_cell_count = atlas_min_cell_count()
   )
+  progress("building product layer outputs")
   product_outputs <- build_product_layer_outputs(
     semantic_outputs = semantic_outputs,
     sources = sources,
@@ -310,6 +320,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     min_cell_count = atlas_min_cell_count(),
     project_root = project_root
   )
+  progress("building reconciliation outputs")
   legacy_resource_audit <- build_legacy_cartography_source_resolution_audit(project_root = project_root)
   source_resolution_attempts <- build_source_resolution_attempts(
     project_root = project_root,
@@ -387,6 +398,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     sources = sources,
     canonical = canonical_resources
   )
+  progress("building Ki67 discovery outputs")
   ki67_discovery <- build_ki67_discovery_outputs(
     project_root = project_root,
     include_reference_files = TRUE,
@@ -407,6 +419,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     canonical_reconciliation = canonical_reconciliation,
     legacy_reference_vs_current = legacy_reference_vs_current
   )
+  progress("building MCL TRIANGLE feasibility outputs")
   mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
     project_root = project_root,
     semantic_dictionary = semantic_outputs$dictionary,
@@ -451,6 +464,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     action_items <- bind_rows_base(list(action_items, budget_action_items))
   }
 
+  progress("writing output CSV files")
   output_paths <- list()
   output_paths$source_resolution <- write_csv(source_resolution, file.path(output_dir, "atlas_source_resolution.csv"))
   output_paths$dalycare_access <- write_csv(access_report, file.path(output_dir, "atlas_dalycare_access.csv"))
@@ -552,6 +566,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     stop(empty_live_run_message(source_map, source_resolution), "\nDiagnostics written to: ", run_dir, call. = FALSE)
   }
 
+  progress("assembling atlas payload")
   payload_sources <- safe_read_output_csv(output_paths$sources, sources)
   payload_columns <- safe_read_output_csv(output_paths$columns, columns)
   payload_checks <- safe_read_output_csv(output_paths$checks, checks)
@@ -691,6 +706,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     patobank_ki67_percent = payload_patobank_ki67_percent,
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility
   )
+  progress("writing static atlas")
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
 

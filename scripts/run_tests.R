@@ -7,15 +7,20 @@ if (!length(test_files)) {
 failures <- list()
 for (test_file in test_files) {
   setwd(root)
-  cat("Running", basename(test_file), "...\n")
+  test_start <- Sys.time()
+  cat("[", format(test_start, "%Y-%m-%d %H:%M:%S"), "] Running ", basename(test_file), "...\n", sep = "")
+  flush.console()
   tryCatch(
     {
       sys.source(test_file, envir = new.env(parent = globalenv()))
-      cat("  OK\n")
+      elapsed <- round(as.numeric(difftime(Sys.time(), test_start, units = "secs")), 1)
+      cat("  OK (", elapsed, "s)\n", sep = "")
+      flush.console()
     },
     error = function(e) {
       failures[[basename(test_file)]] <<- conditionMessage(e)
       cat("  FAIL:", conditionMessage(e), "\n")
+      flush.console()
     },
     finally = {
       closeAllConnections()
