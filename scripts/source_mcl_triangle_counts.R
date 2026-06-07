@@ -46,6 +46,7 @@ if (is.na(small_cell_n) || small_cell_n < 1L) small_cell_n <- 5L
 mcl_count_sourceable_source_required(project_root, file.path("R", "utils.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "source_map.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "db_profile.R"))
+mcl_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_asct_hdt_evidence.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_counts.R"))
 
 if (!MCL_COUNT_MODE %in% c("plan", "production_aggregate")) {

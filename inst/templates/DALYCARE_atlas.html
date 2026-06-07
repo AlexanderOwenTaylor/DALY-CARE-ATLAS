@@ -7370,9 +7370,9 @@
         return `
           <h3>${escapeHtml(title)}</h3>
           ${renderKpiStrip([
-            mclKpiItem("Ibrutinib + ASCT/HDT", both, null, tone || "violet", { note: mclPercent(both) ? `Percent denominator: ${mclPercent(both)}` : "" }),
-            mclKpiItem("ASCT/HDT without ibrutinib evidence", asctOnly, null, "blue", { note: mclPercent(asctOnly) ? `Percent denominator: ${mclPercent(asctOnly)}` : "" }),
-            mclKpiItem("Ibrutinib without ASCT/HDT evidence", ibOnly, null, "green", { note: mclPercent(ibOnly) ? `Percent denominator: ${mclPercent(ibOnly)}` : "" }),
+            mclKpiItem("BTKi/ibrutinib + primary LYFO ASCT/HDT", both, null, tone || "violet", { note: mclPercent(both) ? `Percent denominator: ${mclPercent(both)}` : "" }),
+            mclKpiItem("primary LYFO ASCT/HDT without BTKi evidence", asctOnly, null, "blue", { note: mclPercent(asctOnly) ? `Percent denominator: ${mclPercent(asctOnly)}` : "" }),
+            mclKpiItem("BTKi/ibrutinib no primary LYFO ASCT/HDT", ibOnly, null, "green", { note: mclPercent(ibOnly) ? `Percent denominator: ${mclPercent(ibOnly)}` : "" }),
             mclKpiItem("Neither evidence", neither, null, "amber", { note: mclPercent(neither) ? `Percent denominator: ${mclPercent(neither)}` : "" })
           ], { tone: tone || "violet" })}
         `;
@@ -7380,8 +7380,8 @@
       function renderMclPicoTable() {
         const rows = [
           ["Population", "Adults with newly diagnosed MCL, preferably younger/fit or clinically transplant-eligible, receiving first-line intensive chemoimmunotherapy +/- BTK inhibitor. Stratify by high-risk biology.", "partial", "RKKP_LYFO; SDS_t_tumor; SDS_pato", "Fallback/reference if current payload is not accepted: 1,417 all LYFO MCL; 411 age <=65 younger proxy", "Age <=65 is a proxy, not observed eligibility.", "Validate fitness, induction timing, and biology strata."],
-          ["Intervention", "Ibrutinib-containing chemoimmunotherapy plus ASCT/HDT consolidation.", "partial", "RKKP_LYFO; SDS_indberetningmedpris", "Fallback/reference if current payload is not accepted: 115 expanded ibrutinib ever-observed; 336 ASCT/HDT evidence; 14 all-MCL overlap", "Ever-observed exposure is descriptive only.", "Implement landmark/timing windows."],
-          ["Comparator", "Ibrutinib-containing chemoimmunotherapy without ASCT/HDT. Secondary comparator: historical intensive CIT + ASCT without ibrutinib.", "partial", "RKKP_LYFO regimen fields; ATC L01XE27", "Fallback/reference if current payload is not accepted: 101 all-MCL Ibrutinib without ASCT/HDT evidence; 17 among age <=65 proxy", "No response/fitness adjustment.", "Define induction-completion eligibility and comparator windows."],
+          ["Intervention", "Ibrutinib-containing chemoimmunotherapy plus primary LYFO ASCT/HDT consolidation.", "partial", "RKKP_LYFO; SDS_indberetningmedpris", "Fallback/reference if current payload is not accepted: 115 expanded ibrutinib ever-observed; 336 primary LYFO ASCT/HDT evidence; 14 all-MCL overlap", "Ever-observed exposure is descriptive only.", "Implement landmark/timing windows."],
+          ["Comparator", "Ibrutinib-containing chemoimmunotherapy without primary LYFO ASCT/HDT. Secondary comparator: historical intensive CIT + primary LYFO ASCT without ibrutinib.", "partial", "RKKP_LYFO regimen fields; ATC L01XE27", "Fallback/reference if current payload is not accepted: 101 all-MCL Ibrutinib without primary LYFO ASCT/HDT evidence; 17 among age <=65 proxy", "No response/fitness adjustment; BTKi no-ASCT arm proxy is counted separately from missing ASCT capture.", "Define induction-completion eligibility and comparator windows."],
           ["Outcomes", "Failure-free, progression-free, event-free, overall survival, time to next treatment, relapse, toxicity and hospitalisation outcomes.", "partial", "RKKP_LYFO; death/outcome sources", "Fallback/reference if current payload is not accepted: 779 OS/death evidence; 480 relapse/progression evidence", "Outcome timing and event hierarchy need protocol definitions.", "Validate endpoint dates and censoring rules."],
           ["Effect modifier", "High-risk biology vs standard-risk biology.", "candidate", "SDS_pato.c_snomedkode; pathology text route; LYFO/MIPI components", "Fallback/reference if current payload is not accepted: 37 coded Ki-67 AEKI known; 20 AEKI >=30%; 13 AEKI >=50%", "TP53, morphology, MIPI-c, and known-negative logic are not validated.", "Validate biology predicates and text extraction separately."],
           ["Clinical decision", "Whether first-line ASCT/HDT should be reserved for high-risk MCL biology rather than used broadly in all fit patients.", "blocked", "Requires validated PICO plus landmark design", "Descriptive feasibility is ready; causal answerability is not.", "The atlas does not estimate treatment efficacy or recommend treatment.", "Develop target-trial emulation or landmark protocol."]
@@ -7403,7 +7403,7 @@
         const rows = [
           ["Cohort denominator", "ready", "Payload count when accepted; fallback/reference 1,417 LYFO MCL patients otherwise", "Use as denominator for feasibility."],
           ["Younger/fit proxy", "proxy ready", "Payload count when accepted; fallback/reference 411 age <=65 younger proxy patients otherwise", "Not observed transplant eligibility."],
-          ["Intervention/comparator exposure", "partial", "Payload counts when accepted; fallback/reference 115 expanded ibrutinib ever-observed, 336 ASCT/HDT, 14 all-MCL overlap, and 11 age <=65 overlap otherwise", "Timing/landmark definitions still needed."],
+          ["Intervention/comparator exposure", "partial", "Payload counts when accepted; fallback/reference 115 expanded ibrutinib ever-observed, 336 primary LYFO ASCT/HDT, 14 all-MCL overlap, and 11 age <=65 overlap otherwise", "Timing/landmark definitions still needed."],
           ["Outcome evidence", "partial", "Payload counts when accepted; fallback/reference 779 OS/death and 480 relapse/progression otherwise", "Endpoint hierarchy and censoring need validation."],
           ["Effect modifier: high-risk biology", "candidate", "Payload counts when accepted; fallback/reference 37 coded Ki-67 AEKI and 20 Ki-67 >=30 otherwise; pathology text recovery route available", "TP53, morphology, MIPI-c, and known-negative logic are not validated."],
           ["Causal answerability", "not causal", "Descriptive counts only", "Landmark timing, response eligibility, confounding, and risk strata validation required."],
@@ -7445,6 +7445,12 @@
         const highRiskBiology = mclCountRows("high_risk_biology_counts");
         const answerabilityIntersections = mclCountRows("answerability_intersections");
         const answerabilitySummary = mclCountRows("answerability_summary");
+        const asctPrimaryConditioning = mclCountRows("asct_hdt_primary_vs_conditioning_counts");
+        const asctValidationMatrix = mclCountRows("asct_hdt_validation_matrix");
+        const triangleArmProxy = mclCountRows("triangle_arm_proxy_counts");
+        const asctTiming = mclCountRows("asct_hdt_evidence_timing");
+        const asctSourceResolution = mclCountRows("asct_hdt_source_resolution");
+        const asctProtocolRunway = mclCountRows("asct_hdt_protocol_runway");
         return `
           <div class="callout"><strong>Counts are aggregate distinct-person feasibility counts.</strong> They show whether data elements and combinations are available for study design. They are not treatment-effect estimates and do not establish comparability between treatment groups.</div>
           ${renderKpiStrip([
@@ -7512,6 +7518,68 @@
             { key: "distinct_person_count_display", label: "Individuals", render: row => escapeHtml(row.distinct_person_count_display || "not available") },
             { key: "notes", label: "Notes" }
           ], 8)}
+          <h3>ASCT/HDT primary LYFO bottleneck and conditioning validation</h3>
+          <div class="callout"><strong>LYFO Beh_* remains the primary ASCT/HDT phenotype.</strong> BEAM/melphalan evidence is validation/sensitivity only. Melphalan alone does not define ASCT. Relapse Rec_* ASCT remains separate. BTKi no-ASCT is counted separately from missing ASCT. Cytarabine/DHAP/DHAX are induction or protocol-eligibility signals, not ASCT.</div>
+          ${renderMclCountTable(asctPrimaryConditioning, [
+            { key: "state_label", label: "State", render: row => `<strong>${escapeHtml(row.state_label || row.state_id || "")}</strong><div class="mini">${escapeHtml(row.state_id || "")}</div>` },
+            { key: "evidence_tier", label: "Evidence tier" },
+            { key: "timing_window", label: "Timing" },
+            { key: "persons_n", label: "Persons" },
+            { key: "usable_for_primary_asct", label: "Primary", render: row => mclBool(row.usable_for_primary_asct) ? "yes" : "no" },
+            { key: "usable_for_sensitivity_asct", label: "Sensitivity", render: row => mclBool(row.usable_for_sensitivity_asct) ? "yes" : "no" },
+            { key: "caveat", label: "Caveat" }
+          ], 10)}
+          <h3>ASCT/HDT validation matrix</h3>
+          ${renderMclCountTable(asctValidationMatrix, [
+            { key: "validation_cell", label: "Cell", render: row => `<strong>${escapeHtml(row.validation_cell || "")}</strong>` },
+            { key: "lyfo_asct_flag", label: "LYFO ASCT" },
+            { key: "melphalan_flag", label: "Melphalan" },
+            { key: "beam_multi_component_flag", label: "BEAM components" },
+            { key: "relapse_asct_flag", label: "Relapse ASCT" },
+            { key: "persons_n", label: "Persons" },
+            { key: "caveat", label: "Caveat" }
+          ], 10)}
+          <h3>TRIANGLE arm proxy counts</h3>
+          <p class="mini">Post-TRIANGLE no-ASCT BTKi treatment is counted separately from missing ASCT evidence.</p>
+          ${renderMclCountTable(triangleArmProxy, [
+            { key: "arm_proxy_label", label: "Arm proxy", render: row => `<strong>${escapeHtml(row.arm_proxy_label || row.arm_proxy_id || "")}</strong><div class="mini">${escapeHtml(row.arm_proxy_id || "")}</div>` },
+            { key: "induction_proxy_flag", label: "Induction" },
+            { key: "btk_flag", label: "BTKi" },
+            { key: "asct_primary_lyfo_flag", label: "Primary LYFO ASCT" },
+            { key: "conditioning_support_flag", label: "Conditioning" },
+            { key: "persons_n", label: "Persons" },
+            { key: "caveat", label: "Caveat" }
+          ], 10)}
+          <h3>ASCT/HDT evidence timing windows</h3>
+          ${renderMclCountTable(asctTiming, [
+            { key: "timing_id", label: "Timing window" },
+            { key: "anchor", label: "Anchor" },
+            { key: "window_start_days", label: "Start days" },
+            { key: "window_end_days", label: "End days" },
+            { key: "persons_n", label: "Persons" },
+            { key: "caveat", label: "Caveat" }
+          ], 8)}
+          <h3>ASCT/HDT source resolution</h3>
+          ${renderMclCountTable(asctSourceResolution, [
+            { key: "source_id", label: "Source", render: row => `<strong>${escapeHtml(row.source_id || "")}</strong><div class="mini">${escapeHtml(row.evidence_family || "")}</div>` },
+            { key: "table", label: "Table", render: row => escapeHtml([row.schema, row.table].filter(Boolean).join(".")) },
+            { key: "resolution_status", label: "Resolution", render: row => renderBadge(row.resolution_status || "not_available", mclStatusTone(row.resolution_status)) },
+            { key: "relation_probe_success", label: "Relation", render: row => mclBool(row.relation_probe_success) ? "ok" : "missing" },
+            { key: "column_probe_success", label: "Columns", render: row => mclBool(row.column_probe_success) ? "ok" : "missing" },
+            { key: "co_residency_probe_success", label: "Co-resident", render: row => mclBool(row.co_residency_probe_success) ? "ok" : "missing" },
+            { key: "bridge_probe_success", label: "Bridge", render: row => mclBool(row.bridge_probe_success) ? "ok" : "missing" },
+            { key: "qualifying_event_count_status", label: "Qualifying events", render: row => `<strong>${escapeHtml(row.qualifying_person_count_display || "")}</strong><div class="mini">${escapeHtml(row.qualifying_event_count_status || "")}</div>` },
+            { key: "usable_for_primary_asct", label: "Primary", render: row => mclBool(row.usable_for_primary_asct) ? "yes" : "no" },
+            { key: "usable_for_sensitivity_asct", label: "Sensitivity", render: row => mclBool(row.usable_for_sensitivity_asct) ? "yes" : "no" },
+            { key: "missing_reason", label: "Reason" }
+          ], 18)}
+          <h3>ASCT/HDT protocol runway</h3>
+          ${renderMclCountTable(asctProtocolRunway, [
+            { key: "runway_item", label: "Item", render: row => `<strong>${escapeHtml(row.runway_item || "")}</strong>` },
+            { key: "status", label: "Status", render: row => renderBadge(row.status || "not_available", mclStatusTone(row.status)) },
+            { key: "owner_hint", label: "Owner hint" },
+            { key: "notes", label: "Notes" }
+          ], 12)}
           <h3>Risk-adapted treatment-strategy strata</h3>
           ${renderMclCountTable(treatmentStrategy, [
             { key: "denominator", label: "Denominator" },
@@ -7528,8 +7596,8 @@
             { key: "distinct_person_count_display", label: "Individuals", render: row => escapeHtml(row.distinct_person_count_display || "not available") },
             { key: "notes", label: "Notes" }
           ], 14)}
-          <h3>ASCT/HDT x ibrutinib descriptive strata</h3>
-          <p class="mini">ASCT/HDT x ibrutinib strata are descriptive feasibility strata only. They do not account for timing, eligibility, response, immortal time, or confounding unless the landmark design is implemented.</p>
+          <h3>Primary LYFO ASCT/HDT x ibrutinib descriptive strata</h3>
+          <p class="mini">Primary LYFO ASCT/HDT x ibrutinib strata are descriptive feasibility strata only. They do not account for timing, eligibility, response, immortal time, or confounding unless the landmark design is implemented.</p>
           ${renderMclCountTable(strata, [
             { key: "denominator", label: "Denominator" },
             { key: "asct_hdt_first_line_status", label: "ASCT/HDT" },
@@ -7704,6 +7772,11 @@
         const youngerIbrutinib = mclSumDisplayInfo([youngBoth, youngIbOnly], "28");
         const ageValidation = mclCountRows("age_source_validation");
         const ibSourceCounts = mclCountRows("ibrutinib_source_counts");
+        const asctPrimaryConditioning = mclCountRows("asct_hdt_primary_vs_conditioning_counts");
+        const asctValidationMatrix = mclCountRows("asct_hdt_validation_matrix");
+        const triangleArmProxy = mclCountRows("triangle_arm_proxy_counts");
+        const asctSourceResolution = mclCountRows("asct_hdt_source_resolution");
+        const asctProtocolRunway = mclCountRows("asct_hdt_protocol_runway");
         const textBridge = mclCountRows("ki67_text_bridge_validation");
         const signpost = mclRows("pathology_ki67_signpost")[0] || {};
         return `
@@ -7772,7 +7845,7 @@
                 mclKpiItem("all LYFO MCL", allMcl, "1,417", "blue"),
                 mclKpiItem("age <=65 younger proxy", young, "411", "green", { note: "Younger proxy; not observed transplant eligibility." }),
                 mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "115", "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
-                mclKpiItem("age <=65 + ASCT/HDT + ibrutinib", youngBoth, "11", "violet", { note: "Descriptive stratum; no causal comparison." })
+                mclKpiItem("age <=65 + primary LYFO ASCT/HDT + ibrutinib", youngBoth, "11", "violet", { note: "Descriptive stratum; no causal comparison." })
               ], { tone: "violet" })}
               <p class="mini">Fallback/reference values are retained for orientation and labelled separately.</p>
             `, "violet")}
@@ -7814,11 +7887,12 @@
               ${renderKpiStrip([
                 mclKpiItem("first-line treatment date evidence", firstLine, "1,118", "blue"),
                 mclKpiItem("CIT / immunochemotherapy backbone", cit, "1,148", "green"),
-                mclKpiItem("ASCT/HDT evidence", asct, "336", "violet", { note: "Exposure evidence; not treatment recommendation." }),
+                mclKpiItem("primary LYFO ASCT/HDT", asct, "336", "violet", { note: "LYFO Beh_* first-line registry definition; not treatment recommendation." }),
                 mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "115", "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
                 mclKpiItem("OS/death evidence", osDeath, "779", "blue"),
                 mclKpiItem("relapse/progression evidence", relapse, "480", "amber")
               ], { tone: "green" })}
+              <div class="callout"><strong>ASCT/HDT source logic:</strong> LYFO Beh_* remains the primary ASCT/HDT phenotype. BEAM/melphalan evidence is validation/sensitivity only. Melphalan alone does not define ASCT. Relapse Rec_* ASCT remains separate. BTKi no-ASCT is counted separately from missing ASCT. Cytarabine, DHAP, and DHAX are induction/protocol eligibility signals, not ASCT.</div>
               <div class="callout"><strong>Ibrutinib source logic:</strong> expanded validated primary union of LYFO regimen fields and SDS_indberetningmedpris ATC L01XE27. CIT/immunochemotherapy backbone and BTK/ibrutinib exposure are separate concepts.</div>
               ${renderMclCountTable(ibSourceCounts, [
                 { key: "source_id", label: "Source" },
@@ -7828,7 +7902,54 @@
                 { key: "validation_status", label: "Status", render: row => renderBadge(row.validation_status || "not_available", mclStatusTone(row.validation_status)) }
               ], 12)}
             `, "green")}
-            ${renderSectionCard("ASCT/HDT x expanded ibrutinib matrix", `
+            ${renderSectionCard("ASCT/HDT evidence resolution", `
+              <div class="callout"><strong>Bottleneck:</strong> the primary phenotype is LYFO first-line ASCT/HDT. Conditioning evidence validates a subset, conditioning-only signals are sensitivity rescue candidates, BTKi no-ASCT induction paths are counted separately, and legacy induction without ASCT/BTKi remains a separate feasibility stratum.</div>
+              ${renderMclCountTable(asctPrimaryConditioning, [
+                { key: "state_label", label: "State", render: row => `<strong>${escapeHtml(row.state_label || row.state_id || "")}</strong><div class="mini">${escapeHtml(row.state_id || "")}</div>` },
+                { key: "evidence_tier", label: "Tier" },
+                { key: "timing_window", label: "Timing" },
+                { key: "persons_n", label: "Persons" },
+                { key: "usable_for_primary_asct", label: "Primary", render: row => mclBool(row.usable_for_primary_asct) ? "yes" : "no" },
+                { key: "usable_for_sensitivity_asct", label: "Sensitivity", render: row => mclBool(row.usable_for_sensitivity_asct) ? "yes" : "no" }
+              ], 8)}
+              <h3>Validation and sensitivity matrix</h3>
+              ${renderMclCountTable(asctValidationMatrix, [
+                { key: "validation_cell", label: "Cell" },
+                { key: "lyfo_asct_flag", label: "LYFO ASCT" },
+                { key: "melphalan_flag", label: "Melphalan" },
+                { key: "beam_multi_component_flag", label: "BEAM" },
+                { key: "relapse_asct_flag", label: "Relapse ASCT" },
+                { key: "persons_n", label: "Persons" }
+              ], 8)}
+              <h3>TRIANGLE arm proxy</h3>
+              <p class="mini">Post-TRIANGLE no-ASCT BTKi treatment is counted separately from missing ASCT evidence.</p>
+              ${renderMclCountTable(triangleArmProxy, [
+                { key: "arm_proxy_label", label: "Proxy", render: row => `<strong>${escapeHtml(row.arm_proxy_label || row.arm_proxy_id || "")}</strong>` },
+                { key: "induction_proxy_flag", label: "Induction" },
+                { key: "btk_flag", label: "BTKi" },
+                { key: "asct_primary_lyfo_flag", label: "Primary LYFO ASCT" },
+                { key: "persons_n", label: "Persons" },
+                { key: "caveat", label: "Caveat" }
+              ], 8)}
+            `, "violet")}
+            ${renderSectionCard("ASCT/HDT source runway", `
+              <p class="mini">Medication and procedure sources fail closed until relation, column, co-residency, and bridge validation succeeds. Candidate SKS procedure rows remain inventory-only until exact ASCT/SCT codes are validated.</p>
+              ${renderMclCountTable(asctSourceResolution, [
+                { key: "source_id", label: "Source", render: row => `<strong>${escapeHtml(row.source_id || "")}</strong><div class="mini">${escapeHtml(row.evidence_family || "")}</div>` },
+                { key: "table", label: "Table" },
+                { key: "resolution_status", label: "Resolution", render: row => renderBadge(row.resolution_status || "not_available", mclStatusTone(row.resolution_status)) },
+                { key: "qualifying_event_count_status", label: "Qualifying events", render: row => `<strong>${escapeHtml(row.qualifying_person_count_display || "")}</strong><div class="mini">${escapeHtml(row.qualifying_event_count_status || "")}</div>` },
+                { key: "usable_for_primary_asct", label: "Primary", render: row => mclBool(row.usable_for_primary_asct) ? "yes" : "no" },
+                { key: "usable_for_sensitivity_asct", label: "Sensitivity", render: row => mclBool(row.usable_for_sensitivity_asct) ? "yes" : "no" },
+                { key: "missing_reason", label: "Reason" }
+              ], 12)}
+              ${renderMclCountTable(asctProtocolRunway, [
+                { key: "runway_item", label: "Runway item" },
+                { key: "status", label: "Status", render: row => renderBadge(row.status || "not_available", mclStatusTone(row.status)) },
+                { key: "notes", label: "Notes" }
+              ], 10)}
+            `, "amber")}
+            ${renderSectionCard("Primary LYFO ASCT/HDT x expanded ibrutinib matrix", `
               ${renderMclMiniMatrix("All MCL", "all_lyfo_mcl", "violet")}
               ${renderMclMiniMatrix("Age <=65 younger proxy", "younger_mcl_proxy_age_le_65", "green")}
               ${renderKpiStrip([
@@ -7858,7 +7979,7 @@
               ], 4)}
             `, "amber")}
             ${renderSectionCard("Answerability status", `
-              <div class="callout warn"><strong>Risk-adapted answerability not yet validated.</strong> The atlas can now identify a meaningful younger MCL cohort, ASCT/HDT exposure, expanded ibrutinib exposure, and outcome evidence. The currently observed younger overlap of age <=65, ASCT/HDT, and Ibrutinib evidence is small (11 patients), so this is suitable for descriptive feasibility and cohort planning, not a definitive causal comparison.</div>
+              <div class="callout warn"><strong>Risk-adapted answerability not yet validated.</strong> The atlas can now identify a meaningful younger MCL cohort, primary LYFO ASCT/HDT exposure, expanded ibrutinib exposure, and outcome evidence. The currently observed younger overlap of age <=65, primary LYFO ASCT/HDT, and Ibrutinib evidence is small (11 patients), so this is suitable for descriptive feasibility and cohort planning, not a definitive causal comparison.</div>
               ${renderMclCountTable(mclCountRows("answerability_summary"), [
                 { key: "row_id", label: "Question component", render: row => `<strong>${escapeHtml(row.row_id || "")}</strong><div class="mini">${escapeHtml(row.limiting_factor || "")}</div>` },
                 { key: "status", label: "Status", render: row => renderBadge(row.status || "not_available", mclStatusTone(row.status)) },

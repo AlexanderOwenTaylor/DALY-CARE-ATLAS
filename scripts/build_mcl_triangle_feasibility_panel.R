@@ -20,6 +20,7 @@ source(file.path(project_root, "R", "utils.R"))
 source(file.path(project_root, "R", "semantic_dictionary.R"))
 source(file.path(project_root, "R", "product_layer.R"))
 source(file.path(project_root, "R", "ki67_discovery.R"))
+source(file.path(project_root, "R", "mcl_triangle_asct_hdt_evidence.R"))
 source(file.path(project_root, "R", "mcl_triangle_counts.R"))
 source(file.path(project_root, "R", "mcl_triangle_feasibility.R"))
 
