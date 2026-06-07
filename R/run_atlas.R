@@ -446,6 +446,29 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     )
     confluence_feasibility <- confluence_count_merge_outputs(confluence_feasibility, confluence_count_outputs)
   }
+  smm_immunity_tracker <- build_smm_immunity_tracker_feasibility_outputs(
+    project_root = project_root,
+    sources = sources,
+    columns = columns,
+    column_profiles = column_profiles,
+    column_top_values = column_top_values,
+    panels = panels,
+    panel_raw_fields = product_outputs$panel_raw_fields,
+    panel_distributions = product_outputs$panel_distributions,
+    panel_kpis = product_outputs$panel_kpis,
+    canonical_reconciliation = canonical_reconciliation,
+    legacy_reference_vs_current = legacy_reference_vs_current,
+    min_cell_count = atlas_min_cell_count()
+  )
+  if (exists("smm_immunity_tracker_count_build_outputs", mode = "function")) {
+    smm_immunity_count_outputs <- smm_immunity_tracker_count_build_outputs(
+      project_root = project_root,
+      db_adapter = db_adapter,
+      mode = smm_immunity_tracker_count_mode(db_adapter),
+      min_cell_count = atlas_min_cell_count()
+    )
+    smm_immunity_tracker <- smm_immunity_tracker_count_merge_outputs(smm_immunity_tracker, smm_immunity_count_outputs)
+  }
   patobank_ki67_percent <- patobank_ki67_build_outputs(
     project_root = project_root,
     db_adapter = db_adapter,
@@ -507,6 +530,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   confluence_paths <- confluence_write_outputs(confluence_feasibility, output_dir)
   names(confluence_paths) <- paste0("confluence_", names(confluence_paths))
   output_paths <- c(output_paths, confluence_paths)
+  smm_immunity_paths <- smm_immunity_tracker_write_outputs(smm_immunity_tracker, output_dir)
+  names(smm_immunity_paths) <- paste0("smm_immunity_tracker_", names(smm_immunity_paths))
+  output_paths <- c(output_paths, smm_immunity_paths)
   if (exists("mcl_count_build_outputs", mode = "function")) {
     mcl_count_mode <- if (exists("confluence_mcl_count_mode", mode = "function")) {
       confluence_mcl_count_mode(db_adapter)
@@ -726,6 +752,29 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     source_resolution_audit = safe_read_output_csv(output_paths$confluence_source_resolution_audit, confluence_feasibility$source_resolution_audit),
     production_execution_summary = safe_read_output_csv(output_paths$confluence_production_execution_summary, confluence_feasibility$production_execution_summary)
   )
+  payload_smm_immunity_tracker <- list(
+    summary = safe_read_output_csv(output_paths$smm_immunity_tracker_summary, smm_immunity_tracker$summary),
+    story_cards = safe_read_output_csv(output_paths$smm_immunity_tracker_story_cards, smm_immunity_tracker$story_cards),
+    cohort_readiness = safe_read_output_csv(output_paths$smm_immunity_tracker_cohort_readiness, smm_immunity_tracker$cohort_readiness),
+    cohort_counts = safe_read_output_csv(output_paths$smm_immunity_tracker_cohort_counts, smm_immunity_tracker$cohort_counts),
+    wp5_source_audit = safe_read_output_csv(output_paths$smm_immunity_tracker_wp5_source_audit, smm_immunity_tracker$wp5_source_audit),
+    endpoint_definitions = safe_read_output_csv(output_paths$smm_immunity_tracker_endpoint_definitions, smm_immunity_tracker$endpoint_definitions),
+    infection_counts = safe_read_output_csv(output_paths$smm_immunity_tracker_infection_counts, smm_immunity_tracker$infection_counts),
+    recurrent_infection_counts = safe_read_output_csv(output_paths$smm_immunity_tracker_recurrent_infection_counts, smm_immunity_tracker$recurrent_infection_counts),
+    microbiology_confirmation_counts = safe_read_output_csv(output_paths$smm_immunity_tracker_microbiology_confirmation_counts, smm_immunity_tracker$microbiology_confirmation_counts),
+    infection_person_time = safe_read_output_csv(output_paths$smm_immunity_tracker_infection_person_time, smm_immunity_tracker$infection_person_time),
+    infection_rates = safe_read_output_csv(output_paths$smm_immunity_tracker_infection_rates, smm_immunity_tracker$infection_rates),
+    burden_strata_counts = safe_read_output_csv(output_paths$smm_immunity_tracker_burden_strata_counts, smm_immunity_tracker$burden_strata_counts),
+    landmark_progression_signal = safe_read_output_csv(output_paths$smm_immunity_tracker_landmark_progression_signal, smm_immunity_tracker$landmark_progression_signal),
+    atypical_prolonged_severe_readiness = safe_read_output_csv(output_paths$smm_immunity_tracker_atypical_prolonged_severe_readiness, smm_immunity_tracker$atypical_prolonged_severe_readiness),
+    bias_warnings = safe_read_output_csv(output_paths$smm_immunity_tracker_bias_warnings, smm_immunity_tracker$bias_warnings),
+    estimands = safe_read_output_csv(output_paths$smm_immunity_tracker_estimands, smm_immunity_tracker$estimands),
+    protocol_runway = safe_read_output_csv(output_paths$smm_immunity_tracker_protocol_runway, smm_immunity_tracker$protocol_runway),
+    source_resolution_audit = safe_read_output_csv(output_paths$smm_immunity_tracker_source_resolution_audit, smm_immunity_tracker$source_resolution_audit),
+    production_query_review = safe_read_output_csv(output_paths$smm_immunity_tracker_production_query_review, smm_immunity_tracker$production_query_review),
+    failed_query_audit = safe_read_output_csv(output_paths$smm_immunity_tracker_failed_query_audit, smm_immunity_tracker$failed_query_audit),
+    production_execution_summary = safe_read_output_csv(output_paths$smm_immunity_tracker_production_execution_summary, smm_immunity_tracker$production_execution_summary)
+  )
   payload_panels <- lapply(names(panels), function(panel_name) {
     safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
   })
@@ -772,7 +821,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     ki67_discovery = payload_ki67_discovery,
     patobank_ki67_percent = payload_patobank_ki67_percent,
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility,
-    confluence_feasibility = payload_confluence_feasibility
+    confluence_feasibility = payload_confluence_feasibility,
+    smm_immunity_tracker = payload_smm_immunity_tracker
   )
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
@@ -986,7 +1036,7 @@ source_availability_panel <- function(sources) {
 
 output_manifest_artifact_metadata <- function(id, path = "") {
   stem <- sub("[.][^.]*$", "", basename(path %||% ""))
-  key <- if (grepl("^(confluence|mcl_triangle|ki67|patobank_ki67|atlas|situation_report|npu|isotype|mm_|registry|damyda|lyfo)_", id)) {
+  key <- if (grepl("^(smm_immunity_tracker|confluence|mcl_triangle|ki67|patobank_ki67|atlas|situation_report|npu|isotype|mm_|registry|damyda|lyfo)_", id)) {
     id
   } else if (nzchar(stem)) {
     stem
@@ -1023,13 +1073,35 @@ output_manifest_artifact_metadata <- function(id, path = "") {
     "confluence_source_resolution_audit",
     "confluence_production_execution_summary"
   )
+  smm_immunity_canonical <- c(
+    "smm_immunity_tracker_cohort_counts",
+    "smm_immunity_tracker_wp5_source_audit",
+    "smm_immunity_tracker_endpoint_definitions",
+    "smm_immunity_tracker_infection_counts",
+    "smm_immunity_tracker_recurrent_infection_counts",
+    "smm_immunity_tracker_microbiology_confirmation_counts",
+    "smm_immunity_tracker_infection_person_time",
+    "smm_immunity_tracker_infection_rates",
+    "smm_immunity_tracker_burden_strata_counts",
+    "smm_immunity_tracker_landmark_progression_signal",
+    "smm_immunity_tracker_atypical_prolonged_severe_readiness",
+    "smm_immunity_tracker_bias_warnings",
+    "smm_immunity_tracker_estimands",
+    "smm_immunity_tracker_protocol_runway",
+    "smm_immunity_tracker_source_resolution_audit",
+    "smm_immunity_tracker_production_query_review",
+    "smm_immunity_tracker_failed_query_audit",
+    "smm_immunity_tracker_production_execution_summary"
+  )
   confluence_superseded_by <- c(
     confluence_summary = "confluence_production_execution_summary",
     confluence_disease_state_counts = "confluence_disease_state_person_counts",
     confluence_overlap_counts = "confluence_overlap_counts_accepted",
     confluence_overlap_timing = "confluence_overlap_timing_accepted"
   )
-  module <- if (grepl("^confluence_", key)) {
+  module <- if (grepl("^smm_immunity_tracker_", key)) {
+    "smm_immunity_tracker"
+  } else if (grepl("^confluence_", key)) {
     "confluence"
   } else if (grepl("^mcl_triangle", key)) {
     "mcl_triangle"
@@ -1040,7 +1112,7 @@ output_manifest_artifact_metadata <- function(id, path = "") {
   }
   mcl_count_output <- grepl("^mcl_triangle_count_", id) ||
     (grepl("^mcl_triangle_", key) && grepl("mcl_triangle_(data_point_counts|execution_summary|failed_query_audit|count_summary|inclusion_waterfall|overlap_matrix|exposure_strata_counts|landmark_feasibility_counts|ki67_|age_proxy_counts|ibrutinib_|treatment_strategy_strata_counts|high_risk_biology_counts|answerability_)", key))
-  canonical_output <- key %in% confluence_canonical || isTRUE(mcl_count_output)
+  canonical_output <- key %in% c(confluence_canonical, smm_immunity_canonical) || isTRUE(mcl_count_output)
   production_output <- canonical_output
   superseded_by <- if (key %in% names(confluence_superseded_by)) unname(confluence_superseded_by[[key]]) else ""
   artifact_role <- if (nzchar(superseded_by)) {

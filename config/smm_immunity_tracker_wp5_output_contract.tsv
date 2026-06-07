@@ -1,0 +1,14 @@
+canonical_field	accepted_aliases	required_for	notes
+person_key	patientid;person_key;patient_id	cohort aggregation	Secure intermediate only; never written to static SMM outputs.
+first_dc900_date	first_dc900_date;first_mm_date;index_date;date_diagnosis;diagnosis_date	day-90 harmonization	Used to derive tracker_entry_date.
+tracker_entry_date	entry_date;day90_date;tracker_entry_date	primary tracker entry	For AOT and CVM harmonized views this is first_dc900_date + 90.
+diagnosis_origin_entry_date	main_time_zero;cvm_time_zero;diagnosis_date;first_dc900_date	CVM reproduction view	Secondary/readiness view only.
+progression_date	progression_date;cvm_progression_date_main	progression endpoint	Treatment-defined active MM or AL amyloidosis.
+progression_type	progression_source;cvm_progression_source_main	endpoint audit	Aggregate notes only.
+death_date	death_date;date_death_fu	competing event	Death before progression.
+censor_date	censor_date;followup_reference_date;exit_date;cvm_exit_date_main	follow-up	Used inside secure runtime to compute aggregate person-time.
+event_status	event_status;cvm_event_status_main	event status	1 progression, 2 death before progression, 0 censored where available.
+risk_202020_group	risk_202020_group	stratification readiness	Optional; not emitted as person-level data.
+aquila_group	aquila_group	stratification readiness	Optional; not emitted as person-level data.
+sex	sex	descriptive readiness	Optional; suppress before any public split.
+age_years	age_years	descriptive readiness	Optional; suppress before any public split.

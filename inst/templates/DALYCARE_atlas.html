@@ -1651,6 +1651,7 @@
       <div class="sub-nav" aria-label="Clinical Feasibility sections">
         <button class="sub-tab active" data-sub="mcl-triangle-feasibility">MCL / TRIANGLE</button>
         <button class="sub-tab" data-sub="confluence-feasibility">CONFLUENCE</button>
+        <button class="sub-tab" data-sub="smm-immunity-tracker">SMM immunity tracker</button>
       </div>
       <div class="sub-pane active" id="mcl-triangle-feasibility">
         <div class="panel">
@@ -1675,6 +1676,18 @@
           </div>
           <div class="panel-body">
             <div id="confluence-feasibility-dashboard"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="smm-immunity-tracker">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Feasibility / infection-burden signal</p>
+            <h2 class="panel-title">SMM Immunity Tracker</h2>
+            <p class="panel-sub">AOT/WP5 and CVM/JAMA SMM cohorts compared with a day-90 harmonized tracker entry, infection-burden windows, time to progression, and death as competing event.</p>
+          </div>
+          <div class="panel-body">
+            <div id="smm-immunity-tracker-dashboard"></div>
           </div>
         </div>
       </div>
@@ -1920,6 +1933,7 @@
       const patobankKi67Percent = payload.patobank_ki67_percent || {};
       const mclTriangleFeasibility = payload.mcl_triangle_feasibility || {};
       const confluenceFeasibility = payload.confluence_feasibility || {};
+      const smmImmunityTracker = payload.smm_immunity_tracker || {};
       const columnRows = payload.column_profile_rows || [];
       const columnTopValues = payload.column_top_value_rows || [];
       const columnSummary = payload.column_profile_summary || [];
@@ -2002,7 +2016,7 @@
         { audience: "PI / senior investigator", question: "What can DALY-CARE support now, and what needs validation before a protocol?", firstTab: "Clinical Feasibility", nextTabs: ["Overview briefing", "Infrastructure QA"], caveat: "Feasibility panels are descriptive and not treatment-effect evidence.", tab: "clinical-feasibility", sub: "mcl-triangle-feasibility", tone: "violet", search: "pi briefing" },
         { audience: "Data manager / QA", question: "Which sources, fields, and validation actions need attention first?", firstTab: "Infrastructure / Source Catalogue", nextTabs: ["Data Dictionary", "Clinical Feasibility"], caveat: "Unknown status must stay unknown/needs validation until source-owner evidence exists.", tab: "infrastructure", sub: "infra-catalog", tone: "blue", search: "data manager QA source readiness" },
         { audience: "Disease researcher", question: "Where do I start for disease-specific cohort and evidence review?", firstTab: "Disease Registries", nextTabs: ["Clinical Feasibility", "Laboratory & Diagnostics"], caveat: "Registry indicators are source evidence; CONFLUENCE separates accepted aggregate rows, provisional endpoints, and protocol-hardening needs.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "plum", search: "disease researcher feasibility CONFLUENCE overlap" },
-        { audience: "Plasma cell disorder / MM researcher", question: "Where are DaMyDa, PCD overlap, infection, treatment, and biobank routes?", firstTab: "DaMyDa", nextTabs: ["CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DaMyDa fields and MGUS/MM overlap states need study-specific definitions before extraction.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "green", search: "PCD MM myeloma DaMyDa CONFLUENCE MGUS infection" },
+        { audience: "Plasma cell disorder / MM researcher", question: "Where are DaMyDa, SMM, PCD overlap, infection, treatment, and biobank routes?", firstTab: "DaMyDa", nextTabs: ["SMM Immunity Tracker", "CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DaMyDa fields and MGUS/SMM/MM overlap states need study-specific definitions before extraction.", tab: "clinical-feasibility", sub: "smm-immunity-tracker", tone: "green", search: "SMM smoldering smouldering infection burden immunity progression AOT WP5 CVM JAMA Oncology" },
         { audience: "CLL researcher", question: "Where are CLL/MBL registry, overlap, infection, IGHV/FISH/TP53, and treatment signals?", firstTab: "CLL", nextTabs: ["CONFLUENCE", "Laboratory & Diagnostics"], caveat: "DD479B / D47.9B is coded-candidate MBL, not validated biologic MBL.", tab: "clinical-feasibility", sub: "confluence-feasibility", tone: "cyan", search: "CLL MBL DD479B CONFLUENCE infection overlap" },
         { audience: "Lymphoma researcher", question: "Where are LYFO, MCL/TRIANGLE, pathology, treatment, and outcome routes?", firstTab: "LYFO", nextTabs: ["Clinical Feasibility", "Pathology / PATOBANK"], caveat: "MCL/TRIANGLE-lite is descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", tone: "plum", search: "lymphoma LYFO MCL feasibility" },
         { audience: "New employee onboarding", question: "How do I learn the atlas safely without touching patient-level data?", firstTab: "Quick Start", nextTabs: ["Clinical Variables", "Data Dictionary"], caveat: "Use aggregate routes, glossary terms, and exports; do not infer patient-level completeness.", tab: "quickstart", sub: "quickstart-recipes", tone: "green", search: "onboarding new employee" },
@@ -2018,7 +2032,7 @@
         { label: "descriptive feasibility only", tone: "cyan", meaning: "Study-planning signal only; not causal evidence, not a recommendation, and not treatment safety evidence." }
       ];
       const diseaseEntryCards = [
-        { title: "Plasma cell disorders / MM", firstSource: "DaMyDa registry", support: ["CONFLUENCE", "Treatment", "Biobank"], question: "Can a myeloma or MGUS/SMM/MM overlap cohort be scoped with infection, staging, imaging, and treatment context?", caveat: "Registry indicators and CONFLUENCE overlap rows need source-specific validation.", tab: "clinical-feasibility", sub: "confluence-feasibility", search: "PCD MM myeloma DaMyDa MGUS CONFLUENCE" },
+        { title: "Plasma cell disorders / MM", firstSource: "DaMyDa registry", support: ["SMM Immunity Tracker", "CONFLUENCE", "Treatment", "Biobank"], question: "Can a myeloma or SMM cohort be scoped with infection burden, staging, imaging, and treatment context?", caveat: "Registry indicators, SMM tracker rows, and CONFLUENCE overlap rows need source-specific validation.", tab: "clinical-feasibility", sub: "smm-immunity-tracker", search: "SMM smoldering smouldering infection burden immunity progression AOT WP5 CVM JAMA Oncology" },
         { title: "CLL", firstSource: "RKKP CLL registry", support: ["CONFLUENCE", "Laboratory & Diagnostics", "Treatment"], question: "Which CLL/MBL registry, molecular/treatment, and infection-overlap signals are available for feasibility?", caveat: "IGHV/FISH/TP53 and treatment routes are evidence layers; DD479B MBL is coded candidate evidence.", tab: "clinical-feasibility", sub: "confluence-feasibility", search: "CLL MBL DD479B CONFLUENCE IGHV FISH TP53" },
         { title: "Lymphoma", firstSource: "LYFO registry", support: ["MCL/TRIANGLE-lite", "Pathology / PATOBANK", "Treatment"], question: "Can lymphoma/MCL cohorts be scoped with registry, pathology, treatment, and outcome evidence?", caveat: "TRIANGLE-lite remains descriptive feasibility only.", tab: "registries", sub: "reg-lyfo", search: "lymphoma LYFO MCL" },
         { title: "Other lymphoproliferative disorders", firstSource: "Diagnosis and registry routes", support: ["Clinical Variables", "Laboratory & Diagnostics", "Data Dictionary"], question: "Which diagnosis/source families can support an exploratory LPD feasibility question?", caveat: "Start with diagnosis/source readiness before defining analytic cohorts.", tab: "variables", sub: "variables-concepts", search: "lymphoproliferative diagnosis registry" }
@@ -2030,6 +2044,7 @@
         { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
         { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Walking from a trial-inspired lymphoma question to aggregate feasibility counts, design warnings, and a validation plan.", evidence: "Production aggregate cohort, exposure, outcome, age-proxy, Ibrutinib, and Ki-67 feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
         { title: "DALY-CARE CONFLUENCE", status: "Overlap-feasibility panel", tone: "cyan", bestFor: "Scoping CLL/MBL, MGUS/SMM/MM, converging clonal states, infection outcomes, and bias structure before protocol claims are made.", evidence: "Accepted aggregate rows, provisional endpoint definitions, validation logic, and protocol hardening path", examples: ["MBL", "DD479B", "MGUS", "infection"], tab: "clinical-feasibility", sub: "confluence-feasibility" },
+        { title: "SMM Immunity Tracker", status: "SMM feasibility panel", tone: "green", bestFor: "Reviewing day-90 harmonized SMM infection burden before progression, with death as competing event.", evidence: "AOT/WP5 and CVM/JAMA SMM cohorts, infection windows, landmark progression signal, and bias warnings", examples: ["SMM", "infection burden", "AOT/WP5", "CVM/JAMA"], tab: "clinical-feasibility", sub: "smm-immunity-tracker", search: "SMM smoldering smouldering infection burden immunity progression AOT WP5 CVM JAMA Oncology" },
         { title: "Treatment evidence", status: "Source-context evidence", tone: "green", bestFor: "Separating registry, SP, ATC, SKS, SMR, and prescription treatment layers.", evidence: "Treatment source-context rows and code signals", examples: ["L01", "SP_AdministreretMedicin", "rituximab"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "Laboratory / NPU", status: "Lab/code evidence", tone: "cyan", bestFor: "Finding lab concepts, NPU/DNK codes, and source coverage.", evidence: "NPU/DNK dictionary, lab source rows, registry lab fields", examples: ["haemoglobin", "creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Microbiology / infection", status: "Aggregate evidence", tone: "green", bestFor: "Reviewing culture, resistance, sample material, organism/domain, and result-class evidence.", evidence: "PERSIMUNE microbiology and SP blood-culture aggregate rows", examples: ["BLOODCULTURE", "Virus", "sensitivitet_resultat"], tab: "laboratory", sub: "lab-microbiology" },
@@ -2052,6 +2067,7 @@
         { panel: "Biobank", status: "restored", note: "identifier/date and low-count safeguards in place", tone: "green" },
         { panel: "MCL / TRIANGLE feasibility", status: "added", note: "aggregate feasibility panel; no causal or treatment recommendation claims", tone: "violet" },
         { panel: "DALY-CARE CONFLUENCE", status: "added", note: "overlap-feasibility panel with accepted aggregate rows, provisional endpoints, and no causal claims", tone: "cyan" },
+        { panel: "SMM Immunity Tracker", status: "added", note: "day-90 harmonized SMM infection-burden feasibility panel; no causal or treatment-decision claims", tone: "green" },
         { panel: "Clinical Variables", status: "restored", note: "clinician-first concept ordering", tone: "green" },
         { panel: "Data Dictionary", status: "restored", note: "stacked raw-lineage detail pane", tone: "green" }
       ];
@@ -2059,6 +2075,7 @@
         { title: "Registry to treatment evidence", from: "DaMyDa / LYFO / CLL", to: "Treatment", examples: ["Bortezomib", "R-CHOP", "Ibrutinib"], tab: "treatment", sub: "treatment-dashboard" },
         { title: "MCL feasibility to source activation", from: "LYFO / Treatment / Pathology", to: "MCL / TRIANGLE", examples: ["MCL", "TP53", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
         { title: "CLL/MBL and PCD overlap feasibility", from: "CLL / DaMyDa / Microbiology", to: "CONFLUENCE", examples: ["MBL", "MGUS", "infection"], tab: "clinical-feasibility", sub: "confluence-feasibility" },
+        { title: "SMM infection-burden feasibility", from: "DaMyDa / WP5 / Microbiology", to: "SMM Immunity Tracker", examples: ["SMM", "AOT/WP5", "CVM/JAMA", "infection burden"], tab: "clinical-feasibility", sub: "smm-immunity-tracker" },
         { title: "TRIANGLE-lite to Ki-67 pathology evidence", from: "MCL / TRIANGLE", to: "Pathology / PATOBANK", examples: ["Ki-67", "AEKI/ÆKI", "SDS_pato"], tab: "laboratory", sub: "lab-pathology" },
         { title: "Registry to labs and NPU codes", from: "Disease registries", to: "Laboratory / NPU", examples: ["LDH", "Creatinine", "NPU02319"], tab: "laboratory", sub: "lab-npu" },
         { title: "Treatment to infection context", from: "Treatment", to: "Microbiology / infection", examples: ["BLOODCULTURE", "Negative", "antibiotika"], tab: "laboratory", sub: "lab-microbiology" },
@@ -2622,6 +2639,7 @@
       }
       function panelRoute(panelId) {
         const id = text(panelId || "").toLowerCase();
+        if (/smm|smolder|smoulder|immunity|infection burden|immune vulnerability|aot|wp5|cvm|jama oncology/.test(id)) return { tab: "clinical-feasibility", sub: "smm-immunity-tracker" };
         if (/confluence|mbl|mgus|dd479b|dd472|dd472b|m95911|m96121|m98231|m98233|d47\.?9b|d47\.?2|overlap|dual.?clone|cll mgus|cll mm|mbl mgus/.test(id)) return { tab: "clinical-feasibility", sub: "confluence-feasibility" };
         if (/mcl|triangle|mantle|feasibility/.test(id)) return { tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" };
         if (/damyda/.test(id)) return { tab: "registries", sub: "reg-damyda" };
@@ -2706,6 +2724,27 @@
             confluencePanelSearchRow,
             { tab: "clinical-feasibility", sub: "confluence-feasibility" },
             { query: q, item: "confluence_feasibility", status: "Overlap-feasibility panel", copy: "#clinical-feasibility/confluence-feasibility", score: confluencePanelScore + 130 }
+          ));
+        }
+        const smmPanelSearchRow = {
+          panel_id: "smm_immunity_tracker",
+          panel_title: "SMM Immunity Tracker",
+          clinical_purpose: "Day-90 harmonized SMM infection-burden feasibility panel for AOT/WP5 and CVM/JAMA cohorts, time to progression, progression-free interval, cumulative incidence of progression, and death as competing event.",
+          search_terms: "SMM smoldering smouldering infection burden immunity immune vulnerability progression time to progression progression-free interval cumulative incidence death competing event AOT WP5 CVM JAMA Oncology first DC900 day90 landmark microbiology recurrent infection"
+        };
+        const smmPanelScore = scoreSearchResult(smmPanelSearchRow, q, {
+          exact: ["panel_id", "panel_title"],
+          title: ["panel_title"],
+          body: ["clinical_purpose", "search_terms"]
+        });
+        if (smmPanelScore > 0) {
+          grouped["Panels"].push(makeSearchResult(
+            "Panels",
+            "SMM Immunity Tracker",
+            "Day-90 harmonized SMM infection-burden feasibility panel; descriptive only, not causal or treatment-decision ready.",
+            smmPanelSearchRow,
+            { tab: "clinical-feasibility", sub: "smm-immunity-tracker" },
+            { query: q, item: "smm_immunity_tracker", status: "SMM feasibility panel", copy: "#clinical-feasibility/smm-immunity-tracker", score: smmPanelScore + 140 }
           ));
         }
         ((patobankKi67Percent && patobankKi67Percent.summary) || []).forEach(row => {
@@ -7993,6 +8032,187 @@
           <tbody>${visible.map(row => `<tr data-row-search-key="${escapeHtml(rowHay(row))}">${columns.map(col => `<td>${col.render ? col.render(row) : escapeHtml(row[col.key] || "")}</td>`).join("")}</tr>`).join("")}</tbody>
         </table></div>`;
       }
+      function smmImmunityRows(name) {
+        return (smmImmunityTracker && smmImmunityTracker[name]) || [];
+      }
+      function smmImmunitySummaryMetric(metricId) {
+        return smmImmunityRows("summary").find(row => row.metric === metricId) || {};
+      }
+      function smmImmunityProductionSuccess() {
+        return smmImmunityRows("production_execution_summary")
+          .some(row => row.metric === "production_query_success" && String(row.value).toLowerCase() === "true");
+      }
+      function smmImmunityAcceptedCount(rows) {
+        return (rows || []).filter(row => row.acceptance_status === "accepted").length;
+      }
+      function renderSmmImmunityKpis() {
+        const cohorts = smmImmunityRows("cohort_counts");
+        const burden = smmImmunityRows("burden_strata_counts");
+        const landmark = smmImmunityRows("landmark_progression_signal");
+        const routes = smmImmunityRows("source_resolution_audit");
+        const kpis = [
+          { label: "Primary time origin", value: smmImmunitySummaryMetric("primary_time_origin").value || "day90_harmonized", tone: "green", statusLabel: "AOT/WP5 + CVM/JAMA" },
+          { label: "Accepted cohorts", value: smmImmunityAcceptedCount(cohorts), tone: smmImmunityAcceptedCount(cohorts) ? "green" : "amber", statusLabel: "aggregate rows" },
+          { label: "Burden strata", value: smmImmunityAcceptedCount(burden), tone: smmImmunityAcceptedCount(burden) ? "blue" : "amber", statusLabel: "suppressed aggregate" },
+          { label: "Landmark signal", value: smmImmunityAcceptedCount(landmark), tone: smmImmunityAcceptedCount(landmark) ? "cyan" : "amber", statusLabel: "time to progression" },
+          { label: "Production mode", value: smmImmunityProductionSuccess() ? "available" : "fail-closed", tone: smmImmunityProductionSuccess() ? "green" : "amber", statusLabel: routes.length ? "route audit present" : "plan/readiness" }
+        ];
+        return renderKpiStrip(kpis);
+      }
+      function renderSmmImmunityTable(rows, columns, maxRows) {
+        const visible = (rows || []).slice(0, maxRows || 20);
+        if (!visible.length) return `<div class="empty">No SMM Immunity Tracker rows available in current aggregate output.</div>`;
+        if (!columns || !columns.length) return rowsForTable(visible, maxRows || 20);
+        return renderConfluenceTable(visible, columns, maxRows);
+      }
+      function renderSmmImmunityTrackerPanel() {
+        const story = smmImmunityRows("story_cards");
+        const cohorts = smmImmunityRows("cohort_readiness");
+        const cohortCounts = smmImmunityRows("cohort_counts");
+        const endpoints = smmImmunityRows("endpoint_definitions");
+        const infectionCounts = smmImmunityRows("infection_counts");
+        const recurrentCounts = smmImmunityRows("recurrent_infection_counts");
+        const microCounts = smmImmunityRows("microbiology_confirmation_counts");
+        const personTime = smmImmunityRows("infection_person_time");
+        const rates = smmImmunityRows("infection_rates");
+        const burden = smmImmunityRows("burden_strata_counts");
+        const landmark = smmImmunityRows("landmark_progression_signal");
+        const readiness = smmImmunityRows("atypical_prolonged_severe_readiness");
+        const bias = smmImmunityRows("bias_warnings");
+        const estimands = smmImmunityRows("estimands");
+        const runway = smmImmunityRows("protocol_runway");
+        const review = smmImmunityRows("production_query_review");
+        const failed = smmImmunityRows("failed_query_audit");
+        const sourceAudit = smmImmunityRows("source_resolution_audit");
+        const wp5Audit = smmImmunityRows("wp5_source_audit");
+        return `
+          ${renderSmmImmunityKpis()}
+          <div class="callout"><strong>Feasibility signal only.</strong> Infection burden may be a marker of immune vulnerability, occult progression, surveillance intensity, frailty, or treatment-readiness differences. This panel does not establish that infections cause progression.</div>
+          <div class="dashboard-grid confluence-dashboard">
+            ${renderSectionCard("Story", `
+              ${story.length ? `<div class="grid">${story.map(row => `<article class="card"><div>${renderBadge(row.status || "", row.tone || confluenceStatusTone(row.status))}</div><h3>${escapeHtml(row.title || row.card_id)}</h3><p>${escapeHtml(row.body || "")}</p></article>`).join("")}</div>` : `<div class="empty">No story rows available.</div>`}
+            `, "cyan")}
+            ${renderSectionCard("SMM cohort definitions", `
+              ${renderSmmImmunityTable(cohorts, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "tracker_role", label: "Role", render: row => renderBadge(row.tracker_role || "", confluenceStatusTone(row.tracker_role)) },
+                { key: "time_origin", label: "Time origin" },
+                { key: "entry_rule", label: "Entry rule" },
+                { key: "readiness_status", label: "Readiness", render: row => renderBadge(row.readiness_status || "", confluenceStatusTone(row.readiness_status)) }
+              ], 8)}
+            `, "green")}
+            ${renderSectionCard("Accepted cohort counts", `
+              ${renderSmmImmunityTable(cohortCounts, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "time_origin", label: "Origin" },
+                { key: "n_people_display", label: "People" },
+                { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+                { key: "suppression_status", label: "Suppression" }
+              ], 12)}
+            `, "green")}
+            ${renderSectionCard("Infection endpoints", `
+              ${renderSmmImmunityTable(endpoints, [
+                { key: "endpoint_label", label: "Endpoint" },
+                { key: "endpoint_family", label: "Family" },
+                { key: "definition_status", label: "Definition", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
+                { key: "route_status", label: "Route" }
+              ], 12)}
+            `, "blue")}
+            ${renderSectionCard("Exposure windows and estimands", `
+              ${renderSmmImmunityTable(estimands, [
+                { key: "title", label: "Estimand" },
+                { key: "primary_view", label: "Primary", render: row => renderBadge(row.primary_view || "", row.primary_view === "yes" ? "green" : "amber") },
+                { key: "exposure_window", label: "Window" },
+                { key: "outcome", label: "Outcome" },
+                { key: "interpretation_limit", label: "Limit" }
+              ], 10)}
+            `, "plum")}
+            ${renderSectionCard("Burden strata and landmark progression signal", `
+              ${renderSmmImmunityTable(burden, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "analysis_window", label: "Window" },
+                { key: "burden_stratum", label: "Burden" },
+                { key: "n_people_display", label: "People" },
+                { key: "n_progression_display", label: "Progression" },
+                { key: "n_competing_death_display", label: "Competing death" },
+                { key: "progression_rate_per_100py", label: "Progression rate/100py" },
+                { key: "suppression_status", label: "Suppression" }
+              ], 24)}
+              <details class="lineage-block"><summary>Landmark progression signal rows</summary>${renderSmmImmunityTable(landmark, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "analysis_window", label: "Window" },
+                { key: "burden_stratum", label: "Burden" },
+                { key: "n_at_landmark_display", label: "At landmark" },
+                { key: "progression_events_display", label: "Progression" },
+                { key: "competing_deaths_display", label: "Competing death" },
+                { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
+              ], 24)}</details>
+            `, "cyan")}
+            ${renderSectionCard("Infection counts, recurrent episodes, and rates", `
+              <details class="lineage-block" open><summary>Serious infection counts</summary>${renderSmmImmunityTable(infectionCounts, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "analysis_window", label: "Window" },
+                { key: "infection_endpoint_label", label: "Endpoint" },
+                { key: "count_display", label: "People" },
+                { key: "event_count_display", label: "Events" },
+                { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
+              ], 18)}</details>
+              <details class="lineage-block"><summary>Recurrent episodes</summary>${renderSmmImmunityTable(recurrentCounts, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "analysis_window", label: "Window" },
+                { key: "count_display", label: "People" },
+                { key: "event_count_display", label: "Episodes" },
+                { key: "suppression_status", label: "Suppression" }
+              ], 18)}</details>
+              <details class="lineage-block"><summary>Person-time and rates</summary>${renderSmmImmunityTable(personTime.concat(rates), null, 24)}</details>
+            `, "green")}
+            ${renderSectionCard("Microbiology and atypical/prolonged/severe readiness", `
+              <details class="lineage-block" open><summary>Microbiology-confirmed infection counts</summary>${renderSmmImmunityTable(microCounts, [
+                { key: "cohort_label", label: "Cohort" },
+                { key: "analysis_window", label: "Window" },
+                { key: "count_display", label: "People" },
+                { key: "event_count_display", label: "Events" },
+                { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
+              ], 18)}</details>
+              ${renderSmmImmunityTable(readiness, [
+                { key: "category_label", label: "Category" },
+                { key: "definition_status", label: "Definition", render: row => renderBadge(row.definition_status || "", confluenceStatusTone(row.definition_status)) },
+                { key: "route_status", label: "Route" },
+                { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) }
+              ], 8)}
+            `, "amber")}
+            ${renderSectionCard("Bias warnings", `
+              ${renderSmmImmunityTable(bias, [
+                { key: "bias_label", label: "Bias" },
+                { key: "tracker_implication", label: "Implication" },
+                { key: "mitigation", label: "Mitigation" }
+              ], 12)}
+            `, "amber")}
+            ${renderSectionCard("Protocol-hardening path", `
+              ${renderSmmImmunityTable(runway, [
+                { key: "workstream", label: "Workstream" },
+                { key: "status", label: "Status", render: row => renderBadge(row.status || "", confluenceStatusTone(row.status)) },
+                { key: "owner_role", label: "Owner role" },
+                { key: "notes", label: "Notes" }
+              ], 12)}
+            `, "green")}
+            ${renderSectionCard("Production and source audit", `
+              <details class="lineage-block" open><summary>Production query review</summary>${renderSmmImmunityTable(review, [
+                { key: "query_label", label: "Query" },
+                { key: "query_status", label: "Status", render: row => renderBadge(row.query_status || "", confluenceStatusTone(row.query_status)) },
+                { key: "acceptance_status", label: "Acceptance", render: row => renderBadge(row.acceptance_status || "", confluenceStatusTone(row.acceptance_status)) },
+                { key: "notes", label: "Notes" }
+              ], 12)}</details>
+              <details class="lineage-block"><summary>Failed-query audit</summary>${renderSmmImmunityTable(failed, [
+                { key: "query_id", label: "Query" },
+                { key: "count_status", label: "Status", render: row => renderBadge(row.count_status || "", confluenceStatusTone(row.count_status)) },
+                { key: "error_message_sanitized", label: "Reason" }
+              ], 12)}</details>
+              <details class="lineage-block"><summary>Source route audit</summary>${renderSmmImmunityTable(sourceAudit.concat(wp5Audit), null, 24)}</details>
+            `, "blue")}
+          </div>
+        `;
+      }
       function confluenceSummaryMetric(metricId) {
         return confluenceRows("summary").find(row => row.metric === metricId) || {};
       }
@@ -8783,6 +9003,7 @@
         setHtml("registry-summary-table", rowsForTable(reviewRegistry.summary || [], 100));
         setHtml("mcl-triangle-feasibility-dashboard", renderMclTriangleFeasibilityPanel());
         setHtml("confluence-feasibility-dashboard", renderConfluenceFeasibilityPanel());
+        setHtml("smm-immunity-tracker-dashboard", renderSmmImmunityTrackerPanel());
 
         setHtml("clinical-diagnoses-cards", renderDomainPanel("diagnosis_atlas"));
         setHtml("clinical-admissions-cards", renderDomainPanel("clinical_adt"));

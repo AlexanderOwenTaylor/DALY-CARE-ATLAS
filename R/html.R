@@ -122,7 +122,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           ki67_discovery = NULL,
                           patobank_ki67_percent = NULL,
                           mcl_triangle_feasibility = NULL,
-                          confluence_feasibility = NULL) {
+                          confluence_feasibility = NULL,
+                          smm_immunity_tracker = NULL) {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -158,6 +159,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   if (is.null(patobank_ki67_percent)) patobank_ki67_percent <- patobank_ki67_empty_outputs()
   if (is.null(mcl_triangle_feasibility)) mcl_triangle_feasibility <- mcl_triangle_empty_payload()
   if (is.null(confluence_feasibility)) confluence_feasibility <- confluence_empty_payload()
+  if (is.null(smm_immunity_tracker)) smm_immunity_tracker <- smm_immunity_tracker_empty_payload()
   public_checks <- sanitize_public_frame(checks)
   public_panels <- lapply(panels, sanitize_public_frame)
   public_column_profiles <- public_column_profile_rows(column_profiles)
@@ -209,6 +211,15 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     x
   })
   public_confluence_feasibility <- lapply(confluence_feasibility, function(x) {
+    if (is.data.frame(x)) return(public_rows(sanitize_public_frame(x), max_rows = 2000))
+    if (is.list(x)) {
+      return(lapply(x, function(y) {
+        if (is.data.frame(y)) public_rows(sanitize_public_frame(y), max_rows = 2000) else y
+      }))
+    }
+    x
+  })
+  public_smm_immunity_tracker <- lapply(smm_immunity_tracker, function(x) {
     if (is.data.frame(x)) return(public_rows(sanitize_public_frame(x), max_rows = 2000))
     if (is.list(x)) {
       return(lapply(x, function(y) {
@@ -319,6 +330,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     patobank_ki67_percent = public_patobank_ki67_percent,
     mcl_triangle_feasibility = public_mcl_triangle_feasibility,
     confluence_feasibility = public_confluence_feasibility,
+    smm_immunity_tracker = public_smm_immunity_tracker,
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),
@@ -360,7 +372,7 @@ review_nav <- function() {
     list(
       id = "clinical-feasibility",
       label = "Clinical Feasibility",
-      sub_tabs = c("MCL / TRIANGLE", "CONFLUENCE")
+      sub_tabs = c("MCL / TRIANGLE", "CONFLUENCE", "SMM immunity tracker")
     ),
     list(
       id = "dictionary",

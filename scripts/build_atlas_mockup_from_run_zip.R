@@ -152,9 +152,14 @@ copy_project_artifact <- function(relative_path) {
 project_artifacts <- c(
   "RUN_KI67_FINDER.R",
   "RUN_MCL_TRIANGLE_COUNTS.R",
+  "RUN_SMM_IMMUNITY_TRACKER_COUNTS.R",
   "config/mcl_triangle_feasibility_concepts.tsv",
   "config/mcl_triangle_person_date_mapping.tsv",
   "config/mcl_triangle_count_value_mappings.tsv",
+  "config/smm_immunity_tracker_cohort_sources.tsv",
+  "config/smm_immunity_tracker_endpoint_definitions.tsv",
+  "config/smm_immunity_tracker_analysis_windows.tsv",
+  "config/smm_immunity_tracker_wp5_output_contract.tsv",
   "clinical_questions/ki67_extraction_spec.yml",
   "clinical_questions/mcl_triangle_count_definitions.yml",
   "clinical_questions/mcl_triangle_high_risk_biology_definitions.yml",
@@ -174,11 +179,15 @@ project_artifacts <- c(
   "R/ki67_production_finder.R",
   "R/mcl_triangle_counts.R",
   "R/mcl_triangle_feasibility.R",
+  "R/smm_immunity_tracker_feasibility.R",
+  "R/smm_immunity_tracker_counts.R",
   "scripts/build_ki67_discovery.R",
   "scripts/find_ki67_in_production.R",
   "scripts/source_ki67_finder.R",
   "scripts/source_mcl_triangle_counts.R",
+  "scripts/source_smm_immunity_tracker_counts.R",
   "scripts/run_tests.R",
+  "docs/SMM_IMMUNITY_TRACKER_NOTES.md",
   "tests/helper.R",
   "tests/test-ki67-discovery.R",
   "tests/test-ki67-production-finder.R",
@@ -186,7 +195,9 @@ project_artifacts <- c(
   "tests/test-mcl-triangle-counts.R",
   "tests/test-mcl-triangle-answerability-counts.R",
   "tests/test-mcl-triangle-feasibility.R",
-  "tests/test-mcl-triangle-evidence-filtering.R"
+  "tests/test-mcl-triangle-evidence-filtering.R",
+  "tests/test_smm_immunity_tracker_counts.R",
+  "tests/test_smm_immunity_tracker_payload.R"
 )
 invisible(vapply(project_artifacts, copy_project_artifact, logical(1)))
 

@@ -1,0 +1,8 @@
+endpoint_id	endpoint_label	endpoint_family	definition_status	route_status	notes
+serious_infection_hospitalization	Serious infection hospitalization	hospital diagnosis	repo-derived provisional	reuse CONFLUENCE infection endpoint code sets where available	Feasibility endpoint only; final clinical endpoint ownership required.
+microbiology_confirmed_infection	Microbiology-confirmed infection	microbiology	repo-derived provisional	reuse CONFLUENCE microbiology confirmation mapping where available	No organism names or result text are emitted.
+recurrent_infection_episode	Recurrent infection episode	derived episode	derived from event stream using 14-day same-endpoint gap	requires serious infection or microbiology event stream	Episodes are aggregate burden units only.
+high_burden_infection	High burden infection	derived stratum	derived burden strata	requires infection event stream and landmark window	Default strata are 0, 1, 2-3, and >=4 episodes.
+atypical_or_opportunistic_infection	Atypical or opportunistic infection	readiness	readiness only until validated code lists and source routes exist	not accepted as a count in v1 unless validated	Use aggregate category readiness only.
+prolonged_or_complicated_infection	Prolonged or complicated infection	readiness	readiness only until validated code lists and source routes exist	not accepted as a count in v1 unless validated	Requires validated admission duration or episode linkage route.
+severe_infection	Severe infection	readiness	readiness only until validated code lists and source routes exist	not accepted as a count in v1 unless validated	Do not infer severity from broad infection diagnosis alone.

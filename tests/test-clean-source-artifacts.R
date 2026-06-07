@@ -11,6 +11,10 @@ tracked <- system2(
 expect_true(is.null(attr(tracked, "status")), paste("git ls-files failed:", paste(tracked, collapse = "\n")))
 
 forbidden_patterns <- c(
+  "^atlas_runs/",
+  "^logs/",
+  "^outputs/",
+  "^mockups/",
   "^config/cartography-reference/",
   "^config/semantic-unmapped-entity-map[.]tsv$",
   "^config/dalycare_cycle4_curator_label_promotions[.]csv$",
@@ -18,6 +22,7 @@ forbidden_patterns <- c(
   "^inst/legacy/.*/site/",
   "^qa_pdsa_cycle",
   "(^|/)DALYCARE_atlas_payload[.]js$",
+  "(^|/)site/DALYCARE_atlas.*[.]html$",
   "[.]zip$"
 )
 
@@ -41,7 +46,12 @@ for (needle in c(
   "inst/extdata/*/outputs/",
   "inst/legacy/**/site/",
   "qa_pdsa_cycle*/",
-  "*.zip"
+  "*.zip",
+  "atlas_runs/",
+  "outputs/",
+  "site/DALYCARE_atlas_payload.js",
+  "site/DALYCARE_atlas*.html",
+  "mockups/"
 )) {
   expect_true(grepl(needle, ignore_text, fixed = TRUE), paste("Expected .gitignore rule:", needle))
 }
