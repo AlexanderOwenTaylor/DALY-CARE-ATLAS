@@ -391,6 +391,11 @@ read_cartography_table <- function(filename, project_root = ".") {
 }
 
 validate_cartography_reference <- function(project_root = ".") {
+  root <- cartography_reference_root(project_root)
+  root_exists <- file.exists(root) || dir.exists(root)
+  if (!root_exists) {
+    return(invisible(TRUE))
+  }
   required <- c(
     "cartography_sp_social_hx_resolution.tsv",
     "cartography_sp_social_hx_value_frequencies.tsv",
@@ -403,10 +408,13 @@ validate_cartography_reference <- function(project_root = ".") {
     path <- cartography_reference_file(file, project_root)
     !is.na(path) && file.exists(path)
   }, logical(1))]
+  manifest <- cartography_manifest(project_root)
+  if (length(missing) == length(required) && !nrow(manifest)) {
+    return(invisible(TRUE))
+  }
   if (length(missing)) {
     stop("Cartography reference is missing required files: ", paste(missing, collapse = ", "), call. = FALSE)
   }
-  manifest <- cartography_manifest(project_root)
   if (nrow(manifest) && all(c("reference_filename", "curated_rows") %in% names(manifest))) {
     manifest_required <- manifest[manifest$reference_filename %in% required, , drop = FALSE]
     for (i in seq_len(nrow(manifest_required))) {

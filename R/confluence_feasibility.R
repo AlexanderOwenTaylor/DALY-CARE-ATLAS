@@ -1391,7 +1391,7 @@ confluence_reference_diagnosis_counts <- function(project_root = ".") {
     n_records = suppressWarnings(as.numeric(ref$n_rows %||% ref$n %||% NA_real_)),
     source_table = as.character(ref$object_name %||% ref$source_name %||% "t_dalycare_diagnoses"),
     source_column = as.character(ref$column_name %||% "diagnosis_code"),
-    evidence_source = "checked-in cartography-reference rows",
+    evidence_source = "local cartography-reference rows",
     stringsAsFactors = FALSE
   )
 }
@@ -1447,7 +1447,7 @@ confluence_reference_snomed_counts <- function(project_root = ".") {
     n_records = suppressWarnings(as.numeric(ref$n %||% NA_real_)),
     source_table = "SDS_pato",
     source_column = "SNOMED aggregate",
-    evidence_source = "checked-in cartography-reference PATOBANK SNOMED rows",
+    evidence_source = "local cartography-reference PATOBANK SNOMED rows",
     stringsAsFactors = FALSE
   )
 }

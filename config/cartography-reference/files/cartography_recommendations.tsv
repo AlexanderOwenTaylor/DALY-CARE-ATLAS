@@ -1,5 +1,0 @@
-﻿"priority"	"topic"	"recommendation"	"evidence"
-"high"	"SP_VitaleVaerdier"	"Confirm the resolved SP_VitaleVaerdier date/name/value columns from cartography_sp_vitalevaerdier_resolution.csv before wiring WP2 anthropometrics."	"cartography_sp_vitalevaerdier_resolution.csv"
-"medium"	"SP_Social_Hx"	"Use cartography_sp_social_hx_resolution.csv and cartography_sp_social_hx_value_frequencies.csv to map smoking/tobacco and alcohol fields."	"cartography_sp_social_hx_value_frequencies.csv"
-"high"	"RKKP_DaMyDa"	"Use cartography_damyda_known_field_map.csv and cartography_damyda_value_frequencies.csv to confirm bone-involvement field."	"cartography_damyda_known_field_map.csv"
-"medium"	"SDS_epikur"	"Use cartography_epikur_resolution.csv to confirm the ATC column first."	"cartography_epikur_resolution.csv"
