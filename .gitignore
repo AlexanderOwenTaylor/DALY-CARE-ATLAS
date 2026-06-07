@@ -8,3 +8,13 @@ logs/
 DALYCARE_atlas_V33_coverage_mockup_*/
 DALYCARE_atlas_V33_coverage_mockup_*.zip
 mockups/
+*.zip
+outputs/
+site/DALYCARE_atlas_payload.js
+site/DALYCARE_atlas*.html
+config/cartography-reference/
+config/semantic-unmapped-entity-map.tsv
+config/dalycare_cycle4_curator_label_promotions.csv
+inst/extdata/*/outputs/
+inst/legacy/**/site/
+qa_pdsa_cycle*/

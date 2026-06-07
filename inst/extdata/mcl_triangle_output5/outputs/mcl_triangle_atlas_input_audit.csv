@@ -1,2 +1,0 @@
-"atlas_output_zip","atlas_output_dir","atlas_input_supplied","selected_atlas_run","selected_outputs_dir","atlas_sources_rows","atlas_columns_rows","atlas_source_resolution_rows","canonical_resource_reconciliation_rows","selection_reason","notes"
-"","",FALSE,"","",0,0,0,0,"atlas_input_not_supplied","No main atlas output ZIP or directory was supplied; atlas inventories may contain configured source-space candidates only."

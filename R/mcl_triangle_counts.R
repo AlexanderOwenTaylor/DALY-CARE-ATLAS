@@ -8156,7 +8156,7 @@ mcl_count_resolve_standalone_output_source <- function(project_root = ".",
         fixture,
         fixture,
         selected = TRUE,
-        notes = "Using committed aggregate-only Output(5) fixture as the deterministic atlas fallback."
+        notes = "Using local aggregate-only Output(5) fixture as the deterministic atlas fallback."
       )
     ))
   }
