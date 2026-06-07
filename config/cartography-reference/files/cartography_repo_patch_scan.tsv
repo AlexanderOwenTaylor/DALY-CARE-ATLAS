@@ -1,2 +1,0 @@
-﻿"file_pattern"	"issue"	"suggested_fix"	"severity"
-"000_dalycare_cartography.R"	"Part 2 focus-tables script was needed due to memory exhaustion in Part 1"	"For future runs, consider chunked processing or data.table for 64M+ row tables"	"info"

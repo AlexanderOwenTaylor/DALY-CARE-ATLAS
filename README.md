@@ -166,6 +166,11 @@ Each run writes `atlas_runs/<run_id>/` with:
 - `site/DALYCARE_atlas.html`
 - `site/DALYCARE_atlas_payload.js`
 
+Generated run outputs are local artifacts and should not be committed. The Git
+repository carries the atlas tooling, source maps, static reference code sets,
+templates, and synthetic fixtures; run-specific CSVs, payloads, cartography
+extracts, QA screenshots, and ZIP bundles belong only in local run folders.
+
 Registry-focused runs can include these clinical panels:
 
 - `outputs/panels/registry_clinical_summary.csv`: row, column, patient-count,
@@ -209,9 +214,9 @@ raw columns, descriptors, codes, and values to clinical concepts, domain
 panels, confidence, caveats, and evidence files. The companion semantic value,
 code, and panel-link CSVs support value interpretation, NPU/ATC/SKS/SNOMED/code
 search, and the "Key raw fields" blocks shown throughout the atlas. These rows
-are generated from the committed cartography reference under
-`config/cartography-reference/`; no patient-level rows, CPRs, raw free text, or
-unsuppressed small cells are emitted.
+are generated from the current run and optional local cartography reference
+folder or ZIP supplied through `DALYCARE_CARTOGRAPHY_PATH`; no patient-level
+rows, CPRs, raw free text, or unsuppressed small cells are emitted.
 
 The atlas also ships a reference NPU consensus dictionary in
 `config/npu-consensus-dictionary.tsv`, generated from the unified consensus

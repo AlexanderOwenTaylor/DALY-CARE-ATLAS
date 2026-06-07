@@ -1,2 +1,0 @@
-"component","output_file","query_id","output_area","count_status","validation_status","query_attempted","query_success","error_message_sanitized","notes"
-"ibrutinib_validation","mcl_triangle_ibrutinib_source_validation.csv","CLL_TREAT_IBRUTINIB_auxiliary","auxiliary_cross_db_curated","","co_residency_probe_failed",FALSE,FALSE,"Cross-database join unavailable: source db_name=core and RKKP_LYFO db_name=import.","Source failed closed for primary union counting."

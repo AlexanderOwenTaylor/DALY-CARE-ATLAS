@@ -1,6 +1,0 @@
-﻿"dataset"	"column"	"type"	"position"
-"SP_Journalnotater_del2"	"note_id"	"integer64"	"1"
-"SP_Journalnotater_del2"	"dato"	"POSIXct"	"2"
-"SP_Journalnotater_del2"	"handling"	"character"	"3"
-"SP_Journalnotater_del2"	"date_received"	"Date"	"4"
-"SP_Journalnotater_del2"	"datetime_created"	"POSIXct"	"5"

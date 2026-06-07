@@ -399,6 +399,11 @@ validate_cartography_reference <- function(project_root = ".") {
     "cartography_damyda_known_field_map.tsv",
     "cartography_npu_disease_panels.tsv"
   )
+  root <- cartography_reference_root(project_root)
+  manifest <- cartography_manifest(project_root)
+  if (!file.exists(root) && !nrow(manifest)) {
+    return(invisible(TRUE))
+  }
   missing <- required[!vapply(required, function(file) {
     path <- cartography_reference_file(file, project_root)
     !is.na(path) && file.exists(path)
@@ -406,7 +411,6 @@ validate_cartography_reference <- function(project_root = ".") {
   if (length(missing)) {
     stop("Cartography reference is missing required files: ", paste(missing, collapse = ", "), call. = FALSE)
   }
-  manifest <- cartography_manifest(project_root)
   if (nrow(manifest) && all(c("reference_filename", "curated_rows") %in% names(manifest))) {
     manifest_required <- manifest[manifest$reference_filename %in% required, , drop = FALSE]
     for (i in seq_len(nrow(manifest_required))) {
