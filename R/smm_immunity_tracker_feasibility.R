@@ -45,6 +45,8 @@ smm_immunity_tracker_empty_cohort_counts <- function() {
     n_people = numeric(),
     count_kind = character(),
     acceptance_status = character(),
+    source_acceptance_status = character(),
+    tracker_status = character(),
     query_status = character(),
     suppression_status = character(),
     source_file_or_route = character(),
@@ -54,13 +56,25 @@ smm_immunity_tracker_empty_cohort_counts <- function() {
 
 smm_immunity_tracker_empty_wp5_source_audit <- function() {
   empty_df(
-    source_id = character(),
-    expected_path = character(),
-    source_family = character(),
+    source_file = character(),
+    source_root_label = character(),
+    wp5_run_id = character(),
+    path_status = character(),
     found = logical(),
     read_status = character(),
     rows_read = integer(),
+    public_safe = logical(),
+    secure_input_only = logical(),
     notes = character()
+  )
+}
+
+smm_immunity_tracker_empty_tracker_status <- function() {
+  empty_df(
+    status_key = character(),
+    status_value = character(),
+    status_label = character(),
+    caveat = character()
   )
 }
 
@@ -284,6 +298,7 @@ smm_immunity_tracker_empty_payload <- function() {
     cohort_readiness = smm_immunity_tracker_empty_cohort_readiness(),
     cohort_counts = smm_immunity_tracker_empty_cohort_counts(),
     wp5_source_audit = smm_immunity_tracker_empty_wp5_source_audit(),
+    tracker_status = smm_immunity_tracker_empty_tracker_status(),
     endpoint_definitions = smm_immunity_tracker_empty_endpoint_definitions(),
     infection_counts = smm_immunity_tracker_empty_infection_counts(),
     recurrent_infection_counts = smm_immunity_tracker_empty_infection_counts(),
@@ -565,6 +580,59 @@ smm_immunity_tracker_scaffold_summary <- function() {
   )
 }
 
+smm_immunity_tracker_status_rows <- function(cohort_denominators = "unavailable",
+                                             cvm_aggregate_route = "pending",
+                                             infection_routes = "unavailable",
+                                             microbiology_routes = "unavailable",
+                                             person_time_routes = "unavailable",
+                                             progression_signal = "unavailable",
+                                             tracker_status = "partial",
+                                             production_aggregate_status = "partial: cohort counts unavailable; CVM aggregate route pending; infection routes unavailable") {
+  data.frame(
+    status_key = c(
+      "wp5_cohort_denominators",
+      "cvm_aggregate_route",
+      "infection_routes",
+      "microbiology_routes",
+      "person_time_routes",
+      "progression_signal",
+      "tracker_status",
+      "production_aggregate_status"
+    ),
+    status_value = c(
+      cohort_denominators,
+      cvm_aggregate_route,
+      infection_routes,
+      microbiology_routes,
+      person_time_routes,
+      progression_signal,
+      tracker_status,
+      production_aggregate_status
+    ),
+    status_label = c(
+      "AOT/WP5 cohort denominators",
+      "CVM/JAMA aggregate route",
+      "Hospital-coded infection routes",
+      "Microbiology routes",
+      "Person-time routes",
+      "Progression-by-infection signal",
+      "Tracker-wide status",
+      "Production aggregate status"
+    ),
+    caveat = c(
+      "Accepted only when populated from public WP5 aggregate files.",
+      "CVM/JAMA counts require a separate accepted aggregate source.",
+      "Unavailable until secure aggregate infection-event routes are configured.",
+      "Unavailable until secure aggregate microbiology routes are configured.",
+      "Unavailable until secure aggregate person-time routes are configured.",
+      "Unavailable until secure infection-burden and progression aggregate routes are configured.",
+      "Partial means cohort denominators may be available while infection routes remain unavailable.",
+      "Empty infection outputs mean unavailable/not run, never true zero."
+    ),
+    stringsAsFactors = FALSE
+  )
+}
+
 smm_immunity_tracker_attach_story_layer <- function(outputs) {
   if (is.null(outputs)) outputs <- smm_immunity_tracker_empty_payload()
   counts <- outputs$cohort_counts %||% smm_immunity_tracker_empty_cohort_counts()
@@ -586,7 +654,11 @@ smm_immunity_tracker_attach_story_layer <- function(outputs) {
     tone = c("cyan", "green", "amber", "green", if (accepted_counts > 0L) "green" else "amber"),
     body = c(
       "Ask whether immune vulnerability after SMM recognition is measurable before progression.",
-      "Compare AOT/WP5 and CVM/JAMA using first DC900 plus 90 days as the primary tracker entry.",
+      if (accepted_counts > 0L) {
+        "AOT/WP5 cohort denominators available; CVM aggregate route pending; infection routes unavailable."
+      } else {
+        "AOT/WP5 cohort denominators unavailable; CVM aggregate route pending; infection routes unavailable."
+      },
       "Use pre-diagnosis, diagnosis-to-day-90, and 6/12-month landmark windows; pre-progression burden is descriptive only.",
       "No row-level records, identifiers, raw dates, organism names, microbiology text, pathology text, or free text are written.",
       "Endpoint codes, microbiology routes, cohort source lock, competing-risk plan, and suppression review are required before interpretation."
@@ -615,6 +687,10 @@ build_smm_immunity_tracker_feasibility_outputs <- function(project_root = ".",
   outputs <- empty
   outputs$summary <- smm_immunity_tracker_scaffold_summary()
   outputs$cohort_readiness <- smm_immunity_tracker_cohort_readiness()
+  outputs$tracker_status <- smm_immunity_tracker_status_rows(
+    tracker_status = "partial",
+    production_aggregate_status = "partial: cohort counts unavailable; CVM aggregate route pending; infection routes unavailable"
+  )
   outputs$endpoint_definitions <- smm_immunity_tracker_endpoint_definitions()
   outputs$atypical_prolonged_severe_readiness <- smm_immunity_tracker_atypical_readiness()
   outputs$bias_warnings <- smm_immunity_tracker_bias_warnings()
@@ -668,6 +744,7 @@ smm_immunity_tracker_write_outputs <- function(outputs, output_dir) {
     cohort_readiness = write_csv(outputs$cohort_readiness %||% smm_immunity_tracker_empty_cohort_readiness(), file.path(output_dir, "smm_immunity_tracker_cohort_readiness.csv")),
     cohort_counts = write_csv(outputs$cohort_counts %||% smm_immunity_tracker_empty_cohort_counts(), file.path(output_dir, "smm_immunity_tracker_cohort_counts.csv")),
     wp5_source_audit = write_csv(outputs$wp5_source_audit %||% smm_immunity_tracker_empty_wp5_source_audit(), file.path(output_dir, "smm_immunity_tracker_wp5_source_audit.csv")),
+    tracker_status = write_csv(outputs$tracker_status %||% smm_immunity_tracker_empty_tracker_status(), file.path(output_dir, "smm_immunity_tracker_status.csv")),
     endpoint_definitions = write_csv(outputs$endpoint_definitions %||% smm_immunity_tracker_empty_endpoint_definitions(), file.path(output_dir, "smm_immunity_tracker_endpoint_definitions.csv")),
     infection_counts = write_csv(outputs$infection_counts %||% smm_immunity_tracker_empty_infection_counts(), file.path(output_dir, "smm_immunity_tracker_infection_counts.csv")),
     recurrent_infection_counts = write_csv(outputs$recurrent_infection_counts %||% smm_immunity_tracker_empty_infection_counts(), file.path(output_dir, "smm_immunity_tracker_recurrent_infection_counts.csv")),

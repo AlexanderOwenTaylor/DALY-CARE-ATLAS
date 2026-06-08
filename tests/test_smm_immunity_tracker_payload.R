@@ -4,6 +4,8 @@ source_test_runtime(root)
 
 outputs <- build_smm_immunity_tracker_feasibility_outputs(project_root = root, min_cell_count = 5L)
 expect_true("cohort_readiness" %in% names(outputs), "Scaffold should include cohort readiness.")
+expect_true("tracker_status" %in% names(outputs), "Scaffold should include tracker-wide status rows.")
+expect_true(any(outputs$tracker_status$status_key == "tracker_status" & outputs$tracker_status$status_value == "partial"), "Tracker-wide status should remain partial in scaffold mode.")
 expect_true(any(outputs$cohort_readiness$cohort_id == "cvm_jama_smm_day90_harmonized"), "Scaffold should include CVM day-90 harmonized cohort.")
 expect_true(any(outputs$cohort_readiness$cohort_id == "cvm_jama_smm_diagnosis_origin" & outputs$cohort_readiness$tracker_role == "secondary reproduction/readiness view"), "CVM diagnosis-origin view should be secondary.")
 expect_false(any(grepl("survival before progression", capture.output(str(outputs)), ignore.case = TRUE)), "SMM output copy should avoid survival-before-progression language.")
@@ -54,5 +56,6 @@ expect_true(grepl("death as competing event", html, ignore.case = TRUE), "HTML s
 paths <- smm_immunity_tracker_write_outputs(outputs, tempfile("smm_outputs_"))
 expect_true(any(grepl("smm_immunity_tracker_bias_warnings.csv", unlist(paths), fixed = TRUE)), "Writer should emit SMM bias warnings.")
 expect_true(any(grepl("smm_immunity_tracker_landmark_progression_signal.csv", unlist(paths), fixed = TRUE)), "Writer should emit landmark progression signal.")
+expect_true(any(grepl("smm_immunity_tracker_status.csv", unlist(paths), fixed = TRUE)), "Writer should emit SMM tracker status.")
 
 cat("SMM Immunity Tracker payload tests passed\n")

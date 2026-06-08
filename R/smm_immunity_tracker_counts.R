@@ -22,16 +22,160 @@ smm_immunity_tracker_count_scalar <- function(x, default = "") {
 }
 
 smm_immunity_tracker_wp5_output_root <- function(project_root = ".") {
+  resolution <- smm_immunity_tracker_resolve_wp5_outputs(project_root)
+  resolution$wp5_public_root %||% ""
+}
+
+smm_immunity_tracker_wp5_aggregate_files <- function() {
+  c("wp5_smm_analysis_tiers.csv", "wp5_cohort_attrition.csv")
+}
+
+smm_immunity_tracker_wp5_secure_input_files <- function() {
+  c(
+    "wp5_followup_sanity.csv",
+    "wp5_treatment_landmark_cohort.csv",
+    "wp5_smm_like_cohort.csv",
+    "wp5_patient_classification.csv",
+    "wp5_smm_model_frames.csv",
+    "wp5_treatment_evidence_patient.csv",
+    "wp5_treatment_source_overlap.csv",
+    "wp5_lab_feature_patient.csv",
+    "wp5_smm_baseline_features.csv",
+    "wp5_smm_biomarker_window_qc.csv",
+    "wp5_risk_derivability.csv",
+    "wp5_risk_derivability_reasons.csv",
+    "wp5_mgus_context.csv",
+    "wp5_treatment_window_sensitivity.csv"
+  )
+}
+
+smm_immunity_tracker_wp5_resolution_empty <- function(status = "not_found",
+                                                      wp5_public_root = "",
+                                                      wp5_run_outputs_root = "",
+                                                      source_root_label = "",
+                                                      wp5_run_id = "",
+                                                      path_status = "not_found",
+                                                      reason = "") {
+  list(
+    status = status,
+    wp5_public_root = wp5_public_root,
+    wp5_run_outputs_root = wp5_run_outputs_root,
+    source_root_label = source_root_label,
+    wp5_run_id = wp5_run_id,
+    path_status = path_status,
+    reason = reason
+  )
+}
+
+smm_immunity_tracker_wp5_has_aggregate_contract <- function(path) {
+  if (!nzchar(path) || !dir.exists(path)) return(FALSE)
+  any(file.exists(file.path(path, smm_immunity_tracker_wp5_aggregate_files())))
+}
+
+smm_immunity_tracker_wp5_run_id_from_path <- function(public_root, fallback = "current_wp5_run") {
+  public_root <- normalize_slashes(public_root %||% "")
+  if (!nzchar(public_root)) return(fallback)
+  parts <- strsplit(public_root, "/", fixed = TRUE)[[1]]
+  idx <- which(parts == "outputs")
+  if (length(idx) && idx[[1]] > 1L) return(parts[[idx[[1]] - 1L]])
+  fallback
+}
+
+smm_immunity_tracker_resolve_wp5_candidate <- function(path, source_root_label, project_root = ".") {
+  if (!nzchar(path) || !dir.exists(path)) {
+    return(smm_immunity_tracker_wp5_resolution_empty(
+      source_root_label = source_root_label,
+      path_status = "not_found",
+      reason = "candidate_root_not_found"
+    ))
+  }
+  root <- normalizePath(path, winslash = "/", mustWork = FALSE)
+  checks <- list(
+    list(public_root = root, run_outputs_root = dirname(root), path_status = "resolved_to_outputs_wp5"),
+    list(public_root = file.path(root, "wp5"), run_outputs_root = root, path_status = "resolved_from_outputs_parent"),
+    list(public_root = file.path(root, "outputs", "wp5"), run_outputs_root = file.path(root, "outputs"), path_status = "resolved_from_run_dir"),
+    list(public_root = file.path(root, "data", "processed", "wp5"), run_outputs_root = file.path(root, "data", "processed", "wp5"), path_status = "resolved_from_project_root")
+  )
+  for (candidate in checks) {
+    if (smm_immunity_tracker_wp5_has_aggregate_contract(candidate$public_root)) {
+      run_id <- smm_immunity_tracker_wp5_run_id_from_path(candidate$public_root)
+      return(smm_immunity_tracker_wp5_resolution_empty(
+        status = "resolved",
+        wp5_public_root = normalizePath(candidate$public_root, winslash = "/", mustWork = FALSE),
+        wp5_run_outputs_root = normalizePath(candidate$run_outputs_root, winslash = "/", mustWork = FALSE),
+        source_root_label = source_root_label,
+        wp5_run_id = run_id,
+        path_status = candidate$path_status,
+        reason = "aggregate_contract_found"
+      ))
+    }
+  }
+  # If a run-parent directory was supplied, look for the newest run with an
+  # outputs/wp5 aggregate contract without exposing its absolute path publicly.
+  run_parents <- c(root, file.path(root, "data", "processed", "wp5"))
+  for (run_parent in unique(run_parents)) {
+    if (!dir.exists(run_parent)) next
+    runs <- list.dirs(run_parent, full.names = TRUE, recursive = FALSE)
+    runs <- runs[dir.exists(file.path(runs, "outputs", "wp5"))]
+    if (length(runs)) {
+      info <- file.info(runs)
+      runs <- runs[order(info$mtime, decreasing = TRUE)]
+      for (run in runs) {
+        public_root <- file.path(run, "outputs", "wp5")
+        if (smm_immunity_tracker_wp5_has_aggregate_contract(public_root)) {
+          return(smm_immunity_tracker_wp5_resolution_empty(
+            status = "resolved",
+            wp5_public_root = normalizePath(public_root, winslash = "/", mustWork = FALSE),
+            wp5_run_outputs_root = normalizePath(file.path(run, "outputs"), winslash = "/", mustWork = FALSE),
+            source_root_label = source_root_label,
+            wp5_run_id = basename(run),
+            path_status = "resolved_from_project_root",
+            reason = "latest_local_wp5_aggregate_contract_found"
+          ))
+        }
+      }
+    }
+  }
+  smm_immunity_tracker_wp5_resolution_empty(
+    status = "invalid_contract",
+    source_root_label = source_root_label,
+    path_status = "invalid_contract",
+    reason = "wp5_aggregate_files_not_found"
+  )
+}
+
+smm_immunity_tracker_resolve_wp5_outputs <- function(project_root = ".") {
   candidates <- c(
     Sys.getenv("SMM_IMMUNITY_WP5_OUTPUT_ROOT", unset = ""),
     Sys.getenv("WOMMEN_WP5_OUTPUT_ROOT", unset = ""),
+    file.path(project_root, "outputs", "wp5"),
+    file.path(project_root, "outputs"),
     file.path(project_root, "wp5_outputs"),
-    file.path(project_root, "outputs", "wp5_side_by_side")
+    file.path(project_root, "outputs", "wp5_side_by_side"),
+    project_root
   )
-  candidates <- candidates[nzchar(candidates)]
-  if (!length(candidates)) return("")
-  hit <- candidates[dir.exists(candidates)]
-  if (length(hit)) normalizePath(hit[[1]], winslash = "/", mustWork = FALSE) else candidates[[1]]
+  labels <- c(
+    "env:SMM_IMMUNITY_WP5_OUTPUT_ROOT",
+    "env:WOMMEN_WP5_OUTPUT_ROOT",
+    "latest_local_wp5",
+    "latest_local_outputs",
+    "latest_local_wp5_outputs",
+    "latest_local_wp5_side_by_side",
+    "project_root"
+  )
+  last_invalid <- NULL
+  for (i in seq_along(candidates)) {
+    if (!nzchar(candidates[[i]])) next
+    resolved <- smm_immunity_tracker_resolve_wp5_candidate(candidates[[i]], labels[[i]], project_root = project_root)
+    if (identical(resolved$status, "resolved")) return(resolved)
+    if (!identical(resolved$status, "not_found")) last_invalid <- resolved
+  }
+  last_invalid %||% smm_immunity_tracker_wp5_resolution_empty(
+    status = "not_found",
+    source_root_label = "not_configured",
+    path_status = "not_found",
+    reason = "no_wp5_output_root_configured_or_found"
+  )
 }
 
 smm_immunity_tracker_count_suppress <- function(n, total = NA_real_, min_cell_count = atlas_min_cell_count()) {
@@ -170,17 +314,31 @@ smm_immunity_tracker_count_failed_route_audit <- function(route_status) {
 }
 
 smm_immunity_tracker_public_output_is_safe <- function(outputs) {
-  forbidden_names <- c(
-    "person_key", "patientid", "patient_id", "cpr", "raw_date", "event_date",
-    "first_dc900_date", "tracker_entry_date", "progression_date", "death_date",
-    "censor_date", "organism", "organism_name", "result_text", "free_text"
-  )
+  forbidden_names <- smm_immunity_tracker_unsafe_public_exact_columns()
+  forbidden_patterns <- smm_immunity_tracker_unsafe_public_regex_columns()
+  path_pattern <- "(/ngc/|/home/|/mnt/|[A-Za-z]:[\\\\/])"
+  raw_date_pattern <- "\\b[0-9]{4}-[0-9]{2}-[0-9]{2}\\b"
   hits <- character()
   for (nm in names(outputs)) {
     value <- outputs[[nm]]
     if (!is.data.frame(value)) next
-    bad <- names(value)[tolower(names(value)) %in% forbidden_names]
+    lower_names <- tolower(names(value))
+    bad <- names(value)[lower_names %in% forbidden_names]
+    for (pattern in forbidden_patterns) {
+      bad <- unique(c(bad, names(value)[grepl(pattern, lower_names, perl = TRUE)]))
+    }
     if (length(bad)) hits <- c(hits, paste(nm, paste(bad, collapse = ","), sep = ":"))
+    for (col in names(value)) {
+      vals <- as.character(value[[col]])
+      vals <- vals[!is.na(vals) & nzchar(vals)]
+      if (!length(vals)) next
+      path_hits <- vals[grepl(path_pattern, vals, ignore.case = TRUE)]
+      if (length(path_hits)) hits <- c(hits, paste(nm, col, "absolute_path_value", sep = ":"))
+      if (!identical(tolower(col), "wp5_run_id")) {
+        date_hits <- vals[grepl(raw_date_pattern, vals)]
+        if (length(date_hits)) hits <- c(hits, paste(nm, col, "raw_date_value", sep = ":"))
+      }
+    }
   }
   list(ok = !length(hits), hits = hits)
 }
@@ -191,6 +349,110 @@ smm_immunity_tracker_assert_public_output_safe <- function(outputs) {
     stop("SMM Immunity Tracker public output contains forbidden columns: ", paste(safe$hits, collapse = "; "), call. = FALSE)
   }
   invisible(TRUE)
+}
+
+smm_immunity_tracker_unsafe_public_exact_columns <- function() {
+  tolower(c(
+    "person_key", "patientid", "patient_id", "person_id", "person_key", "cpr", "pnr",
+    "date", "raw_date", "event_date", "sample_date", "sampling_date", "sampling_datetime",
+    "first_dc900_date", "tracker_entry_date", "progression_date", "death_date", "censor_date",
+    "organism", "species", "organism_name", "result_text", "microbiology_text",
+    "pathology_text", "free_text", "cohort_entries", "infection_events",
+    "microbiology_confirmation_events"
+  ))
+}
+
+smm_immunity_tracker_unsafe_public_regex_columns <- function() {
+  c(
+    "(^|_)cpr($|_)",
+    "(^|_)pnr($|_)",
+    "(^|_)patientid($|_)",
+    "(^|_)person_key($|_)",
+    "raw_",
+    "free.?text",
+    "organism",
+    "species",
+    "microbiology.*text",
+    "pathology.*text",
+    "event.*date",
+    "sample.*date",
+    "sampling.*date"
+  )
+}
+
+smm_immunity_tracker_aggregate_hook_privacy_hits <- function(hook) {
+  hits <- character()
+  row_level_names <- c("cohort_entries", "infection_events", "microbiology_confirmation_events")
+  bad_names <- intersect(names(hook), row_level_names)
+  if (length(bad_names)) hits <- c(hits, paste0("row_level_frame_name:", bad_names))
+  exact <- smm_immunity_tracker_unsafe_public_exact_columns()
+  patterns <- smm_immunity_tracker_unsafe_public_regex_columns()
+  for (nm in names(hook)) {
+    df <- hook[[nm]]
+    if (!is.data.frame(df)) next
+    lower_names <- tolower(names(df))
+    bad <- names(df)[lower_names %in% exact]
+    for (pattern in patterns) {
+      bad <- unique(c(bad, names(df)[grepl(pattern, lower_names, perl = TRUE)]))
+    }
+    if (length(bad)) hits <- c(hits, paste(nm, paste(bad, collapse = ","), sep = ":"))
+  }
+  hits
+}
+
+smm_immunity_tracker_append_status <- function(existing, addition) {
+  existing <- as.character(existing %||% "")
+  addition <- as.character(addition %||% "")
+  out <- existing
+  blank <- !nzchar(out)
+  out[blank] <- addition
+  out[!blank & nzchar(addition)] <- paste(out[!blank & nzchar(addition)], addition, sep = "; ")
+  out
+}
+
+smm_immunity_tracker_suppress_adapter_frame <- function(df, min_cell_count = atlas_min_cell_count()) {
+  if (!is.data.frame(df) || !nrow(df)) return(df)
+  min_cell_count <- normalize_min_cell_count(min_cell_count)
+  count_cols <- intersect(names(df), c(
+    "persons_n", "events_n", "n_people", "n_events", "event_count",
+    "n_progression", "n_competing_death", "n_at_landmark", "progression_events",
+    "competing_deaths"
+  ))
+  if (!length(count_cols)) return(df)
+  if (!"suppression_status" %in% names(df)) df$suppression_status <- ""
+  for (col in count_cols) {
+    vals <- suppressWarnings(as.numeric(df[[col]]))
+    suppress <- !is.na(vals) & vals > 0 & vals < min_cell_count
+    if (!any(suppress)) next
+    df[[col]][suppress] <- NA
+    df$suppression_status[suppress] <- smm_immunity_tracker_append_status(df$suppression_status[suppress], "suppressed small cell")
+    display_candidates <- switch(col,
+      persons_n = c("persons_display", "count_display", "n_people_display"),
+      events_n = c("events_display", "event_count_display"),
+      n_people = c("n_people_display", "count_display"),
+      n_events = c("event_count_display", "events_display"),
+      event_count = c("event_count_display", "events_display"),
+      n_progression = c("n_progression_display", "progression_events_display"),
+      n_competing_death = c("n_competing_death_display", "competing_deaths_display"),
+      n_at_landmark = c("n_at_landmark_display"),
+      progression_events = c("progression_events_display", "n_progression_display"),
+      competing_deaths = c("competing_deaths_display", "n_competing_death_display"),
+      character()
+    )
+    display_hit <- display_candidates[display_candidates %in% names(df)]
+    if (length(display_hit)) df[[display_hit[[1]]]][suppress] <- paste0("<", min_cell_count)
+  }
+  df
+}
+
+smm_immunity_tracker_suppress_adapter_outputs <- function(hook, min_cell_count = atlas_min_cell_count()) {
+  if (!is.list(hook)) return(hook)
+  for (nm in names(hook)) {
+    if (is.data.frame(hook[[nm]])) {
+      hook[[nm]] <- smm_immunity_tracker_suppress_adapter_frame(hook[[nm]], min_cell_count = min_cell_count)
+    }
+  }
+  hook
 }
 
 smm_immunity_tracker_first_existing_col <- function(df, candidates) {
@@ -657,62 +919,234 @@ smm_immunity_tracker_build_burden_outputs <- function(entries, events, min_cell_
   )
 }
 
-smm_immunity_tracker_read_wp5_cohort_frames <- function(project_root = ".") {
-  root <- smm_immunity_tracker_wp5_output_root(project_root)
-  expected <- data.frame(
-    source_id = c(
-      "wp5_smm_like_cohort",
-      "wp5_treatment_landmark_cohort",
-      "wp5_cvm_patient_flags",
-      "wp5_cvm_progression_summary",
-      "wp5_scaffold_compare_membership_overlap"
-    ),
-    relative_path = c(
-      file.path("outputs", "wp5", "wp5_smm_like_cohort.csv"),
-      file.path("outputs", "wp5", "wp5_treatment_landmark_cohort.csv"),
-      file.path("outputs", "wp5_cvm", "wp5_cvm_patient_flags.csv"),
-      file.path("outputs", "wp5_cvm", "wp5_cvm_progression_summary.csv"),
-      file.path("outputs", "wp5_scaffold_compare", "wp5_scaffold_compare_membership_overlap.csv")
-    ),
-    source_family = c("aot_wp5_original", "aot_wp5_original", "cvm_jama", "cvm_jama", "compare"),
-    stringsAsFactors = FALSE
-  )
-  rows <- list()
-  audit <- list()
-  for (i in seq_len(nrow(expected))) {
-    path <- file.path(root, expected$relative_path[[i]])
-    found <- nzchar(root) && file.exists(path)
-    read_status <- "not found"
-    data <- data.frame(stringsAsFactors = FALSE)
-    if (found) {
-      data <- tryCatch(read_delimited_file(path), error = function(e) {
-        read_status <<- paste("read error:", conditionMessage(e))
-        data.frame(stringsAsFactors = FALSE)
-      })
-      if (is.data.frame(data) && nrow(data)) {
-        read_status <- "read"
-        data$source_file_or_route <- expected$source_id[[i]]
-        data$cohort_id <- if (identical(expected$source_family[[i]], "cvm_jama")) "cvm_jama_smm_day90_harmonized" else if (identical(expected$source_family[[i]], "aot_wp5_original")) "aot_wp5_original_smm" else data$cohort_id %||% ""
-        rows[[length(rows) + 1L]] <- data
-      }
-    }
-    audit[[length(audit) + 1L]] <- data.frame(
-      source_id = expected$source_id[[i]],
-      expected_path = expected$relative_path[[i]],
-      source_family = expected$source_family[[i]],
+smm_immunity_tracker_read_wp5_public_aggregate <- function(public_root, source_file) {
+  path <- file.path(public_root, source_file)
+  if (!file.exists(path)) {
+    return(list(data = data.frame(stringsAsFactors = FALSE), read_status = "not_found", rows_read = 0L))
+  }
+  data <- tryCatch(read_delimited_file(path), error = function(e) data.frame(stringsAsFactors = FALSE))
+  status <- if (is.data.frame(data) && nrow(data)) "read_public_aggregate" else "public_aggregate_empty_or_unreadable"
+  list(data = data, read_status = status, rows_read = if (is.data.frame(data)) nrow(data) else 0L)
+}
+
+smm_immunity_tracker_wp5_source_audit <- function(resolution, aggregate_reads = list()) {
+  public_root <- resolution$wp5_public_root %||% ""
+  aggregate_rows <- lapply(smm_immunity_tracker_wp5_aggregate_files(), function(source_file) {
+    read <- aggregate_reads[[source_file]] %||% list(read_status = "not_checked", rows_read = 0L)
+    found <- nzchar(public_root) && file.exists(file.path(public_root, source_file))
+    data.frame(
+      source_file = source_file,
+      source_root_label = resolution$source_root_label %||% "",
+      wp5_run_id = resolution$wp5_run_id %||% "",
+      path_status = resolution$path_status %||% "",
       found = found,
-      read_status = read_status,
-      rows_read = if (is.data.frame(data)) nrow(data) else 0L,
-      notes = if (found) "WP5 source was checked inside the configured source root." else "Expected WP5 source output was absent; related counts fail closed.",
+      read_status = if (found) read$read_status else "not_found",
+      rows_read = if (found) as.integer(read$rows_read %||% 0L) else 0L,
+      public_safe = TRUE,
+      secure_input_only = FALSE,
+      notes = if (found) "accepted_public_aggregate_source" else "public_aggregate_source_absent",
       stringsAsFactors = FALSE
     )
+  })
+  secure_rows <- lapply(smm_immunity_tracker_wp5_secure_input_files(), function(source_file) {
+    found <- nzchar(public_root) && file.exists(file.path(public_root, source_file))
+    data.frame(
+      source_file = source_file,
+      source_root_label = resolution$source_root_label %||% "",
+      wp5_run_id = resolution$wp5_run_id %||% "",
+      path_status = resolution$path_status %||% "",
+      found = found,
+      read_status = if (found) "not_read_secure_input_only" else "not_found_secure_input_only",
+      rows_read = NA_integer_,
+      public_safe = FALSE,
+      secure_input_only = TRUE,
+      notes = if (found) "secure_input_presence_checked_only" else "secure_input_not_found",
+      stringsAsFactors = FALSE
+    )
+  })
+  smm_immunity_tracker_match_empty(bind_rows_base(c(aggregate_rows, secure_rows)), smm_immunity_tracker_empty_wp5_source_audit())
+}
+
+smm_immunity_tracker_extract_tier_count <- function(tiers, tier_id) {
+  if (!is.data.frame(tiers) || !nrow(tiers)) return(NA_real_)
+  tier_col <- smm_immunity_tracker_first_existing_col(tiers, c("tier_id", "frame_id", "cohort_id"))
+  n_col <- smm_immunity_tracker_first_existing_col(tiers, c("n_patients", "n_people", "n", "patients"))
+  if (!nzchar(tier_col) || !nzchar(n_col)) return(NA_real_)
+  values <- as.character(tiers[[tier_col]])
+  aliases <- switch(tier_id,
+    "SMM-A" = c("SMM-A", "smm_a", "aot_wp5_original_smm"),
+    "SMM-B" = c("SMM-B", "smm_b", "bmpc_confirmable_subset"),
+    "SMM-C" = c("SMM-C", "smm_c", "risk_derivable_subset"),
+    tier_id
+  )
+  hit <- tiers[values %in% aliases, , drop = FALSE]
+  if (!nrow(hit)) return(NA_real_)
+  suppressWarnings(as.numeric(hit[[n_col]][[1]]))
+}
+
+smm_immunity_tracker_build_wp5_aggregate_cohort_counts <- function(tiers,
+                                                                   min_cell_count = atlas_min_cell_count(),
+                                                                   source_file = "wp5_smm_analysis_tiers.csv") {
+  spec <- data.frame(
+    wp5_tier_id = c("SMM-A", "SMM-B", "SMM-C"),
+    cohort_id = c("aot_wp5_original_smm", "aot_wp5_bmpc_confirmable_subset", "aot_wp5_biomarker_rich_subset"),
+    cohort_label = c(
+      "AOT/WP5 original SMM-compatible day-90 cohort",
+      "AOT/WP5 BMPC-confirmable subset",
+      "AOT/WP5 biomarker-rich subset"
+    ),
+    time_origin = rep("day90_harmonized", 3),
+    stringsAsFactors = FALSE
+  )
+  rows <- lapply(seq_len(nrow(spec)), function(i) {
+    n <- smm_immunity_tracker_extract_tier_count(tiers, spec$wp5_tier_id[[i]])
+    accepted <- !is.na(n)
+    count <- if (accepted) smm_immunity_tracker_count_suppress(n, min_cell_count = min_cell_count) else list(display = "not available", n_public = NA_real_, status = "not available")
+    data.frame(
+      cohort_id = spec$cohort_id[[i]],
+      cohort_label = spec$cohort_label[[i]],
+      time_origin = spec$time_origin[[i]],
+      n_people_display = count$display,
+      n_people = count$n_public,
+      count_kind = "accepted WP5 aggregate denominator",
+      acceptance_status = if (accepted) "accepted" else "not accepted aggregate",
+      source_acceptance_status = if (accepted) "accepted_wp5_aggregate" else "wp5_aggregate_tier_absent",
+      tracker_status = if (accepted) "partial" else "unavailable",
+      query_status = if (accepted) "executed" else "aggregate_tier_absent",
+      suppression_status = count$status,
+      source_file_or_route = source_file,
+      notes = if (accepted) "accepted_wp5_aggregate_denominator" else "wp5_aggregate_tier_not_available",
+      stringsAsFactors = FALSE
+    )
+  })
+  cvm <- data.frame(
+    cohort_id = "cvm_jama_smm",
+    cohort_label = "CVM/JAMA SMM denominator readiness row",
+    time_origin = "day90_harmonized_planned",
+    n_people_display = "not available",
+    n_people = NA_real_,
+    count_kind = "readiness placeholder",
+    acceptance_status = "not accepted aggregate",
+    source_acceptance_status = "not_yet_accepted_aggregate_source",
+    tracker_status = "unavailable",
+    query_status = "aggregate_source_pending",
+    suppression_status = "not available",
+    source_file_or_route = "pending_accepted_cvm_aggregate_source",
+    notes = "cvm_counts_require_separate_accepted_aggregate_source",
+    stringsAsFactors = FALSE
+  )
+  smm_immunity_tracker_match_empty(bind_rows_base(c(rows, list(cvm))), smm_immunity_tracker_empty_cohort_counts())
+}
+
+smm_immunity_tracker_unavailable_route_audit <- function(cohort_available = FALSE) {
+  routes <- data.frame(
+    route_id = c(
+      "wp5_cohort_denominators",
+      "cvm_jama_aggregate_route",
+      "hospital_coded_serious_infection_route",
+      "microbiology_confirmed_infection_route",
+      "recurrent_infection_route",
+      "infection_person_time_route",
+      "landmark_progression_signal_route"
+    ),
+    configured = c(TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE),
+    query_executed = c(isTRUE(cohort_available), FALSE, FALSE, FALSE, FALSE, FALSE, FALSE),
+    query_success = c(isTRUE(cohort_available), FALSE, FALSE, FALSE, FALSE, FALSE, FALSE),
+    query_status = c(
+      if (isTRUE(cohort_available)) "executed" else "production_aggregate_failed_mapping_unavailable",
+      "not_yet_accepted_aggregate_source",
+      rep("unavailable_not_configured", 5)
+    ),
+    source_table = "",
+    error_message_sanitized = "",
+    notes = c(
+      if (isTRUE(cohort_available)) "aot_wp5_cohort_denominators_available" else "aot_wp5_cohort_denominators_unavailable",
+      "cvm_counts_require_separate_accepted_aggregate_source",
+      "hospital_coded_serious_infection_route_unavailable",
+      "microbiology_confirmed_infection_route_unavailable",
+      "recurrent_infection_route_unavailable",
+      "infection_person_time_route_unavailable",
+      "landmark_progression_signal_route_unavailable"
+    ),
+    stringsAsFactors = FALSE
+  )
+  smm_immunity_tracker_match_empty(routes, smm_immunity_tracker_empty_source_resolution_audit())
+}
+
+smm_immunity_tracker_count_outputs_from_wp5_aggregates <- function(resolution,
+                                                                   aggregate_reads,
+                                                                   project_root = ".",
+                                                                   min_cell_count = atlas_min_cell_count(),
+                                                                   mode = "production_aggregate") {
+  outputs <- build_smm_immunity_tracker_feasibility_outputs(project_root = project_root, min_cell_count = min_cell_count)
+  tiers <- aggregate_reads[["wp5_smm_analysis_tiers.csv"]]$data %||% data.frame(stringsAsFactors = FALSE)
+  outputs$cohort_counts <- smm_immunity_tracker_build_wp5_aggregate_cohort_counts(tiers, min_cell_count = min_cell_count)
+  cohort_available <- any(outputs$cohort_counts$source_acceptance_status == "accepted_wp5_aggregate", na.rm = TRUE)
+  outputs$wp5_source_audit <- smm_immunity_tracker_wp5_source_audit(resolution, aggregate_reads)
+  outputs$source_resolution_audit <- smm_immunity_tracker_unavailable_route_audit(cohort_available = cohort_available)
+  outputs$failed_query_audit <- smm_immunity_tracker_count_failed_route_audit(outputs$source_resolution_audit)
+  outputs$production_query_review <- data.frame(
+    query_id = c("smm_immunity_tracker_counts", "wp5_aggregate_denominators", "cvm_jama_aggregate_denominators", "infection_event_routes"),
+    query_label = c("Aggregate SMM tracker counts", "AOT/WP5 public aggregate denominators", "CVM/JAMA aggregate denominator route", "Serious infection and microbiology event routes"),
+    query_executable = c(TRUE, TRUE, FALSE, FALSE),
+    query_status = c(
+      "partial_executed",
+      if (cohort_available) "executed" else "production_aggregate_failed_mapping_unavailable",
+      "not_yet_accepted_aggregate_source",
+      "unavailable_not_configured"
+    ),
+    acceptance_status = c("partial", if (cohort_available) "accepted_wp5_aggregate" else "not accepted aggregate", "not accepted aggregate", "not accepted aggregate"),
+    notes = c(
+      "Cohort denominators may be available while infection routes remain unavailable.",
+      "Only wp5_smm_analysis_tiers.csv and wp5_cohort_attrition.csv are eligible public count sources.",
+      "CVM/JAMA counts require a separate accepted aggregate source.",
+      "Infection outputs remain schemaful empty tables and must not be interpreted as true zero."
+    ),
+    stringsAsFactors = FALSE
+  )
+  outputs$tracker_status <- smm_immunity_tracker_status_rows(
+    cohort_denominators = if (cohort_available) "available" else "unavailable",
+    cvm_aggregate_route = "pending",
+    infection_routes = "unavailable",
+    microbiology_routes = "unavailable",
+    person_time_routes = "unavailable",
+    progression_signal = "unavailable",
+    tracker_status = "partial",
+    production_aggregate_status = if (cohort_available) {
+      "partial: cohort counts available; CVM aggregate route pending; infection routes unavailable"
+    } else {
+      "partial: cohort counts unavailable; CVM aggregate route pending; infection routes unavailable"
+    }
+  )
+  outputs$production_execution_summary <- smm_immunity_tracker_execution_summary(
+    mode,
+    attempted = TRUE,
+    success = cohort_available,
+    failure_reason = if (cohort_available) "" else "No accepted WP5 aggregate cohort denominator rows were available.",
+    min_cell_count = min_cell_count,
+    cohort_rows = 0L,
+    infection_rows = 0L
+  )
+  outputs$summary$value[outputs$summary$metric == "panel_status"] <- if (cohort_available) "partial production aggregate available" else "readiness scaffold"
+  outputs$summary$status[outputs$summary$metric == "panel_status"] <- if (cohort_available) "partial" else "feasibility"
+  outputs$summary$value[outputs$summary$metric == "production_aggregate_status"] <- outputs$tracker_status$status_value[outputs$tracker_status$status_key == "production_aggregate_status"][[1]]
+  outputs$summary$status[outputs$summary$metric == "production_aggregate_status"] <- "partial"
+  smm_immunity_tracker_assert_public_output_safe(outputs)
+  smm_immunity_tracker_attach_story_layer(outputs)
+}
+
+smm_immunity_tracker_read_wp5_cohort_frames <- function(project_root = ".") {
+  resolution <- smm_immunity_tracker_resolve_wp5_outputs(project_root)
+  aggregate_reads <- list()
+  if (identical(resolution$status, "resolved")) {
+    for (source_file in smm_immunity_tracker_wp5_aggregate_files()) {
+      aggregate_reads[[source_file]] <- smm_immunity_tracker_read_wp5_public_aggregate(resolution$wp5_public_root, source_file)
+    }
   }
   list(
-    cohort_entries = bind_rows_base(rows),
-    cohort_route_status = bind_rows_base(list(
-      smm_immunity_tracker_count_route_row("wp5_cohort_outputs", configured = nzchar(root), query_executed = nzchar(root), query_success = length(rows) > 0L, source_table = root, notes = "WP5/CVM source output reader.")
-    )),
-    cohort_source_audit = smm_immunity_tracker_match_empty(bind_rows_base(audit), smm_immunity_tracker_empty_wp5_source_audit())
+    cohort_entries = data.frame(stringsAsFactors = FALSE),
+    cohort_route_status = smm_immunity_tracker_unavailable_route_audit(cohort_available = FALSE),
+    cohort_source_audit = smm_immunity_tracker_wp5_source_audit(resolution, aggregate_reads)
   )
 }
 
@@ -785,15 +1219,17 @@ smm_immunity_tracker_prepare_aggregate_hook_outputs <- function(hook,
       min_cell_count = min_cell_count
     ))
   }
-  if (any(c("cohort_entries", "infection_events", "microbiology_confirmation_events") %in% names(hook))) {
+  privacy_hits <- smm_immunity_tracker_aggregate_hook_privacy_hits(hook)
+  if (length(privacy_hits)) {
     return(smm_immunity_tracker_count_placeholder_outputs(
       mode = "production_aggregate",
-      reason = "SMM aggregate hook returned row-level frame names. Use smm_immunity_tracker_counts() aggregate tables only.",
+      reason = paste("SMM aggregate hook returned unsafe row-level or sensitive fields:", paste(privacy_hits, collapse = "; ")),
       error_class = "production_aggregate_failed_privacy_contract",
       project_root = project_root,
       min_cell_count = min_cell_count
     ))
   }
+  hook <- smm_immunity_tracker_suppress_adapter_outputs(hook, min_cell_count = min_cell_count)
   outputs <- build_smm_immunity_tracker_feasibility_outputs(project_root = project_root, min_cell_count = min_cell_count)
   for (nm in intersect(names(outputs), names(hook))) {
     if (is.data.frame(hook[[nm]])) outputs[[nm]] <- hook[[nm]]
@@ -832,7 +1268,8 @@ smm_immunity_tracker_count_build_outputs <- function(project_root = ".",
       min_cell_count = min_cell_count
     ))
   }
-  wp5_root <- smm_immunity_tracker_wp5_output_root(project_root)
+  wp5_resolution <- smm_immunity_tracker_resolve_wp5_outputs(project_root)
+  wp5_root <- wp5_resolution$wp5_public_root %||% ""
   if (!is.null(db_adapter) && is.function(db_adapter$smm_immunity_tracker_counts)) {
     hook <- tryCatch(
       db_adapter$smm_immunity_tracker_counts(min_cell_count = min_cell_count, wp5_output_root = wp5_root),
@@ -848,25 +1285,22 @@ smm_immunity_tracker_count_build_outputs <- function(project_root = ".",
     )
     return(smm_immunity_tracker_prepare_aggregate_hook_outputs(hook, project_root = project_root, min_cell_count = min_cell_count))
   }
-  wp5 <- smm_immunity_tracker_read_wp5_cohort_frames(project_root)
-  if (is.data.frame(wp5$cohort_entries) && nrow(wp5$cohort_entries)) {
-    return(smm_immunity_tracker_count_outputs_from_secure_frames(
-      list(
-        cohort_entries = wp5$cohort_entries,
-        infection_events = data.frame(stringsAsFactors = FALSE),
-        microbiology_confirmation_events = data.frame(stringsAsFactors = FALSE),
-        route_status = wp5$cohort_route_status,
-        wp5_source_audit = wp5$cohort_source_audit
-      ),
+  if (identical(wp5_resolution$status, "resolved")) {
+    aggregate_reads <- list()
+    for (source_file in smm_immunity_tracker_wp5_aggregate_files()) {
+      aggregate_reads[[source_file]] <- smm_immunity_tracker_read_wp5_public_aggregate(wp5_resolution$wp5_public_root, source_file)
+    }
+    return(smm_immunity_tracker_count_outputs_from_wp5_aggregates(
+      wp5_resolution,
+      aggregate_reads,
       project_root = project_root,
       min_cell_count = min_cell_count,
-      mode = "production_aggregate",
-      source_label = "WP5 source outputs"
+      mode = "production_aggregate"
     ))
   }
   smm_immunity_tracker_count_placeholder_outputs(
     mode = "production_aggregate",
-    reason = "No aggregate SMM count hook or WP5 cohort source outputs were available.",
+    reason = "No aggregate SMM count hook or accepted public WP5 aggregate source outputs were available.",
     error_class = "production_aggregate_failed_mapping_unavailable",
     project_root = project_root,
     min_cell_count = min_cell_count
@@ -891,10 +1325,17 @@ smm_immunity_tracker_count_merge_outputs <- function(scaffold, production) {
     }
   }
   if (smm_immunity_tracker_count_production_success(production)) {
-    scaffold$summary$value[scaffold$summary$metric == "panel_status"] <- "production aggregate available"
-    scaffold$summary$status[scaffold$summary$metric == "panel_status"] <- "accepted"
-    scaffold$summary$value[scaffold$summary$metric == "production_aggregate_status"] <- "aggregate output available"
-    scaffold$summary$status[scaffold$summary$metric == "production_aggregate_status"] <- "accepted"
+    tracker_status <- production$tracker_status %||% data.frame(stringsAsFactors = FALSE)
+    production_status <- if (is.data.frame(tracker_status) && nrow(tracker_status) && all(c("status_key", "status_value") %in% names(tracker_status))) {
+      hit <- tracker_status[tracker_status$status_key == "production_aggregate_status", "status_value", drop = TRUE]
+      hit[[1]] %||% "partial: cohort counts available; CVM aggregate route pending; infection routes unavailable"
+    } else {
+      "partial: cohort counts available; CVM aggregate route pending; infection routes unavailable"
+    }
+    scaffold$summary$value[scaffold$summary$metric == "panel_status"] <- "partial production aggregate available"
+    scaffold$summary$status[scaffold$summary$metric == "panel_status"] <- "partial"
+    scaffold$summary$value[scaffold$summary$metric == "production_aggregate_status"] <- production_status
+    scaffold$summary$status[scaffold$summary$metric == "production_aggregate_status"] <- "partial"
   }
   smm_immunity_tracker_attach_story_layer(scaffold)
 }
@@ -906,6 +1347,7 @@ smm_immunity_tracker_count_read_outputs <- function(outputs_dir) {
     path <- file.path(outputs_dir, paste0("smm_immunity_tracker_", nm, ".csv"))
     if (identical(nm, "summary")) path <- file.path(outputs_dir, "smm_immunity_tracker_summary.csv")
     if (identical(nm, "story_cards")) path <- file.path(outputs_dir, "smm_immunity_tracker_story_cards.csv")
+    if (identical(nm, "tracker_status")) path <- file.path(outputs_dir, "smm_immunity_tracker_status.csv")
     if (file.exists(path)) {
       out[[nm]] <- tryCatch(read_delimited_file(path), error = function(e) empty[[nm]])
     }
