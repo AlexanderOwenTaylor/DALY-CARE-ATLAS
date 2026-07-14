@@ -29,7 +29,15 @@ config_value <- function(name, default) {
 
 CONFLUENCE_COUNT_MODE <- config_value("CONFLUENCE_COUNT_MODE", "plan")
 CONFLUENCE_COUNT_PROJECT_ROOT <- config_value("CONFLUENCE_COUNT_PROJECT_ROOT", ".")
-CONFLUENCE_COUNT_OUTPUTS_DIR <- config_value("CONFLUENCE_COUNT_OUTPUTS_DIR", "outputs/confluence_only")
+CONFLUENCE_COUNT_OUTPUTS_DIR <- config_value("CONFLUENCE_COUNT_OUTPUTS_DIR", "")
+CONFLUENCE_COUNT_OUTPUT_ROOT <- config_value(
+  "CONFLUENCE_COUNT_OUTPUT_ROOT",
+  if (length(CONFLUENCE_COUNT_OUTPUTS_DIR) && !is.na(CONFLUENCE_COUNT_OUTPUTS_DIR[[1]]) && nzchar(as.character(CONFLUENCE_COUNT_OUTPUTS_DIR[[1]]))) {
+    CONFLUENCE_COUNT_OUTPUTS_DIR
+  } else {
+    "atlas_runs"
+  }
+)
 CONFLUENCE_COUNT_SMALL_CELL_N <- config_value("CONFLUENCE_COUNT_SMALL_CELL_N", 5L)
 CONFLUENCE_COUNT_UPDATE_PAYLOAD <- config_value("CONFLUENCE_COUNT_UPDATE_PAYLOAD", FALSE)
 CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR <- config_value("CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR", Sys.getenv("CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR", unset = ""))
@@ -37,34 +45,38 @@ CONFLUENCE_COUNT_ATLAS_OUTPUT_ZIP <- config_value("CONFLUENCE_COUNT_ATLAS_OUTPUT
 CONFLUENCE_COUNT_DB_ADAPTER <- config_value("CONFLUENCE_COUNT_DB_ADAPTER", NULL)
 
 project_root <- normalizePath(CONFLUENCE_COUNT_PROJECT_ROOT, winslash = "/", mustWork = TRUE)
-output_dir <- normalizePath(confluence_count_sourceable_resolve(CONFLUENCE_COUNT_OUTPUTS_DIR, project_root), winslash = "/", mustWork = FALSE)
+confluence_count_sourceable_source_required(project_root, file.path("R", "utils.R"))
+output_root <- normalizePath(confluence_count_sourceable_resolve(CONFLUENCE_COUNT_OUTPUT_ROOT, project_root), winslash = "/", mustWork = FALSE)
+run_id <- atlas_run_id()
+run_dir <- file.path(output_root, run_id)
+output_dir <- file.path(run_dir, "outputs")
 small_cell_n <- suppressWarnings(as.integer(CONFLUENCE_COUNT_SMALL_CELL_N))
 if (is.na(small_cell_n) || small_cell_n < 1L) small_cell_n <- 5L
 
-confluence_count_sourceable_source_required(project_root, file.path("R", "utils.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "source_map.R"))
-confluence_count_sourceable_source_required(project_root, file.path("R", "profiler.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "db_profile.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_counts.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "confluence_clone_evidence.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "confluence_feasibility.R"))
 confluence_count_sourceable_source_required(project_root, file.path("R", "confluence_counts.R"))
+confluence_count_sourceable_source_required(project_root, file.path("R", "atlas_bundle.R"))
+confluence_count_sourceable_source_required(project_root, file.path("R", "html.R"))
 
 if (!CONFLUENCE_COUNT_MODE %in% c("plan", "production_aggregate")) {
   stop("Unsupported CONFLUENCE_COUNT_MODE: ", CONFLUENCE_COUNT_MODE, ". Use 'plan' or 'production_aggregate'.", call. = FALSE)
 }
 
-cat("DALY-CARE CONFLUENCE aggregate mini-bundle runner\n")
+cat("DALY-CARE CONFLUENCE panel-only atlas runner\n")
 cat("Mode: ", CONFLUENCE_COUNT_MODE, "\n", sep = "")
 cat("Project root: ", project_root, "\n", sep = "")
+cat("Run directory: ", run_dir, "\n", sep = "")
 cat("Outputs: ", output_dir, "\n", sep = "")
 cat("Small-cell threshold: ", small_cell_n, "\n", sep = "")
-cat("Payload update enabled: ", isTRUE(CONFLUENCE_COUNT_UPDATE_PAYLOAD), " (not used in v1)\n", sep = "")
-if (nzchar(CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR %||% "")) {
-  cat("Atlas output evidence dir: ", CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR, " (reserved; not required in v1)\n", sep = "")
+if (length(CONFLUENCE_COUNT_OUTPUTS_DIR) && !is.na(CONFLUENCE_COUNT_OUTPUTS_DIR[[1]]) && nzchar(as.character(CONFLUENCE_COUNT_OUTPUTS_DIR[[1]]))) {
+  cat("CONFLUENCE_COUNT_OUTPUTS_DIR is deprecated; use CONFLUENCE_COUNT_OUTPUT_ROOT. The new setting takes precedence when both are supplied.\n")
 }
-if (nzchar(CONFLUENCE_COUNT_ATLAS_OUTPUT_ZIP %||% "")) {
-  cat("Atlas output evidence zip: ", CONFLUENCE_COUNT_ATLAS_OUTPUT_ZIP, " (reserved; not required in v1)\n", sep = "")
+if (isTRUE(CONFLUENCE_COUNT_UPDATE_PAYLOAD) || nzchar(CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR %||% "") || nzchar(CONFLUENCE_COUNT_ATLAS_OUTPUT_ZIP %||% "")) {
+  cat("Deprecated overlay settings were supplied and are ignored; this runner creates a fresh scoped atlas bundle.\n")
 }
 if (identical(CONFLUENCE_COUNT_MODE, "plan")) {
   cat("Plan mode: writing scaffold/readiness outputs and fail-closed aggregate audit rows; no database connection is opened.\n")
@@ -73,20 +85,14 @@ if (identical(CONFLUENCE_COUNT_MODE, "production_aggregate")) {
   cat("Production aggregate mode: aggregate DB-backed CONFLUENCE queries run only when a secure DALY-CARE DB adapter or hook is available.\n")
 }
 
-confluence_scaffold_outputs <- build_confluence_feasibility_outputs(
-  project_root = project_root,
-  min_cell_count = small_cell_n
-)
-confluence_count_outputs <- confluence_count_build_outputs(
+confluence_outputs <- confluence_build_atlas_panel(
   project_root = project_root,
   db_adapter = CONFLUENCE_COUNT_DB_ADAPTER,
   mode = CONFLUENCE_COUNT_MODE,
-  min_cell_count = small_cell_n
+  min_cell_count = small_cell_n,
+  scaffold_args = list()
 )
-confluence_outputs <- confluence_count_merge_outputs(confluence_scaffold_outputs, confluence_count_outputs)
 confluence_paths <- confluence_write_outputs(confluence_outputs, output_dir)
-
-assign("CONFLUENCE_COUNT_RESULT", list(outputs = confluence_outputs, paths = confluence_paths), envir = .GlobalEnv)
 
 summary_rows <- confluence_outputs$production_execution_summary
 summary_value <- function(metric, default = "") {
@@ -117,9 +123,68 @@ if (nzchar(failure)) {
   cat(" - production aggregate status: ", failure, "\n", sep = "")
 }
 
-cat("CONFLUENCE mini-bundle outputs written:\n")
+generated_at <- atlas_timestamp()
+run_scope <- atlas_run_scope("confluence_only")
+run_summary <- atlas_panel_run_summary(
+  run_id = run_id,
+  generated_at = generated_at,
+  run_scope = run_scope,
+  production_execution_summary = confluence_outputs$production_execution_summary,
+  failed_query_audit = confluence_outputs$failed_query_audit,
+  min_cell_count = small_cell_n
+)
+run_summary_path <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
+payload <- atlas_scoped_panel_payload(
+  run_id = run_id,
+  generated_at = generated_at,
+  run_scope = run_scope,
+  run_summary = run_summary,
+  confluence_feasibility = confluence_outputs
+)
+execution_log <- data.frame(
+  timestamp = generated_at,
+  level = if (identical(summary_value("production_query_success", "FALSE"), "TRUE")) "info" else "warning",
+  table_name = "confluence_feasibility",
+  message = paste0(
+    "CONFLUENCE-only atlas; run_profile=", run_scope$profile,
+    "; executed_panel=", paste(run_scope$executed_panels, collapse = ","),
+    "; source_profiling_executed=", if (isTRUE(run_scope$source_profiling_executed)) "TRUE" else "FALSE",
+    "; mode=", CONFLUENCE_COUNT_MODE,
+    "; attempted=", summary_value("production_query_attempted", "FALSE"),
+    "; success=", summary_value("production_query_success", "FALSE"),
+    "; failed_queries=", failed_rows,
+    "; suppression_threshold=", small_cell_n
+  ),
+  stringsAsFactors = FALSE
+)
+manifest_paths <- confluence_paths
+names(manifest_paths) <- paste0("confluence_", names(manifest_paths))
+manifest_paths$run_summary <- run_summary_path
+bundle <- atlas_write_bundle(
+  run_dir = run_dir,
+  project_root = project_root,
+  payload = payload,
+  artifact_paths = manifest_paths,
+  execution_log = execution_log
+)
+
+CONFLUENCE_COUNT_RESULT <- list(
+  run_id = run_id,
+  run_dir = run_dir,
+  outputs = confluence_outputs,
+  paths = c(confluence_paths, list(run_summary = run_summary_path, execution_log = bundle$execution_log)),
+  html = bundle$html,
+  payload = bundle$payload,
+  manifest = bundle$manifest
+)
+assign("CONFLUENCE_COUNT_RESULT", CONFLUENCE_COUNT_RESULT, envir = .GlobalEnv)
+
+cat("CONFLUENCE panel-only atlas outputs written:\n")
 for (path in unlist(confluence_paths, use.names = FALSE)) {
   cat(" - ", path, "\n", sep = "")
 }
+cat(" - ", bundle$html, "\n", sep = "")
+cat(" - ", bundle$payload, "\n", sep = "")
+cat(" - ", bundle$manifest, "\n", sep = "")
 
 invisible(CONFLUENCE_COUNT_RESULT)

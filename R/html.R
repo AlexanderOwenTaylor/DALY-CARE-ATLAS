@@ -122,7 +122,9 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           ki67_discovery = NULL,
                           patobank_ki67_percent = NULL,
                           mcl_triangle_feasibility = NULL,
-                          confluence_feasibility = NULL) {
+                          confluence_feasibility = NULL,
+                          run_scope = NULL) {
+  if (is.null(run_scope)) run_scope <- atlas_run_scope("full_atlas")
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -319,6 +321,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     patobank_ki67_percent = public_patobank_ki67_percent,
     mcl_triangle_feasibility = public_mcl_triangle_feasibility,
     confluence_feasibility = public_confluence_feasibility,
+    run_scope = run_scope,
     run_summary = public_rows(run_summary, max_rows = 100),
     action_items = public_rows(public_action_items, max_rows = 1000),
     action_summary = public_rows(action_item_summary(action_items), max_rows = 100),

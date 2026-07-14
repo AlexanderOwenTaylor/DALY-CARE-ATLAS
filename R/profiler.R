@@ -77,16 +77,6 @@ normalize_profile_mode <- function(profile_mode) {
   profile_mode[[1]]
 }
 
-atlas_min_cell_count <- function() {
-  normalize_min_cell_count(Sys.getenv("DALYCARE_MIN_CELL_COUNT", unset = "5"))
-}
-
-normalize_min_cell_count <- function(x) {
-  out <- suppressWarnings(as.integer(x[[1]] %||% 5L))
-  if (is.na(out) || out < 1L) return(5L)
-  out
-}
-
 source_date_range <- function(data) {
   date_cols <- names(data)[vapply(names(data), function(nm) is_date_like_column(nm, data[[nm]]), logical(1))]
   if (!length(date_cols)) {
@@ -129,18 +119,6 @@ profile_columns <- function(data, table_name) {
     )
   })
   bind_rows_base(rows)
-}
-
-empty_column_profiles <- function() {
-  empty_df(
-    table_name = character(), column_name = character(), column_type = character(),
-    column_class = character(), profile_kind = character(), n_rows = integer(),
-    n_available = integer(), pct_available = numeric(), n_missing = integer(),
-    pct_missing = numeric(), n_distinct_capped = integer(), is_sensitive = logical(),
-    is_date_like = logical(), is_numeric_like = logical(), min = numeric(),
-    mean = numeric(), median = numeric(), p25 = numeric(), p75 = numeric(),
-    max = numeric(), min_date = character(), max_date = character()
-  )
 }
 
 profile_column_profiles <- function(data, table_name, profile_mode = "full") {
@@ -261,10 +239,6 @@ check_row <- function(table_name, check_id, severity, message) {
 
 empty_value_frequencies <- function() {
   empty_df(table_name = character(), column_name = character(), value = character(), n = integer(), pct = numeric())
-}
-
-empty_column_top_values <- function() {
-  empty_df(table_name = character(), column_name = character(), value = character(), n = integer(), pct_rows = numeric())
 }
 
 profile_value_frequencies <- function(data, table_name, top_n = 10L, min_cell_count = atlas_min_cell_count()) {

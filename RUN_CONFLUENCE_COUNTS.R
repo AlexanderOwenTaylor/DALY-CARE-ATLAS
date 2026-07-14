@@ -1,14 +1,15 @@
-# DALY-CARE Atlas one-click CONFLUENCE aggregate mini-bundle runner for RStudio.
+# DALY-CARE Atlas one-click CONFLUENCE panel-only atlas runner for RStudio.
 #
 # Usage:
 #   source("RUN_CONFLUENCE_COUNTS.R")
 #
 # Optional overrides before sourcing:
 #   CONFLUENCE_COUNT_MODE <- "production_aggregate"
-#   CONFLUENCE_COUNT_OUTPUTS_DIR <- "outputs/confluence_only"
+#   CONFLUENCE_COUNT_OUTPUT_ROOT <- "atlas_runs"
 #   CONFLUENCE_COUNT_SMALL_CELL_N <- 10L
-#   CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR <- "path/to/main_atlas_outputs"
-#   CONFLUENCE_COUNT_ATLAS_OUTPUT_ZIP <- "path/to/main_atlas_outputs.zip"
+# Deprecated alias: CONFLUENCE_COUNT_OUTPUTS_DIR (treated as the output root).
+# Deprecated and ignored: CONFLUENCE_COUNT_UPDATE_PAYLOAD,
+#   CONFLUENCE_COUNT_ATLAS_OUTPUT_DIR, CONFLUENCE_COUNT_ATLAS_OUTPUT_ZIP.
 
 .confluence_count_entry_path <- local({
   frames <- sys.frames()
@@ -61,8 +62,15 @@ if (!exists("CONFLUENCE_COUNT_MODE", inherits = FALSE)) {
 if (!exists("CONFLUENCE_COUNT_PROJECT_ROOT", inherits = FALSE)) {
   CONFLUENCE_COUNT_PROJECT_ROOT <- .confluence_count_find_project_root(.confluence_count_default_project_root)
 }
+if (!exists("CONFLUENCE_COUNT_OUTPUT_ROOT", inherits = FALSE)) {
+  CONFLUENCE_COUNT_OUTPUT_ROOT <- if (exists("CONFLUENCE_COUNT_OUTPUTS_DIR", inherits = FALSE)) {
+    CONFLUENCE_COUNT_OUTPUTS_DIR
+  } else {
+    "atlas_runs"
+  }
+}
 if (!exists("CONFLUENCE_COUNT_OUTPUTS_DIR", inherits = FALSE)) {
-  CONFLUENCE_COUNT_OUTPUTS_DIR <- "outputs/confluence_only"
+  CONFLUENCE_COUNT_OUTPUTS_DIR <- ""
 }
 if (!exists("CONFLUENCE_COUNT_SMALL_CELL_N", inherits = FALSE)) {
   CONFLUENCE_COUNT_SMALL_CELL_N <- 5L
@@ -90,6 +98,7 @@ if (!file.exists(.confluence_count_sourceable)) {
 .CONFLUENCE_COUNT_SOURCE_CONFIG <- list(
   CONFLUENCE_COUNT_MODE = CONFLUENCE_COUNT_MODE,
   CONFLUENCE_COUNT_PROJECT_ROOT = CONFLUENCE_COUNT_PROJECT_ROOT,
+  CONFLUENCE_COUNT_OUTPUT_ROOT = CONFLUENCE_COUNT_OUTPUT_ROOT,
   CONFLUENCE_COUNT_OUTPUTS_DIR = CONFLUENCE_COUNT_OUTPUTS_DIR,
   CONFLUENCE_COUNT_SMALL_CELL_N = CONFLUENCE_COUNT_SMALL_CELL_N,
   CONFLUENCE_COUNT_UPDATE_PAYLOAD = CONFLUENCE_COUNT_UPDATE_PAYLOAD,

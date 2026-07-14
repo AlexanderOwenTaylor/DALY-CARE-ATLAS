@@ -2,6 +2,16 @@
   if (is.null(x) || length(x) == 0 || all(is.na(x))) y else x
 }
 
+normalize_min_cell_count <- function(x) {
+  out <- suppressWarnings(as.integer(x[[1]] %||% 5L))
+  if (is.na(out) || out < 1L) return(5L)
+  out
+}
+
+atlas_min_cell_count <- function() {
+  normalize_min_cell_count(Sys.getenv("DALYCARE_MIN_CELL_COUNT", unset = "5"))
+}
+
 atlas_timestamp <- function() {
   format(Sys.time(), "%Y-%m-%dT%H:%M:%S%z")
 }
@@ -34,6 +44,22 @@ relative_path <- function(path, root) {
 empty_df <- function(...) {
   out <- data.frame(..., stringsAsFactors = FALSE)
   out[0, , drop = FALSE]
+}
+
+empty_column_profiles <- function() {
+  empty_df(
+    table_name = character(), column_name = character(), column_type = character(),
+    column_class = character(), profile_kind = character(), n_rows = integer(),
+    n_available = integer(), pct_available = numeric(), n_missing = integer(),
+    pct_missing = numeric(), n_distinct_capped = integer(), is_sensitive = logical(),
+    is_date_like = logical(), is_numeric_like = logical(), min = numeric(),
+    mean = numeric(), median = numeric(), p25 = numeric(), p75 = numeric(),
+    max = numeric(), min_date = character(), max_date = character()
+  )
+}
+
+empty_column_top_values <- function() {
+  empty_df(table_name = character(), column_name = character(), value = character(), n = integer(), pct_rows = numeric())
 }
 
 bind_rows_base <- function(items) {
@@ -227,7 +253,7 @@ atlas_to_json <- function(x) {
   atlas_json_value(x)
 }
 
-atlas_repair_mojibake_text <- function(x) {
+atlas_repair_mojibake_text_legacy_literal_map <- function(x) {
   if (!length(x)) return(x)
   out <- enc2utf8(as.character(x))
   replacements <- c(
@@ -267,6 +293,49 @@ atlas_repair_mojibake_text <- function(x) {
   for (pattern in names(replacements)) {
     out <- gsub(pattern, replacements[[pattern]], out, fixed = TRUE, useBytes = FALSE)
   }
+  out
+}
+
+atlas_repair_mojibake_text <- function(x) {
+  if (!length(x)) return(x)
+  out <- enc2utf8(as.character(x))
+  u <- function(...) intToUtf8(c(...))
+  replacements <- list(
+    c(u(0x00C3, 0x2020), u(0x00C6)),
+    c(u(0x00C3, 0x02DC), u(0x00D8)),
+    c(u(0x00C3, 0x2026), u(0x00C5)),
+    c(u(0x00C3, 0x00A6), u(0x00E6)),
+    c(u(0x00C3, 0x00B8), u(0x00F8)),
+    c(u(0x00C3, 0x00A5), u(0x00E5)),
+    c(u(0x00C3, 0x201E), u(0x00C4)),
+    c(u(0x00C3, 0x2013), u(0x00D6)),
+    c(u(0x00C3, 0x0153), u(0x00DC)),
+    c(u(0x00C3, 0x00A4), u(0x00E4)),
+    c(u(0x00C3, 0x00B6), u(0x00F6)),
+    c(u(0x00C3, 0x00BC), u(0x00FC)),
+    c(u(0x00C3, 0x00A9), u(0x00E9)),
+    c(u(0x00C3, 0x00A8), u(0x00E8)),
+    c(u(0x00C3, 0x00A1), u(0x00E1)),
+    c(u(0x00C3, 0x00AD), u(0x00ED)),
+    c(u(0x00C3, 0x00B3), u(0x00F3)),
+    c(u(0x00C3, 0x00BA), u(0x00FA)),
+    c(u(0x00E2, 0x20AC, 0x201D), u(0x2014)),
+    c(u(0x00E2, 0x20AC, 0x201C), "-"),
+    c(u(0x00E2, 0x20AC, 0x02DC), "'"),
+    c(u(0x00E2, 0x20AC, 0x2122), "'"),
+    c(u(0x00E2, 0x20AC, 0x0153), "\""),
+    c(u(0x00E2, 0x20AC, 0xFFFD), "\""),
+    c(u(0x00E2, 0x20AC, 0x00A6), "..."),
+    c(u(0x00C2, 0x00B7), u(0x00B7)),
+    c(u(0x00C2, 0x00B1), u(0x00B1)),
+    c(u(0x00C2, 0x00B5), u(0x00B5)),
+    c(u(0x00C2, 0x00B0), u(0x00B0)),
+    c(u(0x00C2), "")
+  )
+  for (replacement in replacements) {
+    out <- gsub(replacement[[1]], replacement[[2]], out, fixed = TRUE, useBytes = TRUE)
+  }
+  Encoding(out) <- "UTF-8"
   out
 }
 

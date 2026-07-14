@@ -293,6 +293,18 @@ expect_true(length(payload$confluence_feasibility$code_sets) >= 16L, "Payload sh
 expect_true(length(payload$confluence_feasibility$mbl_source_counts) >= 6L, "Payload should include CONFLUENCE MBL source tiers.")
 
 html <- paste(readLines(file.path(root, "inst", "templates", "DALYCARE_atlas.html"), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+expect_true(grepl("function atlasPanelWasExecuted", html, fixed = TRUE), "Atlas template should gate visible panes using run scope.")
+expect_true(grepl("function renderScopedNotRunPanel", html, fixed = TRUE), "Atlas template should render an explicit not-run state for unexecuted panes.")
+expect_true(grepl("Not run in this CONFLUENCE-only atlas", html, fixed = TRUE), "Panel-only atlas should explain why other panes are empty.")
+expect_true(grepl('activateSubPane("clinical-feasibility", "confluence-feasibility"', html, fixed = TRUE), "CONFLUENCE-only atlas should open the CONFLUENCE pane by default.")
+expect_false(grepl('cloneState(bcellCloneCounts, "bcell_cll_diagnosis_accepted").count_display || state("cll").count_display', html, fixed = TRUE), "Accepted clone KPIs must not fall back to diagnosis scaffold counts.")
+expect_false(grepl('validationStatus: overlap.acceptance_status || "accepted"', html, fixed = TRUE), "Missing overlap rows must not be inferred as accepted.")
+expect_false(grepl('acceptance_status: stateRow.acceptance_status || "accepted"', html, fixed = TRUE), "Missing production source-tier rows must not be inferred as accepted.")
+expect_true(grepl('row.count_status || row.query_status || "not available"', html, fixed = TRUE), "CONFLUENCE count tables should render an explicit count/query status from the payload row.")
+expect_true(grepl('{ key: "endpoint_definition_status", label: "Endpoint status" }', html, fixed = TRUE), "CONFLUENCE count tables should render endpoint-definition status when present.")
+expect_true(grepl('{ key: "suppression_status", label: "Suppression" }', html, fixed = TRUE), "CONFLUENCE count tables should render suppression status when present.")
+expect_true(grepl("function confluenceHasAccepted", html, fixed = TRUE), "CONFLUENCE availability copy should be driven by accepted payload rows, not overall-run success alone.")
+expect_false(grepl("Accepted aggregate CONFLUENCE rows are available for clone evidence, overlap counts, overlap timing, infection outcomes, person-time denominators, rates, and microbiology-confirmed infection.", html, fixed = TRUE), "CONFLUENCE must not claim that every component succeeded when optional query routes can fail.")
 for (needle in c(
   "data-sub=\"mcl-triangle-feasibility\"",
   "data-sub=\"confluence-feasibility\"",

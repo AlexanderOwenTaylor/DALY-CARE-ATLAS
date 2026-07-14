@@ -83,6 +83,7 @@ load_atlas_runtime <- function(project_root = find_project_root()) {
   source(file.path(project_root, "R", "confluence_clone_evidence.R"))
   source(file.path(project_root, "R", "confluence_feasibility.R"))
   source(file.path(project_root, "R", "confluence_counts.R"))
+  source(file.path(project_root, "R", "atlas_bundle.R"))
   source(file.path(project_root, "R", "html.R"))
   source(file.path(project_root, "R", "run_atlas.R"))
   invisible(project_root)

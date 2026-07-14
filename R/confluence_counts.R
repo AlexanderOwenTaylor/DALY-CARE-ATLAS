@@ -410,7 +410,31 @@ confluence_count_acceptance_row <- function(count_kind,
   )
 }
 
+confluence_count_sanitize_error_message <- function(message) {
+  if (is.null(message) || !length(message) || is.na(message[[1]])) return("")
+  msg <- as.character(message[[1]])
+  if (exists("mcl_count_sanitize_error_message", mode = "function")) {
+    msg <- mcl_count_sanitize_error_message(msg)
+  } else {
+    msg <- gsub("(?i)(password|pwd|token|secret|key)\\s*=\\s*[^;\\s]+", "\\1=<redacted>", msg, perl = TRUE)
+    msg <- gsub("(?i)(host|server|dbname|database|user|uid)\\s*=\\s*[^;\\s]+", "\\1=<redacted>", msg, perl = TRUE)
+  }
+  msg <- gsub("\\b[0-3][0-9]{5}-?[0-9]{4}\\b", "<redacted_id>", msg, perl = TRUE)
+  msg <- gsub("\\b[0-9]{4}-[0-9]{2}-[0-9]{2}\\b", "<redacted_date>", msg, perl = TRUE)
+  msg <- gsub("\\s+", " ", msg, perl = TRUE)
+  substr(trimws(msg), 1L, 500L)
+}
+
+confluence_count_sanitize_error_audit <- function(errors) {
+  errors <- confluence_match_empty(errors, confluence_count_empty_failed_query_audit())
+  if (!nrow(errors)) return(errors)
+  errors$error_message_sanitized <- vapply(errors$error_message_sanitized, confluence_count_sanitize_error_message, character(1))
+  errors$notes <- vapply(errors$notes, confluence_count_sanitize_error_message, character(1))
+  errors
+}
+
 confluence_count_fail_closed_frame <- function(component, output_file, reason, mode = "plan", error_class = "") {
+  reason <- confluence_count_sanitize_error_message(reason)
   status <- if (identical(mode, "plan")) "query executable not run" else if (nzchar(error_class)) error_class else "production_aggregate_failed_mapping_unavailable"
   data.frame(
     component = component,
@@ -1265,7 +1289,10 @@ confluence_count_outputs_from_sets <- function(count_sets, project_root = ".", m
     production_query_review = confluence_count_query_review(success = TRUE, endpoint_codes = endpoint_codes),
     failed_query_audit = confluence_count_failed_route_audit(route_status),
     source_resolution_audit = source_resolution,
-    production_execution_summary = confluence_count_execution_summary("production_aggregate", TRUE, TRUE, first_dates, infection_events)
+    production_execution_summary = confluence_count_execution_summary(
+      "production_aggregate", TRUE, TRUE, first_dates, infection_events,
+      min_cell_count = min_cell_count
+    )
   )
 }
 
@@ -1324,18 +1351,27 @@ confluence_count_query_review <- function(success = FALSE, endpoint_codes = conf
   )
 }
 
-confluence_count_execution_summary <- function(mode, attempted, success, first_dates = NULL, infection_events = NULL, failure_reason = "") {
+confluence_count_execution_summary <- function(mode, attempted, success, first_dates = NULL, infection_events = NULL,
+                                                failure_reason = "", min_cell_count = atlas_min_cell_count()) {
+  public_runtime_count <- function(rows) {
+    if (!is.data.frame(rows)) {
+      return(list(display = "not run", status = "not run"))
+    }
+    confluence_count_suppress(nrow(rows), min_cell_count = min_cell_count)
+  }
+  first_date_count <- public_runtime_count(first_dates)
+  infection_event_count <- public_runtime_count(infection_events)
   data.frame(
     metric = c("count_mode", "production_query_attempted", "production_query_success", "first_date_state_rows", "infection_event_rows_internal", "failure_reason"),
     label = c("Count mode", "Production query attempted", "Production query success", "Internal first-date state rows", "Internal infection event rows", "Failure reason"),
-    value = c(mode, as.character(isTRUE(attempted)), as.character(isTRUE(success)), as.character(if (is.data.frame(first_dates)) nrow(first_dates) else 0L), as.character(if (is.data.frame(infection_events)) nrow(infection_events) else 0L), failure_reason),
-    status = c(mode, if (attempted) "attempted" else "not attempted", if (success) "success" else "not successful", "internal secure runtime only", "internal secure runtime only", if (nzchar(failure_reason)) "failed closed" else "ok"),
+    value = c(mode, as.character(isTRUE(attempted)), as.character(isTRUE(success)), first_date_count$display, infection_event_count$display, failure_reason),
+    status = c(mode, if (attempted) "attempted" else "not attempted", if (success) "success" else "not successful", first_date_count$status, infection_event_count$status, if (nzchar(failure_reason)) "failed closed" else "ok"),
     notes = c(
       "CONFLUENCE count mode selected for this atlas run.",
       "Production aggregate execution uses DB adapter or secure hook when available.",
       "Success means aggregate outputs were generated; rows may still be suppressed.",
-      "This number is a diagnostic row count inside the secure runtime, not a public patient list.",
-      "This number is a diagnostic event-row count inside the secure runtime, not a public event list.",
+      "This public-safe diagnostic is suppressed when small and marked not run when no secure result was available.",
+      "This public-safe diagnostic is suppressed when small and marked not run when no secure result was available.",
       "Failure rows remain visible and fail closed."
     ),
     stringsAsFactors = FALSE
@@ -1990,15 +2026,22 @@ confluence_count_fetch_sets_from_db <- function(db_adapter, project_root = ".") 
   )
 }
 
-confluence_count_placeholder_outputs <- function(mode = "plan", reason = "CONFLUENCE production aggregate query did not run.", error_class = "", project_root = ".") {
+confluence_count_placeholder_outputs <- function(mode = "plan", reason = "CONFLUENCE production aggregate query did not run.", error_class = "", project_root = ".",
+                                                 min_cell_count = atlas_min_cell_count()) {
   outputs <- confluence_count_empty_outputs()
-  clone_outputs <- confluence_clone_placeholder_outputs(project_root = project_root, min_cell_count = atlas_min_cell_count())
+  clone_outputs <- confluence_clone_placeholder_outputs(project_root = project_root, min_cell_count = min_cell_count)
   for (nm in names(clone_outputs)) outputs[[nm]] <- clone_outputs[[nm]]
   outputs$infection_endpoint_code_sets <- confluence_count_read_endpoint_code_sets(project_root)
   outputs$microbiology_confirmation_counts <- confluence_count_microbiology_fail_closed(mode = mode)
   outputs$failed_query_audit <- confluence_count_fail_closed_frame("confluence_production_aggregate", "confluence_production_execution_summary.csv", reason, mode = mode, error_class = error_class)
   outputs$production_query_review <- confluence_count_query_review(success = FALSE, endpoint_codes = outputs$infection_endpoint_code_sets)
-  outputs$production_execution_summary <- confluence_count_execution_summary(mode, attempted = !identical(mode, "plan"), success = FALSE, failure_reason = reason)
+  outputs$production_execution_summary <- confluence_count_execution_summary(
+    mode,
+    attempted = !identical(mode, "plan"),
+    success = FALSE,
+    failure_reason = confluence_count_sanitize_error_message(reason),
+    min_cell_count = min_cell_count
+  )
   outputs
 }
 
@@ -2006,11 +2049,11 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
   mode <- match.arg(mode)
   if (identical(mode, "auto")) mode <- confluence_count_mode(db_adapter)
   if (identical(mode, "plan")) {
-    return(confluence_count_placeholder_outputs(mode = "plan", reason = "CONFLUENCE production aggregate mode disabled or DB adapter unavailable.", project_root = project_root))
+    return(confluence_count_placeholder_outputs(mode = "plan", reason = "CONFLUENCE production aggregate mode disabled or DB adapter unavailable.", project_root = project_root, min_cell_count = min_cell_count))
   }
   db_adapter <- confluence_count_auto_db_adapter(db_adapter)
   if (!confluence_count_db_available(db_adapter)) {
-    return(confluence_count_placeholder_outputs(mode = "production_aggregate", reason = "No DB adapter or secure CONFLUENCE count hook was available.", error_class = "production_aggregate_failed_credentials_unavailable", project_root = project_root))
+    return(confluence_count_placeholder_outputs(mode = "production_aggregate", reason = "No DB adapter or secure CONFLUENCE count hook was available.", error_class = "production_aggregate_failed_credentials_unavailable", project_root = project_root, min_cell_count = min_cell_count))
   }
   count_sets <- NULL
   db_errors <- confluence_count_empty_failed_query_audit()
@@ -2033,10 +2076,29 @@ confluence_count_build_outputs <- function(project_root = ".", db_adapter = NULL
     count_sets <- fetched$sets
     db_errors <- fetched$errors
   }
+  db_errors <- confluence_count_sanitize_error_audit(db_errors)
   has_first_dates <- is.list(count_sets) && is.data.frame(count_sets$disease_first_dates) && nrow(count_sets$disease_first_dates)
   has_clone_evidence <- is.list(count_sets) && is.data.frame(count_sets$clone_evidence) && nrow(count_sets$clone_evidence)
   if (!is.list(count_sets) || (!has_first_dates && !has_clone_evidence)) {
-    return(confluence_count_placeholder_outputs(mode = "production_aggregate", reason = "No disease-state first-date rows were available after production aggregate query.", error_class = "production_aggregate_failed_mapping_unavailable", project_root = project_root))
+    failure_reason <- "No disease-state first-date rows were available after production aggregate query."
+    failure_class <- "production_aggregate_failed_mapping_unavailable"
+    if (is.data.frame(db_errors) && nrow(db_errors)) {
+      available_reasons <- db_errors$error_message_sanitized[nzchar(db_errors$error_message_sanitized)]
+      if (length(available_reasons)) failure_reason <- available_reasons[[1]]
+      if ("error_class" %in% names(db_errors)) {
+        available_classes <- as.character(db_errors$error_class[nzchar(as.character(db_errors$error_class))])
+        if (length(available_classes)) failure_class <- available_classes[[1]]
+      }
+    }
+    outputs <- confluence_count_placeholder_outputs(
+      mode = "production_aggregate",
+      reason = failure_reason,
+      error_class = failure_class,
+      project_root = project_root,
+      min_cell_count = min_cell_count
+    )
+    if (is.data.frame(db_errors) && nrow(db_errors)) outputs$failed_query_audit <- db_errors
+    return(outputs)
   }
   if (!has_first_dates) {
     count_sets$disease_first_dates <- empty_df(person_key = character(), state_id = character(), first_date = as.Date(character()))
@@ -2345,4 +2407,145 @@ confluence_count_merge_outputs <- function(scaffold, production) {
     scaffold$recommended_next_actions <- confluence_count_production_compat_actions(scaffold$recommended_next_actions, production)
   }
   confluence_attach_story_layer(scaffold)
+}
+
+confluence_apply_public_suppression <- function(outputs, min_cell_count = atlas_min_cell_count()) {
+  if (is.null(outputs) || !is.list(outputs)) return(outputs)
+  min_cell_count <- normalize_min_cell_count(min_cell_count)
+  complementary_label <- "suppressed for complementary privacy"
+  complementary_status <- "suppressed complementary cell"
+  accepted_overlap_id <- "accepted_dual_clone_overlap"
+
+  audit <- outputs$small_cell_suppression_audit %||% confluence_empty_small_cell_suppression_audit()
+  already_applied <- is.data.frame(audit) && nrow(audit) &&
+    "suppression_status" %in% names(audit) &&
+    any(as.character(audit$suppression_status) == complementary_status, na.rm = TRUE)
+  if (already_applied) return(outputs)
+
+  parent <- outputs$dual_clone_overlap_counts
+  timing <- outputs$dual_clone_overlap_timing
+  if (!is.data.frame(parent) || !nrow(parent) ||
+      !all(c("overlap_id", "n_people") %in% names(parent)) ||
+      !is.data.frame(timing) || !nrow(timing) ||
+      !all(c("timing_id", "n_people", "suppression_status") %in% names(timing))) {
+    return(outputs)
+  }
+
+  parent_index <- which(as.character(parent$overlap_id) == accepted_overlap_id)
+  if (!length(parent_index) || is.na(parent$n_people[parent_index[[1]]])) return(outputs)
+
+  accepted_timing <- rep(TRUE, nrow(timing))
+  if ("classification_id" %in% names(timing)) {
+    accepted_timing <- as.character(timing$classification_id) == accepted_overlap_id
+  } else if ("acceptance_status" %in% names(timing)) {
+    accepted_timing <- as.character(timing$acceptance_status) == "accepted"
+  }
+  primary_suppressed <- accepted_timing & is.na(timing$n_people) &
+    tolower(trimws(as.character(timing$suppression_status))) == "suppressed small cell"
+  if (!any(primary_suppressed, na.rm = TRUE)) return(outputs)
+
+  visible_sibling <- accepted_timing & !is.na(timing$n_people) & is.finite(timing$n_people) &
+    timing$n_people >= min_cell_count &
+    !tolower(trimws(as.character(timing$suppression_status))) %in%
+      c("suppressed small cell", "suppressed complementary cell")
+
+  suppress_rows <- function(df, mask) {
+    if (!is.data.frame(df) || !nrow(df) || !length(mask) || !any(mask)) return(df)
+    if ("n_people" %in% names(df)) df$n_people[mask] <- NA_real_
+    if ("count_display" %in% names(df)) df$count_display[mask] <- complementary_label
+    if ("suppression_status" %in% names(df)) df$suppression_status[mask] <- complementary_status
+    if ("notes" %in% names(df)) {
+      existing <- trimws(as.character(df$notes[mask]))
+      suffix <- "Public value hidden by deterministic complementary suppression."
+      df$notes[mask] <- ifelse(nzchar(existing), paste(existing, suffix), suffix)
+    }
+    df
+  }
+
+  suppress_parent_mirrors <- function(value) {
+    for (name in c("dual_clone_overlap_counts", "overlap_counts_accepted", "overlap_counts")) {
+      df <- value[[name]]
+      if (!is.data.frame(df) || !nrow(df) || !"overlap_id" %in% names(df)) next
+      value[[name]] <- suppress_rows(df, as.character(df$overlap_id) == accepted_overlap_id)
+    }
+    value
+  }
+
+  suppress_timing_mirrors <- function(value, selected) {
+    for (name in c("dual_clone_overlap_timing", "overlap_timing_accepted", "overlap_timing")) {
+      df <- value[[name]]
+      if (!is.data.frame(df) || !nrow(df) || !"timing_id" %in% names(df)) next
+      mask <- as.character(df$timing_id) == as.character(selected$timing_id[[1]])
+      for (key in c("classification_id", "bcell_entry_route_id", "pcd_entry_route_id")) {
+        if (key %in% names(df) && key %in% names(selected)) {
+          mask <- mask & as.character(df[[key]]) == as.character(selected[[key]][[1]])
+        }
+      }
+      value[[name]] <- suppress_rows(df, mask)
+    }
+    value
+  }
+
+  audit_table <- "confluence_dual_clone_overlap_timing"
+  audit_row_id <- accepted_overlap_id
+  if (any(visible_sibling, na.rm = TRUE)) {
+    candidates <- which(visible_sibling)
+    timing_key <- as.character(timing$timing_id[candidates])
+    bcell_key <- if ("bcell_entry_route_id" %in% names(timing)) as.character(timing$bcell_entry_route_id[candidates]) else rep("", length(candidates))
+    pcd_key <- if ("pcd_entry_route_id" %in% names(timing)) as.character(timing$pcd_entry_route_id[candidates]) else rep("", length(candidates))
+    candidates <- candidates[order(timing$n_people[candidates], timing_key, bcell_key, pcd_key, candidates)]
+    selected <- timing[candidates[[1]], , drop = FALSE]
+    outputs <- suppress_timing_mirrors(outputs, selected)
+    audit_row_id <- paste(
+      c(
+        as.character(selected$timing_id[[1]]),
+        if ("classification_id" %in% names(selected)) as.character(selected$classification_id[[1]]) else character(),
+        if ("bcell_entry_route_id" %in% names(selected)) as.character(selected$bcell_entry_route_id[[1]]) else character(),
+        if ("pcd_entry_route_id" %in% names(selected)) as.character(selected$pcd_entry_route_id[[1]]) else character()
+      ),
+      collapse = ":"
+    )
+  } else {
+    outputs <- suppress_parent_mirrors(outputs)
+    audit_table <- "confluence_dual_clone_overlap_counts"
+  }
+
+  complementary_audit <- data.frame(
+    audit_id = "confluence_complementary_overlap_privacy",
+    table_name = audit_table,
+    row_id = audit_row_id,
+    min_cell_count = as.integer(min_cell_count),
+    raw_count_available = "no raw count emitted",
+    count_display = complementary_label,
+    suppression_status = complementary_status,
+    public_safe = "yes",
+    notes = "A visible sibling, or the parent when no sibling was eligible, was hidden so the primary-suppressed remainder cannot be recovered by subtraction; the hidden value is not recorded.",
+    stringsAsFactors = FALSE
+  )
+  outputs$small_cell_suppression_audit <- confluence_match_empty(
+    bind_rows_base(list(audit, complementary_audit)),
+    confluence_empty_small_cell_suppression_audit()
+  )
+  outputs
+}
+
+confluence_build_atlas_panel <- function(project_root = ".", db_adapter = NULL,
+                                         mode = c("auto", "plan", "production_aggregate"),
+                                         min_cell_count = atlas_min_cell_count(),
+                                         scaffold_args = list()) {
+  mode <- match.arg(mode)
+  if (is.null(scaffold_args)) scaffold_args <- list()
+  if (!is.list(scaffold_args)) stop("scaffold_args must be a list.", call. = FALSE)
+  scaffold_args$project_root <- project_root
+  scaffold_args$min_cell_count <- min_cell_count
+  scaffold <- do.call(build_confluence_feasibility_outputs, scaffold_args)
+  production <- confluence_count_build_outputs(
+    project_root = project_root,
+    db_adapter = db_adapter,
+    mode = mode,
+    min_cell_count = min_cell_count
+  )
+  merged <- confluence_count_merge_outputs(scaffold, production)
+  merged <- confluence_apply_public_suppression(merged, min_cell_count = min_cell_count)
+  confluence_attach_story_layer(merged)
 }

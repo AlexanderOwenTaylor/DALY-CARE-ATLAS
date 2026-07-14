@@ -21,6 +21,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/confluence_clone_evidence.R",
     "R/confluence_feasibility.R",
     "R/confluence_counts.R",
+    "R/atlas_bundle.R",
     "R/html.R",
     "R/run_atlas.R"
   )

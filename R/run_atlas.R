@@ -28,6 +28,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   }
 
   generated_at <- atlas_timestamp()
+  run_scope <- atlas_run_scope("full_atlas")
   log_event("info", "", paste("Starting DALY-CARE atlas run", run_id))
   source_map <- read_source_map(source_map_path, project_root = project_root)
   production_source_map <- read_production_source_recovery_map(project_root = project_root)
@@ -423,29 +424,24 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     legacy_reference_vs_current = legacy_reference_vs_current,
     ki67_discovery = ki67_discovery
   )
-  confluence_feasibility <- build_confluence_feasibility_outputs(
+  confluence_feasibility <- confluence_build_atlas_panel(
     project_root = project_root,
-    sources = sources,
-    columns = columns,
-    column_profiles = column_profiles,
-    column_top_values = column_top_values,
-    panels = panels,
-    panel_raw_fields = product_outputs$panel_raw_fields,
-    panel_distributions = product_outputs$panel_distributions,
-    panel_kpis = product_outputs$panel_kpis,
-    canonical_reconciliation = canonical_reconciliation,
-    legacy_reference_vs_current = legacy_reference_vs_current,
-    min_cell_count = atlas_min_cell_count()
-  )
-  if (exists("confluence_count_build_outputs", mode = "function")) {
-    confluence_count_outputs <- confluence_count_build_outputs(
-      project_root = project_root,
-      db_adapter = db_adapter,
-      mode = confluence_count_mode(db_adapter),
-      min_cell_count = atlas_min_cell_count()
+    db_adapter = db_adapter,
+    mode = confluence_count_mode(db_adapter),
+    min_cell_count = atlas_min_cell_count(),
+    scaffold_args = list(
+      sources = sources,
+      columns = columns,
+      column_profiles = column_profiles,
+      column_top_values = column_top_values,
+      panels = panels,
+      panel_raw_fields = product_outputs$panel_raw_fields,
+      panel_distributions = product_outputs$panel_distributions,
+      panel_kpis = product_outputs$panel_kpis,
+      canonical_reconciliation = canonical_reconciliation,
+      legacy_reference_vs_current = legacy_reference_vs_current
     )
-    confluence_feasibility <- confluence_count_merge_outputs(confluence_feasibility, confluence_count_outputs)
-  }
+  )
   patobank_ki67_percent <- patobank_ki67_build_outputs(
     project_root = project_root,
     db_adapter = db_adapter,
@@ -552,8 +548,18 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     column_top_values = column_top_values
   )
   run_summary <- append_resource_reconciliation_run_summary(run_summary, resource_reconciliation, legacy_resource_audit)
+  scope_summary <- atlas_panel_run_summary(
+    run_id = run_id,
+    generated_at = generated_at,
+    run_scope = run_scope,
+    production_execution_summary = confluence_feasibility$production_execution_summary,
+    failed_query_audit = confluence_feasibility$failed_query_audit,
+    min_cell_count = atlas_min_cell_count()
+  )
+  scope_summary <- scope_summary[!scope_summary$metric %in% run_summary$metric, , drop = FALSE]
   run_summary <- bind_rows_base(list(
     run_summary,
+    scope_summary,
     source_recovery_run_summary_metrics(
       plan = production_source_map,
       dry_run = source_resolution_plan_dry_run,
@@ -566,6 +572,20 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     )
   ))
   output_paths$run_summary <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
+  scope_values <- stats::setNames(scope_summary$value, scope_summary$metric)
+  log_event(
+    "info",
+    "confluence_feasibility",
+    paste0(
+      "Atlas scope; run_profile=", run_scope$profile,
+      "; executed_panel=", paste(run_scope$executed_panels, collapse = ","),
+      "; source_profiling_executed=", if (isTRUE(run_scope$source_profiling_executed)) "TRUE" else "FALSE",
+      "; attempted=", scope_values[["production_query_attempted"]] %||% "FALSE",
+      "; success=", scope_values[["production_query_success"]] %||% "FALSE",
+      "; failed_queries=", scope_values[["failed_query_count"]] %||% "0",
+      "; suppression_threshold=", scope_values[["suppression_threshold"]] %||% as.character(atlas_min_cell_count())
+    )
+  )
 
   panel_paths <- list()
   for (panel_name in names(panels)) {
@@ -772,25 +792,26 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     ki67_discovery = payload_ki67_discovery,
     patobank_ki67_percent = payload_patobank_ki67_percent,
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility,
-    confluence_feasibility = payload_confluence_feasibility
+    confluence_feasibility = payload_confluence_feasibility,
+    run_scope = run_scope
   )
-  site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
-  log_event("info", "", "Static atlas written")
-
   memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
-  all_paths <- c(output_paths, panel_paths, list(html = site_paths$html, payload = site_paths$payload, memory_log = memory_log_path))
-  manifest <- output_manifest(all_paths, run_dir = run_dir)
-  manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
-  log_event("info", "", "Output manifest written")
+  log_event("info", "", "Writing static atlas bundle")
   log_event("info", "", paste("Run summary:", run_summary_log_message(run_summary)))
-  write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
+  bundle <- atlas_write_bundle(
+    run_dir = run_dir,
+    project_root = project_root,
+    payload = payload,
+    artifact_paths = c(output_paths, panel_paths, list(memory_log = memory_log_path)),
+    execution_log = bind_rows_base(log_rows)
+  )
 
   invisible(list(
     run_id = run_id,
     run_dir = run_dir,
-    manifest = manifest_path,
-    html = site_paths$html,
-    payload = site_paths$payload
+    manifest = bundle$manifest,
+    html = bundle$html,
+    payload = bundle$payload
   ))
 }
 
@@ -982,99 +1003,6 @@ source_availability_panel <- function(sources) {
     by = list(source_type = sources$source_type, load_status = sources$load_status),
     FUN = length
   )
-}
-
-output_manifest_artifact_metadata <- function(id, path = "") {
-  stem <- sub("[.][^.]*$", "", basename(path %||% ""))
-  key <- if (grepl("^(confluence|mcl_triangle|ki67|patobank_ki67|atlas|situation_report|npu|isotype|mm_|registry|damyda|lyfo)_", id)) {
-    id
-  } else if (nzchar(stem)) {
-    stem
-  } else {
-    id
-  }
-  confluence_canonical <- c(
-    "confluence_disease_state_person_counts",
-    "confluence_first_date_availability",
-    "confluence_clone_route_manifest",
-    "confluence_clone_source_resolution",
-    "confluence_bcell_clone_evidence_counts",
-    "confluence_pcd_clone_evidence_counts",
-    "confluence_paraprotein_ambiguity_counts",
-    "confluence_mgus_reclassification_waterfall",
-    "confluence_dual_clone_overlap_counts",
-    "confluence_dual_clone_overlap_timing",
-    "confluence_primary_overlap_exclusion_reasons",
-    "confluence_clone_availability_protocol_runway",
-    "confluence_overlap_counts_accepted",
-    "confluence_overlap_timing_accepted",
-    "confluence_mbl_validation_waterfall",
-    "confluence_mgus_validation_waterfall",
-    "confluence_dual_clone_validation_waterfall",
-    "confluence_infection_endpoint_code_sets",
-    "confluence_infection_counts",
-    "confluence_recurrent_infection_counts",
-    "confluence_infection_person_time",
-    "confluence_infection_rates",
-    "confluence_microbiology_confirmation_counts",
-    "confluence_microbiology_confirmation_source_audit",
-    "confluence_production_query_review",
-    "confluence_failed_query_audit",
-    "confluence_source_resolution_audit",
-    "confluence_production_execution_summary"
-  )
-  confluence_superseded_by <- c(
-    confluence_summary = "confluence_production_execution_summary",
-    confluence_disease_state_counts = "confluence_disease_state_person_counts",
-    confluence_overlap_counts = "confluence_overlap_counts_accepted",
-    confluence_overlap_timing = "confluence_overlap_timing_accepted"
-  )
-  module <- if (grepl("^confluence_", key)) {
-    "confluence"
-  } else if (grepl("^mcl_triangle", key)) {
-    "mcl_triangle"
-  } else if (grepl("^(ki67|patobank_ki67)_", key)) {
-    "ki67"
-  } else {
-    "atlas"
-  }
-  mcl_count_output <- grepl("^mcl_triangle_count_", id) ||
-    (grepl("^mcl_triangle_", key) && grepl("mcl_triangle_(data_point_counts|execution_summary|failed_query_audit|count_summary|inclusion_waterfall|overlap_matrix|exposure_strata_counts|landmark_feasibility_counts|ki67_|age_proxy_counts|ibrutinib_|treatment_strategy_strata_counts|high_risk_biology_counts|answerability_)", key))
-  canonical_output <- key %in% confluence_canonical || isTRUE(mcl_count_output)
-  production_output <- canonical_output
-  superseded_by <- if (key %in% names(confluence_superseded_by)) unname(confluence_superseded_by[[key]]) else ""
-  artifact_role <- if (nzchar(superseded_by)) {
-    "compatibility_reference"
-  } else if (canonical_output) {
-    "canonical_production"
-  } else {
-    "supporting_output"
-  }
-  data.frame(
-    module = module,
-    artifact_role = artifact_role,
-    canonical_output = isTRUE(canonical_output),
-    production_output = isTRUE(production_output),
-    superseded_by = superseded_by,
-    stringsAsFactors = FALSE
-  )
-}
-
-output_manifest <- function(paths, run_dir) {
-  rows <- lapply(names(paths), function(id) {
-    path <- paths[[id]]
-    info <- if (file.exists(path)) file.info(path) else NULL
-    row <- data.frame(
-      artifact_id = id,
-      relative_path = relative_path(path, run_dir),
-      path = normalize_slashes(normalizePath(path, winslash = "/", mustWork = FALSE)),
-      status = if (file.exists(path)) "ok" else "missing",
-      file_size_bytes = if (!is.null(info)) as.numeric(info$size) else NA_real_,
-      stringsAsFactors = FALSE
-    )
-    cbind(row, output_manifest_artifact_metadata(id, path))
-  })
-  bind_rows_base(rows)
 }
 
 atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels,

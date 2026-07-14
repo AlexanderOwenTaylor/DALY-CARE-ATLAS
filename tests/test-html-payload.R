@@ -2,6 +2,14 @@ root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
 source(file.path(root, "tests", "helper.R"))
 source_test_runtime(root)
 
+mojibake_ae <- intToUtf8(c(0x00C3, 0x2020))
+canonical_ae <- intToUtf8(0x00C6)
+expect_equal(
+  atlas_repair_mojibake_text(paste0(mojibake_ae, "KI030")),
+  paste0(canonical_ae, "KI030"),
+  "Payload sanitization should repair mojibake without locale-dependent invalid UTF-8 patterns."
+)
+
 sources <- data.frame(
   table_name = c("example_labs", "RKKP_DaMyDa"),
   source_type = c("file", "file"),
@@ -399,8 +407,12 @@ payload <- atlas_payload(
     current_behavior = "test",
     recommended_action = "test",
     stringsAsFactors = FALSE
-  )
+  ),
+  run_scope = atlas_run_scope("confluence_only")
 )
+expect_equal(payload$run_scope$profile, "confluence_only", "Payload should identify a CONFLUENCE-only run.")
+expect_equal(unlist(payload$run_scope$executed_panels, use.names = FALSE), "confluence_feasibility", "Payload should identify CONFLUENCE as the only executed pane.")
+expect_false(payload$run_scope$source_profiling_executed, "Panel-only payload should not claim full source profiling.")
 expect_true(all(c("hero_metrics", "domain_cards", "catalog_rows", "qa_items", "action_items", "action_summary", "db_query_log", "db_budget_actions", "npu_cards", "detective_cards", "isotype_cards", "treatment_cards", "situation_report_cards", "registry_cards", "panel_groups", "column_profile_rows", "column_top_value_rows", "column_profile_summary") %in% names(payload)), "Payload should include the review-grade view model sections.")
 expect_true(all(c("review_nav", "review_overview", "review_registry_sections", "review_clinical_sections", "review_treatment_sections", "review_laboratory_sections", "review_situation_sections", "review_ehr_sections", "review_infrastructure_sections") %in% names(payload)), "Payload should include the V33-style review view-model sections.")
 expect_true(all(c("clinical_concept_rows", "domain_panel_rows", "panel_kpi_rows", "panel_distribution_rows", "panel_raw_field_rows", "panel_parity_rows", "review_clinical_variables") %in% names(payload)), "Payload should include the clinical concept and domain-panel product-layer rows.")
