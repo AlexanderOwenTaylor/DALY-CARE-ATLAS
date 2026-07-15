@@ -1422,6 +1422,62 @@ build_mcl_triangle_feasibility_outputs <- function(project_root = ".",
   )
 }
 
+mcl_triangle_current_run_output_source <- function(cohort_counts) {
+  summary <- cohort_counts$execution_summary %||% mcl_count_empty_execution_summary()
+  value <- function(name, default) {
+    if (!is.data.frame(summary) || !nrow(summary) || !name %in% names(summary)) return(default)
+    summary[[name]][[1]] %||% default
+  }
+  data.frame(
+    source_type = "current_run",
+    source_path = "",
+    selected_outputs_dir = "",
+    selected = TRUE,
+    mode = as.character(value("mode", "")),
+    acceptance_status = as.character(value("acceptance_status", "")),
+    failed_queries = suppressWarnings(as.integer(value("failed_queries", 0L))),
+    production_aggregate_succeeded = isTRUE(value("production_aggregate_succeeded", FALSE)),
+    notes = "Current-run MCL/TRIANGLE aggregate rows are passed directly to the atlas payload; no standalone-output resolver or fixture fallback is used.",
+    stringsAsFactors = FALSE
+  )
+}
+
+mcl_triangle_public_cohort_counts <- function(cohort_counts) {
+  internal_names <- c(
+    "definitions", "query_templates", "person_date_mapping", "value_mappings",
+    "treatment_code_mappings", "latest_mapping_change"
+  )
+  candidates <- cohort_counts[setdiff(names(cohort_counts), internal_names)]
+  candidates[vapply(candidates, is.data.frame, logical(1))]
+}
+
+mcl_triangle_build_atlas_panel <- function(project_root, db_adapter = NULL,
+                                           mode = c("plan", "production_aggregate"),
+                                           min_cell_count = 5L,
+                                           scaffold_args = list(),
+                                           count_args = list()) {
+  mode <- match.arg(mode)
+  scaffold_call <- modifyList(scaffold_args, list(project_root = project_root))
+  scaffold <- do.call(build_mcl_triangle_feasibility_outputs, scaffold_call)
+  count_call <- modifyList(
+    count_args,
+    list(
+      project_root = project_root,
+      db_adapter = db_adapter,
+      mode = mode,
+      min_cell_count = min_cell_count,
+      update_payload = FALSE
+    )
+  )
+  cohort_counts <- do.call(mcl_count_build_outputs, count_call)
+  cohort_counts <- mcl_triangle_apply_public_suppression(cohort_counts, min_cell_count = min_cell_count)
+  scaffold$cohort_counts <- mcl_triangle_public_cohort_counts(cohort_counts)
+  scaffold$standalone_output_source <- mcl_triangle_current_run_output_source(cohort_counts)
+  scaffold$pathology_ki67_signpost <- mcl_triangle_pathology_ki67_signpost(cohort_counts)
+  attr(scaffold, "count_outputs") <- cohort_counts
+  scaffold
+}
+
 mcl_triangle_write_outputs <- function(outputs, output_dir) {
   list(
     summary = write_csv(outputs$summary, file.path(output_dir, "mcl_triangle_feasibility_summary.csv")),

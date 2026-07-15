@@ -18,8 +18,6 @@ for (needle in c(
   "Scope:",
   "feasibility/readiness review for study planning",
   "Cohort construction looks feasible; risk-adapted TRIANGLE emulation still needs validation.",
-  "fallback reference count",
-  "fallback/reference count",
   "renderCountKindBadge",
   "What to do here",
   "RKKP registry loading and cleaning",
@@ -38,6 +36,9 @@ for (needle in c(
   expect_true(grepl(needle, template, fixed = TRUE), paste("Presentation template should include:", needle))
 }
 expect_false(grepl("/ngc/dalyca_r/people/", template, fixed = TRUE), "Presentation template must not emit guessed person-specific NGC paths.")
+for (needle in c("fallback reference count", "fallback/reference count")) {
+  expect_false(grepl(needle, template, fixed = TRUE), paste("MCL/TRIANGLE presentation must not retain exact-number fallback language:", needle))
+}
 
 sources <- data.frame(
   table_name = c("SDS_pato", "RKKP_LYFO"),

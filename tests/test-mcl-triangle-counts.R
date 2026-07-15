@@ -1408,12 +1408,17 @@ env$MCL_COUNT_MODE <- "plan"
 env$MCL_COUNT_PROJECT_ROOT <- root
 env$MCL_COUNT_OUTPUTS_DIR <- runner_dir
 runner_console <- capture.output(sys.source(runner, envir = env))
-expect_file(file.path(runner_dir, "mcl_triangle_count_query_templates.sql"))
-expect_file(file.path(runner_dir, "mcl_triangle_data_point_counts.csv"))
-expect_file(file.path(runner_dir, "mcl_triangle_execution_summary.csv"))
+runner_result <- get("MCL_TRIANGLE_COUNT_RESULT", envir = .GlobalEnv, inherits = FALSE)
+expect_true(startsWith(normalizePath(runner_result$run_dir, winslash = "/", mustWork = FALSE), normalizePath(runner_dir, winslash = "/", mustWork = FALSE)), "Deprecated output-directory alias should be treated as the canonical run root.")
+expect_file(runner_result$paths$query_templates)
+expect_file(runner_result$paths$data_point_counts)
+expect_file(runner_result$paths$execution_summary)
+expect_file(runner_result$html)
+expect_file(runner_result$payload)
+expect_file(runner_result$manifest)
 runner_console_text <- paste(runner_console, collapse = "\n")
 expect_true(grepl("Production aggregate console summary:", runner_console_text, fixed = TRUE), "Runner console should print the final production aggregate summary block.")
-for (needle in c("count mode", "executed queries", "failed queries", "populated intersections", "all MCL count", "age <=65 count", "CIT count", "Ibrutinib count", "ASCT/HDT count", "Ki-67 AEKI count", "payload updated")) {
+for (needle in c("count mode", "executed queries", "failed queries", "populated intersections", "acceptance status", "panel-only atlas outputs written")) {
   expect_true(grepl(needle, runner_console_text, fixed = TRUE), paste("Runner console summary should include", needle))
 }
 
@@ -1427,8 +1432,11 @@ invisible(file.copy(file.path(profile_dir, "atlas_columns.csv"), file.path(runne
 invisible(file.copy(file.path(profile_dir, "mcl_triangle_variable_inventory.csv"), file.path(runner_prod_dir, "mcl_triangle_variable_inventory.csv"), overwrite = TRUE))
 env_prod$MCL_COUNT_OUTPUTS_DIR <- runner_prod_dir
 runner_prod_console <- capture.output(sys.source(runner, envir = env_prod))
-runner_prod_counts <- read_delimited_file(file.path(runner_prod_dir, "mcl_triangle_data_point_counts.csv"))
-expect_file(file.path(runner_prod_dir, "mcl_triangle_execution_summary.csv"))
+runner_prod_result <- get("MCL_TRIANGLE_COUNT_RESULT", envir = .GlobalEnv, inherits = FALSE)
+runner_prod_counts <- read_delimited_file(runner_prod_result$paths$data_point_counts)
+expect_file(runner_prod_result$paths$execution_summary)
+expect_file(file.path(runner_prod_result$run_dir, "outputs", "atlas_run_summary.csv"))
+expect_file(file.path(runner_prod_result$run_dir, "logs", "atlas_execution_log.tsv"))
 expect_true(all(runner_prod_counts$count_mode == "production_aggregate"), "One-click runner should respect pre-set production_aggregate mode.")
 expect_false(any(runner_prod_counts$count_mode == "plan"), "Production one-click runner must not silently fall back to plan mode.")
 expect_true(any(runner_prod_counts$count_status %in% c("production_aggregate_failed_credentials_unavailable", "production_aggregate_failed_query_error", "production_aggregate_count_available", "suppressed_small_cell")), "Production one-click runner should report production execution/failed-production statuses.")
@@ -1496,9 +1504,9 @@ expect_true(nrow(mcl_count_read_atlas_treatment_inventory(atlas_output_dir = atl
 
 runner_files <- c("mcl_triangle_atlas_input_audit.csv", "mcl_triangle_failed_query_audit.csv")
 for (name in runner_files) {
-  expect_file(file.path(runner_dir, name))
+  expect_file(file.path(runner_result$run_dir, "outputs", name))
 }
-runner_summary <- read_delimited_file(file.path(runner_dir, "mcl_triangle_execution_summary.csv"))
+runner_summary <- read_delimited_file(runner_result$paths$execution_summary)
 for (name in c("core_marginal_counts_succeeded", "age_validation_succeeded", "ibrutinib_validation_succeeded", "ki67_validation_succeeded", "atlas_ingestion_succeeded", "acceptance_status")) {
   expect_true(name %in% names(runner_summary), paste("Execution summary should include", name))
 }

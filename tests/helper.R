@@ -19,6 +19,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/mcl_triangle_asct_hdt_evidence.R",
     "R/mcl_triangle_counts.R",
     "R/mcl_triangle_feasibility.R",
+    "R/atlas_bundle.R",
     "R/html.R",
     "R/run_atlas.R"
   )

@@ -1648,6 +1648,7 @@
     <section class="tab-page" id="tab-clinical-feasibility">
       <div class="sub-nav" aria-label="Clinical Feasibility sections">
         <button class="sub-tab active" data-sub="mcl-triangle-feasibility">MCL / TRIANGLE</button>
+        <button class="sub-tab" data-sub="confluence-feasibility">CONFLUENCE</button>
       </div>
       <div class="sub-pane active" id="mcl-triangle-feasibility">
         <div class="panel">
@@ -1660,6 +1661,15 @@
             <div id="clinical-feasibility-trust-legend"></div>
             <div style="height:14px"></div>
             <div id="mcl-triangle-feasibility-dashboard"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sub-pane" id="confluence-feasibility">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="section-kicker">Feasibility / study planning</p>
+            <h2 class="panel-title">CONFLUENCE feasibility</h2>
+            <p class="panel-sub">The CONFLUENCE feasibility component is not included in this branch build.</p>
           </div>
         </div>
       </div>
@@ -1885,8 +1895,42 @@
   <button class="utility-button back-to-top" type="button" data-back-to-top="true">Back to top</button>
 
   <script>
-    (function () {
-      const payload = window.DALYCARE_ATLAS_PAYLOAD || {};
+      (function () {
+        const payload = window.DALYCARE_ATLAS_PAYLOAD || {};
+      const runScope = payload.run_scope || { profile: "full_atlas", executed_panels: ["*"], source_profiling_executed: true };
+      function atlasExecutedPanels() {
+        const value = runScope.executed_panels;
+        if (Array.isArray(value)) return value;
+        return value === undefined || value === null || value === "" ? [] : [String(value)];
+      }
+      function atlasPanelWasExecuted(panelId) {
+        const executed = atlasExecutedPanels();
+        return runScope.profile === "full_atlas" || executed.includes("*") || executed.includes(panelId);
+      }
+      function renderScopedNotRunPanel() {
+        return `<div class="panel"><div class="panel-head"><h2 class="panel-title">Not run in this TRIANGLE-only atlas</h2><p class="panel-sub">This atlas was generated from the TRIANGLE-lite aggregate-count profile. Only the MCL/TRIANGLE feasibility pane was executed; no zero, fallback, or reference values are substituted for other panes.</p></div></div>`;
+      }
+      function applyRunScopeToPanes() {
+        if (runScope.profile !== "triangle_only") return;
+        document.querySelectorAll(".tab-page").forEach(page => {
+          const subPanes = Array.from(page.querySelectorAll(":scope > .sub-pane"));
+          if (subPanes.length) {
+            subPanes.forEach(pane => {
+              const panelId = pane.id.replace(/-/g, "_");
+              if (!atlasPanelWasExecuted(panelId)) pane.innerHTML = renderScopedNotRunPanel();
+            });
+            return;
+          }
+          const panelId = page.id.replace(/^tab-/, "").replace(/-/g, "_");
+          if (!atlasPanelWasExecuted(panelId)) page.innerHTML = renderScopedNotRunPanel();
+        });
+      }
+      function applyRunScopeDefaultRoute() {
+        if (runScope.profile !== "triangle_only" || isQaRoute() || window.location.hash) return;
+        activateTab("clinical-feasibility", { silent: true });
+        activateSubPane("clinical-feasibility", "mcl-triangle-feasibility", { silent: true });
+        updateShareUrl("clinical-feasibility", "mcl-triangle-feasibility", true);
+      }
       const panels = payload.panels || {};
       const panelGroups = payload.panel_groups || [];
       const catalogRows = payload.catalog_rows || [];
@@ -3546,7 +3590,7 @@
         ));
         add(
           "MCL/TRIANGLE-lite feasibility",
-          mclAcceptedProductionAggregate() ? "production aggregate where labelled" : "fallback/reference or candidate where labelled",
+          mclAcceptedProductionAggregate() ? "production aggregate where labelled" : "current-run status or candidate/readiness evidence where labelled",
           "mcl_triangle_* outputs and Clinical Feasibility panel",
           "Do not convert descriptive feasibility into causal evidence.",
           "Validate biology/risk predicates, timing, and target-trial design before extraction.",
@@ -7267,99 +7311,86 @@
       function mclRowStatus(row) {
         return text(row && (row.count_status || row.validation_status || row.status || row.acceptance_status || row.readiness_status || "")).toLowerCase();
       }
+      function mclRowStatusSummary(row) {
+        if (!row || !Object.keys(row).length) return "row not present";
+        return [
+          ["count_status", row.count_status],
+          ["validation_status", row.validation_status],
+          ["acceptance_status", row.acceptance_status],
+          ["suppression_status", row.suppression_status]
+        ].filter(item => text(item[1]).trim()).map(item => `${item[0]}=${item[1]}`).join("; ");
+      }
       function mclRowBlocked(row) {
         if (!row || !Object.keys(row).length) return true;
         const status = mclRowStatus(row);
         if (!status) return false;
         return /query_executable_not_run|count_not_available|requires_|failed_acceptance|failed|not_available|not executable|not_executable|blocked|missing/.test(status);
       }
-      function mclDisplayInfo(row, fallback, options) {
+      function mclDisplayInfo(row, options) {
         const opts = options || {};
         const rowValue = row && (row.distinct_person_count_display || row.value || row.mcl_aeki_known);
-        const accepted = mclAcceptedProductionAggregate();
         const blocked = mclRowBlocked(row);
-        if (rowValue && accepted && !blocked) {
+        const suppression = text(row && (row.suppression_status || row.count_status || "")).toLowerCase();
+        const suppressed = (suppression !== "not suppressed" && /suppress/.test(suppression)) || /^</.test(text(rowValue));
+        const status = row && (row.count_status || row.validation_status || row.acceptance_status || row.status || "");
+        if (rowValue && (!blocked || suppressed)) {
           return {
             value: rowValue,
-            countKind: opts.countKind || "persons",
-            statusLabel: "accepted production aggregate",
-            note: opts.note || ""
-          };
-        }
-        if (rowValue && !blocked) {
-          return {
-            value: rowValue,
-            countKind: "not production count",
-            statusLabel: "plan/mockup only",
-            note: opts.note || "Current payload value; status shown above."
-          };
-        }
-        if (fallback !== undefined && fallback !== null && text(fallback).trim()) {
-          return {
-            value: fallback,
-            countKind: "fallback/reference count",
-            statusLabel: "fallback reference count",
-            note: opts.fallbackNote || "Fallback/reference value."
+            countKind: opts.countKind || (suppressed ? "suppressed aggregate count" : "persons"),
+            statusLabel: status || (suppressed ? "suppressed" : "current payload row"),
+            note: [opts.note || "", mclRowStatusSummary(row)].filter(Boolean).join(" | ")
           };
         }
         return {
           value: "not available",
-          countKind: "unavailable",
-          statusLabel: blocked ? "blocked: mapping required" : "unavailable",
-          note: opts.unavailableNote || ""
+          countKind: /not_run|not run/.test(mclRowStatus(row)) ? "not run" : "unavailable",
+          statusLabel: status || (blocked ? "not run or blocked" : "row unavailable"),
+          note: [opts.unavailableNote || "", mclRowStatusSummary(row)].filter(Boolean).join(" | ")
         };
       }
-      function mclKpiItem(label, row, fallback, tone, options) {
+      function mclKpiItem(label, row, tone, options) {
         const opts = options || {};
-        const info = mclDisplayInfo(row, fallback, opts);
+        const info = mclDisplayInfo(row, opts);
         return Object.assign({
           label,
           tone,
           denominator: opts.denominator || row && (row.denominator || row.denominator_id || row.denominator_scope || row.data_point_id) || "",
-          source: opts.source || row && (row.source_locations || row.source || row.table_or_source || row.evidence_file) || "mcl_triangle aggregate outputs",
-          validationStatus: opts.validationStatus || row && (row.validation_status || row.count_status || row.acceptance_status || row.status) || info.statusLabel || ""
+          source: opts.source || row && (row.source_locations || row.source || row.table_or_source || row.evidence_file) || "MCL/TRIANGLE current-run outputs",
+          validationStatus: opts.validationStatus || mclRowStatusSummary(row)
         }, info);
       }
-      function mclDisplay(row, fallback) {
-        return mclDisplayInfo(row, fallback).value;
+      function mclDisplay(row) {
+        return mclDisplayInfo(row).value;
       }
       function mclPercent(row) {
         return (row && row.percent_of_denominator_display) || "";
       }
       function mclDisplayNumber(row) {
-        const display = text(mclDisplay(row, ""));
-        if (!display || /</.test(display)) return NaN;
+        const display = text(mclDisplay(row));
+        if (!display || /<|suppress|not available/i.test(display)) return NaN;
         return numberValue(display.replace(/,/g, ""));
       }
-      function mclSumDisplays(rows, fallback) {
+      function mclSumDisplays(rows) {
         const nums = (rows || []).map(mclDisplayNumber).filter(value => !Number.isNaN(value));
-        if (!nums.length || nums.length !== (rows || []).length) return fallback || "not available";
+        if (!nums.length || nums.length !== (rows || []).length) return "not available";
         return formatNumber(nums.reduce((sum, value) => sum + value, 0));
       }
-      function mclSumDisplayInfo(rows, fallback, options) {
+      function mclSumDisplayInfo(rows, options) {
         const opts = options || {};
         const nums = (rows || []).map(mclDisplayNumber).filter(value => !Number.isNaN(value));
-        if (nums.length && nums.length === (rows || []).length && mclAcceptedProductionAggregate() && !(rows || []).some(mclRowBlocked)) {
+        if (nums.length && nums.length === (rows || []).length && !(rows || []).some(mclRowBlocked)) {
           return {
             value: formatNumber(nums.reduce((sum, value) => sum + value, 0)),
             countKind: opts.countKind || "persons",
-            statusLabel: "accepted production aggregate",
-            note: opts.note || "Derived from accepted aggregate stratum cells."
-          };
-        }
-        if (fallback !== undefined && fallback !== null && text(fallback).trim()) {
-          return {
-            value: fallback,
-            countKind: "fallback/reference count",
-            statusLabel: "fallback reference count",
-            note: opts.fallbackNote || "Fallback-derived value."
+            statusLabel: "derived from current payload rows",
+            note: opts.note || "Derived only when every current-run constituent row is present and unsuppressed."
           };
         }
         return {
           value: "not available",
           countKind: "unavailable",
-          statusLabel: "unavailable",
-          note: ""
+          statusLabel: (rows || []).some(row => /suppress/.test(text(row && (row.suppression_status || row.count_status || "")).toLowerCase())) ? "suppressed constituent row" : "constituent row unavailable",
+          note: "No provisional or reference value substituted."
         };
       }
       function renderMclMiniMatrix(title, denominator, tone) {
@@ -7370,24 +7401,28 @@
         return `
           <h3>${escapeHtml(title)}</h3>
           ${renderKpiStrip([
-            mclKpiItem("BTKi/ibrutinib + primary LYFO ASCT/HDT", both, null, tone || "violet", { note: mclPercent(both) ? `Percent denominator: ${mclPercent(both)}` : "" }),
-            mclKpiItem("primary LYFO ASCT/HDT without BTKi evidence", asctOnly, null, "blue", { note: mclPercent(asctOnly) ? `Percent denominator: ${mclPercent(asctOnly)}` : "" }),
-            mclKpiItem("BTKi/ibrutinib no primary LYFO ASCT/HDT", ibOnly, null, "green", { note: mclPercent(ibOnly) ? `Percent denominator: ${mclPercent(ibOnly)}` : "" }),
-            mclKpiItem("Neither evidence", neither, null, "amber", { note: mclPercent(neither) ? `Percent denominator: ${mclPercent(neither)}` : "" })
+            mclKpiItem("BTKi/ibrutinib + primary LYFO ASCT/HDT", both, tone || "violet", { note: mclPercent(both) ? `Percent denominator: ${mclPercent(both)}` : "" }),
+            mclKpiItem("primary LYFO ASCT/HDT without BTKi evidence", asctOnly, "blue", { note: mclPercent(asctOnly) ? `Percent denominator: ${mclPercent(asctOnly)}` : "" }),
+            mclKpiItem("BTKi/ibrutinib no primary LYFO ASCT/HDT", ibOnly, "green", { note: mclPercent(ibOnly) ? `Percent denominator: ${mclPercent(ibOnly)}` : "" }),
+            mclKpiItem("Neither evidence", neither, "amber", { note: mclPercent(neither) ? `Percent denominator: ${mclPercent(neither)}` : "" })
           ], { tone: tone || "violet" })}
         `;
       }
       function renderMclPicoTable() {
+        const evidenceText = items => items.map(item => {
+          const info = mclDisplayInfo(item[1]);
+          return `${item[0]}: ${info.value} (${info.statusLabel || "row unavailable"})`;
+        }).join("; ");
         const rows = [
-          ["Population", "Adults with newly diagnosed MCL, preferably younger/fit or clinically transplant-eligible, receiving first-line intensive chemoimmunotherapy +/- BTK inhibitor. Stratify by high-risk biology.", "partial", "RKKP_LYFO; SDS_t_tumor; SDS_pato", "Fallback/reference if current payload is not accepted: 1,417 all LYFO MCL; 411 age <=65 younger proxy", "Age <=65 is a proxy, not observed eligibility.", "Validate fitness, induction timing, and biology strata."],
-          ["Intervention", "Ibrutinib-containing chemoimmunotherapy plus primary LYFO ASCT/HDT consolidation.", "partial", "RKKP_LYFO; SDS_indberetningmedpris", "Fallback/reference if current payload is not accepted: 115 expanded ibrutinib ever-observed; 336 primary LYFO ASCT/HDT evidence; 14 all-MCL overlap", "Ever-observed exposure is descriptive only.", "Implement landmark/timing windows."],
-          ["Comparator", "Ibrutinib-containing chemoimmunotherapy without primary LYFO ASCT/HDT. Secondary comparator: historical intensive CIT + primary LYFO ASCT without ibrutinib.", "partial", "RKKP_LYFO regimen fields; ATC L01XE27", "Fallback/reference if current payload is not accepted: 101 all-MCL Ibrutinib without primary LYFO ASCT/HDT evidence; 17 among age <=65 proxy", "No response/fitness adjustment; BTKi no-ASCT arm proxy is counted separately from missing ASCT capture.", "Define induction-completion eligibility and comparator windows."],
-          ["Outcomes", "Failure-free, progression-free, event-free, overall survival, time to next treatment, relapse, toxicity and hospitalisation outcomes.", "partial", "RKKP_LYFO; death/outcome sources", "Fallback/reference if current payload is not accepted: 779 OS/death evidence; 480 relapse/progression evidence", "Outcome timing and event hierarchy need protocol definitions.", "Validate endpoint dates and censoring rules."],
-          ["Effect modifier", "High-risk biology vs standard-risk biology.", "candidate", "SDS_pato.c_snomedkode; pathology text route; LYFO/MIPI components", "Fallback/reference if current payload is not accepted: 37 coded Ki-67 AEKI known; 20 AEKI >=30%; 13 AEKI >=50%", "TP53, morphology, MIPI-c, and known-negative logic are not validated.", "Validate biology predicates and text extraction separately."],
+          ["Population", "Adults with newly diagnosed MCL, preferably younger/fit or clinically transplant-eligible, receiving first-line intensive chemoimmunotherapy +/- BTK inhibitor. Stratify by high-risk biology.", "partial", "RKKP_LYFO; SDS_t_tumor; SDS_pato", evidenceText([["all LYFO MCL", mclDataPoint("all_lyfo_mcl")], ["age <=65 proxy", mclDataPoint("younger_mcl_proxy_age_le_65")]]), "Age <=65 is a proxy, not observed eligibility.", "Validate fitness, induction timing, and biology strata."],
+          ["Intervention", "Ibrutinib-containing chemoimmunotherapy plus primary LYFO ASCT/HDT consolidation.", "partial", "RKKP_LYFO; SDS_indberetningmedpris", evidenceText([["ibrutinib exposure", mclDataPoint("ibrutinib_exposure")], ["primary ASCT/HDT", mclDataPoint("asct_hdt_first_line")]]), "Ever-observed exposure is descriptive only.", "Implement landmark/timing windows."],
+          ["Comparator", "Ibrutinib-containing chemoimmunotherapy without primary LYFO ASCT/HDT. Secondary comparator: historical intensive CIT + primary LYFO ASCT without ibrutinib.", "partial", "RKKP_LYFO regimen fields; ATC L01XE27", evidenceText([["BTKi plus ASCT/HDT", mclStratum("all_lyfo_mcl", "yes", "yes")], ["BTKi without ASCT/HDT evidence", mclStratum("all_lyfo_mcl", "yes", "unknown_or_no_evidence")]]), "No response/fitness adjustment; BTKi no-ASCT arm proxy is counted separately from missing ASCT capture.", "Define induction-completion eligibility and comparator windows."],
+          ["Outcomes", "Failure-free, progression-free, event-free, overall survival, time to next treatment, relapse, toxicity and hospitalisation outcomes.", "partial", "RKKP_LYFO; death/outcome sources", evidenceText([["OS/death evidence", mclDataPoint("os_death")], ["relapse/progression evidence", mclDataPoint("relapse_progression_ffs_proxy")]]), "Outcome timing and event hierarchy need protocol definitions.", "Validate endpoint dates and censoring rules."],
+          ["Effect modifier", "High-risk biology vs standard-risk biology.", "candidate", "SDS_pato.c_snomedkode; pathology text route; LYFO/MIPI components", evidenceText([["coded Ki-67 known", mclKi67Metric("ki67_aeki_known")], ["coded Ki-67 >=30%", mclKi67Metric("ki67_aeki_ge_threshold")], ["coded Ki-67 >=50%", mclKi67Metric("ki67_aeki_ge_50")]]), "TP53, morphology, MIPI-c, and known-negative logic are not validated.", "Validate biology predicates and text extraction separately."],
           ["Clinical decision", "Whether first-line ASCT/HDT should be reserved for high-risk MCL biology rather than used broadly in all fit patients.", "blocked", "Requires validated PICO plus landmark design", "Descriptive feasibility is ready; causal answerability is not.", "The atlas does not estimate treatment efficacy or recommend treatment.", "Develop target-trial emulation or landmark protocol."]
         ];
         return `<div class="table-wrap"><table>
-          <thead><tr><th>PICO row</th><th>Formulation</th><th>Data status</th><th>Mapped DALY-CARE source(s)</th><th>Current or fallback-labelled aggregate evidence</th><th>Main limitation</th><th>Next validation step</th></tr></thead>
+          <thead><tr><th>PICO row</th><th>Formulation</th><th>Data status</th><th>Mapped DALY-CARE source(s)</th><th>Current-run aggregate evidence and status</th><th>Main limitation</th><th>Next validation step</th></tr></thead>
           <tbody>${rows.map(row => `<tr>
             <td><strong>${escapeHtml(row[0])}</strong></td>
             <td>${escapeHtml(row[1])}</td>
@@ -7401,11 +7436,11 @@
       }
       function renderMclFeasibilityScorecard() {
         const rows = [
-          ["Cohort denominator", "ready", "Payload count when accepted; fallback/reference 1,417 LYFO MCL patients otherwise", "Use as denominator for feasibility."],
-          ["Younger/fit proxy", "proxy ready", "Payload count when accepted; fallback/reference 411 age <=65 younger proxy patients otherwise", "Not observed transplant eligibility."],
-          ["Intervention/comparator exposure", "partial", "Payload counts when accepted; fallback/reference 115 expanded ibrutinib ever-observed, 336 primary LYFO ASCT/HDT, 14 all-MCL overlap, and 11 age <=65 overlap otherwise", "Timing/landmark definitions still needed."],
-          ["Outcome evidence", "partial", "Payload counts when accepted; fallback/reference 779 OS/death and 480 relapse/progression otherwise", "Endpoint hierarchy and censoring need validation."],
-          ["Effect modifier: high-risk biology", "candidate", "Payload counts when accepted; fallback/reference 37 coded Ki-67 AEKI and 20 Ki-67 >=30 otherwise; pathology text recovery route available", "TP53, morphology, MIPI-c, and known-negative logic are not validated."],
+          ["Cohort denominator", "ready", mclRowStatusSummary(mclDataPoint("all_lyfo_mcl")), "Use an emitted current-run row as a feasibility denominator only when its count and validation statuses permit."],
+          ["Younger/fit proxy", "proxy ready", mclRowStatusSummary(mclDataPoint("younger_mcl_proxy_age_le_65")), "Not observed transplant eligibility."],
+          ["Intervention/comparator exposure", "partial", [mclRowStatusSummary(mclDataPoint("ibrutinib_exposure")), mclRowStatusSummary(mclDataPoint("asct_hdt_first_line"))].join(" | "), "Timing/landmark definitions still needed."],
+          ["Outcome evidence", "partial", [mclRowStatusSummary(mclDataPoint("os_death")), mclRowStatusSummary(mclDataPoint("relapse_progression_ffs_proxy"))].join(" | "), "Endpoint hierarchy and censoring need validation."],
+          ["Effect modifier: high-risk biology", "candidate", [mclRowStatusSummary(mclKi67Metric("ki67_aeki_known")), mclRowStatusSummary(mclKi67Metric("ki67_aeki_ge_threshold"))].join(" | "), "TP53, morphology, MIPI-c, and known-negative logic are not validated."],
           ["Causal answerability", "not causal", "Descriptive counts only", "Landmark timing, response eligibility, confounding, and risk strata validation required."],
           ["Pre-study value", "ready", "Suitable for PI discussion, funding justification, student scoping, and validation planning", "Proceed to protocol and validation before extraction."]
         ];
@@ -7769,7 +7804,7 @@
         const ki67Missing = mclKi67Metric("ki67_aeki_missing_not_found");
         const youngBoth = mclStratum("younger_mcl_proxy_age_le_65", "yes", "yes");
         const youngIbOnly = mclStratum("younger_mcl_proxy_age_le_65", "yes", "unknown_or_no_evidence");
-        const youngerIbrutinib = mclSumDisplayInfo([youngBoth, youngIbOnly], "28");
+        const youngerIbrutinib = mclSumDisplayInfo([youngBoth, youngIbOnly]);
         const ageValidation = mclCountRows("age_source_validation");
         const ibSourceCounts = mclCountRows("ibrutinib_source_counts");
         const asctPrimaryConditioning = mclCountRows("asct_hdt_primary_vs_conditioning_counts");
@@ -7783,7 +7818,7 @@
           <div class="dashboard-grid mcl-triangle-dashboard">
             ${renderSectionCard("MCL/TRIANGLE-lite feasibility pre-study", `
               <div class="callout warn"><strong>Scope:</strong> feasibility/readiness review for study planning. It can support source validation and aggregate cohort construction; it does not estimate treatment effects or recommend ASCT/HDT decisions.</div>
-              <p>Use this panel to check which TRIANGLE-lite cohort, treatment, outcome, biology, and Ki-67 signals are accepted production aggregates, fallback/reference counts, or validation blockers.</p>
+              <p>Use this panel to distinguish executed and accepted aggregates, suppressed aggregates, partial failures, not-run queries, and readiness-only evidence.</p>
             `, "red")}
             ${renderSectionCard("Clinical question", `
               <p><strong>Can younger/fit patients with newly diagnosed mantle cell lymphoma and standard-risk biology safely omit ASCT/HDT when treated with ibrutinib plus chemoimmunotherapy, while patients with high-risk biology should still receive ASCT/HDT in addition to ibrutinib?</strong></p>
@@ -7792,7 +7827,7 @@
             ${renderSectionCard("Verdict", `
               <article class="card mcl-verdict-banner">
                 <div class="trust-badge-row">
-                  ${renderTrustBadge(mclAcceptedProductionAggregate() ? "accepted production aggregate" : "fallback/reference counts labelled")}
+                  ${renderTrustBadge(mclAcceptedProductionAggregate() ? "accepted production aggregate" : "current-run row statuses shown")}
                   ${renderTrustBadge("study-planning only")}
                   ${renderTrustBadge("candidate / needs validation")}
                   ${renderTrustBadge("no raw text emitted")}
@@ -7800,7 +7835,7 @@
                 <h3>Cohort construction looks feasible; risk-adapted TRIANGLE emulation still needs validation.</h3>
                 <ul>
                   <li>Accepted aggregate counts support MCL cohort and treatment feasibility where labelled.</li>
-                  <li>Fallback/reference counts stay visible and labelled when production acceptance is absent.</li>
+                  <li>Missing, failed, or not-run count rows remain unavailable; no reference number is substituted.</li>
                   <li>Age <=65 is a younger proxy; biology/risk and Ki-67 routes need validated structured evidence before analytic use.</li>
                   <li>Any future effect analysis needs a landmark or target-trial-emulation design.</li>
                 </ul>
@@ -7840,18 +7875,18 @@
                 <li>Landmark timing, response/fitness selection, and confounding by indication need a formal analysis design.</li>
               </ul>
             `, "amber")}
-            ${renderSectionCard("Current aggregate counts, accepted vs fallback labelled", `
+            ${renderSectionCard("Current aggregate counts with row-level truth labels", `
               ${renderKpiStrip([
-                mclKpiItem("all LYFO MCL", allMcl, "1,417", "blue"),
-                mclKpiItem("age <=65 younger proxy", young, "411", "green", { note: "Younger proxy; not observed transplant eligibility." }),
-                mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "115", "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
-                mclKpiItem("age <=65 + primary LYFO ASCT/HDT + ibrutinib", youngBoth, "11", "violet", { note: "Descriptive stratum; no causal comparison." })
+                mclKpiItem("all LYFO MCL", allMcl, "blue"),
+                mclKpiItem("age <=65 younger proxy", young, "green", { note: "Younger proxy; not observed transplant eligibility." }),
+                mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
+                mclKpiItem("age <=65 + primary LYFO ASCT/HDT + ibrutinib", youngBoth, "violet", { note: "Descriptive stratum; no causal comparison." })
               ], { tone: "violet" })}
-              <p class="mini">Fallback/reference values are retained for orientation and labelled separately.</p>
+              <p class="mini">Each displayed value comes from a current payload row and carries its count, validation, acceptance, and suppression status.</p>
             `, "violet")}
-            ${renderSectionCard("Fallback/reference counts", `
-              <p class="mini">Use these as context; production status is shown in the count-kind and validation labels.</p>
-              ${renderTrustBadgeRow(["fallback/reference", "descriptive feasibility only"])}
+            ${renderSectionCard("Count truth rules", `
+              <p class="mini">Executed rows may be accepted, suppressed, or partially failed. Readiness material is not a cohort count, and absent rows remain unavailable.</p>
+              ${renderTrustBadgeRow(["current-run rows only", "suppression preserved", "descriptive feasibility only"])}
             `, "amber")}
             ${renderSectionCard("Unavailable or blocked data points", `
               <p class="mini">Blocked or unavailable routes are validation states, not proof that the underlying clinical phenomenon is absent.</p>
@@ -7865,14 +7900,14 @@
             ${renderSectionCard("Feasibility scorecard", renderMclFeasibilityScorecard(), "green")}
             ${renderSectionCard("Cohort funnel", `
               ${renderKpiStrip([
-                mclKpiItem("all LYFO MCL denominator", allMcl, "1,417", "blue"),
-                mclKpiItem("birth date available", birthAvailable, "1,296", "green"),
-                mclKpiItem("age anchor available", ageAnchor, "1,417", "green"),
-                mclKpiItem("age computable", ageComputable, "1,296", "green"),
-                mclKpiItem("age <=65 younger proxy", young, "411", "violet", { note: "Younger proxy; not observed transplant eligibility." }),
-                mclKpiItem("age >65", ageGt65, "885", "blue"),
-                mclKpiItem("age missing/uncomputable", ageMissing, "121", "amber"),
-                { label: "raw rows emitted", value: "0", tone: "green", countKind: "not patient count", statusLabel: "no raw text emitted" }
+                mclKpiItem("all LYFO MCL denominator", allMcl, "blue"),
+                mclKpiItem("birth date available", birthAvailable, "green"),
+                mclKpiItem("age anchor available", ageAnchor, "green"),
+                mclKpiItem("age computable", ageComputable, "green"),
+                mclKpiItem("age <=65 younger proxy", young, "violet", { note: "Younger proxy; not observed transplant eligibility." }),
+                mclKpiItem("age >65", ageGt65, "blue"),
+                mclKpiItem("age missing/uncomputable", ageMissing, "amber"),
+                { label: "raw rows emitted", value: "not emitted", tone: "green", countKind: "privacy boundary", statusLabel: "no raw text emitted" }
               ], { tone: "blue" })}
               <p class="mini">Age source: import.public.SDS_t_tumor.d_fdsdato joined to import.public.RKKP_LYFO.patientid. Age anchor order: Reg_BehandlingBeslutning_dt, then Beh_KemoterapiStart_dt, then Reg_DiagnostiskBiopsi_dt. Age <=65 is a younger proxy, not observed transplant eligibility.</p>
               ${renderMclCountTable(ageValidation, [
@@ -7885,12 +7920,12 @@
             `, "violet")}
             ${renderSectionCard("Treatment and outcome evidence", `
               ${renderKpiStrip([
-                mclKpiItem("first-line treatment date evidence", firstLine, "1,118", "blue"),
-                mclKpiItem("CIT / immunochemotherapy backbone", cit, "1,148", "green"),
-                mclKpiItem("primary LYFO ASCT/HDT", asct, "336", "violet", { note: "LYFO Beh_* first-line registry definition; not treatment recommendation." }),
-                mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "115", "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
-                mclKpiItem("OS/death evidence", osDeath, "779", "blue"),
-                mclKpiItem("relapse/progression evidence", relapse, "480", "amber")
+                mclKpiItem("first-line treatment date evidence", firstLine, "blue"),
+                mclKpiItem("CIT / immunochemotherapy backbone", cit, "green"),
+                mclKpiItem("primary LYFO ASCT/HDT", asct, "violet", { note: "LYFO Beh_* first-line registry definition; not treatment recommendation." }),
+                mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "green", { note: "Ever-observed exposure; not treatment-effect evidence." }),
+                mclKpiItem("OS/death evidence", osDeath, "blue"),
+                mclKpiItem("relapse/progression evidence", relapse, "amber")
               ], { tone: "green" })}
               <div class="callout"><strong>ASCT/HDT source logic:</strong> LYFO Beh_* remains the primary ASCT/HDT phenotype. BEAM/melphalan evidence is validation/sensitivity only. Melphalan alone does not define ASCT. Relapse Rec_* ASCT remains separate. BTKi no-ASCT is counted separately from missing ASCT. Cytarabine, DHAP, and DHAX are induction/protocol eligibility signals, not ASCT.</div>
               <div class="callout"><strong>Ibrutinib source logic:</strong> expanded validated primary union of LYFO regimen fields and SDS_indberetningmedpris ATC L01XE27. CIT/immunochemotherapy backbone and BTK/ibrutinib exposure are separate concepts.</div>
@@ -7955,17 +7990,17 @@
               ${renderKpiStrip([
                 Object.assign({ label: "age <=65 expanded ibrutinib ever-observed", tone: "green" }, youngerIbrutinib)
               ], { tone: "green" })}
-              <p class="mini">The age <=65 expanded ibrutinib count is derived from age-specific stratum cells. If those cells are not accepted production aggregates, the displayed 28 is fallback/reference only.</p>
+              <p class="mini">The age <=65 expanded ibrutinib count is derived only when both current-run age-specific stratum rows are present, unsuppressed, and usable.</p>
             `, "violet")}
             ${renderSectionCard("MCL/TRIANGLE feasibility: candidate coded Ki-67 signal", `
               <div class="callout"><strong>TRIANGLE feasibility-only:</strong> this block is not general PATOBANK Ki-67 coverage. ${patobankKi67QaState().status === "success" ? "Use the Pathology/PATOBANK panel for source-coverage cartography." : "General PATOBANK Ki-67 cartography was attempted but not computed in this build; TRIANGLE Ki-67 counts remain feasibility-only and cannot be generalized."}</div>
               <div class="callout"><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal.</strong> This is structured PATOBANK/SDS AEKI/ÆKI code-family evidence found in the TRIANGLE feasibility pre-study route. It is not a complete Ki-67 capture strategy, not a patient denominator, not a clinical distribution, and not validated against full pathology text. It is feasibility-only and not general PATOBANK coverage.</div>
               ${renderTrustBadgeRow(["candidate-only", "feasibility-only", "not complete capture", "raw text not emitted"])}
               ${renderKpiStrip([
-                mclKpiItem("coded AEKI/ÆKI records", ki67Known, "37", "green"),
-                mclKpiItem("coded records >=30%", ki67Ge30, "20", "amber"),
-                mclKpiItem("coded records >=50%", ki67Ge50, "13", "amber"),
-                mclKpiItem("coded AEKI missing/not found", ki67Missing, "1,380", "blue")
+                mclKpiItem("coded AEKI/ÆKI records", ki67Known, "green"),
+                mclKpiItem("coded records >=30%", ki67Ge30, "amber"),
+                mclKpiItem("coded records >=50%", ki67Ge50, "amber"),
+                mclKpiItem("coded AEKI missing/not found", ki67Missing, "blue")
               ], { tone: "amber" })}
               <p><strong>MCL/TRIANGLE feasibility: candidate coded Ki-67 signal:</strong> ${escapeHtml(signpost.table_name || "import.public.SDS_pato")}.${escapeHtml(signpost.column_name || "c_snomedkode")} using ${escapeHtml(signpost.code_family || "AEKIxxx / ÆKIxxx")} structured coded pathology/PATOBANK evidence. This is not all Ki-67 in DALY-CARE.</p>
               <div class="callout warn"><strong>Pathology text recovery route - candidate only:</strong> SDS_pato.v_fritekst, SDS_t_mikro_ny.v_fritekst, and SDS_t_konk_ny.v_fritekst may contain additional Ki-67 values, but text-derived Ki-67 is not validated extraction and is excluded from risk classification.</div>
@@ -8899,6 +8934,8 @@
         pre.textContent = JSON.stringify(overflowReport(), null, 2);
         document.body.prepend(pre);
       }
+      applyRunScopeToPanes();
+      applyRunScopeDefaultRoute();
       applyQaRoute();
       if (new URLSearchParams(window.location.search).get("qaOverflow") === "1") {
         window.setTimeout(publishOverflowReport, 600);

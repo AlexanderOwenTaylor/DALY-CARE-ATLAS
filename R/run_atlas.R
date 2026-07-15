@@ -32,6 +32,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   }
 
   generated_at <- atlas_timestamp()
+  run_scope <- atlas_run_scope("full_atlas")
   progress(paste("starting run", run_id))
   log_event("info", "", paste("Starting DALY-CARE atlas run", run_id))
   source_map <- read_source_map(source_map_path, project_root = project_root)
@@ -420,22 +421,32 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     legacy_reference_vs_current = legacy_reference_vs_current
   )
   progress("building MCL TRIANGLE feasibility outputs")
-  mcl_triangle_feasibility <- build_mcl_triangle_feasibility_outputs(
+  mcl_count_run_mode <- mcl_count_mode(db_adapter)
+  mcl_triangle_feasibility <- mcl_triangle_build_atlas_panel(
     project_root = project_root,
-    semantic_dictionary = semantic_outputs$dictionary,
-    semantic_value_map = semantic_outputs$value_map,
-    semantic_code_map = semantic_outputs$code_map,
-    semantic_panel_links = semantic_outputs$panel_links,
-    columns = columns,
-    column_profiles = column_profiles,
-    panel_raw_fields = product_outputs$panel_raw_fields,
-    panel_distributions = product_outputs$panel_distributions,
-    panel_kpis = product_outputs$panel_kpis,
-    sources = sources,
-    canonical_reconciliation = canonical_reconciliation,
-    legacy_reference_vs_current = legacy_reference_vs_current,
-    ki67_discovery = ki67_discovery
+    db_adapter = db_adapter,
+    mode = mcl_count_run_mode,
+    min_cell_count = atlas_min_cell_count(),
+    scaffold_args = list(
+      semantic_dictionary = semantic_outputs$dictionary,
+      semantic_value_map = semantic_outputs$value_map,
+      semantic_code_map = semantic_outputs$code_map,
+      semantic_panel_links = semantic_outputs$panel_links,
+      columns = columns,
+      column_profiles = column_profiles,
+      panel_raw_fields = product_outputs$panel_raw_fields,
+      panel_distributions = product_outputs$panel_distributions,
+      panel_kpis = product_outputs$panel_kpis,
+      sources = sources,
+      canonical_reconciliation = canonical_reconciliation,
+      legacy_reference_vs_current = legacy_reference_vs_current,
+      ki67_discovery = ki67_discovery
+    ),
+    count_args = list(outputs_dir = output_dir)
   )
+  mcl_triangle_count_outputs <- attr(mcl_triangle_feasibility, "count_outputs")
+  attr(mcl_triangle_feasibility, "count_outputs") <- NULL
+  if (!is.list(mcl_triangle_count_outputs)) stop("Shared MCL/TRIANGLE panel builder did not return count outputs.", call. = FALSE)
   patobank_ki67_percent <- patobank_ki67_build_outputs(
     project_root = project_root,
     db_adapter = db_adapter,
@@ -495,19 +506,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   mcl_triangle_paths <- mcl_triangle_write_outputs(mcl_triangle_feasibility, output_dir)
   names(mcl_triangle_paths) <- paste0("mcl_triangle_", names(mcl_triangle_paths))
   output_paths <- c(output_paths, mcl_triangle_paths)
-  if (exists("mcl_count_build_outputs", mode = "function")) {
-    mcl_count_run_mode <- mcl_count_mode(db_adapter)
-    mcl_triangle_count_outputs <- mcl_count_build_outputs(
-      project_root = project_root,
-      outputs_dir = output_dir,
-      mode = mcl_count_run_mode,
-      db_adapter = db_adapter,
-      min_cell_count = atlas_min_cell_count()
-    )
-    mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
-    names(mcl_triangle_count_paths) <- paste0("mcl_triangle_count_", names(mcl_triangle_count_paths))
-    output_paths <- c(output_paths, mcl_triangle_count_paths)
-  }
+  mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
+  names(mcl_triangle_count_paths) <- paste0("mcl_triangle_count_", names(mcl_triangle_count_paths))
+  output_paths <- c(output_paths, mcl_triangle_count_paths)
   output_paths$resource_catalog <- write_csv(resource_catalog(sources), file.path(output_dir, "atlas_resource_catalog.csv"))
   output_paths$sources <- write_csv(sources, file.path(output_dir, "atlas_sources.csv"))
   output_paths$columns <- write_csv(columns, file.path(output_dir, "atlas_columns.csv"))
@@ -536,8 +537,23 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     column_top_values = column_top_values
   )
   run_summary <- append_resource_reconciliation_run_summary(run_summary, resource_reconciliation, legacy_resource_audit)
+  scope_summary <- atlas_panel_run_summary(
+    run_id = run_id,
+    generated_at = generated_at,
+    run_scope = run_scope,
+    execution_summary = mcl_triangle_count_outputs$execution_summary,
+    failed_query_audit = mcl_triangle_count_outputs$failed_query_audit,
+    min_cell_count = atlas_min_cell_count(),
+    evidence_input_provenance = if (is.data.frame(mcl_triangle_count_outputs$atlas_input_audit) && nrow(mcl_triangle_count_outputs$atlas_input_audit)) {
+      as.character(mcl_triangle_count_outputs$atlas_input_audit$selection_reason[[1]] %||% "")
+    } else {
+      "atlas_input_not_supplied"
+    }
+  )
+  scope_summary <- scope_summary[!scope_summary$metric %in% run_summary$metric, , drop = FALSE]
   run_summary <- bind_rows_base(list(
     run_summary,
+    scope_summary,
     source_recovery_run_summary_metrics(
       plan = production_source_map,
       dry_run = source_resolution_plan_dry_run,
@@ -550,6 +566,21 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     )
   ))
   output_paths$run_summary <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
+  scope_values <- stats::setNames(scope_summary$value, scope_summary$metric)
+  log_event(
+    "info",
+    "mcl_triangle_feasibility",
+    paste0(
+      "Atlas scope; run_profile=", run_scope$profile,
+      "; executed_panel=", paste(run_scope$executed_panels, collapse = ","),
+      "; source_profiling_executed=", if (isTRUE(run_scope$source_profiling_executed)) "TRUE" else "FALSE",
+      "; mode=", scope_values[["mode"]] %||% "",
+      "; attempted=", scope_values[["production_query_attempted"]] %||% "FALSE",
+      "; success=", scope_values[["production_query_success"]] %||% "FALSE",
+      "; failed_queries=", scope_values[["failed_query_count"]] %||% "0",
+      "; suppression_threshold=", scope_values[["suppression_threshold"]] %||% as.character(atlas_min_cell_count())
+    )
+  )
 
   panel_paths <- list()
   for (panel_name in names(panels)) {
@@ -632,17 +663,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
       ""
     }
   )
-  mcl_triangle_count_source <- if (exists("mcl_count_resolve_standalone_output_source", mode = "function")) {
-    mcl_count_resolve_standalone_output_source(project_root = project_root, outputs_dir = output_dir)
-  } else {
-    list(outputs_dir = "", metadata = mcl_triangle_empty_standalone_output_source())
-  }
-  payload_mcl_triangle_counts <- if (exists("mcl_count_read_outputs", mode = "function") &&
-                                      nzchar(mcl_triangle_count_source$outputs_dir %||% "")) {
-    mcl_count_read_outputs(mcl_triangle_count_source$outputs_dir)
-  } else {
-    list()
-  }
+  payload_mcl_triangle_counts <- lapply(names(mcl_triangle_feasibility$cohort_counts), function(name) {
+    path <- output_paths[[paste0("mcl_triangle_count_", name)]] %||% ""
+    safe_read_output_csv(path, mcl_triangle_feasibility$cohort_counts[[name]])
+  })
+  names(payload_mcl_triangle_counts) <- names(mcl_triangle_feasibility$cohort_counts)
   payload_mcl_triangle_feasibility <- list(
     summary = safe_read_output_csv(output_paths$mcl_triangle_summary, mcl_triangle_feasibility$summary),
     variable_inventory = safe_read_output_csv(output_paths$mcl_triangle_variable_inventory, mcl_triangle_feasibility$variable_inventory),
@@ -652,7 +677,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     study_readiness_matrix = safe_read_output_csv(output_paths$mcl_triangle_study_readiness_matrix, mcl_triangle_feasibility$study_readiness_matrix),
     false_positive_exclusions = safe_read_output_csv(output_paths$mcl_triangle_false_positive_exclusions, mcl_triangle_feasibility$false_positive_exclusions),
     cohort_counts = payload_mcl_triangle_counts,
-    standalone_output_source = mcl_triangle_count_source$metadata,
+    standalone_output_source = mcl_triangle_feasibility$standalone_output_source,
     pathology_ki67_signpost = mcl_triangle_pathology_ki67_signpost(payload_mcl_triangle_counts),
     ki67_discovery = payload_ki67_discovery,
     recommended_next_actions = mcl_triangle_feasibility$recommended_next_actions,
@@ -704,26 +729,27 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     remaining_activation_plan = payload_remaining_activation_plan,
     ki67_discovery = payload_ki67_discovery,
     patobank_ki67_percent = payload_patobank_ki67_percent,
-    mcl_triangle_feasibility = payload_mcl_triangle_feasibility
+    mcl_triangle_feasibility = payload_mcl_triangle_feasibility,
+    run_scope = run_scope
   )
-  progress("writing static atlas")
-  site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
-  log_event("info", "", "Static atlas written")
-
   memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
-  all_paths <- c(output_paths, panel_paths, list(html = site_paths$html, payload = site_paths$payload, memory_log = memory_log_path))
-  manifest <- output_manifest(all_paths, run_dir = run_dir)
-  manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
-  log_event("info", "", "Output manifest written")
+  progress("writing static atlas bundle")
+  log_event("info", "", "Writing static atlas bundle")
   log_event("info", "", paste("Run summary:", run_summary_log_message(run_summary)))
-  write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
+  bundle <- atlas_write_bundle(
+    run_dir = run_dir,
+    project_root = project_root,
+    payload = payload,
+    artifact_paths = c(output_paths, panel_paths, list(memory_log = memory_log_path)),
+    execution_log = bind_rows_base(log_rows)
+  )
 
   invisible(list(
     run_id = run_id,
     run_dir = run_dir,
-    manifest = manifest_path,
-    html = site_paths$html,
-    payload = site_paths$payload
+    manifest = bundle$manifest,
+    html = bundle$html,
+    payload = bundle$payload
   ))
 }
 
@@ -915,61 +941,6 @@ source_availability_panel <- function(sources) {
     by = list(source_type = sources$source_type, load_status = sources$load_status),
     FUN = length
   )
-}
-
-output_manifest_artifact_metadata <- function(id, path = "") {
-  stem <- sub("[.][^.]*$", "", basename(path %||% ""))
-  key <- if (grepl("^(mcl_triangle|ki67|patobank_ki67|atlas|situation_report|npu|isotype|mm_|registry|damyda|lyfo)_", id)) {
-    id
-  } else if (nzchar(stem)) {
-    stem
-  } else {
-    id
-  }
-  module <- if (grepl("^mcl_triangle", key)) {
-    "mcl_triangle"
-  } else if (grepl("^(ki67|patobank_ki67)_", key)) {
-    "ki67"
-  } else {
-    "atlas"
-  }
-  mcl_count_output <- grepl("^mcl_triangle_count_", id) ||
-    (grepl("^mcl_triangle_", key) && grepl("mcl_triangle_(data_point_counts|execution_summary|failed_query_audit|count_summary|inclusion_waterfall|overlap_matrix|exposure_strata_counts|landmark_feasibility_counts|ki67_|age_proxy_counts|ibrutinib_|treatment_strategy_strata_counts|high_risk_biology_counts|answerability_)", key))
-  canonical_output <- isTRUE(mcl_count_output)
-  production_output <- canonical_output
-  superseded_by <- ""
-  artifact_role <- if (nzchar(superseded_by)) {
-    "compatibility_reference"
-  } else if (canonical_output) {
-    "canonical_production"
-  } else {
-    "supporting_output"
-  }
-  data.frame(
-    module = module,
-    artifact_role = artifact_role,
-    canonical_output = isTRUE(canonical_output),
-    production_output = isTRUE(production_output),
-    superseded_by = superseded_by,
-    stringsAsFactors = FALSE
-  )
-}
-
-output_manifest <- function(paths, run_dir) {
-  rows <- lapply(names(paths), function(id) {
-    path <- paths[[id]]
-    info <- if (file.exists(path)) file.info(path) else NULL
-    row <- data.frame(
-      artifact_id = id,
-      relative_path = relative_path(path, run_dir),
-      path = normalize_slashes(normalizePath(path, winslash = "/", mustWork = FALSE)),
-      status = if (file.exists(path)) "ok" else "missing",
-      file_size_bytes = if (!is.null(info)) as.numeric(info$size) else NA_real_,
-      stringsAsFactors = FALSE
-    )
-    cbind(row, output_manifest_artifact_metadata(id, path))
-  })
-  bind_rows_base(rows)
 }
 
 atlas_run_summary <- function(run_id, generated_at, source_map, sources, columns, checks, frequencies, panels,

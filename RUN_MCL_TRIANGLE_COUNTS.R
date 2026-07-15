@@ -1,16 +1,18 @@
-# DALY-CARE Atlas one-click MCL/TRIANGLE aggregate cohort-size finder for RStudio.
+# DALY-CARE Atlas one-click MCL/TRIANGLE panel-only atlas runner for RStudio.
 #
 # Usage:
 #   source("RUN_MCL_TRIANGLE_COUNTS.R")
 #
 # Optional overrides before sourcing:
 #   MCL_COUNT_MODE <- "production_aggregate"
-#   MCL_COUNT_UPDATE_PAYLOAD <- TRUE
+#   MCL_COUNT_OUTPUT_ROOT <- "atlas_runs"
 #   MCL_COUNT_SMALL_CELL_N <- 10L
 #   MCL_TRIANGLE_ATLAS_OUTPUT_DIR <- "path/to/main_atlas_outputs"
 #   MCL_TRIANGLE_ATLAS_OUTPUT_ZIP <- "path/to/main_atlas_outputs.zip"
 #   MCL_TRIANGLE_KI67_TEXT_SCAN <- FALSE
 #   MCL_TRIANGLE_KI67_THRESHOLD_PERCENT <- 30L
+# Deprecated alias: MCL_COUNT_OUTPUTS_DIR (treated as the output root).
+# Deprecated and ignored: MCL_COUNT_UPDATE_PAYLOAD.
 
 .mcl_count_entry_path <- local({
   frames <- sys.frames()
@@ -63,12 +65,20 @@ if (!exists("MCL_COUNT_MODE", inherits = FALSE)) {
 if (!exists("MCL_COUNT_PROJECT_ROOT", inherits = FALSE)) {
   MCL_COUNT_PROJECT_ROOT <- .mcl_count_find_project_root(.mcl_count_default_project_root)
 }
+if (!exists("MCL_COUNT_OUTPUT_ROOT", inherits = FALSE)) {
+  MCL_COUNT_OUTPUT_ROOT <- if (exists("MCL_COUNT_OUTPUTS_DIR", inherits = FALSE)) {
+    MCL_COUNT_OUTPUTS_DIR
+  } else {
+    "atlas_runs"
+  }
+}
 if (!exists("MCL_COUNT_OUTPUTS_DIR", inherits = FALSE)) {
-  MCL_COUNT_OUTPUTS_DIR <- "outputs"
+  MCL_COUNT_OUTPUTS_DIR <- ""
 }
 if (!exists("MCL_COUNT_SMALL_CELL_N", inherits = FALSE)) {
   MCL_COUNT_SMALL_CELL_N <- 5L
 }
+.MCL_COUNT_UPDATE_PAYLOAD_SUPPLIED <- exists("MCL_COUNT_UPDATE_PAYLOAD", inherits = FALSE)
 if (!exists("MCL_COUNT_UPDATE_PAYLOAD", inherits = FALSE)) {
   MCL_COUNT_UPDATE_PAYLOAD <- FALSE
 }
@@ -101,14 +111,17 @@ if (!file.exists(.mcl_count_sourceable)) {
 .MCL_COUNT_SOURCE_CONFIG <- list(
   MCL_COUNT_MODE = MCL_COUNT_MODE,
   MCL_COUNT_PROJECT_ROOT = MCL_COUNT_PROJECT_ROOT,
+  MCL_COUNT_OUTPUT_ROOT = MCL_COUNT_OUTPUT_ROOT,
   MCL_COUNT_OUTPUTS_DIR = MCL_COUNT_OUTPUTS_DIR,
   MCL_COUNT_SMALL_CELL_N = MCL_COUNT_SMALL_CELL_N,
   MCL_COUNT_UPDATE_PAYLOAD = MCL_COUNT_UPDATE_PAYLOAD,
+  MCL_COUNT_UPDATE_PAYLOAD_SUPPLIED = .MCL_COUNT_UPDATE_PAYLOAD_SUPPLIED,
   MCL_TRIANGLE_ATLAS_OUTPUT_DIR = MCL_TRIANGLE_ATLAS_OUTPUT_DIR,
   MCL_TRIANGLE_ATLAS_OUTPUT_ZIP = MCL_TRIANGLE_ATLAS_OUTPUT_ZIP,
   MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY = MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY,
   MCL_TRIANGLE_KI67_TEXT_SCAN = MCL_TRIANGLE_KI67_TEXT_SCAN,
-  MCL_TRIANGLE_KI67_THRESHOLD_PERCENT = MCL_TRIANGLE_KI67_THRESHOLD_PERCENT
+  MCL_TRIANGLE_KI67_THRESHOLD_PERCENT = MCL_TRIANGLE_KI67_THRESHOLD_PERCENT,
+  MCL_COUNT_DB_ADAPTER = if (exists("MCL_COUNT_DB_ADAPTER", inherits = FALSE)) MCL_COUNT_DB_ADAPTER else NULL
 )
 assign(".MCL_COUNT_SOURCE_CONFIG", .MCL_COUNT_SOURCE_CONFIG, envir = .GlobalEnv)
 source(.mcl_count_sourceable)

@@ -46,9 +46,6 @@ for (needle in c(
   "reusable",
   "feasibility pre-study",
   "descriptive feasibility only",
-  "fallback reference count",
-  "fallback/reference count",
-  "Fallback/reference counts stay visible and labelled",
   "feasibility/readiness review for study planning",
   "does not estimate treatment effects or recommend ASCT/HDT decisions",
   "Ki-67 proliferation index",
@@ -57,7 +54,15 @@ for (needle in c(
   "AEKI",
   "age <=65 younger proxy",
   "expanded ibrutinib ever-observed",
-  "risk-adapted answerability not yet validated"
+  "risk-adapted answerability not yet validated",
+  "Not run in this TRIANGLE-only atlas",
+  "runScope.profile !== \"triangle_only\"",
+  "mcl_triangle_feasibility",
+  "CONFLUENCE",
+  "count_status",
+  "validation_status",
+  "acceptance_status",
+  "suppression_status"
 )) {
   expect_true(grepl(tolower(needle), tolower(template), fixed = TRUE), paste("Template should include:", needle))
 }
@@ -66,7 +71,23 @@ for (needle in c(
   "ASCT can safely be omitted",
   "transplant eligibility is observed",
   "standard-risk classifiability is validated",
-  "validated text Ki-67 extraction"
+  "validated text Ki-67 extraction",
+  "Fallback/reference if current payload is not accepted",
+  "Fallback/reference counts stay visible and labelled"
 )) {
   expect_false(grepl(needle, template, fixed = TRUE), paste("Template should not include overclaim:", needle))
+}
+
+expect_true(grepl("function mclDisplayInfo(row, options)", template, fixed = TRUE), "MCL count display should accept only current payload rows and display options.")
+expect_false(grepl("function mclDisplayInfo(row, fallback", template, fixed = TRUE), "MCL count display must not accept a numeric fallback.")
+expect_true(grepl('suppression !== "not suppressed" && /suppress/.test(suppression)', template, fixed = TRUE), "A visible row labelled not suppressed must not be rendered as a suppressed aggregate.")
+expect_true(grepl("function mclSumDisplayInfo(rows, options)", template, fixed = TRUE), "Derived MCL displays should use only current payload rows.")
+expect_false(grepl("function mclSumDisplayInfo(rows, fallback", template, fixed = TRUE), "Derived MCL displays must not accept a numeric fallback.")
+for (literal in c(
+  'mclKpiItem("all LYFO MCL", allMcl, "1,417"',
+  'mclKpiItem("age <=65 younger proxy", young, "411"',
+  'mclKpiItem("expanded ibrutinib ever-observed", ibrutinib, "115"',
+  'mclSumDisplayInfo([youngBoth, youngIbOnly], "28")'
+)) {
+  expect_false(grepl(literal, template, fixed = TRUE), paste("MCL renderer must not contain hard-coded count fallback:", literal))
 }

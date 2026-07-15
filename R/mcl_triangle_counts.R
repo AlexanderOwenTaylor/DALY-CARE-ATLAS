@@ -15,6 +15,7 @@ mcl_count_status_levels <- function() {
     "count_not_available_requires_dedicated_intersection_query",
     "count_not_available_requires_production_validation",
     "suppressed_small_cell",
+    "suppressed_complementary_cell",
     "not_applicable"
   )
 }
@@ -729,6 +730,7 @@ mcl_count_empty_outputs <- function() {
     asct_hdt_protocol_runway = mcl_asct_empty_protocol_runway(),
     atlas_input_audit = mcl_count_empty_atlas_input_audit(),
     failed_query_audit = mcl_count_empty_failed_query_audit(),
+    small_cell_suppression_audit = mcl_triangle_empty_small_cell_suppression_audit(),
     execution_summary = mcl_count_empty_execution_summary(),
     output_generation_status = mcl_count_empty_output_generation_status()
   )
@@ -1750,6 +1752,7 @@ mcl_count_status_levels <- function() {
     "count_not_available_requires_dedicated_intersection_query",
     "count_not_available_requires_production_validation",
     "suppressed_small_cell",
+    "suppressed_complementary_cell",
     "not_applicable"
   )
 }
@@ -6194,7 +6197,7 @@ mcl_count_display_to_number <- function(x) {
 }
 
 mcl_count_available_statuses <- function() {
-  c("production_aggregate_count_available", "count_available", "count_available_timing_not_validated", "suppressed_small_cell")
+  c("production_aggregate_count_available", "count_available", "count_available_timing_not_validated", "suppressed_small_cell", "suppressed_complementary_cell")
 }
 
 mcl_count_data_row <- function(data_points, id) {
@@ -7561,19 +7564,32 @@ mcl_count_build_outputs <- function(project_root = ".",
   db_attempted <- identical(mode, "production_aggregate")
   db_available <- FALSE
   failure_reason <- ""
+  hook_failed <- FALSE
+  hook_error_class <- ""
+  hook_error_message <- ""
   if (identical(mode, "production_aggregate")) {
     if (is.null(db_adapter) && exists("dalycare_db_adapter", mode = "function")) {
       db_adapter <- tryCatch(dalycare_db_adapter(), error = function(e) NULL)
     }
     db_available <- mcl_count_db_adapter_available(db_adapter)
     if (!is.null(db_adapter) && is.function(db_adapter$mcl_triangle_count_sets)) {
-      hook <- tryCatch(db_adapter$mcl_triangle_count_sets(min_cell_count = min_cell_count), error = function(e) NULL)
+      hook <- tryCatch(
+        db_adapter$mcl_triangle_count_sets(min_cell_count = min_cell_count),
+        error = function(e) {
+          hook_failed <<- TRUE
+          hook_error_class <<- mcl_count_error_class(e)
+          hook_error_message <<- mcl_count_sanitize_error_message(conditionMessage(e))
+          NULL
+        }
+      )
       if (is.list(hook)) {
         count_sets <- hook$sets %||% hook
         ki67_percent_counts <- hook$ki67_percent_counts %||% NULL
       }
     }
-    if (!db_available) {
+    if (hook_failed) {
+      failure_reason <- "production_aggregate_failed_query_error"
+    } else if (!db_available) {
       failure_reason <- "production_aggregate_failed_credentials_unavailable"
     }
   }
@@ -7653,7 +7669,7 @@ mcl_count_build_outputs <- function(project_root = ".",
       source_resolution = asct_hdt_source_resolution,
       min_cell_count = min_cell_count
     )
-  } else if (identical(mode, "production_aggregate") && db_available) {
+  } else if (identical(mode, "production_aggregate") && db_available && !hook_failed) {
     data_points <- mcl_count_execute_data_point_counts(
       defs,
       project_root,
@@ -7737,6 +7753,8 @@ mcl_count_build_outputs <- function(project_root = ".",
   } else {
     status <- if (identical(mode, "plan")) {
       "query_executable_not_run"
+    } else if (identical(failure_reason, "production_aggregate_failed_query_error")) {
+      "production_aggregate_failed_query_error"
     } else if (identical(failure_reason, "production_aggregate_failed_credentials_unavailable")) {
       "production_aggregate_failed_credentials_unavailable"
     } else {
@@ -7749,6 +7767,8 @@ mcl_count_build_outputs <- function(project_root = ".",
       project_root = project_root,
       count_mode = mode,
       generated_at = generated_at,
+      error_class = hook_error_class,
+      error_message_sanitized = hook_error_message,
       patient_demographics_resolver = patient_demographics_resolver,
       age_source_locator = age_source_locator,
       ibrutinib_source_validation = ibrutinib_source_validation,
@@ -7867,6 +7887,332 @@ mcl_count_build_outputs <- function(project_root = ".",
   )
 }
 
+mcl_triangle_empty_small_cell_suppression_audit <- function() {
+  empty_df(
+    audit_id = character(),
+    table_name = character(),
+    row_key = character(),
+    field_name = character(),
+    suppression_type = character(),
+    suppression_status = character(),
+    threshold = integer(),
+    public_display = character(),
+    hidden_value_recorded = character(),
+    notes = character()
+  )
+}
+
+mcl_triangle_public_count_number <- function(value) {
+  value <- trimws(as.character(value %||% ""))
+  if (!length(value) || !nzchar(value[[1]]) || !grepl("^[0-9][0-9,]*$", value[[1]])) return(NA_real_)
+  suppressWarnings(as.numeric(gsub(",", "", value[[1]], fixed = TRUE)))
+}
+
+mcl_triangle_raw_person_count_columns <- function(frame) {
+  names(frame)[grepl(
+    "(^n_people$|^mcl_people$|^people_with_|^age_.*_people$|_distinct_people$|_exposed_people$|_available_people$|_person_count$|_people_count$)",
+    names(frame),
+    ignore.case = TRUE,
+    perl = TRUE
+  )]
+}
+
+mcl_triangle_public_count_display_columns <- function(frame) {
+  names(frame)[grepl(
+    "(^count_display$|count_display$|people_display$|person_count_display$|^persons_n$|rows_display$)",
+    names(frame),
+    ignore.case = TRUE,
+    perl = TRUE
+  ) & !grepl("percent", names(frame), ignore.case = TRUE)]
+}
+
+mcl_triangle_suppression_row_key <- function(frame, index) {
+  keys <- intersect(
+    c(
+      "data_point_id", "metric", "step_id", "intersection_id", "validation_id",
+      "validation_cell", "arm_proxy_id", "state_id", "timing_id", "source_id",
+      "row_id", "denominator"
+    ),
+    names(frame)
+  )
+  values <- vapply(keys, function(name) as.character(frame[[name]][[index]] %||% ""), character(1))
+  values <- values[nzchar(values)]
+  if (!length(values)) paste0("row_", index) else paste(values, collapse = "|")
+}
+
+mcl_triangle_suppression_audit_row <- function(audit, table_name, frame, index, field_name,
+                                               suppression_type, suppression_status,
+                                               min_cell_count, public_display, notes) {
+  row <- data.frame(
+    audit_id = sprintf("mcl-suppression-%04d", nrow(audit) + 1L),
+    table_name = table_name,
+    row_key = mcl_triangle_suppression_row_key(frame, index),
+    field_name = field_name,
+    suppression_type = suppression_type,
+    suppression_status = suppression_status,
+    threshold = as.integer(min_cell_count),
+    public_display = public_display,
+    hidden_value_recorded = "no hidden value recorded",
+    notes = notes,
+    stringsAsFactors = FALSE
+  )
+  mcl_count_match_empty(bind_rows_base(list(audit, row)), mcl_triangle_empty_small_cell_suppression_audit())
+}
+
+mcl_triangle_prepare_public_count_frame <- function(frame) {
+  if (!is.data.frame(frame) || !nrow(frame)) return(frame)
+  display_columns <- mcl_triangle_public_count_display_columns(frame)
+  raw_columns <- mcl_triangle_raw_person_count_columns(frame)
+  if (!length(display_columns) && length(raw_columns)) {
+    for (name in raw_columns) {
+      display_name <- paste0(name, "_display")
+      frame[[display_name]] <- ifelse(is.na(frame[[name]]), "", as.character(frame[[name]]))
+    }
+    display_columns <- mcl_triangle_public_count_display_columns(frame)
+  }
+  if (!length(display_columns)) return(frame)
+  if (!"count_status" %in% names(frame)) frame$count_status <- ""
+  if (!"validation_status" %in% names(frame)) frame$validation_status <- ""
+  if (!"acceptance_status" %in% names(frame)) frame$acceptance_status <- ""
+  if (!"suppression_status" %in% names(frame)) frame$suppression_status <- "not suppressed"
+  frame
+}
+
+mcl_triangle_clear_public_count_numeric <- function(frame, index, display_column) {
+  candidates <- character()
+  if (grepl("_display$", display_column)) {
+    base <- sub("_display$", "", display_column)
+    if (base %in% names(frame)) candidates <- c(candidates, base)
+  }
+  if (display_column %in% c("distinct_person_count_display", "count_display") && "n_people" %in% names(frame)) {
+    candidates <- c(candidates, "n_people")
+  }
+  candidates <- unique(intersect(candidates, names(frame)))
+  for (name in candidates) {
+    if (is.integer(frame[[name]])) {
+      frame[[name]][[index]] <- NA_integer_
+    } else if (is.numeric(frame[[name]])) {
+      frame[[name]][[index]] <- NA_real_
+    } else {
+      frame[[name]][[index]] <- NA_character_
+    }
+  }
+  frame
+}
+
+mcl_triangle_mark_public_suppression <- function(frame, audit, table_name, index, display_column,
+                                                 min_cell_count, complementary = FALSE) {
+  public_display <- if (isTRUE(complementary)) "suppressed for complementary privacy" else paste0("<", min_cell_count)
+  suppression_status <- if (isTRUE(complementary)) "suppressed complementary cell" else "suppressed primary small cell"
+  count_status <- if (isTRUE(complementary)) "suppressed_complementary_cell" else "suppressed_small_cell"
+  frame[[display_column]][[index]] <- public_display
+  frame <- mcl_triangle_clear_public_count_numeric(frame, index, display_column)
+  frame$suppression_status[[index]] <- suppression_status
+  frame$count_status[[index]] <- count_status
+  frame$acceptance_status[[index]] <- "accepted suppressed aggregate row"
+  if ("small_cell_suppressed" %in% names(frame)) frame$small_cell_suppressed[[index]] <- TRUE
+  if ("suppressed_flag" %in% names(frame)) frame$suppressed_flag[[index]] <- TRUE
+  audit <- mcl_triangle_suppression_audit_row(
+    audit,
+    table_name,
+    frame,
+    index,
+    display_column,
+    if (isTRUE(complementary)) "complementary" else "primary",
+    suppression_status,
+    min_cell_count,
+    public_display,
+    if (isTRUE(complementary)) {
+      "A visible sibling or parent was hidden because published arithmetic could otherwise reveal a primary-suppressed remainder."
+    } else {
+      "A public aggregate cell below the configured threshold was hidden."
+    }
+  )
+  list(frame = frame, audit = audit)
+}
+
+mcl_triangle_is_suppressed_status <- function(value) {
+  value <- tolower(trimws(as.character(value %||% "")))
+  nzchar(value) & value != "not suppressed" & grepl("suppress", value)
+}
+
+mcl_triangle_finalize_count_statuses <- function(frame) {
+  if (!is.data.frame(frame) || !nrow(frame) || !"suppression_status" %in% names(frame)) return(frame)
+  for (i in seq_len(nrow(frame))) {
+    status <- tolower(as.character(frame$count_status[[i]] %||% ""))
+    suppressed <- mcl_triangle_is_suppressed_status(frame$suppression_status[[i]])
+    if (!nzchar(status)) {
+      display_columns <- mcl_triangle_public_count_display_columns(frame)
+      values <- if (length(display_columns)) unlist(frame[i, display_columns, drop = FALSE], use.names = FALSE) else character()
+      if (any(grepl("^<|suppressed for complementary", as.character(values), ignore.case = TRUE))) {
+        status <- if (any(grepl("complementary", as.character(values), ignore.case = TRUE))) "suppressed_complementary_cell" else "suppressed_small_cell"
+      } else if (any(vapply(values, function(value) !is.na(mcl_triangle_public_count_number(value)), logical(1)))) {
+        status <- "production_aggregate_count_available"
+      }
+      frame$count_status[[i]] <- status
+    }
+    if (!nzchar(as.character(frame$acceptance_status[[i]] %||% ""))) {
+      frame$acceptance_status[[i]] <- if (suppressed || grepl("suppress", status)) {
+        "accepted suppressed aggregate row"
+      } else if (status %in% c("production_aggregate_count_available", "count_available", "count_available_timing_not_validated")) {
+        "accepted aggregate row"
+      } else if (grepl("query_executable_not_run|not_run|not run", status)) {
+        "not run"
+      } else {
+        "not accepted"
+      }
+    }
+  }
+  frame
+}
+
+mcl_triangle_apply_public_suppression <- function(outputs, min_cell_count = 5L) {
+  if (!is.list(outputs)) return(outputs)
+  min_cell_count <- suppressWarnings(as.integer(min_cell_count))
+  if (is.na(min_cell_count) || min_cell_count < 1L) min_cell_count <- 5L
+  audit <- outputs$small_cell_suppression_audit %||% mcl_triangle_empty_small_cell_suppression_audit()
+  table_names <- setdiff(names(outputs), "small_cell_suppression_audit")
+
+  for (table_name in table_names) {
+    frame <- mcl_triangle_prepare_public_count_frame(outputs[[table_name]])
+    if (!is.data.frame(frame) || !nrow(frame)) {
+      outputs[[table_name]] <- frame
+      next
+    }
+    display_columns <- mcl_triangle_public_count_display_columns(frame)
+    if (!length(display_columns)) {
+      outputs[[table_name]] <- frame
+      next
+    }
+    for (i in seq_len(nrow(frame))) {
+      for (display_column in display_columns) {
+        value <- as.character(frame[[display_column]][[i]] %||% "")
+        number <- mcl_triangle_public_count_number(value)
+        primary <- grepl("^<", trimws(value)) || (!is.na(number) && number > 0 && number < min_cell_count)
+        already_complementary <- identical(value, "suppressed for complementary privacy")
+        if (isTRUE(primary) && !isTRUE(already_complementary)) {
+          marked <- mcl_triangle_mark_public_suppression(
+            frame, audit, table_name, i, display_column, min_cell_count, complementary = FALSE
+          )
+          frame <- marked$frame
+          audit <- marked$audit
+        }
+      }
+    }
+    outputs[[table_name]] <- mcl_triangle_finalize_count_statuses(frame)
+  }
+
+  parent_ref <- function(denominator = "all_lyfo_mcl") {
+    frame <- outputs$data_point_counts
+    if (!is.data.frame(frame) || !nrow(frame) || !"data_point_id" %in% names(frame)) return(NULL)
+    index <- which(as.character(frame$data_point_id) == denominator)
+    if (!length(index)) return(NULL)
+    list(table = "data_point_counts", index = index[[1]])
+  }
+  suppress_ref <- function(table_name, index, display_column = NULL) {
+    frame <- outputs[[table_name]]
+    if (!is.data.frame(frame) || !nrow(frame) || index < 1L || index > nrow(frame)) return(FALSE)
+    candidates <- mcl_triangle_public_count_display_columns(frame)
+    if (!is.null(display_column) && display_column %in% candidates) candidates <- c(display_column, setdiff(candidates, display_column))
+    if (!length(candidates)) return(FALSE)
+    chosen <- candidates[vapply(candidates, function(name) !is.na(mcl_triangle_public_count_number(frame[[name]][[index]])), logical(1))]
+    if (!length(chosen)) return(FALSE)
+    marked <- mcl_triangle_mark_public_suppression(
+      frame, audit, table_name, index, chosen[[1]], min_cell_count, complementary = TRUE
+    )
+    outputs[[table_name]] <<- mcl_triangle_finalize_count_statuses(marked$frame)
+    audit <<- marked$audit
+    TRUE
+  }
+  apply_group <- function(table_name, indices, denominator = "all_lyfo_mcl") {
+    frame <- outputs[[table_name]]
+    if (!is.data.frame(frame) || !nrow(frame) || !length(indices)) return(invisible(FALSE))
+    preferred <- intersect(
+      c("distinct_person_count_display", "persons_n", "mcl_exposed_people_display", "qualifying_person_count_display", "source_distinct_people_display", "count_display"),
+      mcl_triangle_public_count_display_columns(frame)
+    )
+    if (!length(preferred)) preferred <- mcl_triangle_public_count_display_columns(frame)
+    if (!length(preferred)) return(invisible(FALSE))
+    display_column <- preferred[[1]]
+    values <- as.character(frame[[display_column]][indices] %||% "")
+    suppressed <- grepl("^<|suppressed for complementary", values, ignore.case = TRUE) |
+      mcl_triangle_is_suppressed_status(frame$suppression_status[indices])
+    if (sum(suppressed, na.rm = TRUE) != 1L) return(invisible(FALSE))
+    visible_indices <- indices[!suppressed]
+    visible_values <- vapply(visible_indices, function(index) mcl_triangle_public_count_number(frame[[display_column]][[index]]), numeric(1))
+    eligible <- visible_indices[!is.na(visible_values)]
+    if (length(eligible)) {
+      eligible_values <- vapply(eligible, function(index) mcl_triangle_public_count_number(frame[[display_column]][[index]]), numeric(1))
+      keys <- vapply(eligible, function(index) mcl_triangle_suppression_row_key(frame, index), character(1))
+      chosen <- eligible[order(eligible_values, keys)][[1]]
+      return(invisible(suppress_ref(table_name, chosen, display_column)))
+    }
+    parent <- parent_ref(denominator)
+    if (!is.null(parent)) return(invisible(suppress_ref(parent$table, parent$index)))
+    invisible(FALSE)
+  }
+  apply_grouped_table <- function(table_name, group_column = "", default_denominator = "all_lyfo_mcl") {
+    frame <- outputs[[table_name]]
+    if (!is.data.frame(frame) || !nrow(frame)) return(invisible(NULL))
+    groups <- if (nzchar(group_column) && group_column %in% names(frame)) as.character(frame[[group_column]]) else rep(default_denominator, nrow(frame))
+    for (group in unique(groups)) {
+      indices <- which(groups == group)
+      denominator <- if (nzchar(group)) group else default_denominator
+      apply_group(table_name, indices, denominator)
+    }
+    invisible(NULL)
+  }
+
+  for (spec in list(
+    c("age_proxy_counts", "denominator"),
+    c("treatment_strategy_strata_counts", "denominator"),
+    c("exposure_strata_counts", "denominator"),
+    c("ki67_aeki_person_counts", "denominator"),
+    c("overlap_matrix", "denominator"),
+    c("answerability_intersections", "denominator"),
+    c("ibrutinib_overlap_by_source", "denominator"),
+    c("ki67_overlap_by_source", "denominator"),
+    c("inclusion_waterfall", "denominator"),
+    c("asct_hdt_primary_vs_conditioning_counts", ""),
+    c("asct_hdt_validation_matrix", ""),
+    c("triangle_arm_proxy_counts", ""),
+    c("asct_hdt_evidence_timing", "")
+  )) {
+    apply_grouped_table(spec[[1]], spec[[2]])
+  }
+
+  age_validation <- outputs$age_source_validation
+  if (is.data.frame(age_validation) && nrow(age_validation)) {
+    child_columns <- intersect(
+      c("age_le_65_people_display", "age_gt_65_people_display", "age_missing_or_uncomputable_people_display"),
+      names(age_validation)
+    )
+    for (i in seq_len(nrow(age_validation))) {
+      if (!length(child_columns)) next
+      values <- as.character(unlist(age_validation[i, child_columns, drop = FALSE], use.names = FALSE))
+      suppressed <- grepl("^<|suppressed for complementary", values, ignore.case = TRUE)
+      if (sum(suppressed) != 1L) next
+      visible <- child_columns[!suppressed]
+      visible_values <- vapply(visible, function(name) mcl_triangle_public_count_number(age_validation[[name]][[i]]), numeric(1))
+      eligible <- visible[!is.na(visible_values)]
+      if (length(eligible)) {
+        chosen <- eligible[order(visible_values[match(eligible, visible)], eligible)][[1]]
+        marked <- mcl_triangle_mark_public_suppression(age_validation, audit, "age_source_validation", i, chosen, min_cell_count, TRUE)
+      } else if ("mcl_people_display" %in% names(age_validation)) {
+        marked <- mcl_triangle_mark_public_suppression(age_validation, audit, "age_source_validation", i, "mcl_people_display", min_cell_count, TRUE)
+      } else {
+        next
+      }
+      age_validation <- mcl_triangle_finalize_count_statuses(marked$frame)
+      audit <- marked$audit
+    }
+    outputs$age_source_validation <- age_validation
+  }
+
+  outputs$small_cell_suppression_audit <- mcl_count_match_empty(audit, mcl_triangle_empty_small_cell_suppression_audit())
+  outputs
+}
+
 mcl_count_write_outputs <- function(outputs, output_dir) {
   dir_create(output_dir)
   paths <- list(
@@ -7907,6 +8253,7 @@ mcl_count_write_outputs <- function(outputs, output_dir) {
     answerability_summary = write_csv(outputs$answerability_summary %||% mcl_count_empty_answerability_summary(), file.path(output_dir, "mcl_triangle_answerability_summary.csv")),
     count_summary = write_csv(outputs$count_summary, file.path(output_dir, "mcl_triangle_count_summary.csv")),
     failed_query_audit = write_csv(outputs$failed_query_audit %||% mcl_count_empty_failed_query_audit(), file.path(output_dir, "mcl_triangle_failed_query_audit.csv")),
+    small_cell_suppression_audit = write_csv(outputs$small_cell_suppression_audit %||% mcl_triangle_empty_small_cell_suppression_audit(), file.path(output_dir, "mcl_triangle_small_cell_suppression_audit.csv")),
     execution_summary = write_csv(outputs$execution_summary %||% mcl_count_empty_execution_summary(), file.path(output_dir, "mcl_triangle_execution_summary.csv"))
   )
   paths <- c(paths, mcl_asct_write_outputs(outputs, output_dir))
@@ -7975,6 +8322,7 @@ mcl_count_read_outputs <- function(output_dir) {
     answerability_summary = read_or_empty("mcl_triangle_answerability_summary.csv", mcl_count_empty_answerability_summary()),
     count_summary = read_or_empty("mcl_triangle_count_summary.csv", mcl_count_empty_summary()),
     failed_query_audit = read_or_empty("mcl_triangle_failed_query_audit.csv", mcl_count_empty_failed_query_audit()),
+    small_cell_suppression_audit = read_or_empty("mcl_triangle_small_cell_suppression_audit.csv", mcl_triangle_empty_small_cell_suppression_audit()),
     execution_summary = read_or_empty("mcl_triangle_execution_summary.csv", mcl_count_empty_execution_summary()),
     output_generation_status = read_or_empty("output_generation_status.csv", mcl_count_empty_output_generation_status())
   )

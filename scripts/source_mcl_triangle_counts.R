@@ -29,131 +29,199 @@ config_value <- function(name, default) {
 
 MCL_COUNT_MODE <- config_value("MCL_COUNT_MODE", "plan")
 MCL_COUNT_PROJECT_ROOT <- config_value("MCL_COUNT_PROJECT_ROOT", ".")
-MCL_COUNT_OUTPUTS_DIR <- config_value("MCL_COUNT_OUTPUTS_DIR", "outputs")
+MCL_COUNT_OUTPUTS_DIR <- config_value("MCL_COUNT_OUTPUTS_DIR", "")
+MCL_COUNT_OUTPUT_ROOT <- config_value(
+  "MCL_COUNT_OUTPUT_ROOT",
+  if (length(MCL_COUNT_OUTPUTS_DIR) && !is.na(MCL_COUNT_OUTPUTS_DIR[[1]]) && nzchar(as.character(MCL_COUNT_OUTPUTS_DIR[[1]]))) {
+    MCL_COUNT_OUTPUTS_DIR
+  } else {
+    "atlas_runs"
+  }
+)
 MCL_COUNT_SMALL_CELL_N <- config_value("MCL_COUNT_SMALL_CELL_N", 5L)
 MCL_COUNT_UPDATE_PAYLOAD <- config_value("MCL_COUNT_UPDATE_PAYLOAD", FALSE)
+MCL_COUNT_UPDATE_PAYLOAD_SUPPLIED <- config_value(
+  "MCL_COUNT_UPDATE_PAYLOAD_SUPPLIED",
+  !is.null(config[["MCL_COUNT_UPDATE_PAYLOAD"]]) || exists("MCL_COUNT_UPDATE_PAYLOAD", envir = .GlobalEnv, inherits = FALSE)
+)
 MCL_TRIANGLE_ATLAS_OUTPUT_DIR <- config_value("MCL_TRIANGLE_ATLAS_OUTPUT_DIR", Sys.getenv("MCL_TRIANGLE_ATLAS_OUTPUT_DIR", unset = ""))
 MCL_TRIANGLE_ATLAS_OUTPUT_ZIP <- config_value("MCL_TRIANGLE_ATLAS_OUTPUT_ZIP", Sys.getenv("MCL_TRIANGLE_ATLAS_OUTPUT_ZIP", unset = ""))
 MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY <- config_value("MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY", TRUE)
 MCL_TRIANGLE_KI67_TEXT_SCAN <- config_value("MCL_TRIANGLE_KI67_TEXT_SCAN", Sys.getenv("MCL_TRIANGLE_KI67_TEXT_SCAN", unset = "false"))
 MCL_TRIANGLE_KI67_THRESHOLD_PERCENT <- config_value("MCL_TRIANGLE_KI67_THRESHOLD_PERCENT", NA_integer_)
+MCL_COUNT_DB_ADAPTER <- config_value("MCL_COUNT_DB_ADAPTER", NULL)
 
 project_root <- normalizePath(MCL_COUNT_PROJECT_ROOT, winslash = "/", mustWork = TRUE)
-output_dir <- normalizePath(mcl_count_sourceable_resolve(MCL_COUNT_OUTPUTS_DIR, project_root), winslash = "/", mustWork = FALSE)
+mcl_count_sourceable_source_required(project_root, file.path("R", "utils.R"))
+output_root <- normalizePath(mcl_count_sourceable_resolve(MCL_COUNT_OUTPUT_ROOT, project_root), winslash = "/", mustWork = FALSE)
+run_id <- atlas_run_id()
+run_dir <- file.path(output_root, run_id)
+output_dir <- file.path(run_dir, "outputs")
 small_cell_n <- suppressWarnings(as.integer(MCL_COUNT_SMALL_CELL_N))
 if (is.na(small_cell_n) || small_cell_n < 1L) small_cell_n <- 5L
 
-mcl_count_sourceable_source_required(project_root, file.path("R", "utils.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "source_map.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "db_profile.R"))
+mcl_count_sourceable_source_required(project_root, file.path("R", "semantic_dictionary.R"))
+mcl_count_sourceable_source_required(project_root, file.path("R", "ki67_discovery.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_asct_hdt_evidence.R"))
 mcl_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_counts.R"))
+mcl_count_sourceable_source_required(project_root, file.path("R", "mcl_triangle_feasibility.R"))
+mcl_count_sourceable_source_required(project_root, file.path("R", "atlas_bundle.R"))
+mcl_count_sourceable_source_required(project_root, file.path("R", "html.R"))
 
 if (!MCL_COUNT_MODE %in% c("plan", "production_aggregate")) {
   stop("Unsupported MCL_COUNT_MODE: ", MCL_COUNT_MODE, ". Use 'plan' or 'production_aggregate'.", call. = FALSE)
 }
 
-cat("DALY-CARE MCL/TRIANGLE aggregate cohort-size finder\n")
+cat("DALY-CARE MCL/TRIANGLE panel-only atlas runner\n")
 cat("Mode: ", MCL_COUNT_MODE, "\n", sep = "")
 cat("Project root: ", project_root, "\n", sep = "")
+cat("Run directory: ", run_dir, "\n", sep = "")
 cat("Outputs: ", output_dir, "\n", sep = "")
 cat("Small-cell threshold: ", small_cell_n, "\n", sep = "")
-cat("Payload update enabled: ", isTRUE(MCL_COUNT_UPDATE_PAYLOAD), "\n", sep = "")
+if (length(MCL_COUNT_OUTPUTS_DIR) && !is.na(MCL_COUNT_OUTPUTS_DIR[[1]]) && nzchar(as.character(MCL_COUNT_OUTPUTS_DIR[[1]]))) {
+  cat("MCL_COUNT_OUTPUTS_DIR is deprecated; use MCL_COUNT_OUTPUT_ROOT. The new setting takes precedence when both are supplied.\n")
+}
+if (isTRUE(MCL_COUNT_UPDATE_PAYLOAD_SUPPLIED)) {
+  cat("MCL_COUNT_UPDATE_PAYLOAD is deprecated and ignored; this runner creates a fresh scoped atlas bundle.\n")
+}
 if (nzchar(MCL_TRIANGLE_ATLAS_OUTPUT_DIR %||% "")) {
-  cat("Atlas output evidence dir: ", MCL_TRIANGLE_ATLAS_OUTPUT_DIR, "\n", sep = "")
+  cat("Read-only atlas evidence directory: ", MCL_TRIANGLE_ATLAS_OUTPUT_DIR, "\n", sep = "")
 }
 if (nzchar(MCL_TRIANGLE_ATLAS_OUTPUT_ZIP %||% "")) {
-  cat("Atlas output evidence zip: ", MCL_TRIANGLE_ATLAS_OUTPUT_ZIP, "\n", sep = "")
+  cat("Read-only atlas evidence ZIP: ", MCL_TRIANGLE_ATLAS_OUTPUT_ZIP, "\n", sep = "")
 }
 cat("Ki-67 source inventory enabled: ", isTRUE(MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY), "\n", sep = "")
 cat("Ki-67 text scan enabled: ", isTRUE(mcl_count_bool(MCL_TRIANGLE_KI67_TEXT_SCAN)), "\n", sep = "")
 if (identical(MCL_COUNT_MODE, "plan")) {
-  cat("Plan mode: writing aggregate-only SQL templates; no database connection is opened.\n")
+  cat("Plan mode: writing readiness material and fail-closed aggregate query plans; no database connection is opened.\n")
 }
 if (identical(MCL_COUNT_MODE, "production_aggregate")) {
-  cat("Production aggregate mode: aggregate DBI count queries run only when person-key, date, and value mappings are executable.\n")
+  cat("Production aggregate mode: only MCL/TRIANGLE aggregate queries execute; 64-source profiling is not invoked.\n")
 }
 
-mcl_triangle_count_outputs <- mcl_count_build_outputs(
+mcl_triangle_panel <- mcl_triangle_build_atlas_panel(
   project_root = project_root,
-  outputs_dir = output_dir,
+  db_adapter = MCL_COUNT_DB_ADAPTER,
   mode = MCL_COUNT_MODE,
   min_cell_count = small_cell_n,
-  update_payload = isTRUE(MCL_COUNT_UPDATE_PAYLOAD),
-  atlas_output_dir = MCL_TRIANGLE_ATLAS_OUTPUT_DIR,
-  atlas_output_zip = MCL_TRIANGLE_ATLAS_OUTPUT_ZIP,
-  run_ki67_source_inventory = isTRUE(MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY),
-  ki67_text_scan = isTRUE(mcl_count_bool(MCL_TRIANGLE_KI67_TEXT_SCAN)),
-  ki67_threshold_percent = MCL_TRIANGLE_KI67_THRESHOLD_PERCENT
+  scaffold_args = list(),
+  count_args = list(
+    outputs_dir = output_dir,
+    atlas_output_dir = MCL_TRIANGLE_ATLAS_OUTPUT_DIR,
+    atlas_output_zip = MCL_TRIANGLE_ATLAS_OUTPUT_ZIP,
+    run_ki67_source_inventory = isTRUE(MCL_TRIANGLE_RUN_KI67_SOURCE_INVENTORY),
+    ki67_text_scan = isTRUE(mcl_count_bool(MCL_TRIANGLE_KI67_TEXT_SCAN)),
+    ki67_threshold_percent = MCL_TRIANGLE_KI67_THRESHOLD_PERCENT
+  )
+)
+mcl_triangle_count_outputs <- attr(mcl_triangle_panel, "count_outputs")
+attr(mcl_triangle_panel, "count_outputs") <- NULL
+if (!is.list(mcl_triangle_count_outputs)) stop("Shared MCL/TRIANGLE panel builder did not return count outputs.", call. = FALSE)
+
+mcl_triangle_paths <- mcl_triangle_write_outputs(mcl_triangle_panel, output_dir)
+mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
+
+summary_row <- mcl_triangle_count_outputs$execution_summary %||% mcl_count_empty_execution_summary()
+summary_value <- function(name, default = "") {
+  if (!is.data.frame(summary_row) || !nrow(summary_row) || !name %in% names(summary_row)) return(default)
+  summary_row[[name]][[1]] %||% default
+}
+failed_rows <- if (is.data.frame(mcl_triangle_count_outputs$failed_query_audit)) nrow(mcl_triangle_count_outputs$failed_query_audit) else 0L
+atlas_input_audit <- mcl_triangle_count_outputs$atlas_input_audit %||% mcl_count_empty_atlas_input_audit()
+evidence_provenance <- if (is.data.frame(atlas_input_audit) && nrow(atlas_input_audit)) {
+  reason <- as.character(atlas_input_audit$selection_reason[[1]] %||% "")
+  selected <- as.character(atlas_input_audit$selected_atlas_run[[1]] %||% "")
+  if (nzchar(selected)) paste(reason, selected, sep = ":") else reason
+} else {
+  "atlas_input_not_supplied"
+}
+
+generated_at <- atlas_timestamp()
+run_scope <- atlas_run_scope("triangle_only")
+run_summary <- atlas_panel_run_summary(
+  run_id = run_id,
+  generated_at = generated_at,
+  run_scope = run_scope,
+  execution_summary = summary_row,
+  failed_query_audit = mcl_triangle_count_outputs$failed_query_audit,
+  min_cell_count = small_cell_n,
+  evidence_input_provenance = evidence_provenance
+)
+run_summary_path <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
+payload <- atlas_scoped_panel_payload(
+  run_id = run_id,
+  generated_at = generated_at,
+  run_scope = run_scope,
+  run_summary = run_summary,
+  panel_payloads = list(mcl_triangle_feasibility = mcl_triangle_panel)
 )
 
-mcl_triangle_count_paths <- mcl_count_write_outputs(mcl_triangle_count_outputs, output_dir)
-assign("MCL_TRIANGLE_COUNT_RESULT", list(outputs = mcl_triangle_count_outputs, paths = mcl_triangle_count_paths), envir = .GlobalEnv)
+bool_text <- function(x) if (isTRUE(x)) "TRUE" else "FALSE"
+execution_log <- data.frame(
+  timestamp = generated_at,
+  level = if (identical(MCL_COUNT_MODE, "plan") || isTRUE(summary_value("production_aggregate_succeeded", FALSE))) "info" else "warning",
+  table_name = "mcl_triangle_feasibility",
+  message = paste0(
+    "TRIANGLE-only atlas; run_profile=", run_scope$profile,
+    "; executed_panel=", paste(run_scope$executed_panels, collapse = ","),
+    "; source_profiling_executed=", bool_text(run_scope$source_profiling_executed),
+    "; mode=", MCL_COUNT_MODE,
+    "; db_attempted=", bool_text(summary_value("db_connection_attempted", FALSE)),
+    "; db_available=", bool_text(summary_value("db_connection_available", FALSE)),
+    "; executable_queries=", summary_value("executable_queries", 0L),
+    "; executed_queries=", summary_value("executed_queries", 0L),
+    "; failed_queries=", summary_value("failed_queries", failed_rows),
+    "; populated_counts=", summary_value("populated_count_outputs", 0L),
+    "; populated_intersections=", summary_value("populated_intersection_outputs", 0L),
+    "; acceptance_status=", summary_value("acceptance_status", ""),
+    "; suppression_threshold=", small_cell_n,
+    "; optional_atlas_evidence_input=", evidence_provenance
+  ),
+  stringsAsFactors = FALSE
+)
 
-summary_row <- mcl_triangle_count_outputs$execution_summary
-if (is.data.frame(summary_row) && nrow(summary_row)) {
-  cat("DB connection: ", if (isTRUE(summary_row$db_connection_attempted[[1]])) "attempted" else "not attempted", "\n", sep = "")
-  cat("DB available: ", isTRUE(summary_row$db_connection_available[[1]]), "\n", sep = "")
-  cat("Executable queries: ", summary_row$executable_queries[[1]], "\n", sep = "")
-  cat("Executed queries: ", summary_row$executed_queries[[1]], "\n", sep = "")
-  cat("Failed queries: ", summary_row$failed_queries[[1]] %||% 0L, "\n", sep = "")
-  cat("Populated count outputs: ", summary_row$populated_count_outputs[[1]], "\n", sep = "")
-  cat("Populated intersection outputs: ", summary_row$populated_intersection_outputs[[1]] %||% 0L, "\n", sep = "")
-  cat("Atlas age inventory rows: ", summary_row$atlas_age_inventory_rows[[1]] %||% 0L, "\n", sep = "")
-  cat("Age validation queries: ", summary_row$age_validation_queries[[1]] %||% 0L, "\n", sep = "")
-  cat("Atlas treatment inventory rows: ", summary_row$atlas_treatment_inventory_rows[[1]] %||% 0L, "\n", sep = "")
-  cat("Ibrutinib validation queries: ", summary_row$ibrutinib_validation_queries[[1]] %||% 0L, "\n", sep = "")
-  cat("Atlas Ki-67 inventory rows: ", summary_row$atlas_ki67_inventory_rows[[1]] %||% 0L, "\n", sep = "")
-  cat("Ki-67 validation queries: ", summary_row$ki67_validation_queries[[1]] %||% 0L, "\n", sep = "")
-  cat("Core marginal counts succeeded: ", isTRUE(summary_row$core_marginal_counts_succeeded[[1]]), "\n", sep = "")
-  cat("Age validation succeeded: ", isTRUE(summary_row$age_validation_succeeded[[1]]), "\n", sep = "")
-  cat("Ibrutinib validation succeeded: ", isTRUE(summary_row$ibrutinib_validation_succeeded[[1]]), "\n", sep = "")
-  cat("Ki-67 validation succeeded: ", isTRUE(summary_row$ki67_validation_succeeded[[1]]), "\n", sep = "")
-  cat("Atlas ingestion succeeded: ", isTRUE(summary_row$atlas_ingestion_succeeded[[1]]), "\n", sep = "")
-  cat("Acceptance status: ", summary_row$acceptance_status[[1]] %||% "", "\n", sep = "")
-  if (nzchar(summary_row$failure_reason[[1]] %||% "")) {
-    cat("Production aggregate status: ", summary_row$failure_reason[[1]], "\n", sep = "")
-  }
-}
+manifest_readiness_paths <- mcl_triangle_paths
+names(manifest_readiness_paths) <- paste0("mcl_triangle_", names(manifest_readiness_paths))
+manifest_count_paths <- mcl_triangle_count_paths
+names(manifest_count_paths) <- paste0("mcl_triangle_count_", names(manifest_count_paths))
+manifest_paths <- c(manifest_readiness_paths, manifest_count_paths, list(run_summary = run_summary_path))
+bundle <- atlas_write_bundle(
+  run_dir = run_dir,
+  project_root = project_root,
+  payload = payload,
+  artifact_paths = manifest_paths,
+  execution_log = execution_log
+)
 
-count_display <- function(id) {
-  x <- mcl_triangle_count_outputs$data_point_counts
-  if (!is.data.frame(x) || !nrow(x)) return("")
-  hit <- x[x$data_point_id == id, , drop = FALSE]
-  if (!nrow(hit)) return("")
-  display <- hit$distinct_person_count_display[[1]] %||% ""
-  status <- hit$count_status[[1]] %||% ""
-  if (nzchar(display)) display else status
-}
+MCL_TRIANGLE_COUNT_RESULT <- list(
+  run_id = run_id,
+  run_dir = run_dir,
+  outputs = mcl_triangle_panel,
+  paths = c(
+    mcl_triangle_paths,
+    mcl_triangle_count_paths,
+    list(run_summary = run_summary_path, execution_log = bundle$execution_log)
+  ),
+  html = bundle$html,
+  payload = bundle$payload,
+  manifest = bundle$manifest
+)
+assign("MCL_TRIANGLE_COUNT_RESULT", MCL_TRIANGLE_COUNT_RESULT, envir = .GlobalEnv)
+
 cat("Production aggregate console summary:\n")
 cat(" - count mode: ", MCL_COUNT_MODE, "\n", sep = "")
-cat(" - executed queries: ", if (is.data.frame(summary_row) && nrow(summary_row)) summary_row$executed_queries[[1]] else 0L, "\n", sep = "")
-cat(" - failed queries: ", if (is.data.frame(summary_row) && nrow(summary_row)) (summary_row$failed_queries[[1]] %||% 0L) else 0L, "\n", sep = "")
-cat(" - populated intersections: ", if (is.data.frame(summary_row) && nrow(summary_row)) (summary_row$populated_intersection_outputs[[1]] %||% 0L) else 0L, "\n", sep = "")
-cat(" - acceptance status: ", if (is.data.frame(summary_row) && nrow(summary_row)) (summary_row$acceptance_status[[1]] %||% "") else "", "\n", sep = "")
-cat(" - all MCL count: ", count_display("all_lyfo_mcl"), "\n", sep = "")
-cat(" - age <=65 count: ", count_display("younger_mcl_proxy_age_le_65"), "\n", sep = "")
-cat(" - CIT count: ", count_display("cit_immunochemotherapy"), "\n", sep = "")
-cat(" - Ibrutinib count: ", count_display("ibrutinib_exposure"), "\n", sep = "")
-cat(" - ASCT/HDT count: ", count_display("asct_hdt_first_line"), "\n", sep = "")
-cat(" - Ki-67 AEKI count: ", count_display("ki67_aeki"), "\n", sep = "")
-cat(" - payload updated: ", isTRUE(mcl_triangle_count_outputs$payload_updated %||% FALSE), "\n", sep = "")
-
-cat("MCL/TRIANGLE aggregate count outputs written:\n")
-for (path in unlist(mcl_triangle_count_paths, use.names = FALSE)) {
-  cat(" - ", path, "\n", sep = "")
-}
-if (identical(MCL_COUNT_MODE, "production_aggregate") &&
-    all(mcl_triangle_count_outputs$data_point_counts$count_status %in% c(
-      "production_aggregate_failed_credentials_unavailable",
-      "production_aggregate_failed_mapping_unavailable",
-      "production_aggregate_failed_query_error",
-      "count_not_available_requires_person_key_mapping",
-      "count_not_available_requires_date_mapping",
-      "count_not_available_requires_value_mapping",
-      "count_not_available_requires_production_validation"
-    ), na.rm = TRUE)) {
-  cat("No executable production aggregate counts completed; query plans were written and no row counts were labelled as people.\n")
-}
+cat(" - executable queries: ", summary_value("executable_queries", 0L), "\n", sep = "")
+cat(" - executed queries: ", summary_value("executed_queries", 0L), "\n", sep = "")
+cat(" - failed queries: ", summary_value("failed_queries", failed_rows), "\n", sep = "")
+cat(" - populated count outputs: ", summary_value("populated_count_outputs", 0L), "\n", sep = "")
+cat(" - populated intersections: ", summary_value("populated_intersection_outputs", 0L), "\n", sep = "")
+cat(" - acceptance status: ", summary_value("acceptance_status", ""), "\n", sep = "")
+cat("MCL/TRIANGLE panel-only atlas outputs written:\n")
+for (path in unlist(c(mcl_triangle_paths, mcl_triangle_count_paths), use.names = FALSE)) cat(" - ", path, "\n", sep = "")
+cat(" - ", bundle$html, "\n", sep = "")
+cat(" - ", bundle$payload, "\n", sep = "")
+cat(" - ", bundle$manifest, "\n", sep = "")
 
 invisible(MCL_TRIANGLE_COUNT_RESULT)
