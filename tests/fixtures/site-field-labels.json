@@ -1,0 +1,61 @@
+{
+  "valid": [
+    {"kind":"field","system":"SDS_t_biobank","code":"SampleType","label":"Sample type","source_url":"https://example.test/reviewed","retrieved_on":"2026-10-11"},
+    {"kind":"field","system":"SDS_t_biobank","code":"SampleType","label":"Sample type"},
+    {"kind":"field","system":"Microbiology","code":"interpretation","label":"Susceptibility interpretation"},
+    {"kind":"field","system":"SDS_Diagnosis","code":"diagnosis_code","label":"Diagnosis code"},
+    {"kind":"field","system":"RKKP_LYFO","code":"Reg_IPI","label":"Reviewed IPI"},
+    {"kind":"field","system":" Source ","code":" Field ","label":" Exact label "},
+    {"kind":"field","system":"Source","code":"0012","label":"<b>Quoted \"label\"</b> — prøvetype"},
+    {"kind":"code","system":"SDS_t_biobank","code":"material","label":"Excluded code"},
+    {"kind":"term","system":"Microbiology","code":"organism","label":"Excluded term"},
+    {"kind":"gene","system":"Gene","code":"BRCA1","label":"Excluded gene"},
+    {"kind":"value","system":"Microbiology","code":"S","label":"Excluded value"},
+    {"kind":"Field","system":"SDS_t_biobank","code":"wrong_case","label":"Excluded kind"},
+    {"kind":"code","system":"","code":"","label":""}
+  ],
+  "expected": {
+    "SDS_t_biobank":{"SampleType":"Sample type"},
+    "Microbiology":{"interpretation":"Susceptibility interpretation"},
+    "SDS_Diagnosis":{"diagnosis_code":"Diagnosis code"},
+    "RKKP_LYFO":{"Reg_IPI":"Reviewed IPI"},
+    " Source ":{" Field ":" Exact label "},
+    "Source":{"0012":"<b>Quoted \"label\"</b> — prøvetype"}
+  },
+  "excluded": [
+    {"kind":"code","system":"Source","code":"field","label":"Excluded code"},
+    {"kind":"term","system":"Source","code":"field","label":"Excluded term"},
+    {"kind_alias":"field","system":"Source","code":"field","label":"Excluded kind alias"}
+  ],
+  "conflict": [
+    {"kind":"field","system":"Source","code":"field","label":"First"},
+    {"kind":"field","system":"Source","code":"field","label":"Second"}
+  ],
+  "invalid": [
+    {"kind":"field","code":"field","label":"Missing source"},
+    {"kind":"field","system_alias":"Source","code":"field","label":"Nonexact source property"},
+    {"kind":"field","system":"Source","code_alias":"field","label":"Nonexact field property"},
+    {"kind":"field","system":"Source","code":"field","label_alias":"Nonexact label property"},
+    {"kind":"field","system":"","code":"field","label":"Empty source"},
+    {"kind":"field","system":" \t\r\n","code":"field","label":"Whitespace source"},
+    {"kind":"field","system":"\u00a0","code":"field","label":"NBSP-only source"},
+    {"kind":"field","system":null,"code":"field","label":"Null source"},
+    {"kind":"field","system":12,"code":"field","label":"Numeric source"},
+    {"kind":"field","system":"Source","code":"","label":"Empty field"},
+    {"kind":"field","system":"Source","code":" \t\r\n","label":"Whitespace field"},
+    {"kind":"field","system":"Source","code":"\u00a0","label":"NBSP-only field"},
+    {"kind":"field","system":"Source","code":true,"label":"Boolean field"},
+    {"kind":"field","system":"Source","code":["field"],"label":"Array field"},
+    {"kind":"field","system":"Source","code":"field","label":""},
+    {"kind":"field","system":"Source","code":"field","label":" \t\r\n"},
+    {"kind":"field","system":"Source","code":"field","label":"\u00a0"},
+    {"kind":"field","system":"Source","code":"field","label":null},
+    {"kind":"field","system":"Source","code":"field","label":{"text":"Object label"}},
+    {"kind":"field","system":"__proto__","code":"field","label":"Prototype source"},
+    {"kind":"field","system":"constructor","code":"field","label":"Constructor source"},
+    {"kind":"field","system":"prototype","code":"field","label":"Prototype source"},
+    {"kind":"field","system":"Source","code":"__proto__","label":"Prototype field"},
+    {"kind":"field","system":"Source","code":"constructor","label":"Constructor field"},
+    {"kind":"field","system":"Source","code":"prototype","label":"Prototype field"}
+  ]
+}

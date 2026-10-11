@@ -12,7 +12,18 @@
   };
   const sourceLabels={RKKP_DaMyDa:'Myeloma registry',RKKP_LYFO:'Lymphoma registry',RKKP_CLL:'CLL registry'};
   const fieldKey=row=>own(row,'column_name')?row.column_name:own(row,'source_column')?row.source_column:own(row,'date_column')?row.date_column:row.region_column;
-  function fieldLabel(row){const source=own(fieldLabels,row.table_name)?fieldLabels[row.table_name]:null;return source&&own(source,fieldKey(row))?source[fieldKey(row)]:'';}
+  function fieldLabel(row){
+    const c=window.DALYCARE_OUTPUT_CATALOGUE,field=fieldKey(row),sourceName=row.table_name;
+    // Only old catalogues use the copied registry fallback. New maps are exact,
+    // and invalid or missing entries retain the raw identity in the reader.
+    const labels=c&&own(c,'field_labels')?c.field_labels:fieldLabels;
+    const record=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+    const safeKey=value=>typeof value==='string'&&value.trim()&&!['__proto__','constructor','prototype'].includes(value);
+    if(!record(labels)||!safeKey(sourceName)||!safeKey(field)||!own(labels,sourceName))return '';
+    const source=labels[sourceName];
+    if(!record(source)||!own(source,field))return '';
+    const label=source[field];return typeof label==='string'&&label.trim()?label:'';
+  }
   const sourceLabel=source=>own(sourceLabels,source)?sourceLabels[source]:'';
   const fieldTable=tableId=>categoryProfiles.has(tableId)||['column_profiles','columns','damyda_numeric_fields'].includes(tableId);
   const id=value=>typeof value==='string' && /^[A-Za-z0-9_-]+$/.test(value);

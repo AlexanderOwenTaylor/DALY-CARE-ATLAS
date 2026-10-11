@@ -56,6 +56,23 @@ def _registration(build_id, table_id, shard_id, rows):
     return rows_json, script
 
 
+def _field_labels(dictionary):
+    labels = {}
+    for row in dictionary or []:
+        if not isinstance(row, dict) or row.get('kind') != 'field':
+            continue
+        source, field, label = (row.get(key) for key in ('system', 'code', 'label'))
+        if any(not isinstance(value, str) or not value.strip() for value in (source, field, label)):
+            raise ValueError('Invalid field label dictionary row')
+        if source in {'__proto__', 'constructor', 'prototype'} or field in {'__proto__', 'constructor', 'prototype'}:
+            raise ValueError('Unsafe field label dictionary key')
+        fields = labels.setdefault(source, {})
+        if field in fields and fields[field] != label:
+            raise ValueError('Conflicting field label dictionary pair')
+        fields[field] = label
+    return labels
+
+
 def write_site_bundle(output_dir, payload, tables, project_root, provenance, manifest_inputs=None):
     requested = Path(output_dir).absolute()
     output = requested.parent.resolve() / requested.name
@@ -75,6 +92,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
     guarded = sanitize_public_payload(payload, minimum, root)
     if audit_public_payload(safe_tables) or audit_public_payload(guarded):
         raise ValueError('Public privacy audit failed')
+    field_labels = _field_labels(safe_tables.get('clinical_display_dictionary'))
     transport = compact(encode_transport(guarded))
     build_id = uuid.uuid4().hex
     output.parent.mkdir(parents=True,exist_ok=True)
@@ -150,6 +168,8 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             raise ValueError('Public table-data budget exceeded')
         limits = dict(input_max_bytes=registry['input_max_bytes'],public_table_max_bytes=registry['public_table_max_bytes'],shard_max_rows=250,shard_max_bytes=SHARD_BYTES,cache_max_bytes=1048576,page_rows=50,minimum_cell_count=minimum,public_table_bytes=total)
         catalogue = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance,privacy_policy_version=VERSION,limits=limits,tables=catalogue_tables)
+        if field_labels:
+            catalogue['field_labels'] = field_labels
         write('DALYCARE_output_catalogue.js','window.DALYCARE_OUTPUT_CATALOGUE = '+compact(catalogue)+';\n')
         for names in [('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css')]:
             if sum((stage/n).stat().st_size for n in names)>ENTRY_BYTES:

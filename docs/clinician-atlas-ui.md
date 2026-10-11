@@ -100,6 +100,17 @@ transfer size or establish a deployment latency guarantee.
 
 ## Coverage and Data tables
 
+Both bundle writers carry reviewed local field-name translations from the same
+published clinical display dictionary into the lightweight table catalogue.
+Data tables uses exact source/field pairs for primary labels and field-name
+search, while retaining the original identifier and source in the reading view.
+These labels explain names, not observed values, validated units or phenotypes.
+Unknown pairs remain raw; older catalogues without the optional metadata retain
+the previous registry-name fallback. Conflicting or malformed field-label rows
+fail the build without replacing the previous site. Metadata stays within the
+existing initial-asset ceiling; no Clinical core or dictionary parts are fetched
+to display these names.
+
 Coverage over time shows readable counts grouped by exact source, selected date
 field and evidence basis. The local table scrolls horizontally; select a source
 for its year tables. Missing years, zero, withheld counts and duplicate evidence
@@ -283,6 +294,15 @@ incomplete optional panel metadata. These bounded checks do not certify every
 atlas section, accessibility requirement or clinical interpretation. No whole-project
 R-suite success is claimed. The synthetic one-click, CLI and offline rebuild pipeline
 was exercised, including rollback and installed-resource precedence.
+
+Iteration17 extends that review to exact field-label continuity. Researcher,
+clinician and V33-comparison reviewers followed Biobank, susceptibility and
+diagnosis fields into Data tables and exercised readable-name/raw-name search
+under retained and cleared scope. HTTP desktop and offline phone results agreed.
+Independent developer review checked both publisher fixtures and actual catalogue
+parity; its R Unicode-whitespace validation finding was fixed and rechecked.
+Unknown names and dictionary-only pairs do not create labels for another source
+or invent observed profiles. All published row objects remain unchanged.
 
 ### Optional local export checks and benchmarks
 

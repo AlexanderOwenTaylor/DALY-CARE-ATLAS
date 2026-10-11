@@ -3,7 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const templates=path.join(__dirname,'../inst/templates');
 
 // The full shipped runtime runs against a small DOM/history and script-loading boundary.
-function navigation(search='',suppliedTables) {
+function navigation(search='',suppliedTables,catalogueMetadata={}) {
   const html=fs.readFileSync(path.join(templates,'DALYCARE_outputs.html'),'utf8');
   const elements=new Map(),listeners={},scrolls=[],focuses=[],scripts=[];
   let window,document;
@@ -27,7 +27,7 @@ function navigation(search='',suppliedTables) {
     pushState(state,_title,url){entries.splice(++index);entries.push({state:copy(state),search:new URL(url,'https://atlas.test/').search});window.location.search=entries[index].search;},
     go(delta){index+=delta;window.location.search=entries[index].search;listeners.popstate({state:this.state});if(this.scrollRestoration==='auto')window.scrollY=160;}
   };
-  window={DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'b1',tables},location:{search},history,scrollX:0,scrollY:0,
+  window={DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'b1',tables,...catalogueMetadata},location:{search},history,scrollX:0,scrollY:0,
     scrollTo(options){scrolls.push({...options});this.scrollX=options.left;this.scrollY=options.top;},addEventListener(name,fn){listeners[name]=fn;}};
   vm.runInNewContext(fs.readFileSync(path.join(templates,'atlas-outputs.js'),'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
   const card=id=>el('table-list').querySelectorAll('[data-table]').find(button=>button.dataset.table===id);
@@ -41,6 +41,74 @@ function readable(id,rows,metadata={}) {
  const json=JSON.stringify(rows);return {id,title:id,group:'Evidence',status:'available',kind:'aggregate_summary',complete:true,...metadata,columns:Object.keys(rows[0]).map(key=>({key,label:key,type:typeof rows.find(r=>r[key]!==null)?.[key]==='number'?'number':'string',definition:'Supplied meaning for '+key})),shards:[{id:'s1',src:'output-shards/'+id+'-s1.js',rows:rows.length,bytes:Buffer.byteLength(json)}]};
 }
 const flush=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
+
+test('catalogue labels reach nonregistry field readers and both label and raw-name searches',async()=>{
+ for(const [source,field,label] of [['BIOBANK_SAMPLES','sampletype','Sample type'],['microbiology_culture_resistance','interpretation','Susceptibility interpretation'],['SDS_diagnoser','diagnosekode','Diagnosis code']]){
+  const rows=[{table_name:source,column_name:field,n_rows:120}],metadata={field_labels:{[source]:{[field]:label}}},table=readable('column_profiles',rows);
+  for(const query of ['',label,field]){
+   const route=new URLSearchParams({table:table.id,source,field,search:query,searchmode:'fields'}),h=navigation('?'+route,[table],metadata);h.answer(rows);await flush();
+   assert.match(h.el('rows').innerHTML,new RegExp('<strong>'+label+'</strong>'));
+   assert.ok(h.el('rows').innerHTML.includes('<code class="cell-line">'+field+'</code>'));
+   assert.ok(h.el('rows').innerHTML.includes('Source: </span>'+source));
+   assert.match(h.el('read-status').textContent,/of 1 (matching|published) rows/);
+   assert.equal(h.scripts.length,1,'labels require only the selected output shard');
+  }
+ }
+});
+
+test('optional catalogue labels override registry fallback and missing exact pairs stay raw',async()=>{
+ const rows=[{table_name:'RKKP_LYFO',column_name:'IPI'},{table_name:'RKKP_LYFO',column_name:'Reg_IPI'},{table_name:'SDS_t_udtilsgh',column_name:'c_udtilsgh'},{table_name:'RKKP_DaMyDa',column_name:'Stadie'}],table=readable('column_profiles',rows),h=navigation('?table=column_profiles',[table],{field_labels:{RKKP_LYFO:{IPI:'Reviewed index'}}});h.answer(rows);await flush();
+ const html=h.el('rows').innerHTML;assert.match(html,/<strong>Reviewed index<\/strong>/);assert.match(html,/<strong>Reg_IPI<\/strong>/);assert.match(html,/<strong>c_udtilsgh<\/strong>/);assert.match(html,/<strong>Stadie<\/strong>/);assert.doesNotMatch(html,/International Prognostic|Recorded myeloma stage/);
+ h.el('table-query').value='Recorded myeloma stage';h.el('search-table').fire('submit');await flush();assert.equal(h.el('rows').innerHTML,'');
+});
+
+test('catalogue label searches keep exact source and field scope without aliases or key normalization',async()=>{
+ const rows=[{table_name:'S',column_name:'f'},{table_name:'SS',column_name:'f'},{table_name:'S',column_name:'ff'},{table_name:' s ',column_name:'f'},{table_name:'S',column_name:' F '}],table=readable('column_profiles',rows),metadata={field_labels:{S:{f:'Reviewed meaning',ff:'Reviewed meaning'},SS:{f:'Reviewed meaning'},' s ':{f:'Spaced source meaning'},'S ':{f:'Different exact source'}}};
+ const scoped=navigation('?table=column_profiles&source=S&field=f&search=Reviewed%20meaning&searchmode=fields',[table],metadata);scoped.answer(rows);await flush();assert.match(scoped.el('read-status').textContent,/1 matching rows/);assert.match(scoped.el('rows').innerHTML,/<strong>Reviewed meaning<\/strong>/);
+ const raw=navigation('?table=column_profiles',[table],metadata);raw.answer(rows);await flush();assert.match(raw.el('rows').innerHTML,/<strong>Spaced source meaning<\/strong>/);assert.match(raw.el('rows').innerHTML,/<strong> F <\/strong>/);assert.doesNotMatch(raw.el('rows').innerHTML,/Different exact source/);
+});
+
+test('old catalogues retain exact registry fallback while inherited optional metadata is ignored',async()=>{
+ const rows=[{table_name:'RKKP_LYFO',column_name:'IPI'},{table_name:'RKKP_LYFO',column_name:'Reg_IPI'}],table=readable('column_profiles',rows),h=navigation('?table=column_profiles',[table]);
+ Object.setPrototypeOf(h.window.DALYCARE_OUTPUT_CATALOGUE,{field_labels:{RKKP_LYFO:{IPI:'Inherited replacement'}}});h.answer(rows);await flush();assert.match(h.el('rows').innerHTML,/International Prognostic Index \(IPI\)/);assert.match(h.el('rows').innerHTML,/<strong>Reg_IPI<\/strong>/);assert.doesNotMatch(h.el('rows').innerHTML,/Inherited replacement/);
+});
+
+test('malformed optional labels leave raw fields readable without rendering objects or enabling fallback',async()=>{
+ const rows=[{table_name:'RKKP_LYFO',column_name:'IPI'}],table=readable('column_profiles',rows);
+ for(const map of [null,undefined,[],42,'bad',{RKKP_LYFO:null},{RKKP_LYFO:[]},{RKKP_LYFO:'bad'},{RKKP_LYFO:{IPI:{label:'bad'}}},{RKKP_LYFO:{IPI:42}},{RKKP_LYFO:{IPI:''}},{RKKP_LYFO:{IPI:' \t '}}]){
+  const h=navigation('?table=column_profiles',[table],{field_labels:map});h.answer(rows);await flush();assert.match(h.el('rows').innerHTML,/<strong>IPI<\/strong>/);assert.doesNotMatch(h.el('rows').innerHTML,/International Prognostic|\[object Object\]/);assert.doesNotMatch(h.el('read-status').textContent,/incomplete/i);
+ }
+});
+
+test('label reader ignores inherited source and field entries and prototype-related own keys',async()=>{
+ const rows=[{table_name:'InheritedSource',column_name:'f'},{table_name:'S',column_name:'inheritedField'},{table_name:'S',column_name:'f'},{table_name:'constructor',column_name:'f'},{table_name:'__proto__',column_name:'f'},{table_name:'prototype',column_name:'f'},{table_name:'S',column_name:'constructor'},{table_name:'S',column_name:'__proto__'},{table_name:'S',column_name:'prototype'}],table=readable('column_profiles',rows);
+ const labels=JSON.parse('{"S":{"f":"Own reviewed label","constructor":"Unsafe field label","__proto__":"Unsafe field label","prototype":"Unsafe field label"},"constructor":{"f":"Unsafe source label"},"__proto__":{"f":"Unsafe source label"},"prototype":{"f":"Unsafe source label"}}');
+ Object.setPrototypeOf(labels,{InheritedSource:{f:'Inherited source label'}});Object.setPrototypeOf(labels.S,{inheritedField:'Inherited field label'});
+ const h=navigation('?table=column_profiles',[table],{field_labels:labels});h.answer(rows);await flush();assert.match(h.el('rows').innerHTML,/<strong>Own reviewed label<\/strong>/);assert.doesNotMatch(h.el('rows').innerHTML,/Inherited source label|Inherited field label|Unsafe source label|Unsafe field label/);
+ for(const query of ['Inherited source label','Inherited field label','Unsafe source label','Unsafe field label']){h.el('table-query').value=query;h.el('search-table').fire('submit');await flush();assert.equal(h.el('rows').innerHTML,'');}
+});
+
+test('empty metadata identities are ignored while valid exact entries remain available',async()=>{
+ const rows=[{table_name:'',column_name:'f'},{table_name:' ',column_name:'f'},{table_name:'S',column_name:''},{table_name:'S',column_name:' '},{table_name:'S',column_name:'valid'},{table_name:'S',column_name:'bad'}],table=readable('column_profiles',rows),h=navigation('?table=column_profiles',[table],{field_labels:{'':{f:'Invalid empty source'},' ':{f:'Invalid blank source'},S:{'':'Invalid empty field',' ':'Invalid blank field',valid:'  Reviewed exact label  ',bad:{label:'Invalid object'}}}});h.answer(rows);await flush();
+ assert.doesNotMatch(h.el('rows').innerHTML,/Invalid empty|Invalid blank|Invalid object|\[object Object\]/);assert.match(h.el('rows').innerHTML,/<strong>  Reviewed exact label  <\/strong>/);assert.match(h.el('rows').innerHTML,/<strong>bad<\/strong>/);
+});
+
+test('HTML-like reviewed labels are escaped in readable rows and remain searchable as text',async()=>{
+ const label='<img src=x onerror="bad"> & \'reviewed\'',rows=[{table_name:'S',column_name:'raw_field'}],table=readable('columns',rows),h=navigation('?table=columns&search='+encodeURIComponent(label)+'&searchmode=fields',[table],{field_labels:{S:{raw_field:label}}});h.answer(rows);await flush();const html=h.el('rows').innerHTML;
+ assert.match(html,/<strong>&lt;img src=x onerror=&quot;bad&quot;&gt; &amp; &#39;reviewed&#39;<\/strong>/);assert.doesNotMatch(html,/<img/);assert.match(html,/raw_field/);assert.match(h.el('read-status').textContent,/1 matching rows/);
+});
+
+test('reviewed display preserves typed raw evidence, units and withheld values in both reader modes',async()=>{
+ const row={table_name:'S',source_column:'resultvalue',unit:'mmol/L',n_available:0,pct_available:0,median:null,numeric_privacy_status:'needs_validation_negative_sentinel'},rows=[row],table=readable('damyda_numeric_fields',rows);table.columns.find(c=>c.key==='median').type='number';const h=navigation('?table=damyda_numeric_fields',[table],{field_labels:{S:{resultvalue:'Recorded result'}}});h.answer(rows);await flush();
+ assert.match(h.el('rows').innerHTML,/<strong>Recorded result<\/strong>/);for(const value of ['resultvalue','mmol/L','0.0%','<code>S</code>'])assert.ok(h.el('rows').innerHTML.includes(value),value);assert.match(h.el('table-result').textContent,/invalid stored values/);
+ const scanned=await h.window.DALYCARE_OUTPUTS.scanTable(table.id,'Recorded result',0,null,null,{source:'S',field:'resultvalue',fieldNames:true});assert.deepEqual(JSON.parse(JSON.stringify(scanned.rows)),rows);
+ h.el('exact-columns').fire('click');for(const value of ['resultvalue','mmol/L','invalid stored values'])assert.ok(h.el('rows').innerHTML.includes(value),value);assert.doesNotMatch(h.el('rows').innerHTML,/Recorded result/);
+});
+
+test('reference rows are never field-label aliases',async()=>{
+ const rows=[{kind:'code',system:'S',code:'raw_code',label:'Supplied code meaning',table_name:'S',column_name:'raw_field'}],table=readable('clinical_display_dictionary',rows,{kind:'reference_definitions'}),h=navigation('?table=clinical_display_dictionary&search=Field%20only%20meaning',[table],{field_labels:{S:{raw_field:'Field only meaning'}}});h.answer(rows);await flush();assert.equal(h.el('rows').innerHTML,'');
+ h.el('table-query').value='Supplied code meaning';h.el('search-table').fire('submit');await flush();assert.match(h.el('rows').innerHTML,/Supplied code meaning/);assert.doesNotMatch(h.el('rows').innerHTML,/Field only meaning/);
+});
 
 const sourceFixture=()=>({sources:[{table_name:'RKKP_DaMyDa',n_rows:14805,n_cols:352},{table_name:'RKKP_CLL',n_rows:7884,n_cols:80}],atlas_temporal_coverage:[{table_name:'RKKP_DaMyDa',date_column:'Diagnosedato',pct_available:100},{table_name:'RKKP_CLL',date_column:'Reg_Diagnose_dt',pct_available:100}],atlas_temporal_coverage_years:[{table_name:'RKKP_DaMyDa',date_column:'Diagnosedato',coverage_basis:'event_date_counts',year:2024,n_rows:491,pct_rows:3.31644714623438}],atlas_spatial_region_counts:[{table_name:'RKKP_DaMyDa',region_column:'Region',count_basis:'region_column_counts',region_name:'Other/unknown',region_code:'UNK',n_rows:11,pct_rows:0.0742992232353935}]});
 async function answerWorkspace(h,data){for(let i=0;i<8;i++){await flush();const script=h.scripts.at(-1);if(!script||script.answered)break;script.answered=true;const t=h.tables.find(t=>t.shards.some(s=>s.src===script.src));h.answer(data[t.id]);}await flush();}

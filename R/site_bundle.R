@@ -18,6 +18,22 @@ atlas_bundle_resource <- function(name,project_root) {
   if(!nzchar(path) || !file.exists(path)) stop('Site resource unavailable: ',name,call.=FALSE)
   path
 }
+atlas_bundle_field_labels <- function(dictionary) {
+  labels <- list()
+  for(row in dictionary) {
+    if(!is.list(row) || !identical(row[['kind']],'field')) next
+    values <- lapply(c('system','code','label'),function(key)row[[key]])
+    valid <- vapply(values,function(v)is.character(v) && length(v)==1L && !is.na(v) && nzchar(trimws(v,whitespace='[\\h\\v]')),logical(1))
+    if(!all(valid)) stop('Invalid field label dictionary row',call.=FALSE)
+    source <- values[[1]];field <- values[[2]];label <- values[[3]]
+    if(source %in% c('__proto__','constructor','prototype') || field %in% c('__proto__','constructor','prototype')) stop('Unsafe field label dictionary key',call.=FALSE)
+    fields <- labels[[source]]
+    if(field %in% names(fields) && !identical(fields[[field]],label)) stop('Conflicting field label dictionary pair',call.=FALSE)
+    if(is.null(fields)) fields <- list()
+    fields[[field]] <- label;labels[[source]] <- fields
+  }
+  labels
+}
 atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list()) {
   registry <- atlas_output_registry(project_root); minimum <- atlas_effective_threshold(payload)
   if(!exists('atlas_public_privacy',mode='function')) source(file.path(project_root,'R/public_privacy.R'),encoding='UTF-8')
@@ -31,6 +47,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   safe <- atlas_public_privacy(logical,project_root,minimum)
   payload <- atlas_public_privacy(payload,project_root,minimum)
   atlas_evidence_audit(safe);atlas_evidence_audit(payload)
+  field_labels <- atlas_bundle_field_labels(safe[['clinical_display_dictionary']])
   transport <- atlas_bundle_json(atlas_payload_transport(atlas_sanitize_payload_text(payload)))
   parent <- dirname(site_dir);dir.create(parent,recursive=TRUE,showWarnings=FALSE)
   parent <- normalizePath(parent,winslash='/',mustWork=TRUE)
@@ -109,6 +126,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   if(total>registry$public_table_max_bytes) stop('Public table-data budget exceeded',call.=FALSE)
   limits <- list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes,shard_max_rows=250L,shard_max_bytes=262144L,cache_max_bytes=1048576L,page_rows=50L,minimum_cell_count=minimum,public_table_bytes=total)
   catalogue <- list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance,privacy_policy_version=payload$privacy_metadata$policy_version,limits=limits,tables=catalog_tables)
+  if(length(field_labels)) catalogue$field_labels <- field_labels
   write('DALYCARE_output_catalogue.js',paste0('window.DALYCARE_OUTPUT_CATALOGUE = ',atlas_bundle_json(catalogue),';\n'))
   for(names in list(c('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),c('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css'))) if(sum(file.info(file.path(stage,names))$size)>524288) stop('Initial asset byte budget exceeded',call.=FALSE)
   files <- list.files(stage,recursive=TRUE,full.names=FALSE)
