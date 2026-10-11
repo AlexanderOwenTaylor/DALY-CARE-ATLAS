@@ -1,9 +1,10 @@
-write_static_atlas <- function(run_dir, payload, project_root = ".", output_evidence = NULL, manifest_paths = list(), membership_spec = NULL) {
+write_static_atlas <- function(run_dir, payload, project_root = ".", output_evidence = NULL, manifest_paths = list(), membership_spec = NULL, transport_version = NULL) {
   if (is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
   if (!exists("atlas_public_privacy", mode = "function")) {
     source(file.path(project_root, "R", "public_privacy.R"), encoding = "UTF-8")
   }
   if(!exists('atlas_write_site_bundle',mode='function')) source(file.path(project_root,'R/site_bundle.R'),encoding='UTF-8')
+  transport_version <- atlas_transport_version(transport_version)
   if(!exists('atlas_output_evidence',mode='function')) source(file.path(project_root,'R/output_evidence.R'),encoding='UTF-8')
   registry <- atlas_output_registry(project_root)
   for(id in c('npu_display_dictionary','clinical_display_dictionary')) {
@@ -15,7 +16,7 @@ write_static_atlas <- function(run_dir, payload, project_root = ".", output_evid
   payload <- atlas_public_privacy(payload,project_root,atlas_effective_threshold(payload))
   if(is.null(output_evidence)) output_evidence <- atlas_output_evidence(NULL,project_root,payload)
   provenance <- if(any(vapply(output_evidence,function(t) identical(t$provenance,'csv_run'),logical(1)))) 'csv_outputs' else 'legacy_payload'
-  atlas_write_site_bundle(file.path(run_dir,'site'),payload,output_evidence,project_root,provenance,manifest_paths,membership_spec=membership_spec)
+  atlas_write_site_bundle(file.path(run_dir,'site'),payload,output_evidence,project_root,provenance,manifest_paths,membership_spec=membership_spec,transport_version=transport_version)
 }
 
 empty_streaming_progress_summary <- function() {

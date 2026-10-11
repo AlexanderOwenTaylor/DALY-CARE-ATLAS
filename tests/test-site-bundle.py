@@ -1,8 +1,73 @@
-import json, os, sys, tempfile, unittest, copy
+import json, os, sys, tempfile, unittest, copy, subprocess
 from pathlib import Path
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1];sys.path.insert(0,str(ROOT/'scripts'))
 class BundleTests(unittest.TestCase):
+ def test_public_versions_actual_script_parity_and_proto_rollback(self):
+  import site_bundle as b
+  payload={'run_id':'SYNTHETIC','untouched':{'constructor':'keep','prototype':'keep'},'rows':[{'long_repeated_synthetic_column':i} for i in range(12)]}
+  with tempfile.TemporaryDirectory() as tmp:
+   out=Path(tmp)/'site'
+   for requested,environment,want in ((None,'',2),(None,' 1\t',1),(2,'invalid',2),('1','2',1)):
+    with patch.dict(os.environ,{'DALYCARE_ATLAS_TRANSPORT_VERSION':environment}):
+     result=b.write_site_bundle(out,payload,[],ROOT,'legacy_payload',transport_version=requested)
+    wire=json.loads(result['payload_json'].read_text(encoding='utf-8'))
+    self.assertEqual(wire['transport_version'],want)
+    # Evaluate the unchanged classic-script object-literal boundary, not JSON.parse.
+    probe="const fs=require('fs'),vm=require('vm');let c={window:{}};vm.runInNewContext(fs.readFileSync(process.argv[1],'utf8'),c);process.stdout.write(JSON.stringify(c.window.DALYCARE_ATLAS_PAYLOAD));"
+    evaluated=subprocess.run(['node','-e',probe,str(result['payload'])],capture_output=True,text=True,check=True)
+    self.assertEqual(json.loads(evaluated.stdout),wire)
+    self.assertEqual(b.decode_transport(wire)['untouched'],payload['untouched'])
+   before={p:p.read_bytes() for p in result['assets']+[result['manifest']]}
+   for version in (1,2):
+    for unsafe in ({'__proto__':'own'}, {'nested':[{'__proto__':'own'}]}):
+     with self.assertRaisesRegex(ValueError,'__proto__'):
+      b.write_site_bundle(out,dict(payload,unsafe=unsafe),[],ROOT,'legacy_payload',transport_version=version)
+     self.assertEqual(before,{p:p.read_bytes() for p in before})
+
+ def test_writer_exact_asset_and_normalized_budgets_preserve_site(self):
+  import site_bundle as b
+  from output_evidence import load_registry
+  payload={'run_id':'SYNTHETIC','text':'x'*300,'large_integer':10**200}
+  with tempfile.TemporaryDirectory() as tmp:
+   out=Path(tmp)/'site'
+   for version in (1,2):
+    result=b.write_site_bundle(out,payload,[],ROOT,'legacy_payload',transport_version=version)
+    required=max(result['payload'].stat().st_size,result['payload_json'].stat().st_size)
+    registry=load_registry(ROOT)
+    registry['input_max_bytes']=required
+    with patch.object(b,'load_registry',return_value=registry):
+     result=b.write_site_bundle(out,payload,[],ROOT,'legacy_payload',transport_version=version)
+    before={p:p.read_bytes() for p in result['assets']+[result['manifest']]}
+    registry['input_max_bytes']=required-1
+    with patch.object(b,'load_registry',return_value=registry):
+     with self.assertRaisesRegex(ValueError,'budget'):
+      b.write_site_bundle(out,payload,[],ROOT,'legacy_payload',transport_version=version)
+    self.assertEqual(before,{p:p.read_bytes() for p in before})
+    # Numeric normalized charges exceed their small actual token spellings.
+    registry['input_max_bytes']=1000
+    with patch.object(b,'load_registry',return_value=registry):
+     with self.assertRaisesRegex(ValueError,'budget'):
+      b.write_site_bundle(out,{'numbers':[0]*100},[],ROOT,'legacy_payload',transport_version=version)
+    self.assertEqual(before,{p:p.read_bytes() for p in before})
+
+ def test_real_legacy_v1_v2_imports_output_default2_or_explicit1(self):
+  from build_ui_iteration import build
+  import site_bundle as b
+  payload={'run_id':'SYNTHETIC_IMPORT','rows':[{'long_repeated_synthetic_column':i} for i in range(12)]}
+  with tempfile.TemporaryDirectory() as tmp:
+   src=Path(tmp)/'input';src.mkdir()
+   with patch.dict(os.environ,{'DALYCARE_ATLAS_TRANSPORT_VERSION':''}):
+    for imported in (payload,b.encode_transport(payload,1),b.encode_transport(payload,2)):
+     (src/'DALYCARE_atlas_payload.js').write_text('window.DALYCARE_ATLAS_PAYLOAD = '+b.compact(imported)+';\n',encoding='utf-8')
+     for requested,want in ((None,2),(1,1)):
+      result=build(src,Path(tmp)/'site',ROOT,transport_version=requested)
+      wire=json.loads(result['payload_json'].read_text(encoding='utf-8'))
+      self.assertEqual(wire['transport_version'],want)
+      decoded=b.decode_transport(wire)
+      self.assertEqual(decoded['rows'],payload['rows'])
+      self.assertEqual(decoded['clinical_source_inventory']['evidence_origin'],'imported_snapshot')
+
  def test_chunks_transport_manifest_and_rollback(self):
   import site_bundle as b
   from output_evidence import collect_output_evidence

@@ -40,6 +40,38 @@ Double-click Home or serve the entire `site/` directory over HTTP. Keep all page
 scripts, styles and `output-shards/` together. Internal run CSVs are not public
 release artifacts and must not be linked or hosted with the site.
 
+### Clinical payload compatibility
+
+New builds use transport version 2 for the matching Clinical JSON and JavaScript
+assets. It stores repeated row keys once and restores the same guarded logical
+payload before the explorer starts. This changes representation, not the published
+fields, values, privacy decisions or CSV-derived Data tables. Keep the generated
+`atlas-transport.js` with the matching site. Updated builders read legacy payloads
+and versions 1 and 2; older rebuild tools may require version 1.
+
+To produce version 1 with an existing R runner or offline rebuild, set this before
+running it:
+
+```r
+Sys.setenv(DALYCARE_ATLAS_TRANSPORT_VERSION = "1")
+# Run the usual atlas runner or offline rebuild.
+```
+
+Unset that variable to return to the default. The Python migration command also
+accepts `--transport-version 1` or `--transport-version 2`. Explicit version
+arguments take precedence over the environment; the input file's version does
+not choose the output version. Both versions enforce complete output-size budgets
+and preserve the previous publication when a build fails. A version 2 JSON file
+is a transport envelope; decode it with the supplied runtime before consuming
+logical row arrays directly.
+
+On the local iteration20 comparison, the core shrank from 4.95 MB to 2.79 MB and
+retained browser heap fell by about 23%. Median readiness increased from 212 to
+249 ms over local HTTP and from 202 to 284 ms offline. These are three fresh
+profiles per version and mode on one desktop, with no forced garbage collection
+or throttling. They satisfy the predeclared local regression limits, but do not
+establish faster loading or performance on hosted, mobile or slower machines.
+
 ## Clinical explorer
 
 Start offers twelve clinical topics, registry and molecular-field routes, and

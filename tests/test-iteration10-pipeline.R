@@ -1,6 +1,7 @@
 # Real entry-point acceptance using only committed synthetic inputs.
 root <- normalizePath('.',winslash='/')
 source('tests/helper.R'); source_test_runtime(root)
+Sys.unsetenv('DALYCARE_ATLAS_TRANSPORT_VERSION')
 work <- tempfile('iteration10-pipeline-');dir.create(work)
 rscript <- file.path(R.home('bin'),if(.Platform$OS.type=='windows') 'Rscript.exe' else 'Rscript')
 child <- function(args,success=TRUE) {
@@ -11,7 +12,7 @@ child <- function(args,success=TRUE) {
  invisible(log)
 }
 read_assignment <- function(path) jsonlite::fromJSON(sub(';\\s*$','',sub('^[^=]+=','',paste(readLines(path,encoding='UTF-8'),collapse='\n'))),simplifyVector=FALSE)
-accept_site <- function(run,project_root=root) {
+accept_site <- function(run,project_root=root,transport_version=2L) {
  site <- file.path(run,'site');manifest <- read.csv(file.path(run,'outputs/output_manifest.csv'),stringsAsFactors=FALSE)
  files <- list.files(site,recursive=TRUE)
  entries <- manifest[startsWith(manifest$relative_path,'site/'),]
@@ -28,7 +29,16 @@ accept_site <- function(run,project_root=root) {
  expect_true(all(required %in% files))
  bootstrap <- read_assignment(file.path(site,'DALYCARE_entry.js'));catalogue <- read_assignment(file.path(site,'DALYCARE_output_catalogue.js'))
  core <- jsonlite::fromJSON(file.path(site,'DALYCARE_atlas_payload.json'),simplifyVector=FALSE)
- expect_equal(bootstrap$schema_version,1L);expect_equal(catalogue$schema_version,1L);expect_equal(core$transport_version,1L)
+ expect_equal(bootstrap$schema_version,1L);expect_equal(catalogue$schema_version,1L);expect_equal(core$transport_version,transport_version)
+ # Semantic assertions below consume the actual browser-decoded logical payload.
+ decoded <- tempfile('decoded-',tmpdir=work,fileext='.json');probe <- tempfile('decode-',tmpdir=work,fileext='.cjs')
+ writeLines(c("const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');",
+   "const [asset,json,decoder,out]=process.argv.slice(2),context={window:{}};vm.createContext(context);",
+   "vm.runInContext(fs.readFileSync(asset,'utf8'),context);vm.runInContext(fs.readFileSync(decoder,'utf8'),context);",
+   "assert.deepEqual(JSON.parse(JSON.stringify(context.window.DALYCARE_ATLAS_PAYLOAD)),JSON.parse(fs.readFileSync(json,'utf8')));",
+   "fs.writeFileSync(out,JSON.stringify(context.window.DALYCARE_TRANSPORT.decode(context.window.DALYCARE_ATLAS_PAYLOAD)));"),probe)
+ expect_equal(system2(Sys.which('node'),shQuote(c(probe,file.path(site,'DALYCARE_atlas_payload.js'),file.path(site,'DALYCARE_atlas_payload.json'),file.path(site,'atlas-transport.js'),decoded))),0L)
+ core$payload <- jsonlite::fromJSON(decoded,simplifyVector=FALSE)
  expect_equal(bootstrap$build_id,catalogue$build_id);expect_equal(bootstrap$run_id,context$run_id);expect_equal(core$payload$run_id,context$run_id)
  for(t in catalogue$tables) for(shard in t$shards) {
   text <- paste(readLines(file.path(site,shard$src),encoding='UTF-8'),collapse='\n')
@@ -49,6 +59,13 @@ Sys.unsetenv('DALYCARE_ATLAS_SOURCE_ONLY')
 cli_out <- file.path(work,'cli')
 child(c(file.path(root,'scripts/run_atlas.R'),root,'config/source-map.example.tsv',cli_out,'report'))
 cli_runs <- list.dirs(cli_out,recursive=FALSE,full.names=TRUE);expect_equal(length(cli_runs),1L);accept_site(cli_runs[[1]])
+# The unchanged real standalone CLI can still produce genuine v1 via environment.
+Sys.setenv(DALYCARE_ATLAS_TRANSPORT_VERSION='1')
+v1_out <- file.path(work,'cli-requested-v1')
+child(c(file.path(root,'scripts/run_atlas.R'),root,'config/source-map.example.tsv',v1_out,'report'))
+v1_runs <- list.dirs(v1_out,recursive=FALSE,full.names=TRUE);expect_equal(length(v1_runs),1L)
+accept_site(v1_runs[[1]],transport_version=1L)
+Sys.unsetenv('DALYCARE_ATLAS_TRANSPORT_VERSION')
 # A harmless source metadata change must travel through the standalone offline rebuild.
 source_path <- file.path(one$run_dir,'outputs/atlas_sources.csv')
 rows <- read.csv(source_path,stringsAsFactors=FALSE,check.names=FALSE,na.strings='');rows$domain[[1]] <- 'Synthetic CSV acceptance sentinel';write_csv(rows,source_path)

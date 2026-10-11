@@ -6,22 +6,24 @@ import os
 from pathlib import Path
 from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold
 from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, read_build_context, _bound_source_file
-from site_bundle import write_site_bundle, decode_transport
+from site_bundle import write_site_bundle, decode_transport, resolve_transport_version, _byte_limit
 from clinical_source_membership import load_membership_resource, clinical_source_inventory
 
 
-def build(input_dir, output_dir, project_root, run_dir=None):
+def build(input_dir, output_dir, project_root, run_dir=None, transport_version=None):
+    transport_version = resolve_transport_version(transport_version)
     input_dir, output_dir, project_root = map(Path, (input_dir, output_dir, project_root))
     membership_spec, membership_input = load_membership_resource(project_root)
     registry = load_registry(project_root)
     source = input_dir / 'DALYCARE_atlas_payload.js'
-    if source.stat().st_size > registry['input_max_bytes']:
+    maximum = _byte_limit(registry['input_max_bytes'])
+    if source.stat().st_size > maximum:
         raise ValueError('Imported payload exceeds pre-read limit')
     raw = source.read_text(encoding='utf-8-sig')
     prefix = 'window.DALYCARE_ATLAS_PAYLOAD ='
     if not raw.strip().startswith(prefix):
         raise ValueError('Unrecognized atlas payload wrapper')
-    payload = decode_transport(json.loads(raw.strip()[len(prefix):].strip().removesuffix(';')))
+    payload = decode_transport(json.loads(raw.strip()[len(prefix):].strip().removesuffix(';')), max_bytes=maximum)
     context = matching_run_context(run_dir, payload, registry) if run_dir is not None else None
     minimum = effective_threshold(payload, context)
     for key in ('npu_display_dictionary','clinical_display_dictionary'):
@@ -58,7 +60,7 @@ def build(input_dir, output_dir, project_root, run_dir=None):
     if context is not None:
         path=confined_path(run_dir,'outputs/atlas_build_context.json')
         inputs.append(dict(path=str(path),bytes=path.stat().st_size,provenance='build_context'))
-    paths = write_site_bundle(output_dir, payload, tables, project_root, 'legacy_payload',manifest_inputs=inputs)
+    paths = write_site_bundle(output_dir, payload, tables, project_root, 'legacy_payload',manifest_inputs=inputs,transport_version=transport_version)
     print(f'Built {output_dir}: {paths["payload_json"].stat().st_size:,} transport bytes')
     return paths
 
@@ -90,5 +92,6 @@ if __name__ == '__main__':
     parser.add_argument('--output-dir', type=Path, required=True,
                         help='Directory in which to write the rebuilt HTML, JS, and JSON files')
     parser.add_argument('--run-dir', type=Path, help='Explicit matching CSV run to restore complete table evidence')
+    parser.add_argument('--transport-version', choices=('1', '2'), help='Clinical payload transport version (default: environment or 2)')
     args = parser.parse_args()
-    build(args.input_dir, args.output_dir, root, args.run_dir)
+    build(args.input_dir, args.output_dir, root, args.run_dir, args.transport_version)

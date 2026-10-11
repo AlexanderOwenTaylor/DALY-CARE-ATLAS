@@ -6,7 +6,7 @@ test('legacy payload remains unchanged and aliases restore shared logical rows',
 });
 test('unsafe aliases, overwritten targets, missing sources and future versions fail closed',()=>{
  const decode=decoder();for(const aliases of [[{target:['__proto__','secret'],source:['rows']}],[{target:['rows'],source:['rows']}],[{target:['copy'],source:['absent']}],[{target:['copy'],source:['constructor']}]])assert.throws(()=>decode({transport_version:1,payload:{rows:[]},aliases}),/alias|path|target|source/i);
- assert.throws(()=>decode({transport_version:2,payload:{},aliases:[]}),/version/i);assert.equal({}.secret,undefined);
+ assert.throws(()=>decode({transport_version:3,payload:{},aliases:[]}),/version/i);assert.equal({}.secret,undefined);
 });
 test('clinical initialization decodes before capturing payload',()=>{
  const html=fs.readFileSync(path.join(__dirname,'../inst/templates/DALYCARE_atlas.html'),'utf8');assert.ok(html.indexOf('atlas-transport.js')<html.indexOf('const payload = window.DALYCARE_ATLAS_PAYLOAD'));assert.match(html,/DALYCARE_TRANSPORT\.decode\(window.DALYCARE_ATLAS_PAYLOAD\)/);

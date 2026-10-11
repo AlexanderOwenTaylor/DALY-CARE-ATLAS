@@ -120,12 +120,22 @@ class SyntheticBuilderTest(unittest.TestCase):
         self.assertIn('Built ', result.stdout)
         raw = (self.output / 'DALYCARE_atlas_payload.js').read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';')
         self.assertEqual(json.loads(raw), json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
+        self.assertEqual(json.loads(raw)['transport_version'], 2)
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
         self.assertEqual(data, decode_transport(json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8'))))
         self.assertEqual(data['fixture_notice'], self.payload['fixture_notice'])
         self.assertEqual(audit_public_payload(data), [])
         self.assertEqual((self.output / 'DALYCARE_atlas.html').read_bytes(),
                          (ROOT / 'inst/templates/DALYCARE_entry.html').read_bytes())
+
+    def test_builder_cli_can_publish_requested_v1(self):
+        self.write_input()
+        result = self.run_cli(['--input-dir', str(self.input), '--output-dir', str(self.output), '--transport-version', '1'])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        wire = json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8'))
+        self.assertEqual(wire['transport_version'], 1)
+        self.assertEqual(load_js(self.output / 'DALYCARE_atlas_payload.js'), decode_transport(wire))
+        self.assertEqual(audit_public_payload(decode_transport(wire)), [])
 
     def test_build_emits_offline_html_and_identical_json_and_script(self):
         self.write_input()

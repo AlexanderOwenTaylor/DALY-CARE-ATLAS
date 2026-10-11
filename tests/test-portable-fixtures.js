@@ -15,7 +15,7 @@ test('fixture dictionary parser retains quoted commas, newlines and escaped quot
 test('benchmark rejects future transport versions instead of scoring apparent top-level rows', () => {
   const directory=fs.mkdtempSync(path.join(__dirname,'synthetic-benchmark-'));
   try {
-    const envelope={transport_version:2,payload:{column_profile_rows:[]},aliases:[],column_profile_rows:[]};
+    const envelope={transport_version:3,payload:{column_profile_rows:[]},aliases:[],column_profile_rows:[]};
     for(const name of ['future.json','future.js']) {
       const file=path.join(directory,name),text=JSON.stringify(envelope);
       fs.writeFileSync(file,name.endsWith('.js')?'window.DALYCARE_ATLAS_PAYLOAD = '+text+';':text);
@@ -56,8 +56,18 @@ test('benchmark requires an explicit payload and scores legacy and versioned JSO
       assert.equal(scored.rows,2); assert.equal(scored.queries,5);
       assert.equal(scored.scoreChecksum,data.scoreChecksum);
     }
+    const packed={transport_version:2,payload:{...payload,column_profile_rows:null,review_infrastructure_sections:{}},aliases:envelope.aliases,row_tables:[
+      {path:['column_profile_rows'],schemas:[['table_name','column_name','domain']],rows:[
+        [0,'SYNTHETIC_SOURCE','creatinine','Synthetic'],[0,'SYNTHETIC_SOURCE','smoking','Synthetic']]}]};
+    for (const [file,text] of [[json,JSON.stringify(packed)],[js,'window.DALYCARE_ATLAS_PAYLOAD = '+JSON.stringify(packed)+';']]) {
+      fs.writeFileSync(file,text);
+      const versioned = spawnSync(process.execPath,[benchmark,file],{encoding:'utf8',env});
+      assert.equal(versioned.status,0,versioned.stderr);
+      const scored=JSON.parse(versioned.stdout);
+      assert.equal(scored.rows,2);assert.equal(scored.queries,5);assert.equal(scored.scoreChecksum,data.scoreChecksum);
+    }
     for (const file of [json,js]) {
-      const unsupported = {...envelope,transport_version:2};
+      const unsupported = {...envelope,transport_version:3};
       fs.writeFileSync(file,file===json?JSON.stringify(unsupported):'window.DALYCARE_ATLAS_PAYLOAD = '+JSON.stringify(unsupported)+';');
       const rejected = spawnSync(process.execPath,[benchmark,file],{encoding:'utf8',env});
       assert.notEqual(rejected.status,0); assert.match(rejected.stderr,/Unsupported payload transport version/);

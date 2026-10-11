@@ -1,16 +1,270 @@
 # Matched bounded transport and staged publication for R-only installations.
 atlas_bundle_json <- function(x) as.character(jsonlite::toJSON(x,auto_unbox=TRUE,null='null',na='null',digits=NA))
 atlas_bundle_aliases <- function() c(action_items='action_items',action_summary='action_summary',streaming_summary='review_streaming_summary',temporal_date_quality='review_temporal_date_quality',db_budget_actions='db_budget_actions',db_query_log='db_query_log',catalog='catalog_rows',resource_reconciliation='resource_reconciliation_rows',canonical_resource_reconciliation='canonical_resource_reconciliation_rows',current_run_source_map_audit='current_run_source_map_audit_rows',source_map_crosswalk='source_map_crosswalk_rows',source_resolution_delta='source_resolution_delta_rows',legacy_resource_audit='legacy_cartography_audit_rows',columns='column_profile_rows',column_summary='column_profile_summary',panels='panel_groups',qa='qa_items',run_summary='run_summary')
-atlas_payload_transport <- function(payload) {
+atlas_transport_version <- function(transport_version=NULL) {
+  if(is.null(transport_version)) {
+    selected <- Sys.getenv('DALYCARE_ATLAS_TRANSPORT_VERSION',unset='')
+    if(identical(selected,'')) return(2L)
+    selected <- trimws(selected,whitespace='[\\h\\v]')
+  } else selected <- transport_version
+  valid <- length(selected)==1L && !is.na(selected) &&
+    ((is.character(selected) && selected %in% c('1','2')) ||
+     (is.numeric(selected) && is.finite(selected) && selected %in% c(1,2)))
+  if(!valid) stop('Invalid atlas transport version',call.=FALSE)
+  as.integer(selected)
+}
+atlas_transport_limit <- function(max_bytes) {
+  if(!is.numeric(max_bytes) || length(max_bytes)!=1L || !is.finite(max_bytes) ||
+     max_bytes<=0 || max_bytes!=floor(max_bytes)) stop('Invalid transport byte limit',call.=FALSE)
+  min(67108864,max_bytes)
+}
+atlas_transport_record <- function(x) {
+  is.list(x) && identical(class(x),'list') &&
+    all(names(attributes(x)) %in% 'names') && !is.null(names(x)) &&
+    !anyNA(names(x)) && all(nzchar(names(x))) && !anyDuplicated(names(x))
+}
+atlas_transport_named_list <- function(x) {
+  is.list(x) && identical(class(x),'list') &&
+    all(names(attributes(x)) %in% 'names') && !is.null(names(x))
+}
+atlas_transport_wire_keys <- function(x) {
+  keys <- names(x)
+  missing <- is.na(keys) | !nzchar(keys)
+  keys[missing] <- as.character(seq_along(keys))[missing]
+  make.unique(keys)
+}
+atlas_transport_array <- function(x) is.list(x) && is.null(attributes(x))
+# Alias deduplication follows the existing serialized v1 wire contract. Inert
+# attributes can preserve that contract while making a node ineligible to pack.
+atlas_transport_alias_record <- function(x) {
+  keys <- names(x)
+  if(!is.list(x) || is.null(keys) || anyNA(keys) || any(!nzchar(keys)) || anyDuplicated(keys)) return(FALSE)
+  if(atlas_transport_record(x)) return(TRUE)
+  # Compare the complete record spelling to prove exact ordered key identities,
+  # rather than accepting any attribute-bearing value that merely starts with '{'.
+  members <- vapply(seq_along(x),function(i)
+    paste0(atlas_bundle_json(keys[[i]]),':',atlas_bundle_json(x[[i]])),character(1))
+  identical(atlas_bundle_json(x),paste0('{',paste(members,collapse=','),'}'))
+}
+atlas_transport_alias_array_json <- function(x) {
+  if(!is.list(x) || !is.null(names(x))) return(NULL)
+  encoded <- atlas_bundle_json(x)
+  if(!startsWith(encoded,'[') || !endsWith(encoded,']')) return(NULL)
+  encoded
+}
+atlas_transport_string_codes <- function(x) {
+  codes <- suppressWarnings(utf8ToInt(enc2utf8(x)))
+  if(anyNA(codes) || any(codes>=55296L & codes<=57343L)) stop('Invalid transport Unicode',call.=FALSE)
+  codes
+}
+atlas_transport_string_usage <- function(x) {
+  codes <- atlas_transport_string_codes(x)
+  2+sum(ifelse(codes %in% c(34L,92L,8L,9L,10L,12L,13L),2,
+    ifelse(codes<32L,6,ifelse(codes<128L,1,ifelse(codes<2048L,2,ifelse(codes<65536L,3,4))))))
+}
+# Count an unsupported R subtree's existing wire representation without rebuilding
+# or replacing its value graph. This also handles JSON NUL, which R strings lack.
+atlas_transport_json_usage <- function(text,max_bytes=67108864,depth=0L,reject_proto=FALSE) {
+  limit <- atlas_transport_limit(max_bytes); codes <- atlas_transport_string_codes(text)
+  n <- length(codes); pos <- 1L; total <- 0
+  add <- function(amount) {
+    total <<- total+amount
+    if(total>limit) stop('Transport normalized byte budget exceeded',call.=FALSE)
+  }
+  skip <- function() while(pos<=n && codes[[pos]] %in% c(9L,10L,13L,32L)) pos <<- pos+1L
+  take <- function(code) {
+    skip()
+    if(pos>n || codes[[pos]]!=code) stop('Invalid serialized transport shape',call.=FALSE)
+    pos <<- pos+1L
+  }
+  string <- function(key=FALSE) {
+    take(34L); add(2); key_codes <- integer()
+    while(pos<=n && codes[[pos]]!=34L) {
+      code <- codes[[pos]]; pos <<- pos+1L
+      if(code==92L) {
+        if(pos>n) stop('Invalid serialized transport string',call.=FALSE)
+        escape <- codes[[pos]]; pos <<- pos+1L
+        if(escape==117L) {
+          hex <- function() {
+            if(pos+3L>n) stop('Invalid serialized transport Unicode',call.=FALSE)
+            digits <- intToUtf8(codes[pos:(pos+3L)]); pos <<- pos+4L
+            if(!grepl('^[0-9a-fA-F]{4}$',digits)) stop('Invalid serialized transport Unicode',call.=FALSE)
+            strtoi(digits,16L)
+          }
+          code <- hex()
+          if(code>=55296L && code<=56319L) {
+            if(pos+1L>n || codes[[pos]]!=92L || codes[[pos+1L]]!=117L) stop('Invalid transport Unicode',call.=FALSE)
+            pos <<- pos+2L; low <- hex()
+            if(low<56320L || low>57343L) stop('Invalid transport Unicode',call.=FALSE)
+            code <- 65536L+(code-55296L)*1024L+low-56320L
+          } else if(code>=56320L && code<=57343L) stop('Invalid transport Unicode',call.=FALSE)
+        } else {
+          escaped <- c(`34`=34L,`92`=92L,`47`=47L,`98`=8L,`116`=9L,`110`=10L,`102`=12L,`114`=13L)
+          code <- escaped[[as.character(escape)]]
+          if(is.null(code)) stop('Invalid serialized transport string',call.=FALSE)
+        }
+      } else if(code<32L) stop('Invalid serialized transport string',call.=FALSE)
+      add(if(code %in% c(34L,92L,8L,9L,10L,12L,13L)) 2 else if(code<32L) 6 else
+        if(code<128L) 1 else if(code<2048L) 2 else if(code<65536L) 3 else 4)
+      if(key && reject_proto) key_codes <- c(key_codes,code)
+    }
+    take(34L)
+    if(key && reject_proto && identical(key_codes,utf8ToInt('__proto__'))) stop('Unsafe classic-script __proto__ property',call.=FALSE)
+  }
+  value <- function(level) {
+    if(level>128L) stop('Transport JSON depth exceeded',call.=FALSE)
+    skip()
+    if(pos>n) stop('Invalid serialized transport value',call.=FALSE)
+    code <- codes[[pos]]
+    if(code==34L) return(string())
+    if(code %in% c(91L,123L)) {
+      object <- code==123L; close <- if(object)125L else 93L
+      pos <<- pos+1L;add(2);skip()
+      if(pos<=n && codes[[pos]]==close) {pos <<- pos+1L;return(invisible(NULL))}
+      repeat {
+        if(object) {string(TRUE);take(58L);add(1)}
+        value(level+1L);skip()
+        if(pos<=n && codes[[pos]]==close) {pos <<- pos+1L;break}
+        take(44L);add(1)
+      }
+      return(invisible(NULL))
+    }
+    start <- pos
+    while(pos<=n && !codes[[pos]] %in% c(9L,10L,13L,32L,44L,93L,125L)) pos <<- pos+1L
+    token <- intToUtf8(codes[start:(pos-1L)])
+    if(token %in% c('null','true','false')) add(if(token=='false')5 else 4) else {
+      if(!grepl('^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?$',token) ||
+         !is.finite(suppressWarnings(as.numeric(token)))) stop('Invalid finite transport number',call.=FALSE)
+      add(32)
+    }
+  }
+  value(depth);skip()
+  if(pos<=n) stop('Invalid serialized transport suffix',call.=FALSE)
+  total
+}
+atlas_transport_usage <- function(x,max_bytes=67108864,reject_proto=FALSE) {
+  limit <- atlas_transport_limit(max_bytes); total <- 0
+  add <- function(amount) {
+    total <<- total+amount
+    if(total>limit) stop('Transport normalized byte budget exceeded',call.=FALSE)
+  }
+  walk <- function(value,depth) {
+    if(depth>128L) stop('Transport JSON depth exceeded',call.=FALSE)
+    if(is.null(value)) {add(4);return(invisible(NULL))}
+    if(is.numeric(value) && (any(is.nan(value)) || any(!is.na(value) & !is.finite(value)))) stop('Invalid finite transport number',call.=FALSE)
+    if(is.character(value)) for(s in value[!is.na(value)]) atlas_transport_string_codes(s)
+    record <- atlas_transport_named_list(value); array <- atlas_transport_array(value)
+    if(record || array) {
+      add(2+max(0,length(value)-1L))
+      keys <- if(record) atlas_transport_wire_keys(value) else NULL
+      for(i in seq_along(value)) {
+        if(record) {
+          key <- keys[[i]]
+          if(reject_proto && identical(key,'__proto__')) stop('Unsafe classic-script __proto__ property',call.=FALSE)
+          add(atlas_transport_string_usage(key)+1)
+        }
+        walk(value[[i]],depth+1L)
+      }
+    } else if(is.atomic(value) && is.null(attributes(value)) && length(value)==1L &&
+              typeof(value) %in% c('character','logical','integer','double')) {
+      if(is.na(value)) add(4) else if(is.character(value)) add(atlas_transport_string_usage(value)) else
+        if(is.logical(value)) add(if(value)4 else 5) else add(32)
+    } else {
+      if(is.environment(value) || is.function(value) || is.language(value) || isS4(value)) stop('Invalid transport R shape',call.=FALSE)
+      add(atlas_transport_json_usage(atlas_bundle_json(value),limit-total,depth,reject_proto))
+    }
+    invisible(NULL)
+  }
+  walk(x,0L);total
+}
+atlas_transport_scalar <- function(x) {
+  is.null(x) || (is.atomic(x) && is.null(attributes(x)) && length(x)==1L && !is.na(x) &&
+    (is.character(x) || is.logical(x) || (is.numeric(x) && is.finite(x))))
+}
+atlas_transport_pack <- function(payload,limits=list(tables=4096L,path_depth=16L,schemas_per_table=64L,
+  keys_per_schema=64L,key_utf8_bytes=128L,rows=100000L,cells=1000000L)) {
+  descriptors <- list(); packed_rows <- packed_cells <- 0
+  safe_component <- function(key) nzchar(key) && !key %in% c('__proto__','constructor','prototype') &&
+    nchar(enc2utf8(key),type='bytes')<=limits$key_utf8_bytes
+  candidate <- function(rows,path) {
+    if(!atlas_transport_array(rows) || length(rows)<2L || !length(path) ||
+       length(path)>limits$path_depth || !all(vapply(path,safe_component,logical(1))) ||
+       length(descriptors)>=limits$tables || length(rows)+packed_rows>limits$rows) return(NULL)
+    schemas <- packed <- list();cells <- 0
+    for(i in seq_along(rows)) {
+      row <- rows[[i]]; keys <- names(row)
+      if(!atlas_transport_record(row) || !length(row) || length(row)>limits$keys_per_schema ||
+         !all(vapply(keys,safe_component,logical(1))) || !all(vapply(row,atlas_transport_scalar,logical(1)))) return(NULL)
+      cells <- cells+length(row)
+      if(cells+packed_cells>limits$cells) return(NULL)
+      keys <- as.list(keys)
+      index <- which(vapply(schemas,identical,logical(1),keys))
+      if(!length(index)) {
+        if(length(schemas)>=limits$schemas_per_table) return(NULL)
+        schemas[[length(schemas)+1L]] <- keys;index <- length(schemas)
+      }
+      packed[[i]] <- c(list(as.integer(index-1L)),unname(row))
+    }
+    descriptor <- list(path=path,schemas=schemas,rows=packed)
+    # Replacing the array costs null (4), the descriptor, and one array separator.
+    before <- nchar(enc2utf8(atlas_bundle_json(rows)),type='bytes')
+    after <- 4+nchar(enc2utf8(atlas_bundle_json(descriptor)),type='bytes')+as.integer(length(descriptors)>0L)
+    if(after>=before) return(NULL)
+    list(descriptor=descriptor,cells=cells)
+  }
+  visit <- function(node,path=list()) {
+    if(!atlas_transport_record(node)) return(node)
+    for(key in names(node)) {
+      next_path <- c(path,list(key)); value <- node[[key]]
+      selected <- candidate(value,next_path)
+      if(!is.null(selected)) {
+        descriptors[[length(descriptors)+1L]] <<- selected$descriptor
+        packed_rows <<- packed_rows+length(value);packed_cells <<- packed_cells+selected$cells
+        node[key] <- list(NULL)
+      } else if(atlas_transport_record(value)) node[key] <- list(visit(value,next_path))
+    }
+    node
+  }
+  list(payload=visit(payload),row_tables=descriptors)
+}
+atlas_payload_transport <- function(payload,transport_version=2L,max_bytes=67108864) {
+  if(!is.numeric(transport_version) || length(transport_version)!=1L || !is.finite(transport_version) ||
+     !transport_version %in% c(1,2)) stop('Invalid transport protocol version',call.=FALSE)
+  max_bytes <- atlas_transport_limit(max_bytes)
+  if(!is.list(payload) || is.data.frame(payload) || is.null(names(payload)))
+    stop('Transport payload must be a named record',call.=FALSE)
   aliases <- list(); pairs <- atlas_bundle_aliases()
+  review <- payload[['review_infrastructure_sections']]
+  alias_parents <- atlas_transport_alias_record(payload) && atlas_transport_alias_record(review)
   for(target in names(pairs)) {
-    source <- pairs[[target]]; a <- payload$review_infrastructure_sections[[target]]; b <- payload[[source]]
-    if(is.list(a) && is.null(names(a)) && is.list(b) && is.null(names(b)) && identical(atlas_bundle_json(a),atlas_bundle_json(b))) {
+    if(!alias_parents) break
+    review <- payload[['review_infrastructure_sections']]
+    source <- pairs[[target]]; a <- review[[target]]; b <- payload[[source]]
+    a_json <- atlas_transport_alias_array_json(a);b_json <- atlas_transport_alias_array_json(b)
+    if(!is.null(a_json) && !is.null(b_json) && identical(a_json,b_json)) {
       payload$review_infrastructure_sections[target] <- NULL
       aliases[[length(aliases)+1L]] <- list(target=list('review_infrastructure_sections',target),source=list(source))
     }
   }
-  list(transport_version=1L,payload=payload,aliases=aliases)
+  # Expanded accounting precedes alias restoration; repeated aliases are excluded.
+  atlas_transport_usage(payload,max_bytes)
+  transport <- list(transport_version=as.integer(transport_version),payload=payload,aliases=aliases)
+  if(transport_version==2L) {
+    packed <- atlas_transport_pack(payload)
+    transport$payload <- packed$payload;transport$row_tables <- packed$row_tables
+  }
+  atlas_transport_usage(transport,max_bytes)
+  transport
+}
+atlas_transport_assets <- function(transport,max_bytes) {
+  max_bytes <- atlas_transport_limit(max_bytes)
+  # JSON object literals reinterpret __proto__, even though JSON.parse preserves it.
+  atlas_transport_usage(transport,max_bytes,reject_proto=TRUE)
+  encoded <- atlas_bundle_json(transport)
+  assets <- list(script=paste0('window.DALYCARE_ATLAS_PAYLOAD = ',encoded,';\n'),json=paste0(encoded,'\n'))
+  if(any(vapply(assets,function(text)nchar(enc2utf8(text),type='bytes')>max_bytes,logical(1))))
+    stop('Transport emitted-file byte budget exceeded',call.=FALSE)
+  assets
 }
 atlas_bundle_resource <- function(name,project_root) {
   path <- file.path(project_root,'inst/templates',name)
@@ -34,7 +288,8 @@ atlas_bundle_field_labels <- function(dictionary) {
   }
   labels
 }
-atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list(),membership_spec=NULL) {
+atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list(),membership_spec=NULL,transport_version=NULL) {
+  transport_version <- atlas_transport_version(transport_version)
   if(is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
   membership_path <- clinical_source_membership_path(project_root)
   if(!is.null(payload$clinical_source_inventory) && !identical(payload$clinical_source_inventory$inventory_version,membership_spec$inventory_version)) stop('Clinical-source inventory version differs from required resource.',call.=FALSE)
@@ -53,7 +308,9 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   payload <- atlas_public_privacy(payload,project_root,minimum)
   atlas_evidence_audit(safe);atlas_evidence_audit(payload)
   field_labels <- atlas_bundle_field_labels(safe[['clinical_display_dictionary']])
-  transport <- atlas_bundle_json(atlas_payload_transport(atlas_sanitize_payload_text(payload)))
+  transport <- atlas_payload_transport(atlas_sanitize_payload_text(payload),transport_version,
+    max_bytes=atlas_transport_limit(registry$input_max_bytes))
+  transport_assets <- atlas_transport_assets(transport,registry$input_max_bytes)
   parent <- dirname(site_dir);dir.create(parent,recursive=TRUE,showWarnings=FALSE)
   parent <- normalizePath(parent,winslash='/',mustWork=TRUE)
   output <- file.path(parent,basename(site_dir))
@@ -76,8 +333,8 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   }
   resources <- c(DALYCARE_atlas.html='DALYCARE_entry.html',DALYCARE_clinical.html='DALYCARE_atlas.html',DALYCARE_outputs.html='DALYCARE_outputs.html',`atlas-entry.js`='atlas-entry.js',`atlas-outputs.js`='atlas-outputs.js',`atlas-transport.js`='atlas-transport.js',`atlas-pages.css`='atlas-pages.css')
   for(name in names(resources)) if(!file.copy(atlas_bundle_resource(resources[[name]],project_root),file.path(stage,name))) stop('Resource copy failed',call.=FALSE)
-  write('DALYCARE_atlas_payload.js',paste0('window.DALYCARE_ATLAS_PAYLOAD = ',transport,';\n'))
-  write('DALYCARE_atlas_payload.json',paste0(transport,'\n'))
+  write('DALYCARE_atlas_payload.js',transport_assets$script)
+  write('DALYCARE_atlas_payload.json',transport_assets$json)
   write('DALYCARE_entry.js',paste0('window.DALYCARE_ENTRY = ',atlas_bundle_json(list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance)),';\n'))
   dir.create(file.path(stage,'output-shards'))
   registration <- function(table_id,shard_id,rows) {

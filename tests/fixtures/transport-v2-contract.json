@@ -1,0 +1,2426 @@
+{
+  "contract_version": 1,
+  "notice": "SYNTHETIC ONLY. Root owns this contract; implementers must not relax expectations.",
+  "hard_max_bytes": 67108864,
+  "work_limits": {
+    "tables": 4096,
+    "path_depth": 16,
+    "schemas_per_table": 64,
+    "keys_per_schema": 64,
+    "key_utf8_bytes": 128,
+    "rows": 100000,
+    "cells": 1000000,
+    "json_depth": 128
+  },
+  "normalized_charges": [
+    {
+      "value": null,
+      "charge": 4
+    },
+    {
+      "value": true,
+      "charge": 4
+    },
+    {
+      "value": false,
+      "charge": 5
+    },
+    {
+      "value": 0,
+      "charge": 32
+    },
+    {
+      "value": 1e+21,
+      "charge": 32
+    },
+    {
+      "value": "",
+      "charge": 2
+    },
+    {
+      "value": "a",
+      "charge": 3
+    },
+    {
+      "value": "\u00e6",
+      "charge": 4
+    },
+    {
+      "value": "\u4e2d",
+      "charge": 5
+    },
+    {
+      "value": "\ud83d\ude00",
+      "charge": 6
+    },
+    {
+      "value": "\"",
+      "charge": 4
+    },
+    {
+      "value": "\\",
+      "charge": 4
+    },
+    {
+      "value": "/",
+      "charge": 3
+    },
+    {
+      "value": "\b\t\n\f\r",
+      "charge": 12
+    },
+    {
+      "value": "\u0000\u001f",
+      "charge": 14
+    },
+    {
+      "value": "\u2028\u2029",
+      "charge": 8
+    },
+    {
+      "value": "quote\" backslash\\ slash/ \b\t\n\f\r\u0000\u001f \u00e6\u4e2d\ud83d\ude00\u2028\u2029",
+      "charge": 67
+    },
+    {
+      "value": [],
+      "charge": 2
+    },
+    {
+      "value": {},
+      "charge": 2
+    },
+    {
+      "value": [
+        null,
+        0,
+        false
+      ],
+      "charge": 45
+    },
+    {
+      "value": {
+        "a": null,
+        "b": "\u00e6"
+      },
+      "charge": 19
+    }
+  ],
+  "encoder_payload": {
+    "fixture_notice": "SYNTHETIC TRANSPORT CONTRACT; no research data",
+    "mixed_schema_rows": [
+      {
+        "synthetic_identifier_code": "001",
+        "synthetic_nullable_value": null,
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 0,
+        "synthetic_text_value": "quote\" backslash\\ slash/ \b\t\n\f\r\u0000\u001f \u00e6\u4e2d\ud83d\ude00\u2028\u2029"
+      },
+      {
+        "synthetic_identifier_code": "002",
+        "synthetic_boolean_flag": true,
+        "synthetic_number_value": -0.125,
+        "synthetic_nullable_value": null,
+        "synthetic_text_value": ""
+      },
+      {
+        "synthetic_nullable_value": null,
+        "synthetic_identifier_code": "003",
+        "synthetic_number_value": 1e+21,
+        "synthetic_boolean_flag": false,
+        "synthetic_text_value": "synthetic"
+      },
+      {
+        "synthetic_identifier_code": "004",
+        "synthetic_nullable_value": "present",
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 1e-07,
+        "synthetic_text_value": null
+      },
+      {
+        "synthetic_identifier_code": "001",
+        "synthetic_nullable_value": null,
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 0,
+        "synthetic_text_value": "quote\" backslash\\ slash/ \b\t\n\f\r\u0000\u001f \u00e6\u4e2d\ud83d\ude00\u2028\u2029"
+      },
+      {
+        "synthetic_identifier_code": "002",
+        "synthetic_boolean_flag": true,
+        "synthetic_number_value": -0.125,
+        "synthetic_nullable_value": null,
+        "synthetic_text_value": ""
+      },
+      {
+        "synthetic_nullable_value": null,
+        "synthetic_identifier_code": "003",
+        "synthetic_number_value": 1e+21,
+        "synthetic_boolean_flag": false,
+        "synthetic_text_value": "synthetic"
+      },
+      {
+        "synthetic_identifier_code": "004",
+        "synthetic_nullable_value": "present",
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 1e-07,
+        "synthetic_text_value": null
+      },
+      {
+        "synthetic_identifier_code": "001",
+        "synthetic_nullable_value": null,
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 0,
+        "synthetic_text_value": "quote\" backslash\\ slash/ \b\t\n\f\r\u0000\u001f \u00e6\u4e2d\ud83d\ude00\u2028\u2029"
+      },
+      {
+        "synthetic_identifier_code": "002",
+        "synthetic_boolean_flag": true,
+        "synthetic_number_value": -0.125,
+        "synthetic_nullable_value": null,
+        "synthetic_text_value": ""
+      },
+      {
+        "synthetic_nullable_value": null,
+        "synthetic_identifier_code": "003",
+        "synthetic_number_value": 1e+21,
+        "synthetic_boolean_flag": false,
+        "synthetic_text_value": "synthetic"
+      },
+      {
+        "synthetic_identifier_code": "004",
+        "synthetic_nullable_value": "present",
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 1e-07,
+        "synthetic_text_value": null
+      },
+      {
+        "synthetic_identifier_code": "001",
+        "synthetic_nullable_value": null,
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 0,
+        "synthetic_text_value": "quote\" backslash\\ slash/ \b\t\n\f\r\u0000\u001f \u00e6\u4e2d\ud83d\ude00\u2028\u2029"
+      },
+      {
+        "synthetic_identifier_code": "002",
+        "synthetic_boolean_flag": true,
+        "synthetic_number_value": -0.125,
+        "synthetic_nullable_value": null,
+        "synthetic_text_value": ""
+      },
+      {
+        "synthetic_nullable_value": null,
+        "synthetic_identifier_code": "003",
+        "synthetic_number_value": 1e+21,
+        "synthetic_boolean_flag": false,
+        "synthetic_text_value": "synthetic"
+      },
+      {
+        "synthetic_identifier_code": "004",
+        "synthetic_nullable_value": "present",
+        "synthetic_boolean_flag": false,
+        "synthetic_number_value": 1e-07,
+        "synthetic_text_value": null
+      }
+    ],
+    "catalog_rows": [
+      {
+        "synthetic_source_key": "SYNTHETIC_00",
+        "synthetic_record_count": 0,
+        "synthetic_available_flag": true
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_01",
+        "synthetic_record_count": 10,
+        "synthetic_available_flag": false
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_02",
+        "synthetic_record_count": 20,
+        "synthetic_available_flag": true
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_03",
+        "synthetic_record_count": 30,
+        "synthetic_available_flag": false
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_04",
+        "synthetic_record_count": 40,
+        "synthetic_available_flag": true
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_05",
+        "synthetic_record_count": 50,
+        "synthetic_available_flag": false
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_06",
+        "synthetic_record_count": 60,
+        "synthetic_available_flag": true
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_07",
+        "synthetic_record_count": 70,
+        "synthetic_available_flag": false
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_08",
+        "synthetic_record_count": 80,
+        "synthetic_available_flag": true
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_09",
+        "synthetic_record_count": 90,
+        "synthetic_available_flag": false
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_10",
+        "synthetic_record_count": 100,
+        "synthetic_available_flag": true
+      },
+      {
+        "synthetic_source_key": "SYNTHETIC_11",
+        "synthetic_record_count": 110,
+        "synthetic_available_flag": false
+      }
+    ],
+    "review_infrastructure_sections": {
+      "untouched": {
+        "note": "retain"
+      },
+      "catalog": [
+        {
+          "synthetic_source_key": "SYNTHETIC_00",
+          "synthetic_record_count": 0,
+          "synthetic_available_flag": true
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_01",
+          "synthetic_record_count": 10,
+          "synthetic_available_flag": false
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_02",
+          "synthetic_record_count": 20,
+          "synthetic_available_flag": true
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_03",
+          "synthetic_record_count": 30,
+          "synthetic_available_flag": false
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_04",
+          "synthetic_record_count": 40,
+          "synthetic_available_flag": true
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_05",
+          "synthetic_record_count": 50,
+          "synthetic_available_flag": false
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_06",
+          "synthetic_record_count": 60,
+          "synthetic_available_flag": true
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_07",
+          "synthetic_record_count": 70,
+          "synthetic_available_flag": false
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_08",
+          "synthetic_record_count": 80,
+          "synthetic_available_flag": true
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_09",
+          "synthetic_record_count": 90,
+          "synthetic_available_flag": false
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_10",
+          "synthetic_record_count": 100,
+          "synthetic_available_flag": true
+        },
+        {
+          "synthetic_source_key": "SYNTHETIC_11",
+          "synthetic_record_count": 110,
+          "synthetic_available_flag": false
+        }
+      ]
+    },
+    "nested_records": {
+      "one_key_rows": [
+        {
+          "synthetic_long_repeated_column_name": "zero"
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        },
+        {
+          "synthetic_long_repeated_column_name": null
+        }
+      ]
+    },
+    "empty_array": [],
+    "empty_record": {},
+    "ordinary_null": null,
+    "singleton_fallback": [
+      {
+        "a": "one"
+      }
+    ],
+    "nested_cell_fallback": [
+      {
+        "a": {
+          "inner": 1
+        }
+      },
+      {
+        "a": {
+          "inner": 2
+        }
+      }
+    ],
+    "array_element_fallback": [
+      {
+        "child": [
+          {
+            "a": 1
+          },
+          {
+            "a": 2
+          }
+        ]
+      }
+    ],
+    "unsafe_untouched": {
+      "__proto__": "own-data",
+      "constructor": "own-data",
+      "prototype": "own-data"
+    }
+  },
+  "encoder_payload_usage": "Codec round trips via parsed JSON. It deliberately contains an untouched own __proto__ property, so public classic-script writers must reject this exact fixture. For successful public writer parity, remove only that property from a copy, keeping constructor/prototype unchanged.",
+  "writer_boundaries": {
+    "own_proto_key_at_any_depth": "reject before promotion for version1 and version2",
+    "untouched_constructor_and_prototype": "preserve",
+    "prior_site_and_manifest_on_rejection": "unchanged"
+  },
+  "must_pack_paths": [
+    [
+      "mixed_schema_rows"
+    ],
+    [
+      "catalog_rows"
+    ],
+    [
+      "nested_records",
+      "one_key_rows"
+    ]
+  ],
+  "must_remain_verbatim_paths": [
+    [
+      "empty_array"
+    ],
+    [
+      "empty_record"
+    ],
+    [
+      "ordinary_null"
+    ],
+    [
+      "singleton_fallback"
+    ],
+    [
+      "nested_cell_fallback"
+    ],
+    [
+      "array_element_fallback"
+    ]
+  ],
+  "valid_decodes": [
+    {
+      "id": "mixed_absent_null",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      },
+      "logical": {
+        "rows": [
+          {
+            "label": "SYNTHETIC_A",
+            "count": null
+          },
+          {
+            "label": "001"
+          }
+        ],
+        "untouched": {
+          "ordinary_null": null
+        }
+      },
+      "encoded_charge": 303,
+      "expanded_pre_alias_charge": 98,
+      "minimum_decode_budget": 303
+    },
+    {
+      "id": "restored_alias_identity",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "catalog_rows": null,
+          "review_infrastructure_sections": {
+            "note": "keep"
+          }
+        },
+        "aliases": [
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          }
+        ],
+        "row_tables": [
+          {
+            "path": [
+              "catalog_rows"
+            ],
+            "schemas": [
+              [
+                "code",
+                "flag",
+                "value"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "001",
+                false,
+                0
+              ],
+              [
+                0,
+                "002",
+                true,
+                null
+              ]
+            ]
+          }
+        ]
+      },
+      "logical": {
+        "catalog_rows": [
+          {
+            "code": "001",
+            "flag": false,
+            "value": 0
+          },
+          {
+            "code": "002",
+            "flag": true,
+            "value": null
+          }
+        ],
+        "review_infrastructure_sections": {
+          "note": "keep",
+          "catalog": [
+            {
+              "code": "001",
+              "flag": false,
+              "value": 0
+            },
+            {
+              "code": "002",
+              "flag": true,
+              "value": null
+            }
+          ]
+        }
+      },
+      "identity_paths": [
+        [
+          [
+            "catalog_rows"
+          ],
+          [
+            "review_infrastructure_sections",
+            "catalog"
+          ]
+        ]
+      ],
+      "encoded_charge": 446,
+      "expanded_pre_alias_charge": 176,
+      "minimum_decode_budget": 446
+    },
+    {
+      "id": "delimiter_paths_and_ordered_schemas",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "a.b": {
+            "c": null
+          },
+          "a": {
+            "b.c": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "a.b",
+              "c"
+            ],
+            "schemas": [
+              [
+                "x.y",
+                "z"
+              ],
+              [
+                "x",
+                "y.z"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "first",
+                0
+              ],
+              [
+                1,
+                "second",
+                false
+              ]
+            ]
+          },
+          {
+            "path": [
+              "a",
+              "b.c"
+            ],
+            "schemas": [
+              [
+                "value"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                null
+              ],
+              [
+                0,
+                "retained"
+              ]
+            ]
+          }
+        ]
+      },
+      "logical": {
+        "a.b": {
+          "c": [
+            {
+              "x.y": "first",
+              "z": 0
+            },
+            {
+              "x": "second",
+              "y.z": false
+            }
+          ]
+        },
+        "a": {
+          "b.c": [
+            {
+              "value": null
+            },
+            {
+              "value": "retained"
+            }
+          ]
+        }
+      },
+      "encoded_charge": 458,
+      "expanded_pre_alias_charge": 145,
+      "minimum_decode_budget": 458
+    },
+    {
+      "id": "empty_tables_untouched_names",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "empty": [],
+          "nil": null,
+          "__proto__": {
+            "constructor": "own"
+          },
+          "prototype": "own"
+        },
+        "aliases": [],
+        "row_tables": []
+      },
+      "logical": {
+        "empty": [],
+        "nil": null,
+        "__proto__": {
+          "constructor": "own"
+        },
+        "prototype": "own"
+      },
+      "encoded_charge": 169,
+      "expanded_pre_alias_charge": 75,
+      "minimum_decode_budget": 169
+    },
+    {
+      "id": "unused_schema_is_bounded_metadata",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "r": null
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "r"
+            ],
+            "schemas": [
+              [
+                "x"
+              ],
+              [
+                "unused"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                1
+              ],
+              [
+                0,
+                2
+              ]
+            ]
+          }
+        ]
+      },
+      "logical": {
+        "r": [
+          {
+            "x": 1
+          },
+          {
+            "x": 2
+          }
+        ]
+      },
+      "encoded_charge": 292,
+      "expanded_pre_alias_charge": 85,
+      "minimum_decode_budget": 292
+    }
+  ],
+  "invalid_decodes": [
+    {
+      "id": "string_version",
+      "error_category": "version",
+      "wire": {
+        "transport_version": "2",
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "boolean_version",
+      "error_category": "version",
+      "wire": {
+        "transport_version": true,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "future_version",
+      "error_category": "version",
+      "wire": {
+        "transport_version": 3,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "extra_envelope_key",
+      "error_category": "shape",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ],
+        "extra": 1
+      }
+    },
+    {
+      "id": "missing_row_tables",
+      "error_category": "shape",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": []
+      }
+    },
+    {
+      "id": "extra_descriptor_key",
+      "error_category": "shape",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ],
+            "extra": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_schemas",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_schema",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              []
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "duplicate_schema_keys",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "duplicate_schemas",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "zero_rows",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "singleton_rows",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                1,
+                "one"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid_index_True",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                true,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid_index_-1",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                -1,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid_index_0.5",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0.5,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid_index_2",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                2,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "row_width",
+      "error_category": "row",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null,
+                "extra"
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "nested_cell",
+      "error_category": "cell",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                {
+                  "nested": 1
+                },
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_path",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "empty_path_component",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              ""
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing_destination",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "missing"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "non_null_destination",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": [],
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "array_path_traversal",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": [
+            null
+          ],
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows",
+              "0"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "duplicate_path",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          },
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "prefix_overlap",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          },
+          {
+            "path": [
+              "rows",
+              "child"
+            ],
+            "schemas": [
+              [
+                "x"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                1
+              ],
+              [
+                0,
+                2
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unsafe_path___proto__",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          },
+          "__proto__": null
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "__proto__"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unsafe_schema___proto__",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "__proto__",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unsafe_path_constructor",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          },
+          "constructor": null
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "constructor"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unsafe_schema_constructor",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "constructor",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unsafe_path_prototype",
+      "error_category": "path",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          },
+          "prototype": null
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "prototype"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "unsafe_schema_prototype",
+      "error_category": "schema",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "prototype",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "SYNTHETIC_A",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "late_alias_unreviewed",
+      "error_category": "alias",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "catalog_rows": null,
+          "review_infrastructure_sections": {
+            "note": "keep"
+          }
+        },
+        "aliases": [
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          },
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "unknown"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          }
+        ],
+        "row_tables": [
+          {
+            "path": [
+              "catalog_rows"
+            ],
+            "schemas": [
+              [
+                "code",
+                "flag",
+                "value"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "001",
+                false,
+                0
+              ],
+              [
+                0,
+                "002",
+                true,
+                null
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "late_alias_extra_key",
+      "error_category": "alias",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "catalog_rows": null,
+          "review_infrastructure_sections": {
+            "note": "keep"
+          }
+        },
+        "aliases": [
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ],
+            "extra": 1
+          }
+        ],
+        "row_tables": [
+          {
+            "path": [
+              "catalog_rows"
+            ],
+            "schemas": [
+              [
+                "code",
+                "flag",
+                "value"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "001",
+                false,
+                0
+              ],
+              [
+                0,
+                "002",
+                true,
+                null
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "late_alias_duplicate",
+      "error_category": "alias",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "catalog_rows": null,
+          "review_infrastructure_sections": {
+            "note": "keep"
+          }
+        },
+        "aliases": [
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          },
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          }
+        ],
+        "row_tables": [
+          {
+            "path": [
+              "catalog_rows"
+            ],
+            "schemas": [
+              [
+                "code",
+                "flag",
+                "value"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "001",
+                false,
+                0
+              ],
+              [
+                0,
+                "002",
+                true,
+                null
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "late_alias_overwrite",
+      "error_category": "alias",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "catalog_rows": null,
+          "review_infrastructure_sections": {
+            "note": "keep",
+            "catalog": []
+          }
+        },
+        "aliases": [
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          }
+        ],
+        "row_tables": [
+          {
+            "path": [
+              "catalog_rows"
+            ],
+            "schemas": [
+              [
+                "code",
+                "flag",
+                "value"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "001",
+                false,
+                0
+              ],
+              [
+                0,
+                "002",
+                true,
+                null
+              ]
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "late_alias_nonarray_source",
+      "error_category": "alias",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "catalog_rows": {},
+          "review_infrastructure_sections": {
+            "note": "keep"
+          }
+        },
+        "aliases": [
+          {
+            "target": [
+              "review_infrastructure_sections",
+              "catalog"
+            ],
+            "source": [
+              "catalog_rows"
+            ]
+          }
+        ],
+        "row_tables": []
+      }
+    },
+    {
+      "id": "lone_surrogate_cell",
+      "error_category": "unicode",
+      "wire": {
+        "transport_version": 2,
+        "payload": {
+          "rows": null,
+          "untouched": {
+            "ordinary_null": null
+          }
+        },
+        "aliases": [],
+        "row_tables": [
+          {
+            "path": [
+              "rows"
+            ],
+            "schemas": [
+              [
+                "label",
+                "count"
+              ],
+              [
+                "label"
+              ]
+            ],
+            "rows": [
+              [
+                0,
+                "\ud800",
+                null
+              ],
+              [
+                1,
+                "001"
+              ]
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "configuration_cases": [
+    {
+      "id": "default",
+      "explicit": null,
+      "environment": null,
+      "expect": 2
+    },
+    {
+      "id": "empty_environment",
+      "explicit": null,
+      "environment": "",
+      "expect": 2
+    },
+    {
+      "id": "trimmed_environment",
+      "explicit": null,
+      "environment": " 1\t",
+      "expect": 1
+    },
+    {
+      "id": "whitespace_environment",
+      "explicit": null,
+      "environment": "  ",
+      "error": true
+    },
+    {
+      "id": "bad_environment",
+      "explicit": null,
+      "environment": "01",
+      "error": true
+    },
+    {
+      "id": "explicit_precedence",
+      "explicit": 2,
+      "environment": "invalid",
+      "expect": 2
+    },
+    {
+      "id": "explicit_string",
+      "explicit": "1",
+      "environment": "2",
+      "expect": 1
+    },
+    {
+      "id": "explicit_bool",
+      "explicit": true,
+      "environment": "2",
+      "error": true
+    },
+    {
+      "id": "explicit_whitespace",
+      "explicit": " 1 ",
+      "environment": null,
+      "error": true
+    },
+    {
+      "id": "explicit_fraction",
+      "explicit": 1.5,
+      "environment": null,
+      "error": true
+    }
+  ],
+  "language_local_required": [
+    "cycles; acyclic shared subtrees charged per occurrence",
+    "holes, undefined, accessor, symbol and non-record graph values",
+    "nonfinite number and integer whose JavaScript equivalent is infinite",
+    "finite large integer compared to each runtime parsed-v1 baseline",
+    "mathematically integral numeric version/index spelling accepted",
+    "work-limit whole-table fallback with no counter consumption or truncation",
+    "encoded and expanded limits exact boundary and one below; actual-file boundary separately",
+    "early valid table then late invalid metadata/cell/alias/budget leaves input unchanged",
+    "successful decode leaves input unchanged; unaffected subtree sharing; restored alias identity",
+    "genuine legacy/v1 read branches and real default2/requested1 public builds"
+  ]
+}

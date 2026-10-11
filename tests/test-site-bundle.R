@@ -1,10 +1,13 @@
 source('tests/helper.R'); source_test_runtime()
+Sys.unsetenv('DALYCARE_ATLAS_TRANSPORT_VERSION')
 root <- normalizePath('.',winslash='/'); tmp <- tempfile('site-bundle-');dir.create(tmp)
 payload <- list(run_id='synthetic',action_items=list(list(status='safe')),review_infrastructure_sections=list(action_items=list(list(status='safe'))))
 snapshot <- list(privacy_metadata=list(minimum_cell_count=10),panels=list(registry_clinical_summary=lapply(seq_len(251),function(i)list(table_name=paste0('S',i),registry='LYFO',n_rows=if(i==251)7 else 20,n_cols=7,n_patients=20))))
 tables <- atlas_output_evidence(NULL,root,snapshot)
 stopifnot(exists('atlas_write_site_bundle',mode='function'))
 paths <- atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload')
+read_core <- function(path) jsonlite::fromJSON(path,simplifyVector=FALSE)
+stopifnot(read_core(paths$payload_json)$transport_version==2L)
 cattext <- paste(readLines(paths$catalogue,encoding='UTF-8'),collapse='\n')
 catalogue <- jsonlite::fromJSON(sub(';\\s*$','',sub('^[^=]+=', '',cattext)),simplifyVector=FALSE)
 table <- Filter(function(t)t$id=='registry_clinical_summary',catalogue$tables)[[1]]
@@ -25,6 +28,31 @@ member <- manifest[manifest$artifact_id=='clinical_source_membership',,drop=FALS
 stopifnot(nrow(member)==1L,member$clinical_source_inventory_version=='2026-10-11-clinical-source-1',
   member$input_md5==unname(tools::md5sum(clinical_source_membership_path(root))))
 prior <- tools::md5sum(c(actual,paths$manifest))
+# The actual public writer honors configuration and an explicit trailing choice.
+Sys.setenv(DALYCARE_ATLAS_TRANSPORT_VERSION='1')
+v1_paths <- atlas_write_site_bundle(file.path(tmp,'requested-v1','site'),payload,tables,root,'legacy_payload')
+stopifnot(read_core(v1_paths$payload_json)$transport_version==1L)
+Sys.setenv(DALYCARE_ATLAS_TRANSPORT_VERSION='invalid')
+explicit_paths <- atlas_write_site_bundle(file.path(tmp,'explicit-v2','site'),payload,tables,root,'legacy_payload',transport_version=2L)
+stopifnot(read_core(explicit_paths$payload_json)$transport_version==2L)
+caller_paths <- write_static_atlas(file.path(tmp,'public-caller'),payload,root,output_evidence=tables,transport_version='1')
+stopifnot(read_core(caller_paths$payload_json)$transport_version==1L)
+Sys.unsetenv('DALYCARE_ATLAS_TRANSPORT_VERSION')
+for(version in c(1L,2L)) {
+  for(bad in list(list(`__proto__`='bad'),list(nested=list(`__proto__`='bad')),
+                  list(nested=list(list(`__proto__`='bad'))))) {
+    bad$run_id <- 'synthetic'
+    failed <- try(atlas_write_site_bundle(file.path(tmp,'site'),bad,tables,root,'legacy_payload',transport_version=version),silent=TRUE)
+    stopifnot(inherits(failed,'try-error'),identical(prior,tools::md5sum(c(actual,paths$manifest))))
+  }
+  Sys.setenv(DALYCARE_ATLAS_INPUT_MAX_BYTES='1')
+  failed <- try(atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload',transport_version=version),silent=TRUE)
+  Sys.unsetenv('DALYCARE_ATLAS_INPUT_MAX_BYTES')
+  stopifnot(inherits(failed,'try-error'),identical(prior,tools::md5sum(c(actual,paths$manifest))))
+}
+ordinary_keys <- list(run_id='ordinary',untouched=list(constructor='kept',prototype='also kept'))
+ordinary_paths <- atlas_write_site_bundle(file.path(tmp,'ordinary','site'),ordinary_keys,list(),root,'legacy_payload')
+stopifnot(identical(read_core(ordinary_paths$payload_json)$payload$untouched,ordinary_keys$untouched))
 Sys.setenv(DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES='1')
 failed <- try(atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload'),silent=TRUE)
 Sys.unsetenv('DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES')

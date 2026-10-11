@@ -95,10 +95,10 @@ Root owns docs/build/verification/artifacts. No R/Python production changes.
 - [x] X1 exact semantics/field actions, Z3 offline phone/keyboard/tasks, W0
   organization/V33 comparison. Check HTTP direct/refresh/Back/invalid routes,
   global navigation, print and no new errors/external data requests.
-- [ ] Root inspects representative rendered images, records limitations and
+- [x] Root inspects representative rendered images, records limitations and
   acceptance, packages local site, commits/pushes source-only PR3 checkpoint.
   Continue active goal with the next evidenced usability/loading issue.
 
 Implementation, source review, final rendering and data equality are accepted.
-The remaining checkbox records the post-commit packaging/push operation; its
-local release validation and ledger are the final operational record.
+The post-commit packaging/push operation completed at source checkpoint
+eda8bfbb9fe604121b3b12522024fc5a92c4366d; both local ZIPs passed CRC verification.
