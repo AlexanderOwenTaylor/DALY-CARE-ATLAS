@@ -1,37 +1,20 @@
-write_static_atlas <- function(run_dir, payload, project_root = ".") {
+write_static_atlas <- function(run_dir, payload, project_root = ".", output_evidence = NULL, manifest_paths = list()) {
   if (!exists("atlas_public_privacy", mode = "function")) {
     source(file.path(project_root, "R", "public_privacy.R"), encoding = "UTF-8")
   }
-  site_dir <- file.path(run_dir, "site")
-  dir_create(site_dir)
-
-  template_path <- system.file("templates", "DALYCARE_atlas.html", package = "dalycareatlas")
-  if (!nzchar(template_path) || !file.exists(template_path)) {
-    template_path <- file.path(project_root, "inst", "templates", "DALYCARE_atlas.html")
+  if(!exists('atlas_write_site_bundle',mode='function')) source(file.path(project_root,'R/site_bundle.R'),encoding='UTF-8')
+  if(!exists('atlas_output_evidence',mode='function')) source(file.path(project_root,'R/output_evidence.R'),encoding='UTF-8')
+  registry <- atlas_output_registry(project_root)
+  for(id in c('npu_display_dictionary','clinical_display_dictionary')) {
+    spec <- Filter(function(s)s$id==id,registry$artifacts)[[1]]
+    path <- file.path(project_root,spec$source_file)
+    rows <- if(file.exists(path)) tryCatch(atlas_evidence_rows(atlas_read_registered_csv(path,spec,registry$input_max_bytes)),error=function(e)list()) else list()
+    payload[[id]] <- lapply(rows,function(row) lapply(row,function(v)if(is.null(v)) '' else v))
   }
-  if (!file.exists(template_path)) {
-    stop("HTML template not found.", call. = FALSE)
-  }
-
-  html_path <- file.path(site_dir, "DALYCARE_atlas.html")
-  payload_path <- file.path(site_dir, "DALYCARE_atlas_payload.js")
-  file.copy(template_path, html_path, overwrite = TRUE)
-
-  display_path <- file.path(project_root, "config", "npu-display-dictionary.csv")
-  if (file.exists(display_path)) {
-    display_rows <- utils::read.csv(display_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", na.strings = NULL)
-    payload$npu_display_dictionary <- public_rows(display_rows, max_rows = nrow(display_rows))
-  }
-  clinical_display_path <- file.path(project_root, "config", "clinical-display-dictionary.csv")
-  if (file.exists(clinical_display_path)) {
-    clinical_display_rows <- utils::read.csv(clinical_display_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", na.strings = NULL)
-    payload$clinical_display_dictionary <- public_rows(clinical_display_rows, max_rows = nrow(clinical_display_rows))
-  }
-  payload <- atlas_public_privacy(payload, project_root, atlas_min_cell_count())
-  json <- atlas_to_json(atlas_sanitize_payload_text(payload))
-  writeLines(enc2utf8(json), con = file.path(site_dir, "DALYCARE_atlas_payload.json"), useBytes = TRUE)
-  writeLines(enc2utf8(c("window.DALYCARE_ATLAS_PAYLOAD = ", json, ";")), con = payload_path, useBytes = TRUE)
-  list(html = html_path, payload = payload_path)
+  payload <- atlas_public_privacy(payload,project_root,atlas_effective_threshold(payload))
+  if(is.null(output_evidence)) output_evidence <- atlas_output_evidence(NULL,project_root,payload)
+  provenance <- if(any(vapply(output_evidence,function(t) identical(t$provenance,'csv_run'),logical(1)))) 'csv_outputs' else 'legacy_payload'
+  atlas_write_site_bundle(file.path(run_dir,'site'),payload,output_evidence,project_root,provenance,manifest_paths)
 }
 
 empty_streaming_progress_summary <- function() {

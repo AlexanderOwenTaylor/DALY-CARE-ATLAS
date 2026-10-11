@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
 from build_ui_iteration import build
 from public_privacy import audit_public_payload
+from site_bundle import decode_transport
 
 EXPORT_ENV = {
     'original': 'DALYCARE_TEST_ORIGINAL_EXPORT',
@@ -27,7 +28,7 @@ def load_js(path):
     prefix = 'window.DALYCARE_ATLAS_PAYLOAD ='
     raw = path.read_text(encoding='utf-8-sig').strip()
     assert raw.startswith(prefix)
-    return json.loads(raw[len(prefix):].strip().removesuffix(';'))
+    return decode_transport(json.loads(raw[len(prefix):].strip().removesuffix(';')))
 
 
 def supplied_exports():
@@ -43,7 +44,7 @@ def supplied_exports():
                 raise ValueError(f'{env} fails the public privacy audit')
             json_path = directory / 'DALYCARE_atlas_payload.json'
             if json_path.exists() or name == 'updated':
-                json_data = json.loads(json_path.read_text(encoding='utf-8-sig'))
+                json_data = decode_transport(json.loads(json_path.read_text(encoding='utf-8-sig')))
                 if json_data != data:
                     raise ValueError(f'{env} has different JS and JSON payloads')
             exports[name] = (directory, data)
@@ -85,12 +86,14 @@ class SyntheticBuilderTest(unittest.TestCase):
         # Use the real CLI in an isolated public-only project so a regression to
         # sibling output defaults cannot overwrite a developer's local export.
         project = Path(self.temp.name) / 'cli-project'
-        for directory in ('scripts', 'config', 'inst/templates'):
+        for directory in ('scripts', 'config', 'inst/templates', 'inst/config'):
             (project / directory).mkdir(parents=True, exist_ok=True)
-        for relative in ('scripts/build_ui_iteration.py', 'scripts/public_privacy.py',
+        for relative in ('scripts/build_ui_iteration.py', 'scripts/public_privacy.py', 'scripts/site_bundle.py', 'scripts/output_evidence.py', 'inst/config/public-output-registry.json',
                          'config/npu-display-dictionary.csv', 'config/clinical-display-dictionary.csv',
                          'config/public-measurement-policy.csv', 'inst/templates/DALYCARE_atlas.html'):
             shutil.copyfile(ROOT / relative, project / relative)
+        for resource in (ROOT/'inst/templates').iterdir():
+            if resource.is_file(): shutil.copyfile(resource, project/'inst/templates'/resource.name)
         return subprocess.run([sys.executable, str(project / 'scripts/build_ui_iteration.py'), *arguments],
                               cwd=self.temp.name, text=True, capture_output=True)
 
@@ -115,26 +118,32 @@ class SyntheticBuilderTest(unittest.TestCase):
         result = self.run_cli(['--input-dir', str(self.input), '--output-dir', str(self.output)])
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn('Built ', result.stdout)
+        raw = (self.output / 'DALYCARE_atlas_payload.js').read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';')
+        self.assertEqual(json.loads(raw), json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
-        self.assertEqual(data, json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
+        self.assertEqual(data, decode_transport(json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8'))))
         self.assertEqual(data['fixture_notice'], self.payload['fixture_notice'])
         self.assertEqual(audit_public_payload(data), [])
         self.assertEqual((self.output / 'DALYCARE_atlas.html').read_bytes(),
-                         (ROOT / 'inst/templates/DALYCARE_atlas.html').read_bytes())
+                         (ROOT / 'inst/templates/DALYCARE_entry.html').read_bytes())
 
     def test_build_emits_offline_html_and_identical_json_and_script(self):
         self.write_input()
         build(self.input, self.output, ROOT)
+        raw = (self.output / 'DALYCARE_atlas_payload.js').read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';')
+        self.assertEqual(json.loads(raw), json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
-        self.assertEqual(data, json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
+        self.assertEqual(data, decode_transport(json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8'))))
         self.assertEqual((self.output / 'DALYCARE_atlas.html').read_bytes(),
-                         (ROOT / 'inst/templates/DALYCARE_atlas.html').read_bytes())
-        self.assertIn('DALYCARE_atlas_payload.js', (self.output / 'DALYCARE_atlas.html').read_text(encoding='utf-8'))
+                         (ROOT / 'inst/templates/DALYCARE_entry.html').read_bytes())
+        self.assertIn('DALYCARE_atlas_payload.js', (self.output / 'DALYCARE_clinical.html').read_text(encoding='utf-8'))
         self.assertEqual(data['fixture_notice'], self.payload['fixture_notice'])
 
     def test_builder_preserves_committed_public_dictionary_identity(self):
         self.write_input()
         build(self.input, self.output, ROOT)
+        raw = (self.output / 'DALYCARE_atlas_payload.js').read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';')
+        self.assertEqual(json.loads(raw), json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
         for key, filename in [('npu_display_dictionary','npu-display-dictionary.csv'),
                               ('clinical_display_dictionary','clinical-display-dictionary.csv')]:
@@ -145,6 +154,8 @@ class SyntheticBuilderTest(unittest.TestCase):
     def test_builder_enforces_privacy_and_preserves_eligible_zero(self):
         self.write_input()
         build(self.input, self.output, ROOT)
+        raw = (self.output / 'DALYCARE_atlas_payload.js').read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';')
+        self.assertEqual(json.loads(raw), json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8')))
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
         self.assertEqual(audit_public_payload(data), [])
         self.assertGreaterEqual(data['privacy_metadata']['minimum_cell_count'], 5)
@@ -238,7 +249,7 @@ class AtlasExportTest(unittest.TestCase):
 
     def test_offline_script_and_json_have_identical_data(self):
         with (self.exports['updated'][0] / 'DALYCARE_atlas_payload.json').open(encoding='utf-8') as stream:
-            self.assertEqual(self.updated, json.load(stream))
+            self.assertEqual(self.updated, decode_transport(json.load(stream)))
 
     def test_exact_terminology_coverage_and_known_corrections(self):
         dictionary = {row['code']: row for row in self.updated['npu_display_dictionary']}

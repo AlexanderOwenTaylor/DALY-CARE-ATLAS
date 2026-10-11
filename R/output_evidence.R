@@ -206,7 +206,7 @@ atlas_save_build_context <- function(run_dir,payload_args,output_paths,panel_pat
   for (key in c('run_id','generated_at')) if (!is.character(payload_args[[key]]) || length(payload_args[[key]])!=1 || is.na(payload_args[[key]])) stop('Invalid run identity',call.=FALSE)
   context <- list(schema_version=1L,registry_version=1L,provenance='csv_rehydrated',run_id=payload_args$run_id,generated_at=payload_args$generated_at,
                   bindings=bindings,binding_files=binding_files,table_schemas=schema_metadata,query_template=atlas_query_template_context(payload_args),
-                  limits=list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes))
+                  minimum_cell_count=atlas_effective_threshold(),limits=list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes))
   path <- atlas_confined_path(run,'outputs/atlas_build_context.json')
   jsonlite::write_json(context,path,auto_unbox=TRUE,pretty=TRUE,null='null',na='null')
   invisible(path)
@@ -229,6 +229,7 @@ atlas_read_build_context <- function(run_dir,registry) {
 
 atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
   registry <- atlas_output_registry(project_root); context <- atlas_read_build_context(run_dir,registry)
+  minimum <- atlas_effective_threshold(context=context)
   args <- list(run_id=context$run_id,generated_at=context$generated_at,panels=list())
   for (spec in registry$artifacts) {
     if (!spec$id %in% unlist(context$bindings,use.names=FALSE)) next
@@ -255,7 +256,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
     frame <- atlas_evidence_get(args,unlist(spec$arg_path,use.names=FALSE))
     if(is.data.frame(frame)) logical <- atlas_evidence_set(logical,unlist(spec$payload_path,use.names=FALSE),atlas_evidence_rows(frame))
   }
-  guarded <- atlas_public_privacy(logical,project_root,atlas_min_cell_count())
+  guarded <- atlas_public_privacy(logical,project_root,minimum)
   # Transfer whole-table decisions to the original typed frames before any
   # clinical helper filters, ranks or caps them. This also protects derived copies.
   for(spec in registry$artifacts) if(length(spec$arg_path) && length(spec$payload_path)) {
@@ -273,7 +274,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
     }
   }
   args$mcl_triangle_feasibility$ki67_discovery <- args$ki67_discovery
-  payload <- atlas_public_privacy(do.call(atlas_payload,args),project_root,atlas_min_cell_count())
+  payload <- atlas_public_privacy(do.call(atlas_payload,args),project_root,minimum)
   list(payload=payload,tables=atlas_output_evidence(run_dir,project_root),context=context)
 }
 
@@ -305,6 +306,7 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
   registry <- atlas_output_registry(project_root); logical <- list(); descriptors <- list()
   if(!is.null(run_dir)) atlas_validate_output_manifest(run_dir,registry$input_max_bytes)
   context <- if (!is.null(run_dir) && file.exists(atlas_confined_path(run_dir,'outputs/atlas_build_context.json'))) atlas_read_build_context(run_dir,registry) else NULL
+  minimum <- atlas_effective_threshold(payload_snapshot,context)
   required <- unlist(context$bindings,use.names=FALSE)
   for(spec in registry$artifacts) {
     resource <- isTRUE(spec$resource); base <- if(resource) project_root else run_dir
@@ -320,7 +322,11 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
     } else if(spec$id %in% required) stop('Required registered input missing: ',spec$id,call.=FALSE)
     else if(is.null(run_dir) && !resource && !is.null(payload_snapshot) && length(spec$payload_path)) {
       candidate <- atlas_evidence_get(payload_snapshot,unlist(spec$payload_path,use.names=FALSE))
-      if(is.list(candidate) && is.null(names(candidate))) {rows <- candidate;status <- 'snapshot_preview';reason <- 'Original CSV row count and completeness unknown'}
+      if(is.list(candidate) && is.null(names(candidate))) {
+        converted <- tryCatch(atlas_normalize_snapshot_rows(candidate,spec),error=identity)
+        if(inherits(converted,'error')) {status <- 'unavailable';reason <- 'Snapshot values incompatible with reviewed schema'}
+        else {rows <- converted;status <- 'snapshot_preview';reason <- 'Original CSV row count and completeness unknown'}
+      }
     }
     if(!length(spec$projection)) {rows <- list();complete <- FALSE;count <- NULL;if(status %in% c('available','empty_output','snapshot_preview')) {status <- 'metadata_only';reason <- 'Public column projection not reviewed'}}
     if(length(spec$payload_path) && length(spec$projection)) logical <- atlas_evidence_set(logical,unlist(spec$payload_path,use.names=FALSE),rows)
@@ -329,18 +335,19 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
     descriptors[[length(descriptors)+1L]] <- descriptor
   }
   if(!exists('atlas_public_privacy',mode='function')) source(file.path(project_root,'R/public_privacy.R'),encoding='UTF-8')
-  safe <- atlas_public_privacy(logical,project_root,atlas_min_cell_count())
+  safe <- atlas_public_privacy(logical,project_root,minimum)
   atlas_evidence_audit(safe)
   privacy <- c('value_privacy_status','count_privacy_status','date_privacy_status','availability_privacy_status','numeric_privacy_status','summary_scope','summary_method','is_sensitive')
   for(i in seq_along(descriptors)) {
     spec <- registry$artifacts[[i]]
     rows <- if(length(spec$payload_path) && length(spec$projection)) atlas_evidence_get(safe,unlist(spec$payload_path,use.names=FALSE)) else list()
-    descriptors[[i]]$rows <- lapply(rows,function(row) row[intersect(names(row),c(unlist(spec$projection,use.names=FALSE),privacy))])
+    keys <- unique(c(unlist(spec$projection,use.names=FALSE),sort(intersect(unique(unlist(lapply(rows,names))),privacy))))
+    descriptors[[i]]$rows <- lapply(rows,function(row) setNames(lapply(keys,function(k)row[[k]]),keys))
     descriptors[[i]]$represented_row_count <- length(descriptors[[i]]$rows)
     terms <- unlist(lapply(descriptors[[i]]$rows,function(row)row[intersect(c('table_name','source_name','registry'),names(row))]),use.names=FALSE)
     descriptors[[i]]$source_terms <- as.list(sort(unique(terms[!is.na(terms) & nzchar(terms)])))
     types <- unlist(spec$schemas)
-    descriptors[[i]]$columns <- lapply(spec$projection,function(key)c(list(key=key,label=paste0(toupper(substr(gsub('_',' ',key),1,1)),substring(gsub('_',' ',key),2)),type=unname(types[key][1])),spec$column_meanings[[key]]))
+    descriptors[[i]]$columns <- lapply(as.list(keys),function(key)c(list(key=key,label=paste0(toupper(substr(gsub('_',' ',key),1,1)),substring(gsub('_',' ',key),2)),type=if(key %in% names(types)) unname(types[key][1]) else if(key=='is_sensitive') 'boolean' else 'string'),spec$column_meanings[[key]]))
   }
   if(!is.null(run_dir)) {
     known <- vapply(registry$artifacts,function(s)s$source_file,character(1)); unknown <- character()
@@ -353,4 +360,50 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
   bytes <- nchar(jsonlite::toJSON(lapply(descriptors,function(t)t$rows),auto_unbox=TRUE,null='null',na='null',digits=NA),type='bytes')
   if(bytes > registry$public_table_max_bytes) stop('Public table-data budget exceeded',call.=FALSE)
   descriptors
+}
+
+
+atlas_effective_threshold <- function(payload=NULL,context=NULL) {
+  values <- list(Sys.getenv('DALYCARE_MIN_CELL_COUNT',unset='5'))
+  if(!is.null(payload$privacy_metadata) && 'minimum_cell_count' %in% names(payload$privacy_metadata)) values <- c(values,list(payload$privacy_metadata$minimum_cell_count))
+  if('minimum_cell_count' %in% names(context)) values <- c(values,list(context$minimum_cell_count))
+  parsed <- vapply(values,function(value) {
+    if(length(value)!=1 || !(is.numeric(value) || is.character(value))) stop('Invalid explicit privacy threshold',call.=FALSE)
+    n <- suppressWarnings(as.numeric(value))
+    if(!is.finite(n) || n<1 || n!=floor(n)) stop('Invalid explicit privacy threshold',call.=FALSE)
+    n
+  },numeric(1))
+  max(5,parsed)
+}
+
+atlas_normalize_snapshot_rows <- function(rows,spec) {
+  types <- unlist(spec$schemas)
+  lapply(rows,function(row) {
+    if(!is.list(row) || is.null(names(row))) stop('Invalid snapshot row',call.=FALSE)
+    for(key in names(row)) {
+      value <- row[[key]]; kind <- unname(types[key][1])
+      if(is.null(value) || identical(value,'')) {row[key] <- list(NULL);next}
+      if(length(value)!=1 || is.list(value)) stop('Invalid snapshot cell',call.=FALSE)
+      if(identical(kind,'number')) {
+        n <- suppressWarnings(as.numeric(value))
+        if(is.logical(value) || !is.finite(n)) stop('Invalid numeric snapshot value',call.=FALSE)
+        row[[key]] <- n
+      } else if(identical(kind,'boolean')) {
+        if(!is.logical(value)) {
+          if(!is.character(value) || !toupper(value) %in% c('TRUE','FALSE')) stop('Invalid boolean snapshot value',call.=FALSE)
+          row[[key]] <- as.logical(toupper(value))
+        }
+      } else if(identical(kind,'string') && !is.character(value)) stop('Invalid string snapshot value',call.=FALSE)
+    }
+    row
+  })
+}
+
+
+atlas_context_input_paths <- function(run_dir,context,project_root='.') {
+  registry <- atlas_output_registry(project_root)
+  specs <- Filter(function(s)s$id %in% unlist(context$bindings),registry$artifacts)
+  paths <- lapply(specs,function(s)atlas_confined_path(run_dir,atlas_bound_source_file(s,context)))
+  names(paths) <- vapply(specs,function(s)paste0('input_',s$id),character(1))
+  c(list(atlas_build_context=atlas_confined_path(run_dir,'outputs/atlas_build_context.json')),paths)
 }

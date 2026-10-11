@@ -7,7 +7,7 @@ import sys
 import threading
 from contextlib import contextmanager
 from pathlib import Path
-from public_privacy import sanitize_public_payload, audit_public_payload
+from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold
 
 
 def load_registry(project_root):
@@ -138,6 +138,7 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
             context = json.loads(context_path.read_text(encoding='utf-8'))
             if context.get('schema_version') != 1:
                 raise ValueError('Unsupported build context')
+    minimum = effective_threshold(payload_snapshot, context)
     required = set(context.get('bindings', [])) if context else set()
     binding_files = (context or {}).get('binding_files') or {}
     known_ids = {spec['id'] for spec in registry['artifacts']}
@@ -165,7 +166,11 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
         elif run is None and not resource and payload_snapshot is not None and spec['payload_path']:
             candidate = _get(payload_snapshot, spec['payload_path'])
             if isinstance(candidate, list):
-                rows, status, reason = candidate, 'snapshot_preview', 'Original CSV row count and completeness unknown'
+                try:
+                    rows = normalize_snapshot_rows(candidate, spec)
+                    status, reason = 'snapshot_preview', 'Original CSV row count and completeness unknown'
+                except ValueError:
+                    rows, status, reason = [], 'unavailable', 'Snapshot values incompatible with reviewed schema'
         if not spec['projection']:
             rows, complete = [], False
             if status in ('available', 'empty_output', 'snapshot_preview'):
@@ -180,18 +185,19 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
                           source_terms=[], columns=[], rows=[])
         descriptors.append(descriptor)
         retained.append(spec)
-    safe = sanitize_public_payload(logical, project_root=project_root)
+    safe = sanitize_public_payload(logical, min_cell_count=minimum, project_root=project_root)
     if audit_public_payload(safe):
         raise ValueError('Public evidence privacy audit failed')
     privacy_columns = {'value_privacy_status', 'count_privacy_status', 'date_privacy_status', 'availability_privacy_status', 'numeric_privacy_status', 'summary_scope', 'summary_method', 'is_sensitive'}
     for descriptor, spec in zip(descriptors, retained):
         rows = _get(safe, spec['payload_path']) if spec['payload_path'] and spec['projection'] else []
         allowed = set(spec['projection']) | privacy_columns
-        descriptor['rows'] = [{k: v for k, v in row.items() if k in allowed} for row in rows or []]
+        keys = list(spec['projection']) + sorted({k for row in rows or [] for k in row if k in privacy_columns and k not in spec['projection']})
+        descriptor['rows'] = [{k: row.get(k) for k in keys} for row in rows or []]
         descriptor['represented_row_count'] = len(descriptor['rows'])
         descriptor['source_terms'] = sorted({str(row[key]) for row in descriptor['rows'] for key in ('table_name', 'source_name', 'registry') if row.get(key) not in (None, '')})
         types = {k: v for schema in spec['schemas'] for k, v in schema.items()}
-        descriptor['columns'] = [{'key': key, 'label': key.replace('_', ' ').capitalize(), 'type': types.get(key, 'string'), **spec.get('column_meanings', {}).get(key, {})} for key in spec['projection']]
+        descriptor['columns'] = [{'key': key, 'label': key.replace('_', ' ').capitalize(), 'type': types.get(key, 'boolean' if key == 'is_sensitive' else 'string'), **spec.get('column_meanings', {}).get(key, {})} for key in keys]
     if run is not None:
         known = {s['source_file'] for s in retained}
         unknown = []
@@ -206,3 +212,36 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
     if size > registry['public_table_max_bytes']:
         raise ValueError('Public table-data budget exceeded')
     return descriptors
+
+
+def normalize_snapshot_rows(rows, spec):
+    """Convert only registered types before the whole-table privacy guard."""
+    types = {k: v for schema in spec['schemas'] for k, v in schema.items()}
+    result = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError('Invalid snapshot row')
+        converted = dict(row)
+        for key, value in row.items():
+            kind = types.get(key)
+            if value is None or value == '':
+                converted[key] = None
+            elif kind == 'number':
+                if isinstance(value, bool):
+                    raise ValueError('Invalid numeric snapshot value')
+                try:
+                    converted[key] = float(value)
+                except (TypeError, ValueError) as exc:
+                    raise ValueError('Invalid numeric snapshot value') from exc
+                if not math.isfinite(converted[key]):
+                    raise ValueError('Invalid numeric snapshot value')
+            elif kind == 'boolean':
+                if isinstance(value, bool):
+                    continue
+                if not isinstance(value, str) or value.upper() not in ('TRUE', 'FALSE'):
+                    raise ValueError('Invalid boolean snapshot value')
+                converted[key] = value.upper() == 'TRUE'
+            elif kind == 'string' and not isinstance(value, str):
+                raise ValueError('Invalid string snapshot value')
+        result.append(converted)
+    return result

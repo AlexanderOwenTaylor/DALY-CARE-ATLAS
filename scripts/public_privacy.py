@@ -2,6 +2,7 @@
 import copy
 import csv
 import math
+import os
 import re
 from pathlib import Path
 
@@ -151,3 +152,19 @@ def audit_public_payload(payload):
                 visit(v,path+(key,))
     visit(payload,())
     return sorted(set(errors))
+
+
+def effective_threshold(payload=None, context=None):
+    values = [os.environ.get('DALYCARE_MIN_CELL_COUNT', '5')]
+    for obj in (payload, context):
+        if obj is not None:
+            metadata = obj.get('privacy_metadata', {}) if obj is payload else obj
+            if 'minimum_cell_count' in metadata:
+                values.append(metadata['minimum_cell_count'])
+    thresholds = [5]
+    for value in values:
+        n = number(value)
+        if n is None or n < 1 or n != int(n):
+            raise ValueError('Invalid explicit privacy threshold')
+        thresholds.append(int(n))
+    return max(thresholds)

@@ -20,3 +20,8 @@ config/dalycare_cycle4_curator_label_promotions.csv
 inst/extdata/*/outputs/
 inst/legacy/**/site/
 qa_pdsa_cycle*/
+
+# Generated site bundles and local QA artifacts
+site/
+.artifact-temp/
+site.manifest.json

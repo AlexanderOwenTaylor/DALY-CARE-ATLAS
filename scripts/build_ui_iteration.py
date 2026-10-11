@@ -4,37 +4,80 @@ import csv
 import json
 import os
 from pathlib import Path
-from public_privacy import sanitize_public_payload, audit_public_payload
+from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold
+from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, _bound_source_file
+from site_bundle import write_site_bundle, decode_transport
 
 
-def build(input_dir, output_dir, project_root):
+def build(input_dir, output_dir, project_root, run_dir=None):
+    input_dir, output_dir, project_root = map(Path, (input_dir, output_dir, project_root))
+    registry = load_registry(project_root)
     source = input_dir / 'DALYCARE_atlas_payload.js'
+    if source.stat().st_size > registry['input_max_bytes']:
+        raise ValueError('Imported payload exceeds pre-read limit')
     raw = source.read_text(encoding='utf-8-sig')
     prefix = 'window.DALYCARE_ATLAS_PAYLOAD ='
     if not raw.strip().startswith(prefix):
         raise ValueError('Unrecognized atlas payload wrapper')
-    payload = json.loads(raw.strip()[len(prefix):].strip().removesuffix(';'))
-    with (project_root / 'config/npu-display-dictionary.csv').open(encoding='utf-8-sig', newline='') as stream:
-        payload['npu_display_dictionary'] = list(csv.DictReader(stream))
-    with (project_root / 'config/clinical-display-dictionary.csv').open(encoding='utf-8-sig', newline='') as stream:
-        payload['clinical_display_dictionary'] = list(csv.DictReader(stream))
+    payload = decode_transport(json.loads(raw.strip()[len(prefix):].strip().removesuffix(';')))
+    context = matching_run_context(run_dir, payload, registry) if run_dir is not None else None
+    minimum = effective_threshold(payload, context)
+    for key in ('npu_display_dictionary','clinical_display_dictionary'):
+        spec = next(s for s in registry['artifacts'] if s['id']==key)
+        try:
+            payload[key] = [{k: '' if v is None else v for k,v in row.items()} for row in read_registered_csv(project_root/spec['source_file'], spec, registry['input_max_bytes'])]
+        except ValueError:
+            payload[key] = []
     payload['display_metadata'] = {
         'version': '2026-10-11-clinician-9',
         'terminology_source': 'https://cms.ifcc.org/wp-content/uploads/npu-codes-latest.csv',
         'danish_alias_source': 'https://docs.ehealth.sundhed.dk/latest/ig/CodeSystem-mcs.json',
         'note': 'Public disclosure guard applied; stored source-row summaries and reference terminology.'
     }
-    payload = sanitize_public_payload(payload, min_cell_count=os.environ.get('DALYCARE_MIN_CELL_COUNT', '5'), project_root=project_root)
+    payload = sanitize_public_payload(payload, min_cell_count=minimum, project_root=project_root)
     payload['display_metadata'].update(payload['privacy_metadata'])
     errors = audit_public_payload(payload)
     if errors:
         raise ValueError(f'Public privacy audit failed at {len(errors)} paths')
-    compact = json.dumps(payload, ensure_ascii=False, separators=(',', ':'), allow_nan=False)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / 'DALYCARE_atlas.html').write_bytes((project_root / 'inst/templates/DALYCARE_atlas.html').read_bytes())
-    (output_dir / 'DALYCARE_atlas_payload.js').write_text(prefix + compact + ';\n', encoding='utf-8')
-    (output_dir / 'DALYCARE_atlas_payload.json').write_text(compact + '\n', encoding='utf-8')
-    print(f'Built {output_dir}: {len(compact.encode()):,} payload bytes')
+    tables = collect_output_evidence(run_dir, project_root, payload)
+    inputs = [dict(path=str(source.resolve()),bytes=source.stat().st_size,provenance='legacy_payload')]
+    for spec in registry['artifacts']:
+        base = project_root if spec.get('resource') else run_dir
+        if base is not None:
+            path = confined_path(base,spec['source_file'] if spec.get('resource') else _bound_source_file(spec,context))
+            if path.is_file(): inputs.append(dict(path=str(path),bytes=path.stat().st_size,provenance='project_reference' if spec.get('resource') else 'csv_run',artifact_id=spec['id']))
+    if context is not None:
+        path=confined_path(run_dir,'outputs/atlas_build_context.json')
+        inputs.append(dict(path=str(path),bytes=path.stat().st_size,provenance='build_context'))
+    paths = write_site_bundle(output_dir, payload, tables, project_root, 'legacy_payload',manifest_inputs=inputs)
+    print(f'Built {output_dir}: {paths["payload_json"].stat().st_size:,} transport bytes')
+    return paths
+
+
+def matching_run_context(run_dir, payload, registry):
+    """Saved identity wins; historical migration requires the reviewed run metric."""
+    run = Path(run_dir).resolve(strict=True)
+    path = confined_path(run, 'outputs/atlas_build_context.json')
+    context, identities = None, []
+    if path.exists():
+        if path.stat().st_size > registry['input_max_bytes']:
+            raise ValueError('Build context exceeds pre-read limit')
+        context = json.loads(path.read_text(encoding='utf-8-sig'))
+        if context.get('schema_version') != 1 or context.get('registry_version') != 1:
+            raise ValueError('Unsupported build context')
+        identities.append(context.get('run_id'))
+    spec = next(s for s in registry['artifacts'] if s['source_file']=='outputs/atlas_run_summary.csv')
+    summary = confined_path(run, spec['source_file'])
+    if summary.exists():
+        rows = read_registered_csv(summary, spec, registry['input_max_bytes'])
+        found = [r['value'] for r in rows if r['metric']=='run_id']
+        if len(found)!=1:
+            raise ValueError('Missing or conflicting run identity')
+        identities.extend(found)
+    if not identities or any(not isinstance(i,str) or not i or i!=payload.get('run_id') for i in identities):
+        raise ValueError('Selected CSV run does not match imported payload identity')
+    return context
+
 
 
 if __name__ == '__main__':
@@ -44,5 +87,6 @@ if __name__ == '__main__':
                         help='Directory containing DALYCARE_atlas_payload.js to rebuild')
     parser.add_argument('--output-dir', type=Path, required=True,
                         help='Directory in which to write the rebuilt HTML, JS, and JSON files')
+    parser.add_argument('--run-dir', type=Path, help='Explicit matching CSV run to restore complete table evidence')
     args = parser.parse_args()
-    build(args.input_dir, args.output_dir, root)
+    build(args.input_dir, args.output_dir, root, args.run_dir)

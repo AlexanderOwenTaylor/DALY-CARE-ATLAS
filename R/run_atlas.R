@@ -694,13 +694,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   output_paths$atlas_build_context <- atlas_save_build_context(run_dir, payload_args, output_paths, panel_paths, project_root)
   reconstructed <- atlas_payload_from_run_outputs(run_dir, project_root)
   payload <- reconstructed$payload
-  site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
-  log_event("info", "", "Static atlas written")
-
   memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
-  all_paths <- c(output_paths, panel_paths, list(html = site_paths$html, payload = site_paths$payload, memory_log = memory_log_path))
-  manifest <- output_manifest(all_paths, run_dir = run_dir)
-  manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
+  manifest_paths <- c(output_paths,panel_paths,atlas_context_input_paths(run_dir,reconstructed$context,project_root),list(memory_log=memory_log_path))
+  site_paths <- write_static_atlas(run_dir,payload,project_root=project_root,output_evidence=reconstructed$tables,manifest_paths=manifest_paths)
+  manifest_path <- site_paths$manifest
+  log_event("info", "", "Static atlas written")
   log_event("info", "", "Output manifest written")
   log_event("info", "", paste("Run summary:", run_summary_log_message(run_summary)))
   write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
@@ -943,6 +941,7 @@ output_manifest_artifact_metadata <- function(id, path = "") {
 }
 
 output_manifest <- function(paths, run_dir) {
+  paths <- paths[!duplicated(vapply(paths,function(p)tolower(normalizePath(p,winslash="/",mustWork=FALSE)),character(1)))]
   rows <- lapply(names(paths), function(id) {
     path <- paths[[id]]
     info <- if (file.exists(path)) file.info(path) else NULL
