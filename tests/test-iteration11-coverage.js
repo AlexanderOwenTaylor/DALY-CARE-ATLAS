@@ -39,5 +39,5 @@ test('time overview retains a group with an absent year and a withheld count',()
 });
 
 test('unreviewed regional status keeps its uncertainty and none remains a support status',()=>{
- const {run}=runtime();assert.match(run("coveragePill('none')"),/No default EHR support/);assert.doesNotMatch(run("coveragePill('none')"),/No records|No clinical data/i);assert.match(run("coveragePill('new_status')"),/Status not reviewed: new_status/);
+ const {run}=runtime();assert.match(run("coveragePill('none')"),/No default EHR support/);assert.doesNotMatch(run("coveragePill('none')"),/No records|No clinical data/i);assert.match(run("coveragePill('new_status')"),/Regional status not interpreted/);assert.match(run("coveragePill('new_status')"),/title="new_status"/);assert.doesNotMatch(run("coveragePill('no')"),/>[^<]*\bno\b/i);
 });

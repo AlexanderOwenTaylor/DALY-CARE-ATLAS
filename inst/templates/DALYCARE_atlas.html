@@ -1284,6 +1284,66 @@
     .source-coverage { margin-top: 16px; }
     .source-year-counts { max-width: 520px; }
     .source-year-counts td, .source-year-counts th { padding: 9px 12px; }
+    .hero { padding: 14px 24px; }
+    .hero h1 { font-size: 27px; margin: 0 0 3px; }
+    .hero .kicker { display: block; font-size: 10px; margin: 0 0 3px; }
+    .hero-copy { font-size: 13px; margin: 0; }
+    .global-search-shell { margin-top: 10px; padding: 0; background: transparent; border: 0; }
+    .global-search-shell label { font-size: 11px; margin-bottom: 4px; }
+    .global-search-row { grid-template-columns: minmax(0,1fr) auto; max-width: 900px; }
+    .global-search-row input { grid-column: auto; }
+    .global-search-results:empty { display: none; }
+    .export-metadata { margin-top: 7px; font-size: 11px; }
+    .export-metadata summary { color: #e4f2ed; }
+    .export-metadata .hero-meta { display: flex; margin: 8px 0; }
+    .nav-inner { align-items: center; gap: 0; padding: 4px 16px; }
+    .tab-button,.atlas-page-link { padding: 10px 9px 8px; font-size: 12px; }
+    .nav-more,.secondary-nav { position: relative; }
+    .nav-more > summary,.secondary-nav > summary { padding: 10px; font-size: 12px; color: var(--muted); }
+    .nav-more[open] > .nav-more-options { position: absolute; right: 0; top: 100%; background: white; border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); min-width: 230px; padding: 5px; z-index: 30; }
+    .nav-more-options .tab-button { display: block; width: 100%; text-align: left; }
+    .secondary-nav[open] { flex-basis: 100%; }
+    .secondary-nav .sub-tab { margin: 3px; }
+    .home-intro { margin: 4px 0 12px; }
+    .home-intro h2 { font-size: 23px; margin: 0; }
+    .home-actions,.registry-actions,.source-evidence-links { display: flex; gap: 8px 18px; flex-wrap: wrap; align-items: center; margin: 10px 0; font-size: 13px; }
+    .home-actions button,.registry-actions button { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; background: white; min-height: 42px; }
+    .source-evidence-links a { color: var(--green); font-weight: 600; }
+    .home-route { padding: 14px; gap: 6px; border-radius: 7px; }
+    .home-route strong { font-size: 18px; }
+    .home-route > span:not(.route-number):not(.route-open) { font-size: 12px; }
+    .home-route .route-number,.home-route .route-open { display: none; }
+    .home-notes { display: block; margin: 16px 0; }
+    .home-export { margin: 14px 0; font-size: 13px; }
+    .registry-numeric-card p { margin: 8px 0; }
+    #registry-cards .registry-card { align-self: start; align-content: start; }
+    .source-tile .kpi-row { grid-template-columns: minmax(0,1fr); }
+    .source-tile .kpi b { white-space: nowrap; overflow-wrap: normal; }
+    .global-search-shell .global-result-actions [data-search-open] { background: var(--green); color: #fff; border: 1px solid var(--green); }
+    .global-search-shell .global-result-actions [data-search-open]:focus-visible { outline: 3px solid #b67910; outline-offset: 3px; }
+    @media(max-width:820px) {
+      .hero { padding: 12px 14px; }
+      .hero h1 { font-size: 23px; }
+      .hero-copy { display: none; }
+      .global-search-row { grid-template-columns: minmax(0,1fr) auto; }
+      .global-search-row input { grid-column: auto; }
+      .nav-inner { flex-wrap: nowrap; gap: 5px; padding: 5px 10px; }
+      .mobile-tab-label,.nav-more { display: none; }
+      .mobile-tab-select { width: auto; flex: 1; font-size: 12px; padding: 8px 5px; }
+      .atlas-page-link { padding: 8px 4px; font-size: 11px; }
+      .sub-nav { flex-wrap: wrap; position: static; gap: 3px; padding: 5px; }
+      .sub-tab { font-size: 11px; padding: 8px; }
+      main { padding: 12px 12px 28px; }
+      .home-routes { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+      .home-route { padding: 10px; }
+      .home-route strong { font-size: 16px; }
+      .home-route > span:not(.route-number):not(.route-open) { font-size: 11px; }
+      .home-intro h2 { font-size: 20px; }
+      #clinician-home .measurement-shortcuts { margin: 8px 0; }
+      #clinician-home .measurement-shortcuts button { min-height: 40px; font-size: 12px; }
+      .home-actions,.registry-actions { gap: 5px; }
+      .home-actions button,.registry-actions button { font-size: 12px; padding: 6px 9px; }
+    }
   </style>
 
 </head>
@@ -1291,22 +1351,21 @@
   <header class="hero">
     <div class="hero-inner">
       <p class="kicker">DALY-CARE Data Resource</p>
-      <h1>DALY-CARE Atlas</h1>
+      <h1>Clinical explorer</h1>
       <p class="hero-copy" id="hero-copy">Loading run payload...</p>
-      <div class="hero-meta">
+      <details class="export-metadata"><summary>Snapshot and export details</summary><div class="hero-meta">
         <span id="run-id">Run pending</span>
         <span id="generated-at">Generated pending</span>
         <span id="builder-credit">Built by Alexander Owen Taylor</span>
         <span id="qa-badge" class="badge">QA pending</span>
-      </div>
+      </div><button class="utility-button" type="button" data-copy-share-link="true">Copy link</button></details>
       <div class="global-search-shell" role="search" aria-label="Global atlas search">
         <label for="global-atlas-search">Search the atlas</label>
         <div class="global-search-row">
           <input id="global-atlas-search" type="search" placeholder="Search a clinical name, code or source…" autocomplete="off">
           <button class="utility-button primary" id="global-search-button" type="button">Search</button>
-          <button class="utility-button" type="button" data-copy-share-link="true">Copy link</button>
         </div>
-        <div id="global-search-results" class="global-search-results" aria-live="polite"></div><div class="meaning-shortcut"><button type="button" class="utility-button" data-jump-tab="dictionary" data-jump-sub="dictionary-codes">Codes &amp; clinical terms →</button></div>
+        <div id="global-search-results" class="global-search-results" aria-live="polite"></div>
       </div>
       <div id="hero-metrics" class="hero-metrics"></div>
     </div>
@@ -1331,18 +1390,20 @@
       </select>
       <a href="DALYCARE_atlas.html" class="atlas-page-link">Home</a>
       <a href="DALYCARE_outputs.html" class="atlas-page-link">Data tables</a>
-      <button class="tab-button active" data-tab="overview">Overview</button>
-      <button class="tab-button" data-tab="variables">Clinical Variables</button>
-      <button class="tab-button" data-tab="situation">Situation Report</button>
-      <button class="tab-button" data-tab="quickstart">Quick Start</button>
-      <button class="tab-button" data-tab="clinical-feasibility">Clinical Feasibility</button>
-      <button class="tab-button" data-tab="registries">Disease Registries</button>
+      <button class="tab-button active" data-tab="overview">Start</button>
+      <button class="tab-button" data-tab="registries">Registries</button>
       <button class="tab-button" data-tab="clinical">Clinical Data</button>
       <button class="tab-button" data-tab="treatment">Treatment</button>
-      <button class="tab-button" data-tab="laboratory">Laboratory & Diagnostics</button>
-      <button class="tab-button" data-tab="dictionary">Data Dictionary</button>
-      <button class="tab-button" data-tab="ehr">EHR Modules</button>
-      <button class="tab-button" data-tab="infrastructure">Data sources</button>
+      <button class="tab-button" data-tab="laboratory">Laboratory &amp; diagnostics</button>
+      <button class="tab-button" data-tab="infrastructure">Sources &amp; fields</button>
+      <details class="nav-more" id="nav-more"><summary id="nav-more-label">More sections</summary><div class="nav-more-options">
+        <button class="tab-button" data-tab="variables">Clinical Variables</button>
+        <button class="tab-button" data-tab="clinical-feasibility">Clinical Feasibility</button>
+        <button class="tab-button" data-tab="dictionary">Data Dictionary</button>
+        <button class="tab-button" data-tab="situation">Situation Report</button>
+        <button class="tab-button" data-tab="quickstart">Quick Start</button>
+        <button class="tab-button" data-tab="ehr">EHR Modules</button>
+      </div></details>
     </div>
   </nav>
 
@@ -1350,11 +1411,9 @@
     <section class="tab-page active" id="tab-overview">
       <div class="sub-nav" aria-label="Overview sections">
         <button class="sub-tab active" data-sub="overview-summary">Start here</button>
-        <button class="sub-tab" data-sub="overview-briefing">Internal briefing</button>
-        <button class="sub-tab" data-sub="overview-coverage">Coverage</button>
-        <button class="sub-tab" data-sub="overview-temporal">Temporal Coverage</button>
+        <button class="sub-tab" data-sub="overview-temporal">Source years</button>
         <button class="sub-tab" data-sub="overview-spatial">Regional Coverage</button>
-        <button class="sub-tab" data-sub="overview-qa">Priority QA</button>
+        <details class="secondary-nav"><summary>More overview sections</summary><button class="sub-tab" data-sub="overview-briefing">Internal briefing</button><button class="sub-tab" data-sub="overview-coverage">Coverage</button><button class="sub-tab" data-sub="overview-qa">Priority QA</button></details>
       </div>
       <div class="sub-pane active" id="overview-summary">
         <div id="clinician-home"></div>
@@ -1922,13 +1981,9 @@
 
     <section class="tab-page" id="tab-infrastructure">
       <div class="sub-nav" aria-label="Infrastructure sections">
-        <button class="sub-tab" data-sub="infra-actions">Action Items</button>
         <button class="sub-tab active" data-sub="infra-catalog">Data sources</button>
         <button class="sub-tab" data-sub="infra-columns">Source fields</button>
-        <button class="sub-tab" data-sub="infra-resolution">Resolution</button>
-        <button class="sub-tab" data-sub="infra-memory">Memory Plan</button>
-        <button class="sub-tab" data-sub="infra-panels">Panels</button>
-        <button class="sub-tab" data-sub="infra-qa">QA</button>
+        <details class="secondary-nav"><summary>Run and technical sections</summary><button class="sub-tab" data-sub="infra-actions">Action Items</button><button class="sub-tab" data-sub="infra-resolution">Resolution</button><button class="sub-tab" data-sub="infra-memory">Memory Plan</button><button class="sub-tab" data-sub="infra-panels">Panels</button><button class="sub-tab" data-sub="infra-qa">QA</button></details>
       </div>
       <div class="sub-pane" id="infra-actions">
         <div class="panel">
@@ -3129,15 +3184,27 @@
         const isMobile = window.matchMedia && window.matchMedia("(max-width: 520px)").matches;
         search.placeholder = isMobile ? globalSearchPlaceholderMobile : globalSearchPlaceholderFull;
       }
-      function renderGlobalSearch(query) {
+      function collapseGlobalSearch() {
+        const q = document.getElementById('global-atlas-search')?.value.trim() || '';
+        const container = document.getElementById('global-search-results');
+        appState.globalResultsExpanded = false;
+        appState.globalResultsHidden = Boolean(q);
+        appState.lastGlobalQuery = q;
+        if (!container) return;
+        container.classList.remove('expanded');
+        container.innerHTML = q ? `<div class="search-result-summary"><span>Search: ${escapeHtml(q)}</span><button class="utility-button" type="button" data-toggle-global-results="true">Show search results</button><button class="utility-button" type="button" data-clear-global-search>Clear search</button></div>` : '';
+      }
+      function renderGlobalSearch(query, options = {}) {
         const q = text(query || "").trim();
         const container = document.getElementById("global-search-results");
         if (!container) return;
         appState.lastGlobalQuery = q;
+        if (q && options.collapsed) { collapseGlobalSearch(); return; }
+        appState.globalResultsHidden = false;
         if (!q) {
           appState.globalResultsExpanded = false;
           container.classList.remove("expanded");
-          container.innerHTML = `<div class="mini">Try <code>creatinine</code>, <code>leukocytes</code>, <code>kreatinin</code> or an NPU code.</div>`;
+          container.innerHTML = '';
           return;
         }
         const grouped = buildGlobalSearchResults(q);
@@ -3287,15 +3354,15 @@
       function sourceTiles(rows, emptyMessage) {
         if (!rows || !rows.length) return `<div class="empty">${escapeHtml(emptyMessage || "No matching sources were available.")}</div>`;
         return `<div class="grid">${rows.slice(0, 80).map(row => `
-          <article class="card">
-            <div><span class="badge">${escapeHtml(row.domain || "Unassigned")}</span> <span class="badge ${escapeHtml(row.status || row.load_status || "")}">${escapeHtml(row.status || row.load_status || "unknown")}</span></div>
+          <article class="card source-tile">
+            ${resourceCompactStatus(row) === 'ok' ? '' : `<div><span class="badge">${escapeHtml(resourceCompactStatus(row))}</span></div>`}
             <h3>${escapeHtml(sourceDisplayName(row.table_name))}</h3><p class="term-raw"><code>${escapeHtml(row.table_name || "")}</code></p>
             <div class="kpi-row">
               <div class="kpi"><b>${formatNumber(row.n_rows)}</b><span class="mini">rows</span></div>
               <div class="kpi"><b>${formatNumber(row.n_cols)}</b><span class="mini">columns</span></div>
             </div>
-            <p class="mini">${escapeHtml(row.subdomain || "")} ${row.atlas_role ? "- " + escapeHtml(row.atlas_role) : ""}</p>
-            <p class="mini">${escapeHtml(row.min_date || "")}${row.max_date ? " to " + escapeHtml(row.max_date) : ""}</p>
+            ${sourceEvidenceLinks(row.table_name)}
+            <details class="lineage-block"><summary>Source metadata</summary><p class="mini">${escapeHtml(row.domain || '')} · ${escapeHtml(row.subdomain || '')} ${row.atlas_role ? '- ' + escapeHtml(row.atlas_role) : ''}</p><p class="mini">Recorded status: <code>${escapeHtml(row.status || row.load_status || 'Not supplied')}</code></p></details>
           </article>
         `).join("")}</div>`;
       }
@@ -3375,7 +3442,7 @@
       }
       function coveragePill(status) {
         const s = text(status || "unknown");
-        const label = {observed:'Recorded region evidence',nationwide:'National source scope',available:'Source metadata available',ehr:'Default EHR support',none:'No default EHR support'}[s] || (status ? `Status not reviewed: ${s}` : 'Status not supplied');
+        const label = {observed:'Recorded region evidence',nationwide:'National source scope',available:'Source metadata available',ehr:'Default EHR support',none:'No default EHR support'}[s] || (status ? 'Regional status not interpreted' : 'Status not supplied');
         return `<span class="coverage-pill ${cssClass(s)}" title="${escapeHtml(s)}">${escapeHtml(label)}</span>`;
       }
       function renderRegionMatrix() {
@@ -3619,7 +3686,9 @@
         const group = destination ? 'Source fields' : 'Codes';
         const status = destination ? 'Field listed in export' : 'Reference meaning';
         return makeSearchResult(group,row.label,
-          [row.code,row.kind === 'field' ? sourceDisplayName(row.system) : row.system,status].join(' · '),row,
+          [row.code,row.kind === 'field' ? sourceDisplayName(row.system) : row.system,
+            row.kind === 'laboratory_test' ? `Specimen/system: ${row.specimen || 'Not supplied'}${row.system_spec ? ` · ${row.system_spec}` : ''}` : '',
+            row.kind === 'laboratory_test' ? `Reference unit: ${row.unit || 'Not supplied'}` : ''].filter(Boolean).join(' · '),row,
           destination || {tab:'dictionary',sub:'dictionary-codes'},
           {query:row.code,item:row.code,source:destination?.source || '',status,
             copy:destination ? `${row.system}.${row.code}` : row.code,
@@ -3740,18 +3809,19 @@
         const referenceCount = (payload.npu_display_dictionary || []).length;
         const routes = [
           ['01', 'Laboratory tests', 'Find haemoglobin, creatinine, CRP and other tests by name or code.', 'laboratory', 'lab-npu', 'cyan'],
-          ['02', 'Disease registries', 'Explore myeloma, lymphoma and chronic lymphocytic leukaemia.', 'registries', 'reg-overview', 'blue'],
+          ['02', 'Admissions and contacts', 'Inspect the documented hospital contact sources.', 'clinical', 'clinical-admissions', 'blue'],
           ['03', 'Treatments', 'Explore medicines, treatment plans and administration evidence.', 'treatment', 'treatment-dashboard', 'violet'],
           ['04', 'Pathology & Ki-67', 'Inspect coded pathology evidence and proliferation markers.', 'laboratory', 'lab-pathology', 'plum'],
           ['05', 'Clinical data', 'Explore admissions, vital signs, smoking and alcohol history.', 'clinical', 'clinical-vitals', 'green'],
           ['06', 'Study feasibility', 'Review the available evidence for the MCL / TRIANGLE question.', 'clinical-feasibility', 'mcl-triangle-feasibility', 'amber']
         ];
-        return `<div class="home-intro"><div><p class="section-kicker">Your guide to the data</p><h2>What would you like to explore?</h2><p>Start with a clinical topic. Follow a result to its source and see what the available evidence can tell you.</p></div><span class="snapshot-note">Data snapshot<br><strong>${escapeHtml(formatTimestamp(payload.generated_at || '').display)}</strong></span></div>
-          <div class="home-stats"><div><strong>${formatNumber(payload.loaded_source_count)}</strong><span>sources loaded or resolved</span></div><div><strong>${formatNumber(payload.column_count)}</strong><span>fields profiled</span></div><div><strong>${withheld ? referenceCount : `${resolved} / ${codes}`}</strong><span>${withheld ? 'laboratory reference definitions · observed coverage withheld' : 'exported lab codes with names'}</span></div></div>
-        <p><button class="concept-link-button" type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button></p>
-          ${measurementShortcuts()}
+        return `<div class="home-intro"><h2>Find clinical evidence</h2></div>
+          ${measurementShortcuts('',true)}
+          <div class="home-actions"><button type="button" data-jump-tab="infrastructure" data-jump-sub="infra-columns">Find source fields →</button><button type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button></div>
+          <div class="registry-actions" aria-label="Disease registries"><span class="mini">Registries</span><button type="button" data-jump-tab="registries" data-jump-sub="reg-damyda">Myeloma</button><button type="button" data-jump-tab="registries" data-jump-sub="reg-lyfo">Lymphoma</button><button type="button" data-jump-tab="registries" data-jump-sub="reg-cll">CLL</button></div>
           <div class="home-routes">${routes.map(([number, title, description, tab, sub, tone]) => `<button type="button" class="home-route ${tone}" data-jump-tab="${tab}" data-jump-sub="${sub}"><span class="route-number">${number}</span><strong>${title}</strong><span>${description}</span><span class="route-open">Explore <span aria-hidden="true">→</span></span></button>`).join('')}</div>
-          <div class="home-notes"><p><strong>How to read this atlas</strong><br>Counts describe records or codes unless explicitly labelled as people. A code being present does not establish complete or harmonised test results.</p><p><strong>Clinical labels are still being completed</strong><br>Laboratory tests, selected treatment codes and registry terms have readable names. Some legacy categories still need a source codebook; missing mappings do not mean the underlying data is absent.</p></div>`;
+          <div class="home-notes"><p>Counts describe source records unless labelled as people. Field listings and reference codes do not establish complete measurement results.</p></div>
+          <details class="home-export"><summary>Snapshot scope and interpretation</summary><p>${escapeHtml(formatTimestamp(payload.generated_at || '').display)} · ${formatNumber(payload.loaded_source_count)} sources loaded or resolved · ${formatNumber(payload.column_count)} fields profiled.</p><p>${withheld ? `${referenceCount} laboratory reference definitions; observed code coverage withheld.` : `${resolved} of ${codes} exported laboratory codes have names.`} Clinical labels are incomplete; missing mappings do not mean the underlying data is absent.</p></details>`;
       }
 
       function setHtml(id, html) {
@@ -4694,7 +4764,10 @@
         const priorityKeys = new Set(priorityRows.map(row => row.semantic_id || rawFieldDisplay(row)));
         const otherRaw = raw.filter(row => !priorityKeys.has(row.semantic_id || rawFieldDisplay(row)));
         const allVitalsDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_vitals");
+        const fieldJourneys = `<section class="measurement-shortcuts"><h3>Weight, height and BMI fields</h3><p class="mini">Selected fields in Patient information (SP) <code>SP_PatientInfo</code> and the Myeloma registry <code>RKKP_DaMyDa</code>. These are separate from SP vital-sign events.</p><div class="toolbar"><button class="concept-link-button" type="button" data-measurement="weight-height">Weight and height →</button><button class="concept-link-button" type="button" data-measurement="bmi">BMI →</button></div></section>`;
+        if (!allVitalsDistributions.length) return `${fieldJourneys}<article class="card"><h3>SP vital-sign events</h3><p><code>SP_VitaleVaerdier</code></p><p>Event-level weight and height aggregates are not supplied in this export. The selected fields above do not supply this missing event evidence.</p>${sourceEvidenceLinks('SP_VitaleVaerdier')}<details class="lineage-block"><summary>Source schema and interpretation</summary><p>Descriptors use <code>displayname</code>; stored values use <code>numericvalue</code>. Repeated measures require a diagnosis-relative baseline window and source validation before deriving patient-level height, weight or BMI.</p>${priorityRows.length ? renderVitalsPriorityLineage(priorityRows) : ''}</details></article>`;
         return `<div class="focused-panel vitals-panel">
+          ${fieldJourneys}
           <div class="source-shape">
             <div class="source-fact"><span class="mini">Source</span><b>SP_VitaleVaerdier</b></div>
             <div class="source-fact"><span class="mini">Patient ID column</span><b>patientid</b></div>
@@ -4897,22 +4970,35 @@
       function damydaNumericValue(row, field) {
         return row && hasDisplayValue(row[field]) ? formatNumber(row[field]) : "not available";
       }
+      /* REGISTRY_NUMERIC_START */
+      function registryNumericReason(row) {
+        return /^needs_validation/.test(row.numeric_privacy_status || '') ? 'Stored numeric summaries need validation.' : /withheld|protected/.test(row.numeric_privacy_status || '') ? 'Stored numeric summaries are withheld.' : 'Stored numeric summaries are not supplied.';
+      }
+      function renderRegistryNumericList(rows,source) {
+        const groups = new Map();
+        rows.forEach(row => { const key = row.numeric_privacy_status === 'eligible_stored_summary' ? '' : registryNumericReason(row); if (!groups.has(key)) groups.set(key,[]); groups.get(key).push(row); });
+        return `<p class="mini">Units below are configured registry-panel metadata; source-profile units are separate evidence. These counts describe source records.</p>${[...groups].map(([reason,group]) => `${reason ? `<p>${escapeHtml(reason)}</p>` : ''}<div class="grid">${group.map(row => renderRegistryNumericCard(row,'',source,true)).join('')}</div>`).join('')}`;
+      }
+      function renderRegistryNumericCard(row, label, source, sharedReason = false) {
+        if (!row) return '';
+        const field = row.source_column || row.column_name || '';
+        const available = finiteSummary(row.n_available), pct = finiteSummary(row.pct_available);
+        const protectedCount = /withheld/.test(row.availability_privacy_status || '');
+        const eligible = row.numeric_privacy_status === 'eligible_stored_summary';
+        const reason = registryNumericReason(row);
+        const q1 = finiteSummary(row.p25), q3 = finiteSummary(row.p75);
+        const interval = q1 !== null && q3 !== null && q3 >= q1 ? `${formatNumber(q1)}–${formatNumber(q3)}` : 'Not supplied';
+        return `<article class="card registry-numeric-card"><h3>${escapeHtml(label || clinicalDisplayEntry('field',source,field)?.label || row.field || field)}</h3><p class="mini"><code>${escapeHtml(source)} / ${escapeHtml(field || 'Field not supplied')}</code></p>
+          <p${pct !== null && !protectedCount ? ` title="Supplied percentage: ${escapeHtml(pct)}%"` : ''}>${protectedCount ? 'Availability count withheld' : available !== null ? `${formatNumber(available)} source records with a value${pct !== null ? ` · ${escapeHtml(fieldPercent(pct))}% recorded` : ''}` : 'Availability not supplied'}</p>
+          ${eligible ? `<p><strong>Median: ${finiteSummary(row.median) !== null ? formatNumber(row.median) : 'Not supplied'}</strong><br>Middle 50%: ${interval}</p><p class="mini">Recorded values; not a clinical reference range.</p>` : sharedReason ? '' : `<p>${escapeHtml(reason)}</p>`}
+          <p class="mini">${row.unit ? `Configured registry-panel unit: ${escapeHtml(row.unit)}.${sharedReason ? '' : ' Source-profile unit metadata is separate.'}` : 'Configured registry-panel unit not supplied.'}</p>
+          ${field ? sourceEvidenceLinks(source,field) : ''}
+          <details class="lineage-block"><summary>Exact summary metadata</summary><p class="mini">Publication status: <code>${escapeHtml(row.numeric_privacy_status || 'Not supplied')}</code><br>Scope: <code>${escapeHtml(row.summary_scope || 'Not supplied')}</code><br>Method: <code>${escapeHtml(row.summary_method || 'Not supplied')}</code></p>${eligible && finiteSummary(row.mean) !== null ? `<p>Mean: ${formatNumber(row.mean)}. Quartiles may use a bounded sample.</p>` : ''}</details></article>`;
+      }
+      /* REGISTRY_NUMERIC_END */
       function renderDaMyDaNumericCard(label, columns) {
         const row = damydaNumericHit(columns);
-        const tone = /crp|calcium|bone/i.test(label) ? "cyan" : /albumin|ldh|haemoglobin|creatinine/i.test(label) ? "blue" : "violet";
-        return `<article class="stat-card ${escapeHtml(tone)} clinical-metric-card">
-          <h3>${escapeHtml(label)}</h3>
-          <p class="mini">Source column: <code>${escapeHtml(row && row.source_column ? row.source_column : "not available")}</code></p>
-          ${renderKpiStrip([
-            { label: "n available", value: damydaNumericValue(row, "n_available"), tone },
-            { label: "% available", value: damydaNumericValue(row, "pct_available"), tone: "green" },
-            { label: "mean", value: damydaNumericValue(row, "mean"), tone: "blue" },
-            { label: "median", value: damydaNumericValue(row, "median"), tone: "amber" },
-            { label: "p25", value: damydaNumericValue(row, "p25"), tone: "plum" },
-            { label: "p75", value: damydaNumericValue(row, "p75"), tone: "violet" },
-            { label: "unit", value: row && row.unit ? row.unit : "not available", tone: "cyan" }
-          ], { tone })}
-        </article>`;
+        return renderRegistryNumericCard(row,label,'RKKP_DaMyDa');
       }
       function damydaFacetRows(keys) {
         return damydaClinicalRows().filter(row => rowMatchesKeys(row, keys));
@@ -5038,19 +5124,7 @@
           ], { tone: "plum" })}
           <section class="panel-section blue section-baseline-markers">
             <h3>Baseline disease markers</h3>
-            <div class="grid">
-              ${renderDaMyDaNumericCard("Haemoglobin", damydaExactFieldGroups.haemoglobin)}
-              ${renderDaMyDaNumericCard("Creatinine", damydaExactFieldGroups.creatinine)}
-              ${renderDaMyDaNumericCard("CRP / C-reactive protein", damydaExactFieldGroups.crp)}
-              ${renderDaMyDaNumericCard("LDH", damydaExactFieldGroups.ldh)}
-              ${renderDaMyDaNumericCard("Albumin", damydaExactFieldGroups.albumin)}
-              ${renderDaMyDaNumericCard("Albumin-corrected calcium", damydaExactFieldGroups.albuminCorrectedCalcium)}
-              ${renderDaMyDaNumericCard("Beta-2 microglobulin", damydaExactFieldGroups.beta2m)}
-              ${renderDaMyDaNumericCard("Clonal plasma-cell percentage", damydaExactFieldGroups.plasmaCells)}
-              ${renderDaMyDaNumericCard("Calcium", damydaExactFieldGroups.calcium)}
-              ${renderDaMyDaNumericCard("M-component", damydaExactFieldGroups.mComponent)}
-              ${renderDaMyDaNumericCard("Light chains", damydaExactFieldGroups.lightChains)}
-            </div>
+            ${renderRegistryNumericList(damydaNumericRows(),'RKKP_DaMyDa')}
           </section>
           <div class="value-map-grid">
             ${renderDaMyDaFacetGroup("Staging/risk", ["stage", "Stadie", "performance_status", "Reg_PerformanceStatus", "charlson"], "Stage and performance-status fields are availability summaries; derive risk models only after confirming definitions.", "plum")}
@@ -5458,7 +5532,7 @@
         </div>`;
       }
 
-      document.getElementById("hero-copy").textContent = "Explore clinical data, with names you can understand and sources you can trace.";
+      document.getElementById("hero-copy").textContent = "Find measurements, source fields and reference definitions.";
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
       const heroGeneratedAt = formatTimestamp(payload.generated_at || runSummaryValue("generated_at", ""));
       document.getElementById("generated-at").textContent = `Generated ${heroGeneratedAt.display}`;
@@ -5528,12 +5602,15 @@
         if (tabId === 'overview' && subId === 'overview-temporal') routeParams.source = document.getElementById('temporal-source-filter').value;
         if (tabId === 'variables') routeParams.q = document.getElementById('clinical-variable-search').value.trim();
         if (tabId === 'infrastructure' && subId === 'infra-catalog') routeParams.q = document.getElementById('catalog-search').value.trim();
+        if (tabId === 'infrastructure' && subId === 'infra-catalog') routeParams.source = catalogExactSource;
         const hash = atlasRouteHash(tabId, subId, routeParams);
-        if (window.location.hash === hash) return;
+        const searchResultsVisible = typeof appState !== 'undefined' ? !appState.globalResultsHidden : false;
+        if (window.location.hash === hash && window.history.state?.searchResultsVisible === searchResultsVisible) return;
+        replace = replace || window.location.hash === hash;
         if (replace) {
-          window.history.replaceState({ tabId, subId, params: routeParams }, "", hash);
+          window.history.replaceState({ tabId, subId, params: routeParams, searchResultsVisible }, "", hash);
         } else {
-          window.history.pushState({ tabId, subId, params: routeParams }, "", hash);
+          window.history.pushState({ tabId, subId, params: routeParams, searchResultsVisible }, "", hash);
         }
       }
       function parseHashRoute() {
@@ -5566,6 +5643,7 @@
           columnMeasurement = Object.prototype.hasOwnProperty.call(measurementGroups, route.measurement) ? route.measurement : '';
           renderColumnExplorer();
         }
+        if (route.tabId === 'infrastructure' && route.subId === 'infra-catalog') { catalogExactSource = route.source || ''; renderCatalog(); }
         if (route.tabId === 'overview' && route.subId === 'overview-temporal') {
           const select = document.getElementById('temporal-source-filter');
           select.value = Array.from(select.options).some(option => option.value === route.source) ? route.source : '';
@@ -5573,7 +5651,14 @@
         }
         const global = document.getElementById('global-atlas-search');
         global.value = route.g || '';
-        renderGlobalSearch(global.value);
+        const historyVisibility = typeof window !== 'undefined' ? window.history?.state?.searchResultsVisible : undefined;
+        renderGlobalSearch(global.value,{collapsed: historyVisibility === false || (historyVisibility !== true && !(route.tabId === 'overview' && route.subId === 'overview-summary'))});
+      }
+      function syncSecondaryNavigation() {
+        const more = document.getElementById('nav-more');
+        const active = more?.querySelector('.tab-button.active');
+        if (more) { more.open = Boolean(active); const label = document.getElementById('nav-more-label'); if (label) label.textContent = active ? `More: ${active.textContent}` : 'More sections'; }
+        document.querySelectorAll('.secondary-nav').forEach(details => { const selected = details.querySelector('.sub-tab.active'); details.open = Boolean(selected); });
       }
       function activateTab(tabId, options) {
         const opts = options || {};
@@ -5582,6 +5667,7 @@
         document.querySelectorAll(".tab-page").forEach(page => page.classList.toggle("active", page.id === `tab-${tab}`));
         const mobileSelect = document.getElementById("mobile-tab-select");
         if (mobileSelect && mobileSelect.value !== tab) mobileSelect.value = tab;
+        syncSecondaryNavigation();
         flushPendingRenders();
         if (!opts.silent) updateShareUrl(tab, activeSubForTab(tab), opts.replace);
       }
@@ -5595,6 +5681,7 @@
         if (!targetSub) return;
         page.querySelectorAll(".sub-tab").forEach(button => (button.classList.toggle("active", button.dataset.sub === targetSub), button.setAttribute("aria-pressed", String(button.dataset.sub === targetSub))));
         page.querySelectorAll(".sub-pane").forEach(p => p.classList.toggle("active", p.id === targetSub));
+        syncSecondaryNavigation();
         flushPendingRenders();
         if (!opts.silent) updateShareUrl(tabId, targetSub, opts.replace);
       }
@@ -5619,6 +5706,7 @@
           renderColumnExplorer();
         }
         if (tabId === 'infrastructure' && subId === 'infra-catalog') {
+          catalogExactSource = '';
           document.getElementById('catalog-search').value = q;
           ['catalog-domain-filter', 'catalog-status-filter', 'catalog-role-filter'].forEach(id => document.getElementById(id).value = '');
           const disclosure = document.getElementById('catalog-list').closest('details');
@@ -5702,6 +5790,8 @@
           document.getElementById('temporal-source-filter').value = opts.source || '';
           renderTemporalCoverage();
         }
+        if (tab === 'infrastructure' && subId === 'infra-catalog') { catalogExactSource = opts.source || ''; renderCatalog(); }
+        collapseGlobalSearch();
         updateShareUrl(tab, subId || activeSubForTab(tab), Boolean(opts.replace), { q: opts.search || "", item: opts.item || "" });
         const target = (opts.scrollId && document.getElementById(opts.scrollId)) ||
           (subId && document.getElementById(subId)) ||
@@ -5731,9 +5821,9 @@
       }
       document.addEventListener("keydown", event => {
         if (event.altKey || event.ctrlKey || event.metaKey || event.target.matches("input, select, textarea")) return;
-        const tabs = Array.from(document.querySelectorAll(".tab-button"));
+        const tabs = ['overview','variables','situation','quickstart','clinical-feasibility','registries','clinical','treatment','laboratory','dictionary','ehr','infrastructure'];
         const index = Number(event.key) - 1;
-        if (index >= 0 && index < tabs.length) activateTab(tabs[index].dataset.tab);
+        if (index >= 0 && index < tabs.length) jumpToPanel(tabs[index],activeSubForTab(tabs[index]));
       });
       document.querySelectorAll(".sub-nav").forEach(nav => {
         nav.querySelectorAll(".sub-tab").forEach(button => {
@@ -5778,11 +5868,12 @@
           if (event.key === "Enter") {
             event.preventDefault();
             renderGlobalSearch(globalAtlasSearch.value.trim());
+            const route = parseHashRoute(); updateShareUrl(route.tabId || 'overview',route.subId || activeSubForTab(route.tabId || 'overview'),true,route);
           }
         });
       }
       if (globalSearchButton) {
-        globalSearchButton.addEventListener("click", () => renderGlobalSearch(globalAtlasSearch ? globalAtlasSearch.value.trim() : ""));
+        globalSearchButton.addEventListener("click", () => { renderGlobalSearch(globalAtlasSearch ? globalAtlasSearch.value.trim() : ""); const route=parseHashRoute(); updateShareUrl(route.tabId || 'overview',route.subId || activeSubForTab(route.tabId || 'overview'),true,route); });
       }
       function clearGlobalSearch() {
         globalAtlasSearch.value = '';
@@ -5800,14 +5891,6 @@
           source: open.dataset.searchSource || "",
           scroll: false
         });
-        {
-          appState.globalResultsExpanded = false;
-          const results = document.getElementById("global-search-results");
-          if (results) {
-            results.classList.remove("expanded");
-            results.innerHTML = `<div class="search-result-summary"><span>Opened ${escapeHtml(open.dataset.searchQuery || "result")}</span><button class="utility-button" type="button" data-toggle-global-results="true">Show results</button><button class="utility-button" type="button" data-clear-global-search>Clear search</button></div>`;
-          }
-        }
         const destination = document.getElementById(open.dataset.searchSub) || document.getElementById(`tab-${open.dataset.searchTab}`);
         if (destination) scrollToAtlasTarget(destination);
       });
@@ -5821,6 +5904,7 @@
         if (toggle) {
           appState.globalResultsExpanded = !appState.globalResultsExpanded;
           renderGlobalSearch(appState.lastGlobalQuery || (globalAtlasSearch ? globalAtlasSearch.value.trim() : ""));
+          const route=parseHashRoute(); updateShareUrl(route.tabId || 'overview',route.subId || activeSubForTab(route.tabId || 'overview'),true,route);
           const results = document.getElementById("global-search-results");
           (results?.querySelector('[data-toggle-global-results]') || results?.querySelector('[data-search-open]') || results?.querySelector('[data-clear-global-search]'))?.focus();
         }
@@ -5864,12 +5948,7 @@
         supports: ["Operational review and freshness checks.", "Identifying where metric definitions need source-owner validation."],
         caveats: ["Each metric has its own definition and anchor date; do not combine them as a patient-level timeline."]
       }));
-      setHtml("registry-overview-interpretation", renderInterpretationLead({
-        meaning: "Disease registries provide curated disease-area context for cohort construction, baseline features, treatment fields, response, and follow-up.",
-        keyNumbers: renderTrustBadgeRow(["validated aggregate", "legacy reference", "study-planning only"]),
-        supports: ["Disease-area feasibility review.", "Registry-specific source selection before protocol writing."],
-        caveats: ["Registry fields are curated summaries and may not be complete event streams."]
-      }));
+      setHtml("registry-overview-interpretation", '<p class="mini">Choose a registry to inspect its recorded fields and source coverage. Source records are not unique people or complete event streams.</p>');
       setHtml("infrastructure-actions-interpretation", renderInterpretationLead({
         meaning: "Infrastructure panels explain trust, source resolution, memory strategy, and QA posture without changing clinical evidence.",
         keyNumbers: renderTrustBadgeRow(["manual / embedded", "not patient count", "no raw text emitted"]),
@@ -5912,8 +5991,8 @@
         </article>
       `).join("") || `<div class="empty">No source domains were available.</div>`);
       deferRender("review-largest-sources", () => setHtml("review-largest-sources", rowsForTable(reviewOverview.largest_sources || [], 20)));
-      setHtml("review-source-availability", rowsForTable(reviewOverview.source_availability || [], 200));
-      setHtml("module-readiness", rowsForTable(reviewModuleReadiness.length ? reviewModuleReadiness : (reviewOverview.module_readiness || []), 100));
+      deferRender("review-source-availability", () => setHtml("review-source-availability", rowsForTable(reviewOverview.source_availability || [], 200)));
+      deferRender("module-readiness", () => setHtml("module-readiness", rowsForTable(reviewModuleReadiness.length ? reviewModuleReadiness : (reviewOverview.module_readiness || []), 100)));
       deferRender("temporal-summary", () => renderTemporalCoverage());
       deferRender("dkMap", () => renderSpatialCoverage());
 
@@ -5926,9 +6005,9 @@
           </article>
         `).join("") || `<div class="empty">No QA rows available.</div>`);
       }
-      renderQa("qa-preview", actionItems.length ? actionItems : qaItems, 8);
-      renderQa("qa-list", qaItems);
-      setHtml("infra-semantic-output-qa", renderSemanticOutputQaSummary());
+      deferRender("qa-preview", () => renderQa("qa-preview", actionItems.length ? actionItems : qaItems, 8));
+      deferRender("qa-list", () => renderQa("qa-list", qaItems));
+      deferRender("infra-semantic-output-qa", () => setHtml("infra-semantic-output-qa", renderSemanticOutputQaSummary()));
 
       function renderSituationReport() {
         const cards = reviewSituation.cards || situationCards || [];
@@ -6007,38 +6086,50 @@
         return codeSystem === "NPU" || /lab|biochem|alleproevesvar|persimune_biochemistry|haematology|immunoglobulin/.test(hay);
       }
       function treatmentSourceContext(row) {
-        const sourceKey = normalizeClinicalKey([row.source_name, row.object_name, row.table_name].map(text).join(" "));
-        const evidenceKey = normalizeClinicalKey(row.evidence_file || "");
-        const combined = `${sourceKey} ${evidenceKey}`;
+        // Reviewed identities only: punctuation-normalized substrings lose source boundaries.
+        const identities = {
+          RKKP_DaMyDa:'registry',RKKP_LYFO:'registry',RKKP_CLL:'registry',
+          SP_Behandlingsplaner_Del1:'sp_plan',SP_Behandlingsplaner_Del2:'sp_plan',Behandlingsplaner_del2:'sp_plan',
+          SP_AdministreretMedicin:'sp_administered',SP_OrdineretMedicin:'sp_ordered',
+          SDS_epikur:'national_prescription',SDS_ekokur:'national_prescription',EKOKUR:'national_prescription',
+          SDS_indberetningmedpris:'smr',SMR_medicine:'smr',
+          SDS_t_sksopr:'sks',SDS_t_sksube:'sks',SDS_procedurer_andre:'sks',SDS_procedurer_kirurgi:'sks'
+        };
+        const layers = [...new Set([row.table_name,row.source_name,row.object_name].filter(key => Object.prototype.hasOwnProperty.call(identities,key)).map(key => identities[key]))];
         const codeSystem = text(row.code_system || "").toUpperCase();
         const code = text(row.code || row.raw_code || "").toUpperCase();
         const ctx = (id, label, tone, description) => ({ id, label, tone, description });
-        if (/rkkp_damyda|rkkp_lyfo|rkkp_cll/.test(combined)) {
+        const candidate = () => ctx("candidate", "Candidate / needs-validation treatment rows", "amber", "Treatment-related row needing source-specific validation before primary exposure use.");
+        // A source card displays and links table_name; secondary metadata cannot replace it.
+        if (row.table_name !== undefined && row.table_name !== null && row.table_name !== '' && !Object.prototype.hasOwnProperty.call(identities,row.table_name)) return candidate();
+        if (layers.length > 1 || codeSystem === 'NPU' || codeSystem === 'DNK' || (layers.length && codeSystem === 'SKS' && layers[0] !== 'sks') || (layers[0] === 'sks' && codeSystem === 'ATC')) return candidate();
+        const layer = layers[0];
+        if (layer === 'registry') {
           return ctx("registry", "Registry treatment fields", "amber", "Registry-coded treatment, response, relapse, or follow-up fields; not complete medication administration records.");
         }
-        if (/sp_behandlingsplaner/.test(combined)) {
+        if (layer === 'sp_plan') {
           return ctx("sp_plan", "SP treatment plans", "violet", "Treatment plan, protocol, cycle, goal, or planned-treatment metadata; not confirmed administration.");
         }
-        if (/sp_administreretmedicin/.test(combined)) {
+        if (layer === 'sp_administered') {
           return ctx("sp_administered", "SP administered medication", "blue", "EHR medication-administration evidence, including administered ATC/name/route/time when present.");
         }
-        if (/sp_ordineretmedicin/.test(combined)) {
+        if (layer === 'sp_ordered') {
           return ctx("sp_ordered", "SP ordered medication", "green", "EHR ordered-medication or prescription-like order evidence; not confirmed administration.");
         }
-        if (/sds_epikur|sds_ekokur/.test(combined)) {
+        if (layer === 'national_prescription') {
           return ctx("national_prescription", "National prescription data", "cyan", "Prescription/outpatient prescription or ATC prescription signal; not inpatient administration.");
         }
-        if (/sds_indberetningmedpris|smr_medicine|smr/.test(combined)) {
+        if (layer === 'smr') {
           return ctx("smr", "SMR / in-hospital medication", "plum", "National in-hospital medication-register signal; separate from SP administered medication.");
         }
-        if (/sds_t_sks|sksopr|sksube|sds_procedurer|sds_sks/.test(combined) || codeSystem === "SKS") {
+        if (layer === 'sks' || codeSystem === "SKS") {
           return ctx("sks", "SKS procedure/treatment signals", "plum", "Procedure or treatment-code signal; not an ATC drug exposure or medication administration row.");
         }
         if (codeSystem === "ATC" || /^[A-Z][0-9]{2}/.test(code)) {
           const family = code.startsWith("L01") ? "Antineoplastic ATC signal" : code.startsWith("L04") ? "Immunomodulating/immunosuppressive ATC signal" : "ATC medication signal";
           return ctx("atc", "ATC medication signals", "green", `${family}; code-level medication evidence, not a confirmed delivered therapy unless the source layer says so.`);
         }
-        return ctx("candidate", "Candidate / needs-validation treatment rows", "amber", "Treatment-related row needing source-specific validation before primary exposure use.");
+        return candidate();
       }
       function treatmentCodeRows(predicate) {
         return (semanticCodeRows || [])
@@ -6131,18 +6222,17 @@
         return label && label !== "Candidate / needs-validation treatment rows" ? label : "";
       }
       function renderTreatmentSourceCards(rows, title) {
-        const shown = (rows || []).slice(0, 8);
+        const shown = rows || [];
         if (!shown.length) return `<div class="empty">Source summary card not generated in this aggregate output; code-level signals may be available below.</div>`;
         return `<div class="grid grid-4">${shown.map(row => `
           <article class="clinical-card">
-            ${renderBadge(treatmentSourceContext(row).label, treatmentSourceContext(row).tone)}
             <h3>${escapeHtml(sourceDisplayName(row.table_name || row.source_name || title))}</h3><p class="term-raw"><code>${escapeHtml(row.table_name || row.source_name || "")}</code></p>
             ${renderKpiStrip([
-              { label: "rows", value: row.n_rows, tone: "blue" },
-              { label: "columns", value: row.n_cols, tone: "cyan" }
+              { label: "source records", value: row.n_rows, tone: "blue" },
+              { label: "fields", value: row.n_cols, tone: "cyan" }
             ], { tone: "blue" })}
-            <p class="mini">${escapeHtml(treatmentSourceContext(row).description)}</p>
-            <p class="mini">${escapeHtml([row.subdomain, row.atlas_role].filter(Boolean).join(" - "))}</p>
+            ${sourceEvidenceLinks(row.table_name || row.source_name)}
+            <details class="lineage-block"><summary>Source interpretation</summary><p class="mini">${escapeHtml(treatmentSourceContext(row).description)}</p><p class="mini">${escapeHtml([row.subdomain,row.atlas_role].filter(Boolean).join(' · '))}</p></details>
           </article>
         `).join("")}</div>`;
       }
@@ -6194,21 +6284,14 @@
         const antineoplasticRows = atcRows.filter(row => treatmentContains(row, antineoplasticDrugTerms));
         const supportiveMedicationRows = atcRows.filter(row => treatmentContains(row, supportiveMedicationTerms));
         const sksPriorityRows = sksRows.filter(row => treatmentContains(row, ["antineoplastic", "chemotherapy", "immunotherapy", "radiotherapy", "sct", "stem", "lenalidomide", "bortezomib", "daratumumab", "venetoclax", "ibrutinib"]));
+        const sourceGroups = new Map();
+        sources.forEach(row => { const context = treatmentSourceContext(row); if (!sourceGroups.has(context.id)) sourceGroups.set(context.id,{context,rows:[]}); sourceGroups.get(context.id).rows.push(row); });
         return `
           <div class="dashboard-grid treatment-dashboard">
-            ${renderInterpretationLead({
-              meaning: "Treatment combines registry therapy fields, ATC medicines, SKS procedures, SP medication layers, SMR medicine, Epikur metadata, and treatment plans as source evidence for exposure definitions.",
-              keyNumbers: renderTrustBadgeRow(["candidate / needs validation", "validated aggregate", "study-planning only"]),
-              supports: ["Drug-exposed cohort planning.", "Cross-source treatment triangulation before timing-window design."],
-              caveats: ["Code or source signals are not treatment effects and are not complete line-of-therapy definitions without validation."]
-            })}
-            ${renderKpiStrip([
-              { label: "treatment sources", value: sources.length, tone: "blue" },
-              { label: "observed codes / groups", value: observedRowsWithheld(panels.mm_treatment_code_counts) ? 'Withheld' : new Set((panels.mm_treatment_code_counts || []).map(row => `${row.code_system}:${row.code}`)).size, tone: "green" },
-              { label: "aggregate rows", value: treatmentDistributions.length, tone: "amber" },
-              { label: "raw lineage rows", value: rawRows.length, tone: "plum" }
-            ], { tone: "blue" })}
+            <p class="mini">Inspect ${sources.length} documented sources by evidence layer. Plans, prescriptions, administrations, registry indicators and procedures support different exposure questions; source counts do not establish delivered treatment or treatment effects.</p>
+            ${[...sourceGroups.values()].map(({context,rows}) => `<section class="panel-section"><h3>${escapeHtml(context.label)}</h3><p class="mini">${escapeHtml(context.description)}</p>${renderTreatmentSourceCards(rows,context.label)}</section>`).join('')}
             ${renderSectionCard("Treatment codes in this export", renderObservedTreatmentCodes() + renderTermHelp(["ASCT","HDT","CIT","BTK","ATC","SKS"]), "green")}
+            <details class="lineage-block"><summary>Code mappings, other treatment signals and technical lineage</summary>
             ${renderSectionCard("Treatment source availability matrix", `
               <p>${escapeHtml(treatmentPanel.clinical_purpose || "Treatment evidence across SKS procedure codes, ATC medication codes, administered medicine, prescriptions, SMR, Epikur, and treatment plans.")}</p>
               ${renderTreatmentSourceCards(sources, "Treatment source")}
@@ -6286,6 +6369,7 @@
               <p>Code-level treatment signals are proxies unless a registry or treatment-plan source confirms regimen semantics. Counts may be cartography scan or top-N evidence and must not be treated as full cohort denominators unless explicitly labeled.</p>
               <p>Dates, note text, and free-text treatment context are not rendered as categorical bars. Treatment exposure needs source-specific timing, dose, route, and line-of-therapy definitions.</p>
             `, "amber")}
+            </details>
           </div>`;
       }
 
@@ -7636,6 +7720,7 @@
           <div class="lab-shortcuts" aria-label="Common laboratory searches"${withheld ? ' hidden' : ''}>${['Haemoglobin','Creatinine','CRP','Platelets','Lymphocytes','Albumin'].map(term => `<button type="button" data-lab-query="${term}">${term}</button>`).join('')}<button type="button" data-lab-clear>Clear filters</button></div>
           <details class="lab-refine"${withheld ? ' hidden' : ''}><summary>Refine by specimen or change order</summary><div class="lab-controls"><label>Specimen / system<select id="lab-specimen-filter"><option value="">All specimens and systems</option>${specimens.map(value => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join('')}</select></label><label>Order results<select id="lab-sort"><option value="records">Most source records</option><option value="name">Clinical name A–Z</option></select></label></div></details>
           <div id="lab-result-summary" role="status" aria-live="polite"></div><div id="lab-results"></div><div id="lab-pagination" class="lab-pagination" aria-label="Laboratory result pages"></div>
+          ${withheld ? `<h3>Laboratory source fields and coverage</h3>${sourceTiles(reviewLaboratory.lab_sources,'Laboratory source metadata is not supplied in this export.')}` : ''}
           <details class="lab-method"><summary>About names, codes and coverage</summary><p>Names are matched by exact code to the public IFCC NPU terminology snapshot retrieved on 10 October 2026. NPU17597 is identified from the original 2000 IFCC–IUPAC report and marked as a historical reference; its current status is unverified. Common clinical synonyms make selected terms easier to find. Available Danish aliases come from the published Danish eHealth terminology. Each result retains its formal definition.</p><p>The terminology unit describes the code; it has not been checked against this source's result values. Retired codes may occur in historical records. A missing translation is a dictionary gap, not evidence that a test is unavailable.</p><p>No counts, dates or source records have been recalculated. Additional laboratory sources and registry fields remain available under <strong>Lab Sources</strong> and <strong>Disease Registries</strong>.</p></details>
         </div>`;
       }
@@ -7643,8 +7728,8 @@
         const input = document.getElementById('lab-name-search');
         if (!input) return;
         if (observedRowsWithheld(labEvidenceRows)) {
-          document.getElementById('lab-result-summary').textContent = 'Observed code coverage withheld';
-          setHtml('lab-results', withheldObservedState());
+          document.getElementById('lab-result-summary').textContent = '';
+          setHtml('lab-results', '');
           setHtml('lab-pagination', '');
           return;
         }
@@ -8917,14 +9002,14 @@
       }
       function resourceTitle(row) {
         const source = row.canonical_resource_id || row.current_resolved_source_key || row.current_resolved_table_or_view || row.current_table_name || row.table_name || row.expected_resource_id;
-        if (['RKKP_CLL','RKKP_DaMyDa','RKKP_LYFO'].includes(source)) return sourceDisplayName(source);
+        if (Object.prototype.hasOwnProperty.call(sourceNames,source)) return sourceDisplayName(source);
         return row.display_name || row.canonical_resource_display_name || sourceDisplayName(source);
       }
       function resourceRoleLabel(role) {
         return {canonical_resource:'Main resource',special_manual_or_embedded:'Manual or embedded resource',derived_view:'Derived view',helper_table:'Supporting table',reference_only:'Reference source'}[role] || text(role).replace(/_/g,' ') || 'Role not supplied';
       }
       function resourceCompactStatus(row) {
-        const status = row.current_status || row.current_run_status || row.load_status || row.status_category || '';
+        const status = row.current_status || row.current_run_status || row.load_status || row.status_category || row.status || '';
         if (['current_profiled','loaded','profiled','legacy_unavailable_current_resolved'].includes(status)) return 'Profiled';
         if (status === 'embedded_fields_represented') return 'Fields embedded in registries';
         if (status === 'manual_file_not_available') return 'Manual source';
@@ -8964,6 +9049,7 @@
           </details>
         </article>`;
       }
+      let catalogExactSource = '';
       function renderCatalog() {
         const q = document.getElementById('catalog-search').value.trim().toLowerCase();
         const domain = document.getElementById('catalog-domain-filter').value;
@@ -8973,15 +9059,16 @@
           const hay = [resourceTitle(row), row.canonical_resource_id, row.expected_resource_id, row.current_resolved_table_or_view, row.table_name, row.domain, row.current_status, row.source_map_role, row.expected_role, row.atlas_role, row.notes, ...resourceSources(row)].join(' ').toLowerCase();
           const statuses = [row.current_status, row.current_run_status, row.load_status, row.status_category];
           const roles = [row.source_map_role, row.expected_role, row.atlas_role];
-          return (!q || hay.includes(q)) && (!domain || row.domain === domain) && (!status || statuses.includes(status)) && (!role || roles.includes(role));
+          return (!catalogExactSource || resourceSources(row).includes(catalogExactSource) || resourceFieldSource(row) === catalogExactSource) && (!q || hay.includes(q)) && (!domain || row.domain === domain) && (!status || statuses.includes(status)) && (!role || roles.includes(role));
         });
         document.getElementById('catalog-count').textContent = `${filtered.length} of ${catalogDisplayRows.length} resources shown`;
-        setHtml('catalog-list', filtered.map(resourceCard).join('') || '<div class="empty">No resources match these filters.</div>');
+        setHtml('catalog-list', filtered.map(resourceCard).join('') || `<div class="empty">${catalogExactSource ? `No catalogue resource is linked to the exact source <code>${escapeHtml(catalogExactSource)}</code>. Source field evidence remains accessible in the previous view.` : 'No resources match these filters.'}</div>`);
         // This secondary list is explicitly unfiltered and remains inside coverage details.
         setHtml('current-source-catalog-list', catalogRows.map(resourceCard).join('') || '<div class="empty">Current source-map rows are not included.</div>');
       }
       ["catalog-search", "catalog-domain-filter", "catalog-status-filter", "catalog-role-filter"].forEach(id => {
         const render = () => {
+          catalogExactSource = '';
           renderCatalog();
           if (document.getElementById('tab-infrastructure').classList.contains('active')) updateShareUrl('infrastructure', 'infra-catalog', true);
         };
@@ -9055,8 +9142,8 @@
         bmi: {label:'BMI', fields:[['SP_PatientInfo','bmi']]},
         haemoglobin: {label:'Haemoglobin', fields:[['RKKP_LYFO','Reg_Haemoglobin'],['RKKP_DaMyDa','Reg_Haemoglobin'],['RKKP_DaMyDa','PB_Haemoglobin']]}
       };
-      function measurementShortcuts(selected = '') {
-        return `<div class="measurement-shortcuts"><p class="mini">Find a measurement · selected source fields</p><div class="toolbar" aria-label="Measurement shortcuts">${Object.entries(measurementGroups).map(([key,group]) => `<button class="concept-link-button" type="button" data-measurement="${key}" aria-pressed="${selected === key}">${group.label}</button>`).join('')}${selected ? '<button class="concept-link-button" type="button" data-measurement="">All fields</button>' : ''}</div><p class="mini">Source fields only; these shortcuts are not a complete list of measurements or laboratory result values.</p></div>`;
+      function measurementShortcuts(selected = '', compact = false) {
+        return `<div class="measurement-shortcuts"><p class="mini">Find a measurement · selected source fields</p><div class="toolbar" aria-label="Measurement shortcuts">${Object.entries(measurementGroups).map(([key,group]) => `<button class="concept-link-button" type="button" data-measurement="${key}" aria-pressed="${selected === key}">${group.label}</button>`).join('')}${selected ? '<button class="concept-link-button" type="button" data-measurement="">All fields</button>' : ''}</div>${compact ? '' : '<p class="mini">Source fields only; these shortcuts are not a complete list of measurements or laboratory result values.</p>'}</div>`;
       }
       function measurementMatches(row, group) {
         return !group || (measurementGroups[group]?.fields || []).some(([source,field]) => row.table_name === source && row.column_name === field);
@@ -9066,7 +9153,18 @@
       }
       function fieldPercent(value) {
         const n = finiteSummary(value);
-        return n === null ? 'Not supplied' : n.toLocaleString(undefined, {maximumFractionDigits:1});
+        if (n === null) return 'Not supplied';
+        if (n > 0 && n < 0.1) return '<0.1';
+        if (n < 100 && Math.round(n * 10) / 10 === 100) return '<100';
+        return n.toLocaleString(undefined, {maximumFractionDigits:1});
+      }
+      function sourceEvidenceLinks(source, field = '') {
+        if (!source) return '';
+        const coverage = new URLSearchParams({view:'timeplace',source});
+        const profile = new URLSearchParams({view:'fields',table:'column_profiles',source});
+        if (field) profile.set('field',field);
+        const fields = field ? `<a href="DALYCARE_outputs.html?${escapeHtml(profile.toString())}">Published field evidence →</a>` : browseFieldsLink(source) || '<span class="mini">Field profiles are not included for this exact source.</span>';
+        return `<div class="source-evidence-links">${fields}<a href="DALYCARE_outputs.html?${escapeHtml(coverage.toString())}">Source years and regions →</a></div>`;
       }
       function fieldUnitCopy(row) {
         if (row.unit || row.units) return `Source unit metadata: ${row.unit || row.units}`;
@@ -9196,21 +9294,23 @@
         const hasDefinitions = (payload.clinical_display_dictionary || []).some(entry => entry.kind === 'registry_value' && entry.system === `${row.table_name}:${row.column_name}`);
         const needsMeanings = hasDefinitions || ['categorical','text'].includes(row.profile_kind) || (row.profile_kind === 'numeric' && row.numeric_privacy_status !== 'eligible_stored_summary' && row.numeric_privacy_status !== 'protected_field');
         const available = finiteSummary(row.n_available), missing = finiteSummary(row.n_missing), pct = finiteSummary(row.pct_available);
-        const coverage = privacy === 'Small count withheld' ? privacy : available !== null ? `${formatNumber(available)} available source records${pct !== null ? ` · ${fieldPercent(pct)}% recorded` : ''}` : 'Availability not supplied';
+        const availabilityBlocked = /withheld/.test(row.availability_privacy_status || '');
+        const total = finiteSummary(row.n_rows);
+        const coverage = availabilityBlocked ? privacy === 'Small count withheld' ? privacy : 'Availability count withheld' : available !== null ? `${formatNumber(available)}${total !== null && total >= available && !/withheld/.test(row.count_privacy_status || '') ? ` of ${formatNumber(total)} source records` : ' source records'} with a value${pct !== null ? ` · ${fieldPercent(pct)}% recorded` : ''}` : 'Availability not supplied';
         return `<article class="card" data-field-name="${escapeHtml(row.column_name)}">
           <h3>${escapeHtml(definition?.label || row.column_name)}</h3>
           <p class="mini"><button class="concept-link-button" type="button" data-field-source-context="${escapeHtml(row.table_name)}">${escapeHtml(sourceDisplayName(row.table_name))}</button></p>
           <p class="mini">Field: <code>${escapeHtml(row.column_name)}</code> · source: <code>${escapeHtml(row.table_name)}</code></p>
           <span class="badge">${escapeHtml(typeLabel)}</span>
-          <p>${escapeHtml(coverage)}</p>${privacy && privacy !== coverage && row.profile_kind !== 'numeric' ? `<p class="mini">${escapeHtml(privacy)}</p>` : ''}
+          <p${pct !== null && !availabilityBlocked ? ` title="Supplied percentage: ${escapeHtml(pct)}%"` : ''}>${escapeHtml(coverage)}</p>${missing !== null && !availabilityBlocked ? `<p class="mini">${formatNumber(missing)} missing source records</p>` : ''}${privacy && privacy !== coverage && row.profile_kind !== 'numeric' ? `<p class="mini">${escapeHtml(privacy)}</p>` : ''}
           ${fieldTypicalPreview(row)}
+          ${sourceEvidenceLinks(row.table_name,row.column_name)}
+          <p class="mini">Source years and regions describe the source's selected date/region fields, not this measurement's completeness.</p>
           <details class="lineage-block"${columnExactField === row.column_name ? ' open' : ''}><summary>Summary and meanings</summary>
             ${displayDefinition ? `<p>${escapeHtml(displayDefinition)}</p>` : ''}
             <p class="mini">Field: <code>${escapeHtml(row.column_name)}</code> · storage type: ${escapeHtml(row.column_class || row.column_type || 'Not supplied')}</p>
-            ${missing !== null && privacy !== 'Small count withheld' ? `<p class="mini">${formatNumber(missing)} missing source records</p>` : ''}
-            ${row.profile_kind === 'numeric' && row.numeric_privacy_status === 'eligible_stored_summary' ? columnStat(row) : ''}
+            ${row.profile_kind === 'numeric' && row.numeric_privacy_status === 'eligible_stored_summary' ? `<p class="mini">Mean: ${finiteSummary(row.mean) !== null ? formatNumber(row.mean) : 'Not supplied'}. Quartiles may use a sample of source records; data cleaning is unverified.</p>` : ''}
             ${row.profile_kind === 'categorical' || row.profile_kind === 'text' ? '<h4>Common observed values</h4><p>Categorical values and frequencies are not published for this field.</p><p>Mode: Not supplied</p>' : ''}
-            ${renderSourceCoverage(row.table_name)}
             ${needsMeanings ? `<h4>Value definitions</h4>${fieldValueDefinitions(row)}<button class="concept-link-button" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-codes" data-jump-search="${escapeHtml(row.column_name)}">Browse codes and clinical terms →</button>` : ''}
           </details>
         </article>`;
@@ -9263,8 +9363,7 @@
         const back = event.target.closest('[data-field-source-context]');
         if (back) {
           const source = back.dataset.fieldSourceContext;
-          const crosswalk = sourceMapCrosswalkRows.find(row => row.source_map_key === source);
-          jumpToPanel('infrastructure', 'infra-catalog', {search: crosswalk?.canonical_resource_id || source});
+          jumpToPanel('infrastructure', 'infra-catalog', {search:'',source});
         }
       });
       deferRender("column-list", () => renderColumnExplorer());
@@ -9510,12 +9609,13 @@
         document.getElementById(id).addEventListener("input", () => renderSemanticExplorer());
         document.getElementById(id).addEventListener("change", () => renderSemanticExplorer());
       });
-      renderSemanticExplorer();
-      renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500);
-      renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500);
-      renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500);
-      renderFilteredSemanticTable("semantic-overlay-map", semanticOverlayRows, "semanticOverlayFilteredRows", "semantic-overlay-search", 500);
-      renderFilteredSemanticTable("semantic-conflict-map", semanticConflictRows, "semanticConflictFilteredRows", "semantic-conflict-search", 500);
+      deferRender("semantic-list", () => renderSemanticExplorer());
+      deferRender("clinical-code-guide", () => renderCodeMeaningGuide());
+      deferRender("semantic-value-map", () => renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500));
+      deferRender("semantic-code-map", () => renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500));
+      deferRender("semantic-panel-links", () => renderFilteredSemanticTable("semantic-panel-links", semanticPanelLinks, "semanticPanelFilteredRows", "semantic-panel-search", 500));
+      deferRender("semantic-overlay-map", () => renderFilteredSemanticTable("semantic-overlay-map", semanticOverlayRows, "semanticOverlayFilteredRows", "semantic-overlay-search", 500));
+      deferRender("semantic-conflict-map", () => renderFilteredSemanticTable("semantic-conflict-map", semanticConflictRows, "semanticConflictFilteredRows", "semantic-conflict-search", 500));
       [
         ["semantic-value-search", () => renderFilteredSemanticTable("semantic-value-map", semanticValueRows, "semanticValueFilteredRows", "semantic-value-search", 500)],
         ["semantic-code-search", () => renderFilteredSemanticTable("semantic-code-map", semanticCodeRows, "semanticCodeFilteredRows", "semantic-code-search", 500)],
@@ -9542,30 +9642,32 @@
       deferRender("isotype-cards", () => renderCodeDiscoveryCards());
       renderReviewSections();
       renderSemanticLineageBlocks();
-      setHtml("registry-cards", Object.keys(registryCards).map(name => {
+      deferRender("registry-cards", () => setHtml("registry-cards", Object.keys(registryCards).map(name => {
         const card = registryCards[name];
         const facets = card.facets || [];
         const numeric = card.numeric_fields || [];
+        const source = card.table_name || card.registry || name;
+        const route = {RKKP_DaMyDa:'reg-damyda',RKKP_LYFO:'reg-lyfo',RKKP_CLL:'reg-cll'}[source];
+        const categoryTable = {RKKP_DaMyDa:'damyda_clinical_profile',RKKP_LYFO:'lyfo_clinical_profile',RKKP_CLL:'cll_clinical_profile'}[source];
         return `<article class="card registry-card">
           <div>
             <h3>${escapeHtml(sourceDisplayName(card.table_name || card.registry || name))}</h3>
             <p class="mini">${escapeHtml(card.table_name || "")} ${card.date_range ? "- " + escapeHtml(card.date_range) : ""}</p>
           </div>
           <div class="kpi-row">
-            <div class="kpi"><b>${formatNumber(card.n_patients)}</b><span class="mini">patients</span></div>
-            <div class="kpi"><b>${formatNumber(card.n_rows)}</b><span class="mini">rows</span></div>
-            <div class="kpi"><b>${formatNumber(card.n_cols)}</b><span class="mini">columns</span></div>
+            ${finiteSummary(card.n_patients) !== null ? `<div class="kpi"><b>${formatNumber(card.n_patients)}</b><span class="mini">supplied person count</span></div>` : ''}
+            <div class="kpi"><b>${formatNumber(card.n_rows)}</b><span class="mini">source records</span></div>
+            <div class="kpi"><b>${formatNumber(card.n_cols)}</b><span class="mini">fields</span></div>
           </div>
-          <div>
-            <strong>Top categorical facets</strong>
+          ${route ? `<button class="concept-link-button" type="button" data-jump-tab="registries" data-jump-sub="${route}">Open registry evidence →</button>` : ''}
+          ${sourceEvidenceLinks(source)}
+          ${categoryTable ? `<p><a href="DALYCARE_outputs.html?${escapeHtml(new URLSearchParams({view:'fields',table:categoryTable,source}).toString())}">Registry fields and category evidence →</a></p>` : ''}
+          <details><summary>Category summary and definitions</summary>
             ${bars(facets.slice(0, 10).map(row => Object.assign({}, row, { display_label: `${clinicalRegistryLabel({...row,table_name:row.table_name || card.table_name})} (${row.label})` })), "n", "display_label")}
-          </div>
-          <div>
-            <strong>Numeric availability</strong>
-            ${numeric.length ? rowsForTable(numeric, 12) : `<div class="empty">No numeric registry panel for this registry.</div>`}
-          </div>
+          </details>
+          ${numeric.length ? `<details><summary>Numeric field availability (${numeric.length})</summary>${renderRegistryNumericList(numeric,source)}</details>` : ''}
         </article>`;
-      }).join("") || `<div class="empty">No registry cards were generated for this run.</div>`);
+      }).join("") || `<div class="empty">No registry cards were generated for this run.</div>`));
 
       fillSelect("panel-group-filter", uniqueValues(panelGroups, "group"));
       function renderPanels() {

@@ -9,6 +9,7 @@ function load(start,end,ctx){const a=html.indexOf(start),b=html.indexOf(end,a);a
 function runtime(extra={}) {
  const nodes={},output={};const node=id=>nodes[id]||={value:'',innerHTML:'',textContent:'',options:[],setAttribute(){},querySelectorAll:()=>[],classList:{contains:()=>true}};
  const ctx=vm.createContext({payload,columnRows:payload.column_profile_rows,columnPageIndex:0,columnExactField:'',columnMeasurement:'',reviewTemporal:payload.review_temporal_coverage,reviewSpatial:payload.review_spatial_coverage,URLSearchParams,sourceDisplayName:x=>x,clinicalDisplayEntry:(kind,system,code)=>payload.clinical_display_dictionary.find(r=>r.kind===kind&&r.system===system&&r.code===code),labSearchKey:x=>String(x).toLowerCase(),setHtml:(id,value)=>output[id]=value,document:{getElementById:node,querySelectorAll:()=>[]},...extra});
+ ctx.collapseGlobalSearch=()=>{};
  load('      function text(', '      function metric(',ctx);load('      function observedRowsWithheld(', '      function sourceTiles(',ctx);
  load('      function clinicalFieldMatches(', '      function clinicalTermSearchResult(',ctx);
  load('      function finiteSummary(', '      ["column-search"',ctx);
@@ -83,6 +84,6 @@ test('source count status preserves suppression, absent counts and zero independ
 });
 test('compact numeric cards use one unavailable reason and readable percentages',()=>{
  const {run}=runtime();const unavailable=run("fieldCard(columnRows.find(r=>r.table_name==='RKKP_DaMyDa'&&r.column_name==='Reg_Vaegt'))");
- assert.equal((unavailable.match(/Numeric coding needs review/g)||[]).length,1);assert.match(unavailable,/58\.3% recorded/);assert.doesNotMatch(unavailable,/58\.324%/);
- const recorded=run("fieldCard(columnRows.find(r=>r.table_name==='SP_PatientInfo'&&r.column_name==='weight_in_kg'))");assert.match(recorded,/63\.8% recorded/);assert.match(recorded,/Recorded values; not a clinical reference range/);assert.match(recorded,/27\.4% date-field availability/);
+ assert.equal((unavailable.match(/Numeric coding needs review/g)||[]).length,1);assert.match(unavailable,/58\.3% recorded/);assert.doesNotMatch(unavailable.replace(/title="[^"]*"/g,''),/58\.324%/);assert.match(unavailable,/title="Supplied percentage: 58\.324%"/);
+ const recorded=run("fieldCard(columnRows.find(r=>r.table_name==='SP_PatientInfo'&&r.column_name==='weight_in_kg'))");assert.match(recorded,/63\.8% recorded/);assert.match(recorded,/Recorded values; not a clinical reference range/);assert.match(recorded,/view=timeplace&amp;source=SP_PatientInfo/);assert.doesNotMatch(recorded,/source-year-counts/);
 });

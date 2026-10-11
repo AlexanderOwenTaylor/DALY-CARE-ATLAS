@@ -10,9 +10,12 @@ function runtime(extra={}){
   const output={},nodes={};
   const node=id=>nodes[id]||=( {value:'',textContent:'',innerHTML:'',options:[],listeners:{},addEventListener(event,handler){this.listeners[event]=handler;},classList:{contains:()=>true},querySelectorAll:()=>[],closest:()=>null,setAttribute(){}} );
   const ctx=vm.createContext({payload,sourceMapCrosswalkRows:payload.source_map_crosswalk_rows,columnRows:payload.column_profile_rows,catalogRows:payload.catalog_rows,catalogDisplayRows:payload.canonical_resource_reconciliation_rows,columnPageIndex:0,columnExactField:'',columnMeasurement:'',reviewTemporal:payload.review_temporal_coverage,reviewSpatial:payload.review_spatial_coverage,clinicalDisplayEntry:(kind,system,code)=>payload.clinical_display_dictionary.find(row=>row.kind===kind&&row.system===system&&row.code===code),sourceDisplayName:name=>({RKKP_CLL:'Chronic Lymphocytic Leukaemia Registry',RKKP_LYFO:'Danish Lymphoma Registry',RKKP_DaMyDa:'Danish Myeloma Database'}[name] || name),clinicalFieldMatches:(row,q)=>row.column_name.toLowerCase().includes(q),setHtml:(id,value)=>output[id]=value,document:{getElementById:node,querySelectorAll:()=>[]},...extra});
+  Object.assign(ctx,{URLSearchParams,panels:payload.panels,reviewLaboratory:{lab_sources:[]},collapseGlobalSearch(){}});
+  vm.runInContext(html.split('/* CLINICIAN_DISPLAY_START */')[1].split('/* CLINICIAN_DISPLAY_END */')[0],ctx);
   load('      function text(', '      function metric(',ctx);
   load('      function observedRowsWithheld(', '      function sourceTiles(',ctx);
   load('      function resourceSources(', '      ["catalog-search"',ctx);
+  load('      function sourceTiles(', '      function cssClass(',ctx);
   load('      function finiteSummary(', '      ["column-search"',ctx);
   return {ctx,output,node,run:code=>vm.runInContext(code,ctx)};
 }
@@ -156,7 +159,7 @@ test('EKOKUR and all resources with exact profile candidates link to available f
 });
 test('global NPU search uses preserved reference definitions with dictionary routes',()=>{
   const {ctx,run}=runtime({panels:payload.panels,patobankKi67Percent:{},mclTriangleFeasibility:{},ki67Discovery:{},clinicalConceptRows:[],semanticRows:[],semanticCodeRows:[],semanticValueRows:[],semanticPanelLinks:[],semanticOverlayRows:[],semanticConflictRows:[],qaItems:[],actionItems:[],curatorLabelRowsForLookup:()=>[],scoreSearchResult:()=>0,normalizeSearchText:value=>String(value).toLowerCase()});
-  for(const name of ['CLINICIAN_DISPLAY','CLINICAL_TERMS','CLINICAL_GUIDE']) vm.runInContext(html.split(`/* ${name}_START */`)[1].split(`/* ${name}_END */`)[0],ctx);
+  for(const name of ['CLINICAL_TERMS','CLINICAL_GUIDE']) vm.runInContext(html.split(`/* ${name}_START */`)[1].split(`/* ${name}_END */`)[0],ctx);
   load('      function makeSearchResult(', '      function syncGlobalSearchPlaceholder(',ctx);
   load('      function dedupeSearchResults(', '      function humanMetricLabel(',ctx);
   for(const query of ['NPU04998','creatinine','kreatinin']) {

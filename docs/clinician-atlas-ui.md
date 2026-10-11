@@ -38,6 +38,49 @@ Double-click Home or serve the entire `site/` directory over HTTP. Keep all page
 scripts, styles and `output-shards/` together. Internal run CSVs are not public
 release artifacts and must not be linked or hosted with the site.
 
+## Clinical explorer
+
+Start offers clinical tasks and measurement shortcuts. Six primary sections keep
+registries, clinical data, treatment, laboratory data and source fields close to
+hand. More sections retains the other destinations; existing deep links and the
+mobile section selector remain supported. Export metadata and technical guidance
+are secondary details.
+
+Field cards show the exact source and field beside the readable name, records
+with a value, usable numeric summaries or the reason they are unavailable. A
+recorded/total statement uses an explicitly supplied compatible total; it does
+not reconstruct suppressed counts or estimate people. Small positive percentages
+and incomplete recording remain distinguishable from zero and 100%. Full source
+coverage is linked once from each field rather than repeated as tables inside
+its summary. The destination retains the exact source.
+
+Vitals links to the available weight/height and BMI field profiles with their
+source names. These are separate from SP vital-event aggregates. Laboratory
+reference results show supplied specimen/system and terminology units before
+selection. Those definitions do not establish which tests were observed or
+validate the units in a source. Where observed summaries are withheld, the page
+explains that limit and offers source fields, source coverage and reference
+definitions as separate actions.
+
+Registry numeric cards retain configured panel units as explicitly configured
+metadata. An absent field-profile unit stays absent; no unit is copied between
+the two outputs. Withheld statistics receive a readable reason and an exact
+field-evidence link. Treatment source groups distinguish administrations,
+prescriptions, plans, national medicine, registry indicators and procedures.
+Known identities and declared aliases determine these groups; uncertain or
+conflicting identities remain candidates.
+
+Global search retains its query after opening a result, with a control to show
+the results again. Exact source/field selection, search terms and supported
+laboratory, reference and measurement filters remain in the route for refresh and
+browser history. Catalogue domain/status/role and field domain/kind filters are
+not encoded in the route. Hidden technical panels render on demand;
+direct links and printing retain their content. Clinical explorer still downloads
+the complete clinical core. Reduced initial rendering does not reduce its payload
+transfer size or establish a deployment latency guarantee.
+
+## Coverage and Data tables
+
 Coverage over time shows readable counts grouped by exact source, selected date
 field and evidence basis. The local table scrolls horizontally; select a source
 for its year tables. Missing years, zero, withheld counts and duplicate evidence
@@ -210,10 +253,14 @@ may need a UTF-8 locale and the local package-library path. `jsonlite` is needed
 for the shared privacy-fixture test. Optional export-to-export tests and search
 benchmarks require explicitly supplied local exports; these data are not committed.
 
-The local iteration9 build was reviewed in desktop and mobile browsers, including
-measurement discovery, unit provenance, source coverage, keyboard controls and
-route restoration. That visual acceptance does not certify all accessibility or
-clinical interpretation requirements. No whole-project R-suite success is claimed.
+The local Clinical explorer iteration15 was reviewed by independent researcher,
+clinician and software reviewers. Browser checks covered desktop and offline phone
+use, measurement and reference discovery, exact source coverage links, registry
+unit provenance, search/history, keyboard controls, all existing section routes
+and print rendering. Visual review found and corrected source-count wrapping,
+stretched registry cards and invisible search actions. These bounded checks do not
+certify every atlas section, accessibility requirement or clinical interpretation.
+No whole-project R-suite success is claimed.
 
 ### Optional local export checks and benchmarks
 

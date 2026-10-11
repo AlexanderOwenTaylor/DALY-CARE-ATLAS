@@ -58,7 +58,7 @@ test('zero semantic source rows differ from nonzero source filtered to no matche
 });
 test('search replacement toggle handlers restore focus only on explicit toggle activation',()=>{
   let listener;let focused=0;const replacement={focus:()=>focused++};
-  const context=vm.createContext({appState:{lastGlobalQuery:'creatinine'},globalAtlasSearch:{value:'creatinine'},renderGlobalSearch:()=>{},document:{addEventListener:(_event,handler)=>listener=handler,getElementById:()=>({querySelector:()=>replacement})}});
+  const context=vm.createContext({appState:{lastGlobalQuery:'creatinine'},globalAtlasSearch:{value:'creatinine'},parseHashRoute:()=>({tabId:'overview',subId:'overview-summary'}),updateShareUrl(){},activeSubForTab:()=>'',renderGlobalSearch:()=>{},document:{addEventListener:(_event,handler)=>listener=handler,getElementById:()=>({querySelector:()=>replacement})}});
   const start=html.indexOf('      document.addEventListener("click", event => {\n        if (event.target.closest(\'[data-clear-global-search]\'))');
   const end=html.indexOf('        const copy =',start);
   vm.runInContext(html.slice(start,end)+'\n      });',context);
