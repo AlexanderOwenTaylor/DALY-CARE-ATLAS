@@ -11,7 +11,7 @@
     RKKP_CLL:{Reg_BinetStadium:'Binet stage',Reg_Umuteret:'IGHV mutation-status field',Reg_FISH:'FISH result field',Reg_Del13q14:'Chromosome 13q14 deletion field',Reg_Del11q:'Chromosome 11q deletion field',Reg_Del17p:'Chromosome 17p deletion field',Reg_Trisomi12:'Trisomy 12 field',Reg_TP53:'TP53 field',Reg_Performancestatus:'Performance status',Reg_ZAP70:'ZAP-70 marker field',Reg_CD38Positiv:'CD38 positivity field',Reg_Beta2Microglobulin:'Beta-2 microglobulin field'}
   };
   const sourceLabels={RKKP_DaMyDa:'Myeloma registry',RKKP_LYFO:'Lymphoma registry',RKKP_CLL:'CLL registry'};
-  const fieldKey=row=>own(row,'column_name')?row.column_name:row.source_column;
+  const fieldKey=row=>own(row,'column_name')?row.column_name:own(row,'source_column')?row.source_column:own(row,'date_column')?row.date_column:row.region_column;
   function fieldLabel(row){const source=own(fieldLabels,row.table_name)?fieldLabels[row.table_name]:null;return source&&own(source,fieldKey(row))?source[fieldKey(row)]:'';}
   const sourceLabel=source=>own(sourceLabels,source)?sourceLabels[source]:'';
   const fieldTable=tableId=>categoryProfiles.has(tableId)||['column_profiles','columns','damyda_numeric_fields'].includes(tableId);
@@ -109,8 +109,9 @@
       }
       for(const shard of t.shards){check();const data=await loadShard(tableId,shard.id);check();for(const row of data){
         const inScope=(!criteria.source||row.table_name===criteria.source)&&(!criteria.field||fieldKey(row)===criteria.field);
-        const alias=fieldTable(tableId)?[fieldLabel(row),own(sourceLabels,row.table_name)?sourceLabels[row.table_name]:''].join(' '):'';
-        if(inScope&&(!needle||t.columns.some(c=>row[c.key]!==null&&String(row[c.key]).toLocaleLowerCase().includes(needle))||alias.toLocaleLowerCase().includes(needle))){if(matches>=start&&rows.length<PAGE_ROWS)rows.push(row);matches++;}
+        const namesOnly=criteria.fieldNames===true&&fieldTable(tableId),alias=fieldTable(tableId)?[fieldLabel(row),own(sourceLabels,row.table_name)?sourceLabels[row.table_name]:''].join(' '):'';
+        const matchesQuery=!needle||(namesOnly?[fieldKey(row),fieldLabel(row)].some(value=>String(value||'').toLocaleLowerCase().includes(needle)):t.columns.some(c=>row[c.key]!==null&&String(row[c.key]).toLocaleLowerCase().includes(needle))||alias.toLocaleLowerCase().includes(needle));
+        if(inScope&&matchesQuery){if(matches>=start&&rows.length<PAGE_ROWS)rows.push(row);matches++;}
       }scanned+=data.length;onProgress?.({scanned_rows:scanned,total_rows:t.shards.reduce((n,s)=>n+s.rows,0)});}
       check();return {rows,total_matches:matches,scanned_rows:scanned,complete:true};
     }catch(error){throw new Error('Search incomplete: '+error.message);}
@@ -236,18 +237,19 @@
   try{c=catalogue();}catch(error){el('outputs-status').textContent=error.message+'. Keep all atlas files together and retry.';if(document.documentElement)document.documentElement.dataset.atlasReady='outputs-error';return;}
   const groups=[...new Set(c.tables.map(t=>t.group).filter(Boolean))].sort();
   el('group-filter').innerHTML='<option value="">All groups</option>'+groups.map(g=>'<option>'+escape(g)+'</option>').join('');
-  let selected=null,page=0,controller=null,viewEpoch=0,libraryReturn=null,view='fields',listPage=0,exactColumns=false,lastResult=null,rowScope={};
+  let selected=null,page=0,controller=null,viewEpoch=0,libraryReturn=null,view='fields',listPage=0,exactColumns=false,lastResult=null,rowScope={},fieldNameOnly=false,coverageSource='',coverageQuery='',coverageExplicit=false,sourceInventory=null,coverageRunning=false;
   const LIST_ROWS=12;
   if('scrollRestoration' in window.history)window.history.scrollRestoration='manual';
   const count=value=>value===null||value===undefined?'Not supplied':formatValue(value);
   function saveState(replace=false){
     const p=new URLSearchParams();
-    if(view!=='fields')p.set('view',view);
+    if(view!=='fields'||el('metadata-query').value)p.set('view',view);
     if(listPage)p.set('listpage',listPage+1);
     if(el('metadata-query').value)p.set('q',el('metadata-query').value);
     if(el('group-filter').value)p.set('group',el('group-filter').value);
     if(el('availability-filter').value)p.set('status',el('availability-filter').value);
-    if(selected){p.set('table',selected.id);if(el('table-query').value)p.set('search',el('table-query').value);if(page)p.set('page',page+1);if(exactColumns)p.set('columns','all');if(rowScope.source)p.set('source',rowScope.source);if(rowScope.field)p.set('field',rowScope.field);}
+    if(view==='timeplace'){if(coverageSource)p.set(selected?'returnsource':'source',coverageSource);if(coverageQuery)p.set('findsource',coverageQuery);}
+    if(selected){p.set('table',selected.id);if(el('table-query').value)p.set('search',el('table-query').value);if(fieldNameOnly)p.set('searchmode','fields');if(page)p.set('page',page+1);if(exactColumns)p.set('columns','all');if(rowScope.source)p.set('source',rowScope.source);if(rowScope.field)p.set('field',rowScope.field);}
     window.history[replace?'replaceState':'pushState']({outputsLibraryReturn:libraryReturn},'','DALYCARE_outputs.html'+(p.size?'?'+p:''));
   }
   function restoreLibraryPosition(){
@@ -259,7 +261,12 @@
   const searchTargets=[['search-field-rows','column_profiles'],['search-clinical-rows','clinical_display_dictionary'],['search-lab-rows','npu_display_dictionary']];
   function list(){
     const q=el('metadata-query').value.trim().toLocaleLowerCase(),g=el('group-filter').value,s=el('availability-filter').value,task=tasks[view];
-    const tables=c.tables.filter(t=>(view==='all'||(view==='technical'?!researchIds.has(t.id):task.ids.includes(t.id)))&&(!g||t.group===g)&&(!s||t.status===s)&&[t.id,t.title,tableTitle(t),t.group,t.source_file,t.kind,t.row_grain,...(t.source_terms||[]),...(t.columns||[]).flatMap(c=>[c.key,c.label,c.definition])].some(value=>String(value||'').toLocaleLowerCase().includes(q)));
+    document.body.classList.toggle('coverage-mode',view==='timeplace');el('coverage-workspace').hidden=view!=='timeplace';
+    el('catalogue-search-label').textContent=view==='fields'?'Find a field in published rows':'Search table names and descriptions';
+    el('catalogue-search-help').textContent=view==='fields'?'Search exact field names and reviewed labels across sources.':'This searches table names and descriptions. Row searches are available below.';
+    el('catalogue-search-submit').textContent=view==='fields'?'Find fields':'Find tables';
+    el('metadata-query').placeholder=view==='fields'?'Try creatinine, height, or an exact field name':'Try a table name or exact table ID';
+    const tables=c.tables.filter(t=>(view==='all'||(view==='technical'?!researchIds.has(t.id):task.ids.includes(t.id)))&&(!g||t.group===g)&&(!s||t.status===s)&&(view==='fields'||[t.id,t.title,tableTitle(t),t.group,t.source_file,t.kind,t.row_grain,...(t.source_terms||[]),...(t.columns||[]).flatMap(c=>[c.key,c.label,c.definition])].some(value=>String(value||'').toLocaleLowerCase().includes(q))));
     if(task.ids)tables.sort((a,b)=>task.ids.indexOf(a.id)-task.ids.indexOf(b.id));
     listPage=Math.min(listPage,Math.max(0,Math.ceil(tables.length/LIST_ROWS)-1));
     const start=listPage*LIST_ROWS,shown=tables.slice(start,start+LIST_ROWS);
@@ -272,7 +279,7 @@
     el('catalogue-page').textContent='Page '+(listPage+1)+' of '+Math.max(1,Math.ceil(tables.length/LIST_ROWS));
     el('clear-filters').hidden=!(q||g||s);el('applied-filters').hidden=!(g||s);el('applied-filters').textContent=[g&&'Group: '+g,s&&'State: '+statusLabels[s]].filter(Boolean).join(' · ');
     let actions=0;for(const [control,tableId] of searchTargets){const t=c.tables.find(t=>t.id===tableId);el(control).hidden=!q||!t||!readable(t);if(!el(control).hidden)actions++;}
-    el('query-actions').hidden=!actions;el('query-action-label').textContent='Look for “'+el('metadata-query').value.trim()+'” inside published rows:';
+    el('query-actions').hidden=!actions||view==='fields'||view==='timeplace';el('query-action-label').textContent='Look for “'+el('metadata-query').value.trim()+'” inside published rows:';
   }
   const cell=(row,key)=>escape(formatValue(row[key],key,row));
   const supplied=(row,key)=>row[key]!==null&&row[key]!==undefined&&row[key]!=='';
@@ -295,9 +302,9 @@
     if(fallback[key]&&(!c?.label||c.label===key||c.label.toLocaleLowerCase()===key.replaceAll('_',' ').toLocaleLowerCase()))return fallback[key];
     return c?.label||key.replaceAll('_',' ');
   }
-  const lines=(row,keys)=>keys.filter(key=>own(row,key)).map(key=>line(readingLabel(key),readingCell(row,key))).join('');
+  const lines=(row,keys)=>keys.filter(key=>own(row,key)&&(!key.endsWith('_privacy_status')||supplied(row,key))).map(key=>line(readingLabel(key),readingCell(row,key))).join('');
   const fieldIdentity=(row,field='column_name')=>'<strong>'+escape(fieldLabel(row)||formatValue(row[field],field,row))+'</strong>'+(fieldLabel(row)?'<code class="cell-line">'+cell(row,field)+'</code>':'');
-  const identity=(row,field='column_name')=>fieldIdentity(row,field)+line('Source',cell(row,'table_name'));
+  const identity=(row,field='column_name')=>fieldIdentity(row,field)+line('Source',cell(row,'table_name'))+(fieldTable(selected?.id)&&!rowScope.source?sourceCoverageLink(row.table_name):'');
   function availability(row){
     if(row.n_available===null&&row.pct_available===null&&own(privacyLabels,row.availability_privacy_status))return cell(row,'n_available')+(own(row,'n_rows')?line('Source records',readingCell(row,'n_rows')):'');
     let html=own(row,'n_available')?line('With a value',readingCell(row,'n_available')+(own(row,'n_rows')?' of '+readingCell(row,'n_rows')+' source rows':' source rows')):'';
@@ -334,12 +341,94 @@
     const labels={region_column_counts:'Recorded region-field counts',streamed_region_column_counts:'Recorded region-field counts (streamed)',registry_region_panel:'Retained registry-region categories'};
     return escape(labels[row.count_basis]||row.count_basis||'Basis not supplied');
   }
+  // Names already reviewed in the Clinical explorer. Unknown names retain exact identifiers.
+  Object.assign(sourceLabels,{SP_AlleProvesvar:'Hospital laboratory results (SP)',SDS_lab_forsker:'National laboratory data (SDS)',biochemistry:'PERSIMUNE biochemistry',SP_AdministreretMedicin:'Administered medicines (SP)',SP_OrdineretMedicin:'Prescribed medicines (SP)',SP_ADT_haendelser:'Admissions, discharges and transfers (SP)',SP_VitaleVaerdier:'Vital signs (SP)',SP_SocialHX:'Social history (SP)',SP_ITAOphold:'Intensive care stays (SP)',CLLPANEL_WIDE:'CLL molecular-marker dataset',CLL_TREAT:'CLL treatment dataset',CLL_TREAT_IBRUTINIB:'CLL ibrutinib treatment dataset',SP_Behandlingsplaner_Del1:'Treatment plans — part 1 (SP)',Behandlingsplaner_del2:'Treatment plans — part 2 (SP)',SP_Journalnotater_Del1:'Clinical notes — part 1 (SP)',Journalnotater_del2:'Clinical notes — part 2 (SP)',SP_PatientInfo:'Patient information (SP)',Flytningshistorik:'Patient movement history (SP)',SP_BilleddiagnostikeUndersoegelser_Del1:'Imaging examinations — part 1 (SP)',SP_BilleddiagnostikeUndersoegelser_Del2:'Imaging examinations — part 2 (SP)',microbiology_analysis:'Microbiology analyses',microbiology_culture:'Microbiology cultures',microbiology_culture_resistance:'Antimicrobial susceptibility',microbiology_microscopy:'Microbiology microscopy',SDS_pato:'Pathology records (SDS)',BIOBANK_SAMPLES:'Biobank samples',SDS_diagnoser:'Diagnoses (LPR3)',SDS_t_diag:'Diagnoses (LPR)',SDS_procedurer_kirurgi:'Surgical procedures (LPR3)',SDS_procedurer_andre:'Other procedures (LPR3)'});
+  const coverageIds=['sources','atlas_temporal_coverage','atlas_temporal_coverage_years','atlas_spatial_region_counts'];
+  // In addition to the unchanged 1 MiB shard cache, retain at most 512 KiB / 2,048 aggregate rows.
+  // These four reviewed aggregates total about 300 KiB / 965 rows in this export.
+  const COVERAGE_BYTES=524288,COVERAGE_ROWS=2048;
+  const coverageFieldLabels={RKKP_CLL:{Reg_Diagnose_dt:'CLL diagnosis date'},RKKP_LYFO:{Reg_DiagnostiskBiopsi_dt:'Diagnostic biopsy date'},RKKP_DaMyDa:{Diagnosedato:'Diagnosis date'},SP_AdministreretMedicin:{taken_time:'Medication administration time'},SP_OrdineretMedicin:{order_start_time:'Prescription start time'},SP_ADT_haendelser:{kontakt_start_local_dttm:'Hospital contact start (local time)'},SP_AlleProvesvar:{specimn_taken_time:'Specimen collection time'},SP_BilleddiagnostikeUndersoegelser_Del1:{bestillingstidspunkt:'Imaging order time'},SP_BilleddiagnostikeUndersoegelser_Del2:{bestillingstidspunkt:'Imaging order time'},SP_Behandlingsplaner_Del1:{behandlingsstartdato:'Treatment start date'},SP_Bloddyrkning_Del3:{provetagningstidspunkt:'Blood culture specimen collection time'},SP_SocialHX:{registringsdato:'Social history recording date'},SP_VitaleVaerdier:{recorded_time:'Measurement recording time'},SDS_kontakter:{dato_start:'Contact start date'},SDS_t_sksube:{d_odto:'Procedure date'},SDS_procedurer_andre:{dato_start:'Procedure start date'},SDS_pato:{d_rekvdato:'Pathology request date'},SDS_lab_forsker:{samplingdate:'Specimen collection date'},SP_PatientInfo:{contact_date:'Hospital contact date'},microbiology_analysis:{samplerecieveddatetime:'Microbiology sample receipt time'},microbiology_culture:{samplerecieveddatetime:'Microbiology sample receipt time'},microbiology_microscopy:{samplerecieveddatetime:'Microbiology sample receipt time'},BIOBANK_SAMPLES:{date_samplecollection:'Sample collection date'},CLL_TREAT_IBRUTINIB:{date_diagnosis:'CLL diagnosis date'},SP_ITAOphold:{region_name:'Region name'}};
+  function coverageField(row,key){const source=own(coverageFieldLabels,row.table_name)?coverageFieldLabels[row.table_name]:null,label=source&&own(source,row[key])?source[row[key]]:'';return (label?escape(label)+' ':'')+'<code>'+cell(row,key)+'</code>';}
+  let coverageData=null,coverageExample=false;
+  function evidenceLink(tableId,label,source='',field='',query='',namesOnly=false){
+    const target=c.tables.find(t=>t.id===tableId);if(!target||tableId==='column_profiles'&&!readable(target))return '';
+    const p=new URLSearchParams({view:'timeplace',table:tableId});if(source)p.set('source',source);if(field)p.set('field',field);if(query)p.set('search',query);if(namesOnly)p.set('searchmode','fields');if(coverageSource||source)p.set('returnsource',coverageSource||source);
+    return '<a href="DALYCARE_outputs.html?'+escape(p.toString())+'">'+escape(label)+' →</a>';
+  }
+  function sourceCoverageLink(source){return supplied({source},'source')?'<a class="field-availability" href="DALYCARE_outputs.html?'+escape(new URLSearchParams({view:'timeplace',source}).toString())+'">Years and regions for this source →</a>':'';}
+  function sourceChoices(){
+    if(!sourceInventory)return;
+    const allNames=[...new Set(sourceInventory.map(r=>r.table_name).filter(Boolean))],matches=name=>(sourceLabel(name)+' '+name).toLocaleLowerCase().includes(coverageQuery.trim().toLocaleLowerCase());
+    if(coverageExplicit&&coverageSource&&(!allNames.includes(coverageSource)||!matches(coverageSource))){coverageQuery='';el('coverage-query').value='';}
+    const names=allNames.filter(matches),unknown=coverageExplicit&&coverageSource&&!allNames.includes(coverageSource);
+    names.sort((a,b)=>(sourceLabel(a)||a).localeCompare(sourceLabel(b)||b));
+    if(!coverageExplicit&&!names.includes(coverageSource))coverageSource=['RKKP_DaMyDa','RKKP_CLL','RKKP_LYFO'].find(name=>names.includes(name))||names[0]||'';
+    el('coverage-source').innerHTML=(unknown?'<option value="'+escape(coverageSource)+'">'+escape(coverageSource)+' · not present in this export</option>':'')+names.map(name=>'<option value="'+escape(name)+'">'+escape(sourceLabel(name)?sourceLabel(name)+' · '+name:name)+'</option>').join('');el('coverage-source').value=coverageSource;
+    el('coverage-discovery').textContent=unknown?'The requested source is not present in this export. Choose another source above.':names.length?names.length+' matching sources'+(coverageExample?' · Showing an example source; choose the source for your question.':''):'No source names match. Try an exact identifier or another term.';
+  }
+  function disclosure(row){return ['count_privacy_status','availability_privacy_status','value_privacy_status','date_privacy_status'].filter(key=>supplied(row,key)).map(key=>cell(row,key)).filter((v,i,a)=>a.indexOf(v)===i).join(' · ');}
+  function denominator(row,kind){
+    if(kind==='year'&&['event_date_counts','streamed_event_date_counts'].includes(row.coverage_basis))return 'Supplied shares use all source records, including missing, unparseable or out-of-window dates.';
+    if(kind==='region'&&['region_column_counts','streamed_region_column_counts'].includes(row.count_basis))return 'Supplied shares use all source records.';
+    if(kind==='region'&&row.count_basis==='registry_region_panel')return 'Supplied shares use retained normalized registry-region counts; missing, unmapped or suppressed categories may be excluded.';
+    return 'The percentage denominator is not supplied for this evidence basis.';
+  }
+  function evidenceGroups(rows,kind){
+    const groups=new Map(),field=kind==='year'?'date_column':'region_column',basis=kind==='year'?'coverage_basis':'count_basis';
+    for(const row of rows){const key=JSON.stringify([row.table_name,row[field],row[basis]]);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
+    return [...groups.values()].map(group=>{
+      const first=group[0],range=kind==='year'&&first.coverage_basis==='source_date_range',observed=kind==='year'?['event_date_counts','streamed_event_date_counts'].includes(first.coverage_basis):['region_column_counts','streamed_region_column_counts','registry_region_panel'].includes(first.count_basis);
+      const keys=new Map();for(const row of group){const key=JSON.stringify(kind==='year'?row.year:[row.region_code,row.region_name]);keys.set(key,(keys.get(key)||0)+1);}
+      const sorted=kind==='year'?[...group].sort((a,b)=>Number(b.year)-Number(a.year)):group;
+      const title=kind==='year'?(range?'Inferred source date range':first.coverage_basis==='streamed_event_date_counts'?'Recorded year counts (streamed)':observed?'Recorded year counts':'Unreviewed year evidence: '+cell(first,basis)):regionBasis(first);
+      const meta='<p class="mini">'+coverageField(first,field)+' · '+title+'</p>';
+      if(range)return '<section class="coverage-group">'+meta+'<p>Source range withheld. This does not establish recorded events or continuous coverage.</p></section>';
+      return '<section class="coverage-group">'+meta+'<p class="mini">'+denominator(first,kind)+'</p><table class="coverage-values"><thead><tr><th scope="col">'+(kind==='year'?'Year':'Recorded region')+'</th><th scope="col">Source records</th><th scope="col">Supplied share</th></tr></thead><tbody>'+sorted.map(row=>{
+        const key=JSON.stringify(kind==='year'?row.year:[row.region_code,row.region_name]),duplicate=keys.get(key)>1,guard=disclosure(row),protectedCount=row.count_privacy_status||row.value_privacy_status==='withheld_unvalidated_distribution'||row.date_privacy_status==='withheld_derived_source_range';
+        const name=kind==='year'?(supplied(row,'year')?cell(row,'year'):'Year not supplied'):(supplied(row,'region_name')?cell(row,'region_name'):cell(row,'region_code'));
+        const number=protectedCount?'Count withheld':readingCell(row,'n_rows');
+        const share=protectedCount?'Not shown':readingCell(row,'pct_rows');
+        return '<tr><th scope="row">'+name+(duplicate?'<small class="cell-line">Duplicate evidence; separate supplied row</small>':'')+'</th><td>'+number+'</td><td>'+share+'</td></tr>'+(guard?'<tr class="coverage-guard"><td colspan="3">'+guard+'</td></tr>':'');
+      }).join('')+'</tbody></table><p class="coverage-links">'+evidenceLink(kind==='year'?'atlas_temporal_coverage_years':'atlas_spatial_region_counts','Exact '+(kind==='year'?'year':'region')+' evidence',coverageSource,first[field]||'')+' '+evidenceLink('column_profiles','Inspect this field',coverageSource,first[field]||'')+'</p></section>';
+    }).join('');
+  }
+  function renderCoverage(){
+    renderCoverageLinks();
+    if(!coverageData||!coverageSource){el('coverage-answer').innerHTML='';return;}
+    if(!sourceInventory.some(r=>r.table_name===coverageSource)){el('coverage-answer').innerHTML='<section class="coverage-source-summary"><p class="coverage-showing">Requested source: '+escape(coverageSource)+'</p><p>This source is not present in this export. Its clinical data availability cannot be determined here. Choose another source above to inspect published evidence.</p></section>';return;}
+    const rows=id=>coverageData[id].rows.filter(r=>r.table_name===coverageSource),inventory=rows('sources'),dates=rows('atlas_temporal_coverage'),years=rows('atlas_temporal_coverage_years'),regions=rows('atlas_spatial_region_counts');
+    const absent=(id,label)=>coverageData[id].readable?(c.tables.find(t=>t.id===id)?.complete===true?'No '+label+' summary is published for this source.':'No '+label+' summary is present in these published rows; the original scope is limited or unknown.'):'The '+label+' summary is not available in this export.';
+    const dateFacts=dates.length?dates.map(r=>!supplied(r,'date_column')?'<div class="coverage-date"><span>No date field identified in this export.</span></div>':'<div class="coverage-date"><strong>'+(supplied(r,'pct_available')?readingCell(r,'pct_available'):r.availability_privacy_status?cell(r,'availability_privacy_status'):'Availability not supplied')+'</strong><span>'+(supplied(r,'pct_available')?'Records with a date value · ':'')+coverageField(r,'date_column')+'</span></div>').join(''):'<div class="coverage-date"><span>Date-field availability is not supplied for this source.</span></div>';
+    const dateStates=[...new Set(dates.filter(r=>supplied(r,'date_privacy_status')).map(r=>formatValue(r.date_privacy_status,'date_privacy_status')))];
+    el('coverage-answer').innerHTML='<section class="coverage-source-summary"><p class="coverage-showing">Showing: '+escape(sourceLabel(coverageSource)||coverageSource)+'</p><code>'+escape(coverageSource)+'</code><div class="coverage-facts">'+inventory.map(r=>'<div><strong>'+(supplied(r,'n_rows')?readingCell(r,'n_rows'):'Not supplied')+'</strong><span>source records</span></div><div><strong>'+(supplied(r,'n_cols')?readingCell(r,'n_cols'):'Not supplied')+'</strong><span>source fields</span></div>').join('')+dateFacts+'</div><p class="mini">Counts describe source records, not unique people. A nonmissing date does not establish date validity.'+(dateStates.length?' '+escape(dateStates.join(' · '))+'.':'')+'</p><p class="coverage-links">'+evidenceLink('column_profiles','Fields in this source',coverageSource)+' '+evidenceLink('sources','Source details',coverageSource)+' '+evidenceLink('atlas_temporal_coverage','Date availability evidence',coverageSource)+'</p></section><div class="coverage-panels"><section><h3>Years with published record counts</h3>'+(years.length?'<p class="mini">Individual published years, not a claim of continuous coverage.</p>'+evidenceGroups(years,'year'):'<p class="coverage-empty">'+absent('atlas_temporal_coverage_years','annual')+'</p>')+'</section><section><h3>Regions recorded in this source</h3>'+(regions.length?'<p class="mini">Location meaning depends on the selected region field; residence or treatment location is not established.</p>'+evidenceGroups(regions,'region'):'<p class="coverage-empty">'+absent('atlas_spatial_region_counts','regional')+'</p>')+(years.some(r=>['event_date_counts','streamed_event_date_counts'].includes(r.coverage_basis))&&regions.length?'<p class="mini">These regional summaries are separate from the annual counts; no combined year-and-region cohort is supplied.</p>':'')+'<div class="coverage-hospitals"><p class="mini">Hospital field names can be checked across sources. Hospital names and counts are not supplied here.</p>'+evidenceLink('column_profiles','Find hospital fields across sources','','','hospital',true)+'</div></section></div>';
+  }
+  async function readCoverage(){
+    controller?.abort();cancel();controller=new AbortController();const signal=controller.signal,epoch=++viewEpoch;coverageRunning=true;
+    const check=()=>{if(signal.aborted||epoch!==viewEpoch||view!=='timeplace'||selected)throw new Error('Reading cancelled');};
+    const abort=()=>{if(epoch===viewEpoch)cancel();};signal.addEventListener('abort',abort,{once:true});
+    el('coverage-answer').innerHTML='';el('coverage-status').textContent='Reading source summaries…';el('coverage-retry').hidden=true;el('coverage-cancel').hidden=false;
+    try{
+      if(!coverageData){
+        const descriptors=coverageIds.map(id=>c.tables.find(t=>t.id===id)),shards=descriptors.flatMap(t=>t?.shards||[]);
+        if(shards.reduce((n,s)=>n+s.rows,0)>COVERAGE_ROWS||shards.reduce((n,s)=>n+s.bytes,0)>COVERAGE_BYTES)throw new Error('Source summaries exceed the overview reading limit. Use the original tables below');
+        const data={};for(const tableId of coverageIds){check();const t=c.tables.find(t=>t.id===tableId);data[tableId]={rows:[],readable:!!t&&readable(t)};if(data[tableId].readable){for(const shard of t.shards){check();const rows=await loadShard(tableId,shard.id);check();data[tableId].rows.push(...rows);}}if(tableId==='sources'){if(!data.sources.rows.length)throw new Error('Source inventory is unavailable in this export');sourceInventory=data.sources.rows;sourceChoices();}}
+        check();coverageData=data;
+      }
+      check();sourceInventory=coverageData.sources.rows;sourceChoices();renderCoverage();el('coverage-status').textContent='';saveState(true);
+    }catch(error){if(epoch===viewEpoch){el('coverage-answer').innerHTML='';el('coverage-status').textContent=error.message+'. Source summaries are incomplete; no absence of evidence can be concluded. Keep the atlas files together and retry.';el('coverage-retry').hidden=false;}}
+    finally{signal.removeEventListener('abort',abort);if(epoch===viewEpoch){coverageRunning=false;el('coverage-cancel').hidden=true;}}
+  }
+  function renderCoverageLinks(){el('coverage-evidence-links').innerHTML=tasks.timeplace.ids.map(id=>evidenceLink(id,tableTitle(c.tables.find(t=>t.id===id)||{id,title:id}))).join(' ');}
+  function startCoverage(){
+    el('coverage-query').value=coverageQuery;renderCoverageLinks();
+    if(coverageData){sourceChoices();renderCoverage();el('coverage-status').textContent='';}else readCoverage();
+  }
   // Primary columns compose existing values only. Exact columns remain available below the toggle.
   const primary={
     column_profiles:[['Source field','Exact field, source and profile kind',r=>identity(r)+line('Profile',cell(r,'profile_kind'))],['Availability','Source records, not people',availability],['Stored values','Supplied summaries, not reference ranges',summaryValues]],
     damyda_numeric_fields:[['Source field and unit','Configured unit, not harmonization',r=>identity(r,'source_column')+line('Field key',cell(r,'field'))+line('Unit',cell(r,'unit'))],['Availability','Supplied source-record availability',availability],['Stored values','Supplied summaries or withholding reason',summaryValues]],
     columns:[['Source field','Exact names',r=>identity(r)],['Field type','Supplied source typing',r=>lines(r,['column_type','column_class'])],['Missingness','Source records, not people',r=>lines(r,['n_missing','pct_missing','availability_privacy_status'])],['Distinctness and protection','Capped count, not a value list',r=>lines(r,['n_distinct_capped','is_sensitive','value_privacy_status'])]],
-    sources:[['Source','Exact table and configured type',r=>'<strong>'+cell(r,'table_name')+'</strong>'+lines(r,['source_type','domain'])],['Source size','Records and fields, not people',r=>lines(r,['n_rows','n_cols'])],['Load and profile','Supplied current-run status',r=>lines(r,['load_status','profile_mode'])],['Resolution','Finding a source is not completeness',r=>lines(r,['resolution_status','memory_status'])]],
+    sources:[['Source','Exact table and configured type',r=>'<strong>'+escape(sourceLabel(r.table_name)||r.table_name)+'</strong>'+line('Exact source',cell(r,'table_name'))+lines(r,['source_type','domain'])+sourceCoverageLink(r.table_name)+' '+evidenceLink('column_profiles','Fields in this source',r.table_name)],['Source size','Records and fields, not people',r=>lines(r,['n_rows','n_cols'])],['Load and profile','Supplied current-run status',r=>lines(r,['load_status','profile_mode'])],['Resolution','Finding a source is not completeness',r=>lines(r,['resolution_status','memory_status'])]],
     npu_display_dictionary:[['Code and meaning','Supplied reference entry',r=>'<strong>'+cell(r,'code')+'</strong>'+line('Meaning',cell(r,'label'))+(supplied(r,'label_da')?line('Danish label',cell(r,'label_da')):'')],['System and unit','As supplied by the dictionary',r=>lines(r,['system','system_spec','unit','property'])],['Definition','Reference meaning, not an observation',r=>cell(r,'definition')],['Reference source','Supplied provenance',r=>lines(r,['source_label','source_url','retrieved_on','note'])]],
     clinical_display_dictionary:[['Code and meaning','Supplied reference entry',r=>'<strong>'+cell(r,'code')+'</strong>'+line('Meaning',cell(r,'label'))+(supplied(r,'label_da')?line('Danish label',cell(r,'label_da')):'')],['Kind and system','Confirm the stated source/system',r=>lines(r,['kind','system'])],['Definition','Reference meaning, not an observation',r=>cell(r,'definition')],['Reference source','Supplied provenance',r=>lines(r,['source_label','source_url','retrieved_on','note'])]],
     atlas_temporal_coverage_years:[['Source and date field','Exact selected evidence field',r=>identity(r,'date_column')],['Recorded year','Selected date-field year',r=>cell(r,'year')],['Source records','Count and supplied percentage',r=>coverageShare(r,'year')],['Evidence basis','Interpret counts using this basis',r=>lines(r,['coverage_basis','availability_privacy_status','value_privacy_status'])]],
@@ -390,10 +479,17 @@
     }).join('');
   }
   function rowStatus(result){
+    if(!result.total_matches&&fieldNameOnly)return rowScope.source||rowScope.field?'No field names or reviewed labels match in this exact source and field scope. Clear the scope to search other fields.':'No field names or reviewed labels match. Try another field name, switch Search scope to all row fields and values, or use Sources to find a source.';
     if(!result.total_matches)return rowScope.source||rowScope.field?'No matching published rows for this exact source and field scope. Clear the scope to search other fields.':isReference(selected)?'No matching reference definition in this export. Try an exact code or another spelling.':'No matching published rows. Try a field name, exact source identifier, or another spelling.';
     return result.rows.length?'Showing '+(page*PAGE_ROWS+1)+'–'+(page*PAGE_ROWS+result.rows.length)+' of '+result.total_matches+(el('table-query').value?' matching rows':' published rows'):'No rows on this page · '+result.total_matches+' matching rows';
   }
-  function renderRowScope(){el('row-scope').hidden=!(rowScope.source||rowScope.field);el('row-scope-label').textContent=[rowScope.source&&'Source: '+rowScope.source,rowScope.field&&'Field: '+rowScope.field].filter(Boolean).join(' · ');}
+  function renderRowScope(){el('row-scope').hidden=!(rowScope.source||rowScope.field);el('row-scope-label').textContent=[rowScope.source&&'Source: '+rowScope.source,rowScope.field&&'Field: '+rowScope.field].filter(Boolean).join(' · ');el('row-scope-navigation').innerHTML=rowScope.source?sourceCoverageLink(rowScope.source):'';}
+  function renderSearchMode(){
+    const fields=fieldTable(selected?.id);if(!fields)fieldNameOnly=false;
+    el('table-search-mode-control').hidden=!fields;el('table-search-mode').value=fieldNameOnly?'fields':'rows';
+    el('table-query-label').textContent=fieldNameOnly?'Search field names and reviewed labels':'Search fields and values';
+    el('table-query').placeholder=fieldNameOnly?'Field name or reviewed field label':'Field, code, or value';
+  }
   function renderRows(){
     if(!selected||!lastResult)return;
     const t=selected,rows=lastResult.rows,compact=primary[t.id]&&!exactColumns;
@@ -416,19 +512,20 @@
     controller?.abort();controller=new AbortController();const epoch=++viewEpoch,t=selected;if(!t)return;
     lastResult=null;el('rows').innerHTML='';el('table-result').hidden=true;el('read-status').hidden=false;el('table-state').hidden=false;el('read-status').textContent='Loading table rows…';el('cancel-search').disabled=false;el('cancel-search').hidden=false;el('next-page').disabled=true;el('previous-page').disabled=true;el('data-paging').hidden=true;el('retry-read').hidden=true;
     try{
-      const result=await scanTable(t.id,el('table-query').value,page,progress=>{if(epoch===viewEpoch)el('read-status').textContent='Searching published rows… '+progress.scanned_rows+' of '+progress.total_rows+' scanned';},controller.signal,rowScope);
+      const result=await scanTable(t.id,el('table-query').value,page,progress=>{if(epoch===viewEpoch)el('read-status').textContent='Searching published rows… '+progress.scanned_rows+' of '+progress.total_rows+' scanned';},controller.signal,{...rowScope,fieldNames:fieldNameOnly});
       if(epoch!==viewEpoch)return;lastResult=result;
       renderRows();el('next-page').disabled=(page+1)*PAGE_ROWS>=result.total_matches;el('previous-page').disabled=page===0;el('data-paging').hidden=page===0&&result.total_matches<=PAGE_ROWS;
     }catch(error){if(epoch===viewEpoch){el('read-status').textContent=error.message.replace(/shard/gi,'table part')+'. Keep the HTML and accompanying data folder/files together, then try again to complete the search.';el('rows').innerHTML='';el('retry-read').hidden=false;}}
     finally{if(epoch===viewEpoch){el('cancel-search').disabled=true;el('cancel-search').hidden=true;}}
   }
   function detailMode(active){document.body.classList.toggle('detail-mode',active);}
-  function open(tableId,restore=false,query='',controlId=null){
+  function open(tableId,restore=false,query='',controlId=null,namesOnly=false){
     const next=c.tables.find(t=>t.id===tableId)||null;
     if(!restore&&next&&!selected){libraryReturn={tableId,controlId,x:window.scrollX,y:window.scrollY};saveState(true);}
     controller?.abort();cancel();viewEpoch++;selected=next;lastResult=null;
     el('table-detail').hidden=!selected;el('library').hidden=!!selected;detailMode(!!selected);if(!selected)return;
-    if(!restore){page=0;el('table-query').value=query;exactColumns=false;rowScope={};}renderRowScope();
+    el('back-library').textContent=view==='timeplace'?(coverageSource?'← Back to this source':'← Back to years and regions'):'← Back to tables';
+    if(!restore){page=0;el('table-query').value=query;exactColumns=false;rowScope={};fieldNameOnly=namesOnly;}renderRowScope();renderSearchMode();
     const t=selected,[label,purpose]=content(t);
     el('table-title').textContent=tableTitle(t);el('table-purpose').textContent=categoryProfiles.has(t.id)?'Inspect the selected fields and their recorded availability.':descriptions[t.id]?purpose:(t.row_grain||'Row meaning not supplied. Inspect the column meanings before interpreting this output.');
     const cues=[];
@@ -447,25 +544,31 @@
   }
   function showLibrary(){controller?.abort();cancel();viewEpoch++;selected=null;lastResult=null;el('table-detail').hidden=true;el('library').hidden=false;detailMode(false);}
   function clearFilters(){for(const name of ['metadata-query','group-filter','availability-filter'])el(name).value='';listPage=0;libraryReturn=null;}
-  for(const key of Object.keys(tasks))el('task-'+key).addEventListener('click',()=>{view=key;clearFilters();list();saveState();});
+  for(const key of Object.keys(tasks))el('task-'+key).addEventListener('click',()=>{controller?.abort();cancel();viewEpoch++;view=key;clearFilters();list();saveState();if(view==='timeplace'){coverageExample=!coverageSource;startCoverage();}});
   el('clear-filters').addEventListener('click',()=>{clearFilters();list();saveState();});
-  el('metadata-query').addEventListener('input',()=>{libraryReturn=null;listPage=0;view='all';list();saveState(true);});
+  el('metadata-query').addEventListener('input',()=>{libraryReturn=null;listPage=0;if(view!=='fields')view='all';list();saveState(true);});
+  el('catalogue-search-form').addEventListener('submit',event=>{event.preventDefault();if(view==='fields')open('column_profiles',false,el('metadata-query').value.trim(),'catalogue-search-submit',true);else{list();saveState(true);}});
+  el('coverage-query').addEventListener('input',()=>{coverageQuery=el('coverage-query').value;coverageExplicit=false;coverageExample=false;sourceChoices();renderCoverage();saveState(true);});
+  el('coverage-source').addEventListener('change',()=>{coverageSource=el('coverage-source').value;coverageExplicit=true;coverageExample=false;if(coverageRunning){controller?.abort();cancel();viewEpoch++;}saveState();startCoverage();});
+  el('coverage-retry').addEventListener('click',readCoverage);el('coverage-cancel').addEventListener('click',()=>controller?.abort());
   for(const name of ['group-filter','availability-filter'])el(name).addEventListener('change',()=>{libraryReturn=null;listPage=0;view='all';list();saveState();});
   for(const [name,delta] of [['catalogue-previous',-1],['catalogue-next',1]])el(name).addEventListener('click',()=>{listPage=Math.max(0,listPage+delta);libraryReturn=null;list();saveState();el('task-title').setAttribute('tabindex','-1');el('task-title').focus();});
   for(const [control,tableId] of searchTargets)el(control).addEventListener('click',()=>open(tableId,false,el('metadata-query').value.trim(),control));
   el('search-table').addEventListener('submit',event=>{event.preventDefault();page=0;saveState();readPage();});
+  el('table-search-mode').addEventListener('change',()=>{fieldNameOnly=el('table-search-mode').value==='fields';page=0;renderSearchMode();saveState();readPage();});
   el('clear-row-scope').addEventListener('click',()=>{rowScope={};page=0;renderRowScope();saveState();readPage();});
   el('retry-read').addEventListener('click',readPage);el('cancel-search').addEventListener('click',()=>controller?.abort());
   el('exact-columns').addEventListener('click',()=>{exactColumns=!exactColumns;renderRows();saveState(true);});
   for(const [name,delta] of [['previous-page',-1],['next-page',1]])el(name).addEventListener('click',()=>{page=Math.max(0,page+delta);saveState();readPage();});
-  el('back-library').addEventListener('click',()=>{showLibrary();saveState();list();if(!restoreLibraryPosition())el('metadata-query').focus();});
+  el('back-library').addEventListener('click',()=>{showLibrary();saveState();list();if(view==='timeplace'){startCoverage();el('coverage-source').focus();}else if(!restoreLibraryPosition())el('metadata-query').focus();});
   function restore(event){
     const p=new URLSearchParams(window.location.search),saved=window.history.state?.outputsLibraryReturn;
-    libraryReturn=saved&&id(saved.tableId)&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)&&(!saved.controlId||searchTargets.some(([control])=>control===saved.controlId))?saved:null;
+    libraryReturn=saved&&id(saved.tableId)&&Number.isFinite(saved.x)&&Number.isFinite(saved.y)&&(!saved.controlId||saved.controlId==='catalogue-search-submit'||searchTargets.some(([control])=>control===saved.controlId))?saved:null;
     view=own(tasks,p.get('view'))?p.get('view'):(p.get('q')||p.get('group')||p.get('status')?'all':'fields');listPage=Math.max(0,Math.floor(Number(p.get('listpage'))||1)-1);
-    el('metadata-query').value=p.get('q')||'';el('group-filter').value=groups.includes(p.get('group'))?p.get('group'):'';el('availability-filter').value=own(statusLabels,p.get('status'))?p.get('status'):'';
-    el('table-query').value=p.get('search')||'';page=Math.max(0,Math.floor(Number(p.get('page'))||1)-1);exactColumns=p.get('columns')==='all';rowScope={source:p.get('source')||'',field:p.get('field')||''};list();
-    if(p.get('table'))open(p.get('table'),true);else{showLibrary();if(!restoreLibraryPosition()&&event)el('metadata-query').focus();}
+    coverageSource=(p.get('table')?p.get('returnsource'):'')||p.get('source')||'';coverageExplicit=!!coverageSource;coverageQuery=p.get('findsource')||(view==='timeplace'?p.get('q')||'':'');coverageExample=view==='timeplace'&&!coverageSource&&!coverageQuery;
+    el('metadata-query').value=view==='timeplace'?'':p.get('q')||'';el('group-filter').value=groups.includes(p.get('group'))?p.get('group'):'';el('availability-filter').value=own(statusLabels,p.get('status'))?p.get('status'):'';
+    el('table-query').value=p.get('search')||'';page=Math.max(0,Math.floor(Number(p.get('page'))||1)-1);exactColumns=p.get('columns')==='all';fieldNameOnly=p.get('searchmode')==='fields';rowScope={source:p.get('source')||'',field:p.get('field')||''};list();
+    if(p.get('table'))open(p.get('table'),true);else{showLibrary();if(view==='timeplace')startCoverage();else if(!restoreLibraryPosition()&&event)el('metadata-query').focus();}
   }
   window.addEventListener('popstate',restore);restore();if(document.documentElement)document.documentElement.dataset.atlasReady='outputs';
 })(window,document);

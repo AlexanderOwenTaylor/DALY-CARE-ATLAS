@@ -60,20 +60,44 @@ offers the remaining technical inventory. A published file is not a promise of
 clinical usefulness: source-only or domain-only projections are labelled Context
 only before opening.
 
-The main search matches table IDs, names, file paths, source terms and supplied
-column meanings. It does not scan table rows. With a search term entered, the
-explicit field-row and reference-definition actions carry that term into the
-selected table without retyping. These actions do not promise a match. Exact
+In Fields and summaries, submitting the primary search opens matching published
+field profiles directly. This search matches field names and reviewed field
+labels, excluding incidental matches in source labels or numeric values. The
+visible search mode survives URL restoration; users can switch to searching all
+published row values. Other inventory views search table IDs, names, file
+paths, source terms and supplied column meanings; their explicit field-row and
+reference-definition actions carry the term into a table without retyping.
+These actions do not promise a match. Exact
 names and source languages may differ; English search is not exhaustive bilingual
 mapping. Typing replaces the current search state, while task choices, paging,
 table opening and whole-table searches remain meaningful browser history entries.
+
+Years and regions opens a source overview with a searchable source selector.
+The initially selected Myeloma registry is labelled as an example. Reviewed names
+and exact identifiers find sources; all current source-inventory entries remain
+selectable. Exact source links override conflicting discovery terms; an absent
+source retains its requested identity and is reported as absent from the export.
+Source totals, availability of the selected date field, annual counts
+and regional counts appear together. Years and regions remain independent
+summaries, grouped by exact source, field and count basis. Shared explanations
+appear once per group. Duplicate entries retain their separate supplied values;
+inferred date ranges do not become recorded years. Sources without annual or
+regional summaries receive an explicit explanation, not spelling advice or zero
+counts. Read failures do not become absence claims.
+
+Field profiles and source details link to the same source's coverage. Evidence
+links carry exact source and date/region field filters. Original tables and
+geographic reference context remain accessible below the overview. A secondary
+hospital-field search explicitly searches across sources; it does not promise
+hospital names, counts or hospital-specific coverage. This view reuses 25 reviewed
+date/region field labels and existing source labels without loading a dictionary.
 
 Frequently used field, dictionary, source and coverage tables have a reading
 view that keeps exact source identity, supplied counts/denominators, units where
 provided, and interpretation details together. On narrow screens each result
 becomes a vertical row card. Show all exact columns restores the original schema;
-whole-table search always covers every approved column, including columns not
-shown in the reading view. Source lineage, full row meaning, original scope and
+search in all-row-values mode covers every approved column, including columns
+not shown in the reading view. Source lineage, full row meaning, original scope and
 column definitions remain below the rows. No new statistics or units are inferred.
 Reading views group counts and round percentage/statistic displays, while keeping
 exact values in titles and the exact-column view. A value below 100% that would
@@ -90,9 +114,9 @@ zero, stay separate. The exact view retains every published row. Grouping is
 limited to the loaded page; it does not estimate category counts or recover
 withheld distributions.
 
-These views reuse 42 reviewed source/field labels from the clinical dictionary
+The registry views reuse 42 reviewed source/field labels from the clinical dictionary
 (27 category fields and 15 myeloma numeric fields). The same exact-pair labels
-and three registry source aliases support searches in field profiles and field
+and reviewed source aliases support searches in field profiles and field
 metadata. Unknown fields keep their exact names. The compact map needs no extra
 dictionary download and is not a complete translation of the atlas.
 
@@ -225,7 +249,13 @@ Default pre-read/public table-data budgets are 64 MiB each, configured through
 Catalogue limits expose the effective budget and disclosure threshold. Each table
 part is limited to 250 rows and 256 KiB of both serialized rows and finished script;
 50 rows are visible per page. The runtime retains at most 1 MiB of serialized-equivalent
-shard data with one active table read. Browser heap overhead is additional. Home
+shard data with one active table read. The source coverage overview sequentially
+reads only the source inventory, date availability, annual counts and regional
+counts. Its retained snapshot has separate limits of 512 KiB of serialized rows
+and 2,048 rows; oversize exports show an explicit limitation with links to the
+original tables. It does not preload field profiles, dictionaries or the clinical
+core. Source changes reuse the completed bounded snapshot. Browser heap overhead
+is additional. Home
 and direct-library initial assets have a 512 KiB build ceiling; opening Clinical
 explorer still loads its full, deduplicated clinical core.
 
