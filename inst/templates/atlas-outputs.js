@@ -138,11 +138,11 @@
       status=row.numeric_privacy_status;
       if(['min','max'].includes(key) && status==='eligible_stored_summary') return 'Withheld: exact stored extrema';
     } else if(['n_available','n_missing','pct_available','pct_missing'].includes(key)) status=row.availability_privacy_status;
-    else if(['n','n_rows','n_observed','n_patients','count','frequency','pct','pct_rows','pct_patients'].includes(key)) status=row.count_privacy_status || row.value_privacy_status || (row.date_privacy_status==='withheld_derived_source_range'?row.date_privacy_status:null);
+    else if(['n','n_rows','n_observed','n_patients','count','frequency','pct','pct_rows','pct_patients'].includes(key)) status=row.count_privacy_status || (row.value_privacy_status==='withheld_unvalidated_distribution'?row.value_privacy_status:null) || (row.date_privacy_status==='withheld_derived_source_range'?row.date_privacy_status:null);
     else if(['value','label','top_value','mode','code','npu_code','lab_code','category','display_value','raw_value'].includes(key)) status=row.value_privacy_status;
     else if(key==='year' && row.date_privacy_status==='withheld_derived_source_range') status=row.date_privacy_status;
     else if(['min_date','max_date','date_min','date_max','date_range','display_min_year','display_max_year'].includes(key)) status=row.date_privacy_status;
-    else if(key==='n_distinct_capped') status=row.availability_privacy_status || (row.is_sensitive?row.value_privacy_status:null);
+    else if(key==='n_distinct_capped') status=row.availability_privacy_status || (row.is_sensitive && row.value_privacy_status==='protected_field'?row.value_privacy_status:null) || (['protected_field','withheld_unknown_support','withheld_insufficient_support','unavailable_zero_support'].includes(row.numeric_privacy_status)?row.numeric_privacy_status:null);
     return privacyLabels[status] || 'Missing';
   }
   window.DALYCARE_OUTPUTS={register,loadShard,scanTable,cancel,formatValue,get cacheBytes(){return cacheBytes;}};
@@ -285,7 +285,7 @@
     el('table-purpose').textContent = (kindLabels[t.kind] || 'Metadata') + ' · ' + (t.row_grain || 'Row meaning not supplied');
     const reference = ['reference','reference_dictionary','reference_definitions'].includes(t.kind);
     el('table-cue').innerHTML = reference ? 'Reference definitions explain meanings; they do not establish observed tests, categories or result values.' :
-      t.id==='lab_npu_code_coverage' ? 'Code values and counts are withheld pending validation. Published rows retain source-field context. <a href="DALYCARE_outputs.html?table=npu_display_dictionary">Reviewed laboratory reference definitions</a> explain meanings, not observed availability.' :
+      t.id==='lab_npu_code_coverage' ? '<a href="DALYCARE_outputs.html?table=npu_display_dictionary">Reviewed laboratory reference definitions</a> explain meanings, not observed availability.' :
       t.id==='semantic_code_map' ? 'Code values are withheld. <a href="DALYCARE_outputs.html?table=clinical_display_dictionary">Reviewed reference definitions</a> explain code meanings.' :
       t.id==='column_top_values' ? 'Observed categorical values and frequencies are not published under the current release policy. Rows, where present, retain summary metadata.' : '';
     el('table-scope').textContent = t.complete===true ? 'All approved output rows are represented. Searches cover these published rows.' : 'Limited or unknown original scope. Searches cover only the published rows in this export.';

@@ -111,11 +111,11 @@ test('selected laboratory rows expose cell withholding and reference meaning bef
  const elements=new Map(),scripts=[],listeners={};
  function el(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,addEventListener(){},querySelectorAll(){return [];}});return elements.get(id);}
  const row={table_name:'S',lab_code:null,n:null,value_privacy_status:'withheld_unvalidated_distribution'},json=JSON.stringify([row]);
- const table={id:'lab_npu_code_coverage',title:'Laboratory code occurrence metadata by source',kind:'aggregate_summary',row_grain:'One source/code-field summary',status:'available',source_file:'outputs/panels/lab_npu_code_coverage.csv',provenance:'csv_run',complete:true,columns:Object.keys(row).map(key=>({key,type:key==='n'?'number':'string'})),shards:[{id:'s0',src:'output-shards/lab-s0.js',rows:1,bytes:Buffer.byteLength(json)}]};
+ const table={id:'lab_npu_code_coverage',title:'Laboratory code occurrence metadata by source',kind:'aggregate_summary',row_grain:JSON.parse(fs.readFileSync(path.join(__dirname,'../inst/config/public-output-registry.json'),'utf8')).artifacts.find(t=>t.id==='lab_npu_code_coverage').row_grain,status:'available',source_file:'outputs/panels/lab_npu_code_coverage.csv',provenance:'csv_run',complete:true,columns:Object.keys(row).map(key=>({key,type:key==='n'?'number':'string'})),shards:[{id:'s0',src:'output-shards/lab-s0.js',rows:1,bytes:Buffer.byteLength(json)}]};
  const document={getElementById:el,body:{classList:{toggle(){}}},documentElement:{dataset:{}},createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);}}};
  const window={DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'b1',tables:[table]},location:{search:'?table=lab_npu_code_coverage'},history:{replaceState(){},pushState(){}},addEventListener(name,fn){listeners[name]=fn;}};
  vm.runInNewContext(fs.readFileSync(runtime,'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
- assert.match(el('table-purpose').textContent,/Aggregate summary/);assert.match(el('table-cue').innerHTML,/withheld.*source.field/i);assert.match(el('table-cue').innerHTML,/href="DALYCARE_outputs.html\?table=npu_display_dictionary"/);
+ assert.match(el('table-purpose').textContent,/Aggregate summary/);assert.match(el('table-purpose').textContent,/withheld.*source.field context/i);assert.doesNotMatch(el('table-cue').innerHTML,/withheld|source.field context/i);assert.match(el('table-cue').innerHTML,/href="DALYCARE_outputs.html\?table=npu_display_dictionary"/);
  assert.match(el('table-metadata').innerHTML,/From this run.s CSV outputs/);
  document.currentScript=scripts[0];window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'b1',table_id:table.id,shard_id:'s0',rows_json:json});
  await Promise.resolve();await Promise.resolve();await Promise.resolve();
@@ -127,4 +127,19 @@ test('selected laboratory rows expose cell withholding and reference meaning bef
  assert.match(el('read-status').textContent,/incomplete/i);assert.match(el('read-status').textContent,/HTML.*folder\/files together/);assert.doesNotMatch(el('read-status').textContent,/shard|No matches/);
  // A load failure remains distinct from a completed empty scan.
  window.DALYCARE_OUTPUTS.cancel();
+});
+
+test('null count and distinctness reasons follow only their actual guard suppressions',()=>{
+ const f=harness().api.formatValue;
+ assert.equal(f(null,'n_rows',{value_privacy_status:'protected_field'}),'Missing');
+ for(const key of ['n','n_rows','pct_rows']) assert.match(f(null,key,{value_privacy_status:'withheld_unvalidated_distribution'}),/Withheld/);
+ for(const [reason,label] of Object.entries({withheld_unknown_support:'Withheld: supporting count unknown',withheld_insufficient_support:'Withheld: too few recorded values',unavailable_zero_support:'Unavailable: no recorded values'})) {
+  assert.equal(f(null,'n_distinct_capped',{numeric_privacy_status:reason}),label);
+  assert.equal(f(0,'n_distinct_capped',{numeric_privacy_status:reason}),'0');
+ }
+ for(const reason of ['eligible_stored_summary','needs_validation_unknown_distinctness','needs_validation_negative_sentinel','needs_validation_unreviewed_field','withheld_constant_profile','withheld_near_unique_profile']) assert.equal(f(null,'n_distinct_capped',{numeric_privacy_status:reason}),'Missing');
+ assert.match(f(null,'n_distinct_capped',{is_sensitive:true,value_privacy_status:'protected_field'}),/protected field/);
+ assert.match(f(null,'n_distinct_capped',{availability_privacy_status:'withheld_small_complementary_cells'}),/small groups/);
+ assert.equal(f(null,'n_distinct_capped',{}),'Missing');
+ assert.equal(f(0,'n_rows',{value_privacy_status:'protected_field'}),'0');
 });
