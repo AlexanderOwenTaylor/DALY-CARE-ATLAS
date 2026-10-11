@@ -114,6 +114,43 @@ def _bound_source_file(spec, context):
     return relative
 
 
+def validate_build_context(context, registry):
+    """Validate required-input metadata before either migration or evidence reads."""
+    if not isinstance(context, dict):
+        raise ValueError('Build context must be an object')
+    for key in ('schema_version', 'registry_version'):
+        if type(context.get(key)) is not int or context[key] != 1:
+            raise ValueError('Unsupported build context version')
+    specs = {spec['id']: spec for spec in registry['artifacts']}
+    bindings = context.get('bindings')
+    if (not isinstance(bindings, list)
+            or any(not isinstance(key, str) or key not in specs for key in bindings)
+            or len(bindings) != len(set(bindings))):
+        raise ValueError('Invalid build context bindings')
+    files = context.get('binding_files', {})
+    # jsonlite writes an unpopulated R named-list candidate as []; preserve that
+    # exact empty representation, without accepting nonempty arrays or scalars.
+    if isinstance(files, list) and not files:
+        files = {}
+    if not isinstance(files, dict):
+        raise ValueError('Invalid selected aggregate bindings')
+    for key, relative in files.items():
+        if key not in specs or key not in bindings or not isinstance(relative, str):
+            raise ValueError('Invalid selected aggregate binding')
+        _bound_source_file(specs[key], context)
+    return context
+
+
+def read_build_context(run_dir, registry):
+    """Read bounded optional context; historical runs can lack this file."""
+    path = confined_path(run_dir, 'outputs/atlas_build_context.json')
+    if not path.exists():
+        return None
+    if not path.is_file() or path.stat().st_size > registry['input_max_bytes']:
+        raise ValueError('Build context unavailable or exceeds pre-read limit')
+    return validate_build_context(json.loads(path.read_text(encoding='utf-8-sig')), registry)
+
+
 def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
     registry = load_registry(project_root)
     run = Path(run_dir).resolve() if run_dir is not None else None
@@ -131,19 +168,9 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
                 for row in reader:
                     confined_path(run, row['relative_path'])
     if run is not None:
-        context_path = confined_path(run, 'outputs/atlas_build_context.json')
-        if context_path.exists():
-            if context_path.stat().st_size > registry['input_max_bytes']:
-                raise ValueError('Build context exceeds pre-read limit')
-            context = json.loads(context_path.read_text(encoding='utf-8'))
-            if context.get('schema_version') != 1:
-                raise ValueError('Unsupported build context')
+        context = read_build_context(run, registry)
     minimum = effective_threshold(payload_snapshot, context)
     required = set(context.get('bindings', [])) if context else set()
-    binding_files = (context or {}).get('binding_files') or {}
-    known_ids = {spec['id'] for spec in registry['artifacts']}
-    if not isinstance(binding_files, dict) or set(binding_files) - known_ids:
-        raise ValueError('Invalid selected aggregate bindings')
     for spec in registry['artifacts']:
         resource = spec.get('resource', False)
         base = project_root if resource else run

@@ -98,7 +98,7 @@ class BundleTests(unittest.TestCase):
    with path.open('wb') as f:f.truncate(67108865)
    t=next(t for t in collect_output_evidence(run,ROOT) if t['id']=='registry_clinical_summary')
    self.assertEqual(t['status'],'metadata_only');self.assertEqual(t['rows'],[])
-   (run/'outputs/atlas_build_context.json').write_text(json.dumps({'schema_version':1,'bindings':['registry_clinical_summary']}),encoding='utf-8')
+   (run/'outputs/atlas_build_context.json').write_text(json.dumps({'schema_version':1,'registry_version':1,'bindings':['registry_clinical_summary']}),encoding='utf-8')
    with self.assertRaises(ValueError):collect_output_evidence(run,ROOT)
   t=next(t for t in collect_output_evidence(None,ROOT,{'panels':{'registry_clinical_summary':[{'table_name':'0012','registry':'LYFO','n_rows':'bad','n_cols':'0'}]}}) if t['id']=='registry_clinical_summary')
   self.assertEqual(t['status'],'unavailable');self.assertEqual(t['rows'],[])
@@ -117,5 +117,37 @@ class BundleTests(unittest.TestCase):
    restored=decode_transport(json.loads(paths['payload_json'].read_text(encoding='utf-8')))
    self.assertEqual(restored['action_items'],payload['action_items'])
    self.assertIs(restored['action_items'],restored['review_infrastructure_sections']['action_items'])
+
+
+ def test_invalid_saved_context_preserves_previous_site_and_manifest(self):
+  from build_ui_iteration import build
+  with tempfile.TemporaryDirectory() as tmp:
+   src=Path(tmp)/'input';src.mkdir();run=Path(tmp)/'run';(run/'outputs').mkdir(parents=True)
+   (src/'DALYCARE_atlas_payload.js').write_text('window.DALYCARE_ATLAS_PAYLOAD = {"run_id":"saved"};',encoding='utf-8')
+   (run/'outputs/atlas_build_context.json').write_text(json.dumps({'schema_version':1,'registry_version':1,'run_id':'saved','bindings':[],'binding_files':[]}),encoding='utf-8')
+   paths=build(src,Path(tmp)/'site',ROOT,run)
+   original={p:p.read_bytes() for p in paths['assets']+[paths['manifest']]}
+   for bindings in (['not_registered'],['sources','sources'],None,'sources'):
+    (run/'outputs/atlas_build_context.json').write_text(json.dumps({'schema_version':1,'registry_version':1,'run_id':'saved','bindings':bindings}),encoding='utf-8')
+    with self.assertRaises(ValueError):build(src,Path(tmp)/'site',ROOT,run)
+    self.assertEqual(original,{p:p.read_bytes() for p in original})
+ def test_later_optional_overwide_row_discards_all_prior_parts(self):
+  from output_evidence import collect_output_evidence
+  from site_bundle import write_site_bundle
+  base=next(t for t in collect_output_evidence(None,ROOT,{}) if t['id']=='npu_display_dictionary')
+  for label in ('x'*270000,('"'+chr(92))*40000):
+   table=copy.deepcopy(base);small=copy.deepcopy(table['rows'][0]);big=dict(small,label=label)
+   row_json=json.dumps([big],ensure_ascii=False,separators=(',',':'))
+   if label.startswith('"'):
+    self.assertLess(len(row_json.encode('utf-8')),262144)
+    self.assertGreater(len(json.dumps({'rows_json':row_json},ensure_ascii=False,separators=(',',':')).encode('utf-8')),262144)
+   table['rows']=[small]*250+[big]
+   with tempfile.TemporaryDirectory() as tmp:
+    paths=write_site_bundle(Path(tmp)/'site',{'run_id':'wide'},[table],ROOT,'legacy_payload')
+    cat=json.loads(paths['catalogue'].read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';'))
+    item=cat['tables'][0]
+    self.assertEqual(item['status'],'unavailable');self.assertFalse(item['complete'])
+    self.assertEqual(item['represented_row_count'],0);self.assertEqual(item['shards'],[])
+    self.assertEqual(list((Path(tmp)/'site/output-shards').iterdir()),[])
 
 if __name__=='__main__':unittest.main()

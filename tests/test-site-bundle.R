@@ -53,6 +53,22 @@ wide$source_terms <- list()
 wpaths <- atlas_write_site_bundle(file.path(tmp,'wide','site'),list(run_id='wide'),list(wide),root,'legacy_payload')
 wc <- jsonlite::fromJSON(sub(';\\s*$','',sub('^[^=]+=', '',paste(readLines(wpaths$catalogue,encoding='UTF-8'),collapse='\n'))),simplifyVector=FALSE)
 stopifnot(length(wc$tables[[1]]$shards)>1,all(vapply(wc$tables[[1]]$shards,function(s) file.info(file.path(tmp,'wide','site',s$src))$size<=262144,logical(1))))
+# A later single-row failure discards already accumulated parts, including when
+# row JSON fits but escaping it into the registration script exceeds the limit.
+optional <- Filter(function(t)t$id=='npu_display_dictionary',tables)[[1]]
+labels <- list(paste(rep('x',270000),collapse=''),paste(rep(paste0('"',intToUtf8(92)),40000),collapse=''))
+for(i in seq_along(labels)) {
+  test_table <- optional
+  small <- optional$rows[[1]];big <- small;big$label <- labels[[i]]
+  row_json <- atlas_bundle_json(list(big))
+  if(i==2L) stopifnot(nchar(enc2utf8(row_json),type='bytes')<262144,nchar(enc2utf8(atlas_bundle_json(list(rows_json=row_json))),type='bytes')>262144)
+  test_table$rows <- c(rep(list(small),250),list(big))
+  target <- file.path(tmp,paste0('later-wide-',i),'site')
+  result <- atlas_write_site_bundle(target,list(run_id='wide'),list(test_table),root,'legacy_payload')
+  cat_json <- sub(';\\s*$','',sub('^[^=]+=', '',paste(readLines(result$catalogue,encoding='UTF-8'),collapse='\n')))
+  descriptor <- jsonlite::fromJSON(cat_json,simplifyVector=FALSE)$tables[[1]]
+  stopifnot(descriptor$status=='unavailable',identical(descriptor$complete,FALSE),descriptor$represented_row_count==0,length(descriptor$shards)==0,length(list.files(file.path(target,'output-shards')))==0)
+}
 # Schema conversions do not turn booleans or leading-zero identifiers into numbers.
 converted <- atlas_normalize_snapshot_rows(list(list(code='0012',n='0',flag='FALSE')),list(schemas=list(list(code='string',n='number',flag='boolean'))))
 stopifnot(identical(converted[[1]],list(code='0012',n=0,flag=FALSE)))

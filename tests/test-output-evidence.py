@@ -89,4 +89,44 @@ class EvidenceTests(unittest.TestCase):
   self.write('panels/damyda_numeric_fields.csv','table_name registry field source_column unit n_available pct_available mean median p25 p75'.split(),[['S3000','DaMyDa','Test','test','',998,99.8,5,5,3,7]])
   tables=self.collect(); t=next(t for t in tables if t['id']=='damyda_numeric_fields')
   self.assertIsNone(t['rows'][0]['n_available']);self.assertIsNone(t['rows'][0]['mean'])
+
+ def test_saved_context_binding_validation_is_shared(self):
+  from build_ui_iteration import matching_run_context
+  from output_evidence import load_registry
+  registry=load_registry(ROOT)
+  base={'schema_version':1,'registry_version':1,'run_id':'synthetic-context','bindings':[]}
+  context_path=self.run/'outputs/atlas_build_context.json'
+  selected='mcl_triangle_feasibility_cohort_counts_count_summary'
+  invalid=[[],None,dict(base,schema_version=True),dict(base,registry_version=2),
+   {k:v for k,v in base.items() if k!='bindings'},dict(base,bindings=None),dict(base,bindings='sources'),
+   dict(base,bindings={'sources':True}),dict(base,bindings=[['sources']]),dict(base,bindings=[1]),
+   dict(base,bindings=['not_a_registered_input']),dict(base,bindings=['sources','sources']),
+   dict(base,binding_files=['invalid']),dict(base,binding_files=None),
+   dict(base,binding_files={'not_a_registered_input':'outputs/selected_mcl/unknown.csv'}),
+   dict(base,binding_files={selected:'outputs/selected_mcl/mcl_triangle_count_summary.csv'}),
+   dict(base,bindings=[selected],binding_files={selected:'../outside.csv'}),
+   dict(base,bindings=[selected],binding_files={selected:None}),
+   dict(base,bindings=['sources'],binding_files={'sources':'outputs/selected_mcl/atlas_sources.csv'})]
+  for context in invalid:
+   with self.subTest(context=context):
+    context_path.write_text(json.dumps(context),encoding='utf-8')
+    for read in (lambda:matching_run_context(self.run,{'run_id':'synthetic-context'},registry),self.collect):
+     with self.assertRaises(ValueError):read()
+  for context in (base,dict(base,binding_files={}),dict(base,binding_files=[])):
+   context_path.write_text(json.dumps(context),encoding='utf-8')
+   self.assertEqual(matching_run_context(self.run,{'run_id':'synthetic-context'},registry),context)
+   self.assertEqual(len(self.collect()),147)
+  # A real selected binding validates and remains required at its selected path.
+  spec=next(s for s in registry['artifacts'] if s['id']==selected)
+  headers=list(spec['schemas'][0]);row={k:'' for k in headers};row.update(metric='synthetic_count',label='Selected source',value='23',status='available')
+  (self.run/'outputs/selected_mcl').mkdir()
+  self.write('selected_mcl/mcl_triangle_count_summary.csv',headers,[[row[k] for k in headers]])
+  context=dict(base,bindings=[selected],binding_files={selected:'outputs/selected_mcl/mcl_triangle_count_summary.csv'})
+  context_path.write_text(json.dumps(context),encoding='utf-8')
+  self.assertEqual(matching_run_context(self.run,{'run_id':'synthetic-context'},registry),context)
+  self.assertEqual(len(self.collect()),147)
+  context_path.unlink();self.write('atlas_run_summary.csv',['metric','value'],[['run_id','synthetic-context']])
+  self.assertIsNone(matching_run_context(self.run,{'run_id':'synthetic-context'},registry))
+  self.assertEqual(len(self.collect()),147)
+
 if __name__=='__main__':unittest.main()

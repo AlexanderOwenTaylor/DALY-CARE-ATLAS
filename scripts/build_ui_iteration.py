@@ -5,7 +5,7 @@ import json
 import os
 from pathlib import Path
 from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold
-from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, _bound_source_file
+from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, read_build_context, _bound_source_file
 from site_bundle import write_site_bundle, decode_transport
 
 
@@ -57,15 +57,8 @@ def build(input_dir, output_dir, project_root, run_dir=None):
 def matching_run_context(run_dir, payload, registry):
     """Saved identity wins; historical migration requires the reviewed run metric."""
     run = Path(run_dir).resolve(strict=True)
-    path = confined_path(run, 'outputs/atlas_build_context.json')
-    context, identities = None, []
-    if path.exists():
-        if path.stat().st_size > registry['input_max_bytes']:
-            raise ValueError('Build context exceeds pre-read limit')
-        context = json.loads(path.read_text(encoding='utf-8-sig'))
-        if context.get('schema_version') != 1 or context.get('registry_version') != 1:
-            raise ValueError('Unsupported build context')
-        identities.append(context.get('run_id'))
+    context = read_build_context(run, registry)
+    identities = [context.get('run_id')] if context is not None else []
     spec = next(s for s in registry['artifacts'] if s['source_file']=='outputs/atlas_run_summary.csv')
     summary = confined_path(run, spec['source_file'])
     if summary.exists():
