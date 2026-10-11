@@ -6,19 +6,37 @@ Selected weight/height, BMI and haemoglobin shortcuts link exact source/field
 identities to available summary statistics and source coverage. These are not
 complete inventories of every laboratory measurement or harmonized results.
 
-The HTML template remains `inst/templates/DALYCARE_atlas.html`. The native R
-writer in `R/html.R` embeds the committed reference dictionaries, applies the
-disclosure filter, and writes equivalent JavaScript and JSON payloads. The
-offline Python builder applies the corresponding filter to an existing export:
+The clinical template remains `inst/templates/DALYCARE_atlas.html` and is emitted
+as `DALYCARE_clinical.html`. Home (`DALYCARE_atlas.html`) and Data tables
+(`DALYCARE_outputs.html`) have light independent assets. The R one-click and CLI
+runners write CSVs plus saved context, strictly reconstruct the clinical payload,
+and publish the pages, typed table catalogue/shards, and matching JSON/JS core.
+
+For an exact offline rebuild of a new run, without the original source connection:
 
 ```sh
-python scripts/build_ui_iteration.py --input-dir /path/to/existing/site --output-dir /path/to/new/site
+Rscript scripts/rebuild_atlas_from_outputs.R /path/to/run /path/to/project
 ```
 
-Both input and output directories must be supplied explicitly. Input requires
-`DALYCARE_atlas_payload.js`. The generated HTML and payload script
-must remain together for offline use. This build does not query a database.
-Do not confuse intermediate run CSVs with guarded public release artifacts.
+Keep the saved context and all bound CSVs, including supplemental and imported
+selected-count files. Required errors fail the staged build and preserve the prior
+site/manifest pair. Optional missing, header-only, incompatible and unreviewed
+artifacts have distinct catalogue states. Explicit project resources beat installed
+package fallbacks. The internal manifest enumerates inputs and published assets.
+
+An older export without saved context uses snapshot migration:
+
+```sh
+python scripts/build_ui_iteration.py --input-dir /path/to/existing/site --output-dir /path/to/new/site --run-dir /path/to/matching/run
+```
+
+The clinical core remains a labelled legacy snapshot; matching registered CSVs
+supply individual table evidence. Omit `--run-dir` for limited snapshot-only table
+previews with unknown original counts. Neither mode queries a database.
+
+Double-click Home or serve the entire `site/` directory over HTTP. Keep all pages,
+scripts, styles and `output-shards/` together. Internal run CSVs are not public
+release artifacts and must not be linked or hosted with the site.
 
 ## Interpretation
 
@@ -33,7 +51,19 @@ Do not confuse intermediate run CSVs with guarded public release artifacts.
 - Regional summaries describe the recorded source field, not necessarily residence.
   They do not establish completeness by measurement, region and year.
 - Missing, withheld and zero counts are distinct. Reference definitions remain
-  separate from observed category distributions.
+  separate from observed category distributions. Table cells show their applicable
+  suppression or validation reason; unrelated missing cells remain missing.
+- Table kind, row meaning and evidence origin distinguish aggregate summaries,
+  field metadata and reference definitions. Common observed values and laboratory
+  code frequencies remain withheld under the current policy; source-field context
+  and reviewed definitions do not establish observed result availability.
+- Inferred source date ranges are collapsed to one neutral row per source/date
+  field/basis. Their years, counts and original cardinality are withheld, including
+  copied temporal summaries and inventories. Recorded and streamed year aggregates
+  keep their existing count guards. Regional domain totals must not be summed
+  across reference regions or treated as region-specific patient counts.
+- Search covers the selected published rows. Limited snapshots do not recover
+  omitted original rows, and failed/cancelled scans report incomplete search.
 
 ## Disclosure controls
 
@@ -64,6 +94,8 @@ reference definitions. They must run without local atlas releases or database ac
 node --test tests/*.js
 python tests/test-ui-export.py
 python tests/test-public-privacy.py
+python tests/test-output-evidence.py
+python tests/test-site-bundle.py
 ```
 
 Native R checks for the writer, shared synthetic privacy fixtures and startup:
@@ -72,6 +104,9 @@ Native R checks for the writer, shared synthetic privacy fixtures and startup:
 Rscript tests/test-html-payload.R
 Rscript tests/test-public-privacy.R
 Rscript tests/test-atlas-startup-runtime.R
+Rscript tests/test-iteration10-pipeline.R
+Rscript tests/test-site-bundle.R
+Rscript tests/test-output-evidence.R
 ```
 
 Other relevant regressions include laboratory/imaging identity, semantic-code
@@ -105,3 +140,26 @@ node tests/benchmark-search.cjs /path/to/DALYCARE_atlas_payload.json
 Alternatively, set `DALYCARE_BENCHMARK_PAYLOAD` to an explicit JSON/offline-JS
 payload path. A second CLI argument can select an HTML template. No export is
 loaded by default, and data exports must remain local.
+
+The integrated iteration10 test executes real one-click, standalone CLI and offline
+R rebuilds against committed synthetic sources; checks a CSV sentinel in the core
+and public table, required-input publication rollback, optional/header-only states,
+complete manifests/build versions, range-cardinality suppression, and installed
+resource inventory/preference. It does not connect to the production database.
+Final real-bundle browser/heap benchmarks and independent release review are
+separate local acceptance steps; generated data, screenshots and ZIPs stay out of Git.
+
+Default pre-read/public table-data budgets are 64 MiB each, configured through
+`DALYCARE_ATLAS_INPUT_MAX_BYTES` and `DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES`.
+Catalogue limits expose the effective budget and disclosure threshold. Each table
+part is limited to 250 rows and 256 KiB of both serialized rows and finished script;
+50 rows are visible per page. The runtime retains at most 1 MiB of serialized-equivalent
+shard data with one active table read. Browser heap overhead is additional. Home
+and direct-library initial assets have a 512 KiB build ceiling; opening Clinical
+explorer still loads its full, deduplicated clinical core.
+
+The current package `DESCRIPTION` lacks a maintainer email, so untouched-source
+`R CMD INSTALL` fails metadata validation. The installed-resource acceptance
+test installs a temporary copy with a synthetic test contact; it verifies shipped
+assets and project-resource preference, not production package-install readiness.
+The source one-click, CLI and offline rebuild workflows do not require installation.

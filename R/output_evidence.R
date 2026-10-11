@@ -264,6 +264,15 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
     frame <- atlas_evidence_get(args,path)
     full <- atlas_evidence_get(guarded,unlist(spec$payload_path,use.names=FALSE))
     if(is.data.frame(frame) && nrow(frame) && is.list(full)) {
+      if(nrow(frame) != length(full)) {
+        # Range-derived rows were collapsed by the whole-table guard. Preserve
+        # original column types while rebuilding only the approved row set.
+        frame <- frame[rep(NA_integer_,length(full)),,drop=FALSE]
+        rownames(frame) <- NULL
+        for(i in seq_along(full)) for(key in intersect(names(frame),names(full[[i]]))) {
+          if(!is.null(full[[i]][[key]])) frame[i,key] <- full[[i]][[key]]
+        }
+      }
       for(i in seq_len(nrow(frame))) for(key in intersect(names(frame),names(full[[i]]))) {
         if(is.null(full[[i]][[key]])) frame[i,key] <- NA
       }
@@ -344,10 +353,18 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
     keys <- unique(c(unlist(spec$projection,use.names=FALSE),sort(intersect(unique(unlist(lapply(rows,names))),privacy))))
     descriptors[[i]]$rows <- lapply(rows,function(row) setNames(lapply(keys,function(k)row[[k]]),keys))
     descriptors[[i]]$represented_row_count <- length(descriptors[[i]]$rows)
+    if(any(vapply(rows,function(row) identical(row$date_privacy_status,'withheld_derived_source_range'),logical(1)))) {
+      descriptors[[i]]['source_row_count'] <- list(NULL)
+      descriptors[[i]]$reason <- 'Transformed approved scope: inferred source ranges collapsed; original row count withheld'
+    }
+
     terms <- unlist(lapply(descriptors[[i]]$rows,function(row)row[intersect(c('table_name','source_name','registry'),names(row))]),use.names=FALSE)
-    descriptors[[i]]$source_terms <- as.list(sort(unique(terms[!is.na(terms) & nzchar(terms)])))
+
+    terms <- c(terms,unlist(spec$navigation_terms,use.names=FALSE))
+    for(mapping in spec$navigation_fields) if(any(vapply(descriptors[[i]]$rows,function(row) identical(row$table_name,mapping$table_name) && identical(row$column_name,mapping$column_name),logical(1)))) terms <- c(terms,unlist(mapping$terms,use.names=FALSE))
+    descriptors[[i]]$source_terms <- as.list(sort(unique(as.character(terms[!is.na(terms) & nzchar(terms)])),method='radix'))
     types <- unlist(spec$schemas)
-    descriptors[[i]]$columns <- lapply(as.list(keys),function(key)c(list(key=key,label=paste0(toupper(substr(gsub('_',' ',key),1,1)),substring(gsub('_',' ',key),2)),type=if(key %in% names(types)) unname(types[key][1]) else if(key=='is_sensitive') 'boolean' else 'string'),spec$column_meanings[[key]]))
+    descriptors[[i]]$columns <- lapply(as.list(keys),function(key)utils::modifyList(list(key=key,label=paste0(toupper(substr(gsub('_',' ',key),1,1)),substring(gsub('_',' ',key),2)),type=if(key %in% names(types)) unname(types[key][1]) else if(key=='is_sensitive') 'boolean' else 'string'),spec$column_meanings[[key]] %||% list()))
   }
   if(!is.null(run_dir)) {
     known <- vapply(registry$artifacts,function(s)s$source_file,character(1)); unknown <- character()

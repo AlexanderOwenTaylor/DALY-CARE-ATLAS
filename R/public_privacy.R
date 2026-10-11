@@ -21,6 +21,9 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   profiles <- list()
   for (r in rows) profiles[[paste(scalar(r,"table_name"),scalar(r,"column_name"),sep="\r")]] <- r
   blank <- function(r, keys) { for (key in intersect(keys,names(r))) r[key] <- list(NULL); r }
+  year_paths <- list(c('panels','atlas_temporal_coverage_years'),c('review_temporal_coverage','years'))
+  range_rows <- c(payload$panels$atlas_temporal_coverage_years,payload$review_temporal_coverage$years)
+  has_ranges <- any(vapply(range_rows,function(r) is.list(r) && scalar(r,'coverage_basis') == 'source_date_range',logical(1)))
   walk <- function(obj, path = character()) {
     if (is.data.frame(obj)) obj <- lapply(seq_len(nrow(obj)), function(i) as.list(obj[i,,drop=FALSE]))
     if (!is.list(obj)) {
@@ -28,9 +31,27 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
       return(obj)
     }
     if (is.null(names(obj))) {
+      if (any(vapply(year_paths,identical,logical(1),y=path))) {
+        normalized <- list(); seen <- character()
+        for(row in obj) {
+          if(is.list(row) && scalar(row,'coverage_basis') == 'source_date_range') {
+            identity <- jsonlite::toJSON(row[c('table_name','date_column','coverage_basis')],auto_unbox=TRUE,null='null')
+            if(identity %in% seen) next
+            seen <- c(seen,identity)
+            row <- row[intersect(c('table_name','domain','subdomain','atlas_role','date_column','coverage_basis'),names(row))]
+            row[c('year','n_rows','pct_rows')] <- list(NULL,NULL,NULL)
+            row$date_privacy_status <- 'withheld_derived_source_range'
+          }
+          normalized[[length(normalized)+1L]] <- row
+        }
+        obj <- normalized
+      }
       structural_path <- identical(path,"panel_groups") || identical(path,c("review_overview","panel_groups")) || (length(path) > 0 && tail(path,1) == "panels" && startsWith(path[1],"review_"))
       structural_rows <- all(vapply(obj,function(x) is.list(x) && setequal(names(x),c("group","panel_name","title","n_rows")),logical(1)))
-      if (structural_path && structural_rows) return(obj)
+      if (structural_path && structural_rows) {
+        if(has_ranges) obj <- lapply(obj,function(r) {if(scalar(r,'panel_name') == 'atlas_temporal_coverage_years') r['n_rows'] <- list(NULL);r})
+        return(obj)
+      }
       out <- lapply(obj,walk,path=path)
       small <- any(vapply(obj,function(x) {
         if (!is.list(x)) return(FALSE)
@@ -44,6 +65,7 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
       })
       return(out)
     }
+    if(has_ranges && identical(path,c('review_temporal_coverage','summary')) && 'n_year_rows' %in% names(obj)) obj['n_year_rows'] <- list(NULL)
     r <- obj
     for (key in names(r)) if (!key %in% reference) r[key] <- list(walk(r[[key]],c(path,key)))
     r <- blank(r,dates)

@@ -9181,7 +9181,7 @@
             <p class="mini">Field: <code>${escapeHtml(row.column_name)}</code> · storage type: ${escapeHtml(row.column_class || row.column_type || 'Not supplied')}</p>
             ${missing !== null && privacy !== 'Small count withheld' ? `<p class="mini">${formatNumber(missing)} missing source records</p>` : ''}
             ${row.profile_kind === 'numeric' && row.numeric_privacy_status === 'eligible_stored_summary' ? columnStat(row) : ''}
-            ${row.profile_kind === 'categorical' || row.profile_kind === 'text' ? '<h4>Common observed values</h4><p>Frequencies are not included in this snapshot.</p><p>Mode: Not supplied</p>' : ''}
+            ${row.profile_kind === 'categorical' || row.profile_kind === 'text' ? '<h4>Common observed values</h4><p>Categorical values and frequencies are not published for this field.</p><p>Mode: Not supplied</p>' : ''}
             ${renderSourceCoverage(row.table_name)}
             ${needsMeanings ? `<h4>Value definitions</h4>${fieldValueDefinitions(row)}<button class="concept-link-button" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-codes" data-jump-search="${escapeHtml(row.column_name)}">Browse codes and clinical terms →</button>` : ''}
           </details>
@@ -9550,7 +9550,7 @@
           return `DALYCARE_outputs.html${query.size ? '?' + query.toString() : ''}`;
         };
         setHtml("panel-nav", '');
-        setHtml("panel-list", `<a class="sub-tab" href="${escapeHtml(currentHref())}">Open Data tables</a><p class="mini">Choose one table, inspect its column meanings, then search the complete protected output. Availability and privacy states are shown beside each table.</p>`);
+        setHtml("panel-list", `<a class="sub-tab" href="${escapeHtml(currentHref())}">Open Data tables</a><p class="mini">Choose one table, inspect its column meanings, then search its published rows. Each table states whether all approved rows are represented or only a limited snapshot is available.</p>`);
         const link = document.getElementById('panel-list').querySelector('a');
         ['click', 'auxclick', 'contextmenu'].forEach(eventName => {
           link?.addEventListener(eventName, () => { link.href = currentHref(); });
@@ -9586,6 +9586,15 @@
           restoreRouteSearch({});
         }
       });
+      function focusQuestionArrival() {
+        if (focusQuestionArrival.done) return;
+        focusQuestionArrival.done = true;
+        if (!new URLSearchParams(window.location.search).has('question') || isQaRoute() || window.performance?.getEntriesByType('navigation')[0]?.type === 'back_forward') return;
+        const route = parseHashRoute();
+        const target = route.subId === 'infra-columns' ? document.getElementById('column-list')?.querySelector('article') : document.getElementById(route.subId)?.querySelector('h2, h3');
+        if (!target) return;
+        scrollToAtlasTarget(target);
+      }
       function overflowReport() {
         const bodyOverflow = document.body.scrollWidth > document.documentElement.clientWidth + 2;
         const targets = ".hero, .hero-meta, .global-search-shell, .global-search-row, .global-search-group, .global-result, .card, .clinical-card, .raw-lineage-card, .value-map-card, .panel-section, .stat-card, .source-fact, .kpi, .lineage-item, .value-row, .semantic-row, .catalog-row, .column-row, .h-bar, .panel-title, .panel-sub, code, pre";
@@ -9738,6 +9747,7 @@
       if (!Object.keys(payload).length) {
         setHtml("clinician-home", `<div class="empty" role="alert"><h2>The atlas data could not be loaded</h2><p>Keep DALYCARE_atlas.html and DALYCARE_atlas_payload.js together in the same folder, then reopen the HTML file.</p></div>`);
       }
+      focusQuestionArrival();
       document.documentElement.dataset.atlasReady = "true";
       if (new URLSearchParams(window.location.search).get("qaOverflow") === "1") {
         window.setTimeout(publishOverflowReport, 600);

@@ -5,7 +5,7 @@
   "artifacts": [
     {
       "id": "sources",
-      "title": "Sources",
+      "title": "Data sources and load status",
       "source_file": "outputs/atlas_sources.csv",
       "arg_path": [
         "sources"
@@ -106,12 +106,13 @@
       ],
       "group": "Evidence",
       "kind": "field_metadata",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "Source inventory, sizes, and load/profile status. One row describes one source table; source rows are not unique people.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
@@ -121,11 +122,17 @@
           "definition": "Number of fields in the source table.",
           "unit": "fields"
         }
-      }
+      },
+      "navigation_terms": [
+        "data sources",
+        "source tables",
+        "source contents",
+        "load status"
+      ]
     },
     {
       "id": "columns",
-      "title": "Columns",
+      "title": "Source field names and types",
       "source_file": "outputs/atlas_columns.csv",
       "arg_path": [
         "columns"
@@ -162,29 +169,76 @@
       ],
       "group": "Evidence",
       "kind": "field_metadata",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "Field inventory and supplied missingness. One row describes one named field in one source table.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "column_name": {
-          "definition": "Exact source field name."
+          "definition": "Exact source field name.",
+          "label": "Source field"
         },
         "n_missing": {
           "definition": "Number of source rows with a missing value for this field.",
-          "unit": "source rows"
+          "unit": "source rows",
+          "label": "Source rows without a value"
         },
         "pct_missing": {
           "definition": "Percentage of source rows with a missing field value.",
           "unit": "percent",
-          "denominator": "profiled source rows"
+          "denominator": "profiled source rows",
+          "label": "Source rows without a value (%)"
         },
         "n_distinct_capped": {
-          "definition": "Distinct-value count, subject to the configured profiling cap."
+          "definition": "Distinct-value count, subject to the configured profiling cap.",
+          "label": "Distinct values (capped)"
         }
-      }
+      },
+      "navigation_terms": [
+        "columns",
+        "fields",
+        "variables",
+        "field names",
+        "data types",
+        "missing values"
+      ],
+      "navigation_fields": [
+        {
+          "table_name": "SP_PatientInfo",
+          "column_name": "weight_in_kg",
+          "terms": [
+            "weight_in_kg",
+            "weight"
+          ]
+        },
+        {
+          "table_name": "SP_PatientInfo",
+          "column_name": "height_in_cm",
+          "terms": [
+            "height_in_cm",
+            "height"
+          ]
+        },
+        {
+          "table_name": "RKKP_DaMyDa",
+          "column_name": "Reg_Vaegt",
+          "terms": [
+            "Reg_Vaegt",
+            "weight"
+          ]
+        },
+        {
+          "table_name": "RKKP_DaMyDa",
+          "column_name": "Reg_Hoejde",
+          "terms": [
+            "Reg_Hoejde",
+            "height"
+          ]
+        }
+      ]
     },
     {
       "id": "checks",
@@ -215,13 +269,14 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
     {
       "id": "lab_npu_code_coverage",
-      "title": "Panels / lab npu code coverage",
+      "title": "Laboratory code occurrence metadata by source",
       "source_file": "outputs/panels/lab_npu_code_coverage.csv",
       "arg_path": [
         "panels",
@@ -251,14 +306,23 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "One source/code-field/code summary. Code values and counts are withheld pending validation; published rows retain source-field context, not evidence of harmonized result values.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
-      }
+      },
+      "navigation_terms": [
+        "lab npu code coverage",
+        "laboratory codes",
+        "NPU",
+        "DNK",
+        "code counts",
+        "code coverage"
+      ]
     },
     {
       "id": "npu_dictionary_summary",
@@ -378,7 +442,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -419,7 +484,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -474,7 +540,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -523,7 +590,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -570,7 +638,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -619,7 +688,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -664,7 +734,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
@@ -719,7 +790,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
@@ -764,7 +836,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -804,7 +877,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -844,7 +918,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -883,16 +958,19 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_available": {
           "definition": "Number of source rows with a nonmissing value for this field.",
-          "unit": "source rows"
+          "unit": "source rows",
+          "label": "Source rows with a value"
         },
         "pct_available": {
           "definition": "Percentage of source rows with a nonmissing field value.",
           "unit": "percent",
-          "denominator": "profiled source rows"
+          "denominator": "profiled source rows",
+          "label": "Source rows with a value (%)"
         }
       }
     },
@@ -937,7 +1015,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
@@ -989,7 +1068,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -1042,16 +1122,25 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_available": {
           "definition": "Number of source rows with a nonmissing value for this field.",
-          "unit": "source rows"
+          "unit": "source rows",
+          "label": "Source rows with a value"
         },
         "pct_available": {
           "definition": "Percentage of source rows with a nonmissing field value.",
           "unit": "percent",
-          "denominator": "profiled source rows"
+          "denominator": "profiled source rows",
+          "label": "Source rows with a value (%)"
+        },
+        "p25": {
+          "label": "25th percentile"
+        },
+        "p75": {
+          "label": "75th percentile"
         }
       }
     },
@@ -1095,7 +1184,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -1139,7 +1229,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -1180,7 +1271,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
@@ -1194,7 +1286,7 @@
     },
     {
       "id": "atlas_temporal_coverage",
-      "title": "Panels / atlas temporal coverage",
+      "title": "Source date-field availability",
       "source_file": "outputs/panels/atlas_temporal_coverage.csv",
       "arg_path": [
         "panels",
@@ -1239,7 +1331,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
@@ -1248,13 +1341,14 @@
         "pct_available": {
           "definition": "Percentage of source rows with a nonmissing field value.",
           "unit": "percent",
-          "denominator": "profiled source rows"
+          "denominator": "profiled source rows",
+          "label": "Source rows with a value (%)"
         }
       }
     },
     {
       "id": "atlas_temporal_coverage_years",
-      "title": "Panels / atlas temporal coverage years",
+      "title": "Source coverage by year",
       "source_file": "outputs/panels/atlas_temporal_coverage_years.csv",
       "arg_path": [
         "panels",
@@ -1285,22 +1379,42 @@
         "subdomain",
         "atlas_role",
         "n_rows",
-        "pct_rows"
+        "pct_rows",
+        "date_column",
+        "year",
+        "coverage_basis"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "One supplied source/date-field/year aggregate, or one metadata row for a withheld source date range. Inferred ranges do not establish recorded events or continuous coverage.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
           "unit": "source rows"
+        },
+        "date_column": {
+          "label": "Source date field"
+        },
+        "year": {
+          "label": "Year (see evidence basis)"
+        },
+        "coverage_basis": {
+          "label": "Year evidence basis"
         }
-      }
+      },
+      "navigation_terms": [
+        "temporal coverage years",
+        "time coverage",
+        "year counts",
+        "years",
+        "date field"
+      ]
     },
     {
       "id": "atlas_temporal_date_quality",
@@ -1345,13 +1459,14 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
     {
       "id": "atlas_spatial_region_counts",
-      "title": "Panels / atlas spatial region counts",
+      "title": "Recorded region counts by source",
       "source_file": "outputs/panels/atlas_spatial_region_counts.csv",
       "arg_path": [
         "panels",
@@ -1386,26 +1501,38 @@
         "region_name",
         "n_rows",
         "pct_rows",
-        "count_basis"
+        "count_basis",
+        "region_column"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "Approved source-row counts grouped by the recorded region field. One row describes one source/region grouping; this does not establish residence or treatment location.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
           "unit": "source rows"
+        },
+        "region_column": {
+          "label": "Recorded region field"
         }
-      }
+      },
+      "navigation_terms": [
+        "spatial region counts",
+        "place coverage",
+        "regional counts",
+        "geography",
+        "region field"
+      ]
     },
     {
       "id": "atlas_spatial_region_coverage",
-      "title": "Panels / atlas spatial region coverage",
+      "title": "Regional source coverage status",
       "source_file": "outputs/panels/atlas_spatial_region_coverage.csv",
       "arg_path": [
         "panels",
@@ -1441,7 +1568,7 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "One region/domain status entry. Any source-row total covers the domain, not the region; do not sum these totals across regions. Status does not establish geographic completeness.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
@@ -1449,7 +1576,13 @@
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
           "unit": "source rows"
         }
-      }
+      },
+      "navigation_terms": [
+        "spatial region coverage",
+        "place coverage",
+        "regional source availability",
+        "geography"
+      ]
     },
     {
       "id": "atlas_dk_choropleth_regions",
@@ -1671,7 +1804,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -1757,7 +1891,7 @@
     },
     {
       "id": "column_profiles",
-      "title": "Column profiles",
+      "title": "Source field availability and stored summaries",
       "source_file": "outputs/atlas_column_profiles.csv",
       "arg_path": [
         "column_profiles"
@@ -1848,15 +1982,17 @@
       ],
       "group": "Evidence",
       "kind": "field_metadata",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "Available/missing source-row counts and approved stored numeric summaries. One row describes one source field; null summaries need their supplied reason.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "column_name": {
-          "definition": "Exact source field name."
+          "definition": "Exact source field name.",
+          "label": "Source field"
         },
         "profile_kind": {
           "definition": "Profiling category assigned by the atlas profiler."
@@ -1867,30 +2003,83 @@
         },
         "n_available": {
           "definition": "Number of source rows with a nonmissing value for this field.",
-          "unit": "source rows"
+          "unit": "source rows",
+          "label": "Source rows with a value"
         },
         "pct_available": {
           "definition": "Percentage of source rows with a nonmissing field value.",
           "unit": "percent",
-          "denominator": "profiled source rows"
+          "denominator": "profiled source rows",
+          "label": "Source rows with a value (%)"
         },
         "n_missing": {
           "definition": "Number of source rows with a missing value for this field.",
-          "unit": "source rows"
+          "unit": "source rows",
+          "label": "Source rows without a value"
         },
         "pct_missing": {
           "definition": "Percentage of source rows with a missing field value.",
           "unit": "percent",
-          "denominator": "profiled source rows"
+          "denominator": "profiled source rows",
+          "label": "Source rows without a value (%)"
         },
         "n_distinct_capped": {
-          "definition": "Distinct-value count, subject to the configured profiling cap."
+          "definition": "Distinct-value count, subject to the configured profiling cap.",
+          "label": "Distinct values (capped)"
+        },
+        "p25": {
+          "label": "25th percentile"
+        },
+        "p75": {
+          "label": "75th percentile"
         }
-      }
+      },
+      "navigation_terms": [
+        "column profiles",
+        "field summaries",
+        "recorded values",
+        "median",
+        "middle 50%",
+        "measurement fields"
+      ],
+      "navigation_fields": [
+        {
+          "table_name": "SP_PatientInfo",
+          "column_name": "weight_in_kg",
+          "terms": [
+            "weight_in_kg",
+            "weight"
+          ]
+        },
+        {
+          "table_name": "SP_PatientInfo",
+          "column_name": "height_in_cm",
+          "terms": [
+            "height_in_cm",
+            "height"
+          ]
+        },
+        {
+          "table_name": "RKKP_DaMyDa",
+          "column_name": "Reg_Vaegt",
+          "terms": [
+            "Reg_Vaegt",
+            "weight"
+          ]
+        },
+        {
+          "table_name": "RKKP_DaMyDa",
+          "column_name": "Reg_Hoejde",
+          "terms": [
+            "Reg_Hoejde",
+            "height"
+          ]
+        }
+      ]
     },
     {
       "id": "column_top_values",
-      "title": "Column top values",
+      "title": "Common recorded field values",
       "source_file": "outputs/atlas_column_top_values.csv",
       "arg_path": [
         "column_top_values"
@@ -1931,17 +2120,26 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "One value-summary metadata row for one source field. Observed values and frequencies are withheld pending validation; this is not a complete valid-value list.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "column_name": {
-          "definition": "Exact source field name."
+          "definition": "Exact source field name.",
+          "label": "Source field"
         }
-      }
+      },
+      "navigation_terms": [
+        "top values",
+        "common values",
+        "observed categories",
+        "value counts",
+        "frequencies"
+      ]
     },
     {
       "id": "run_summary",
@@ -2010,7 +2208,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -2060,7 +2259,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -2111,7 +2311,8 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         }
       }
     },
@@ -2152,10 +2353,12 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "column_name": {
-          "definition": "Exact source field name."
+          "definition": "Exact source field name.",
+          "label": "Source field"
         }
       }
     },
@@ -2195,16 +2398,18 @@
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "column_name": {
-          "definition": "Exact source field name."
+          "definition": "Exact source field name.",
+          "label": "Source field"
         }
       }
     },
     {
       "id": "semantic_dictionary",
-      "title": "Semantic dictionary",
+      "title": "Clinical meanings and source-field mappings",
       "source_file": "outputs/atlas_semantic_data_dictionary.csv",
       "arg_path": [
         "semantic_dictionary"
@@ -2284,18 +2489,26 @@
       ],
       "group": "Evidence",
       "kind": "field_metadata",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "Source-aware clinical meanings, mapping confidence/status, and caveats. One row describes one semantic mapping entry; mappings do not prove a recorded measurement or completed event.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas."
+          "definition": "Exact source table identifier used by the atlas.",
+          "label": "Source table"
         },
         "n_rows": {
           "definition": "Number of source rows; does not establish a distinct-person denominator.",
           "unit": "source rows"
         }
-      }
+      },
+      "navigation_terms": [
+        "semantic dictionary",
+        "clinical terms",
+        "field meanings",
+        "source connections",
+        "measurement names"
+      ]
     },
     {
       "id": "semantic_value_map",
@@ -2355,7 +2568,7 @@
     },
     {
       "id": "semantic_code_map",
-      "title": "Semantic code map",
+      "title": "Code-system mapping metadata",
       "source_file": "outputs/atlas_semantic_code_map.csv",
       "arg_path": [
         "semantic_code_map"
@@ -2400,7 +2613,7 @@
       ],
       "group": "Evidence",
       "kind": "field_metadata",
-      "row_grain": "One output row; source counts are not unique people",
+      "row_grain": "One source/code-system mapping entry. Code values are withheld; use reviewed reference definitions for code meanings.",
       "count_basis": "source_rows; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
@@ -6468,7 +6681,7 @@
     },
     {
       "id": "npu_display_dictionary",
-      "title": "Npu display dictionary",
+      "title": "Laboratory code definitions (NPU/DNK)",
       "source_file": "config/npu-display-dictionary.csv",
       "arg_path": [],
       "payload_path": [
@@ -6510,14 +6723,21 @@
       "resource": true,
       "group": "Reference definitions",
       "kind": "reference_definitions",
-      "row_grain": "One reference definition; does not establish observed availability",
+      "row_grain": "Reviewed laboratory code labels, definitions, systems, and units where supplied. One row is one reference definition, not an observed test or frequency.",
       "count_basis": "reference_rows",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {},
+      "navigation_terms": [
+        "npu display dictionary",
+        "NPU",
+        "DNK",
+        "lab code meanings",
+        "laboratory definitions"
+      ]
     },
     {
       "id": "clinical_display_dictionary",
-      "title": "Clinical display dictionary",
+      "title": "Clinical code and field definitions",
       "source_file": "config/clinical-display-dictionary.csv",
       "arg_path": [],
       "payload_path": [
@@ -6553,10 +6773,17 @@
       "resource": true,
       "group": "Reference definitions",
       "kind": "reference_definitions",
-      "row_grain": "One reference definition; does not establish observed availability",
+      "row_grain": "Reviewed labels/definitions for the stated kind and source/system. One row is one reference entry; it does not establish observed categories or events.",
       "count_basis": "reference_rows",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {},
+      "navigation_terms": [
+        "clinical display dictionary",
+        "code meanings",
+        "value definitions",
+        "field labels",
+        "clinical terms"
+      ]
     }
   ]
 }

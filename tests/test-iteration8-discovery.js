@@ -85,7 +85,7 @@ test('reloading a source-field route restores page and an exact definition route
 });
 test('field definitions are scoped reference meanings separate from frequencies',()=>{
   const {run}=runtime();const definitions=run("fieldCard(columnRows.find(row=>row.table_name==='RKKP_LYFO'&&row.column_name==='subtype'))");
-  assert.equal((definitions.match(/Definition source/g)||[]).length,13);assert.match(definitions,/Reference definitions/);assert.match(definitions,/Frequencies are not included/);assert.match(definitions,/Mode: Not supplied/);assert.match(definitions,/Diffuse large B-cell lymphoma/);
+  assert.equal((definitions.match(/Definition source/g)||[]).length,13);assert.match(definitions,/Reference definitions/);assert.match(definitions,/Categorical values and frequencies are not published for this field/);assert.match(definitions,/Mode: Not supplied/);assert.match(definitions,/Diffuse large B-cell lymphoma/);
   const unknown=run("fieldCard(columnRows.find(row=>row.table_name==='RKKP_CLL'&&row.column_name==='Reg_BinetStadium'))");assert.match(unknown,/Value definitions are not included for this field/);assert.doesNotMatch(unknown,/Diffuse large/);
 });
 test('small, protected and date fields remain schema discoverable without raw values',()=>{

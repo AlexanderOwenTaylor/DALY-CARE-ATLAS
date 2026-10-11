@@ -27,3 +27,19 @@ test('Panels library navigation uses changed or cleared global search at click t
  search.value='';link.listeners.click?.();
  params=new URLSearchParams(link.href.split('?')[1]);assert.equal(params.has('q'),false);assert.equal(params.get('group'),'Clinical');
 });
+
+test('Home question arrival focuses answers once below sticky navigation without altering history restoration',()=>{
+ const html=fs.readFileSync(path.join(dir,'DALYCARE_atlas.html'),'utf8');
+ const start=html.indexOf('      function focusQuestionArrival()'),end=html.indexOf('      function overflowReport()',start);
+ assert.ok(start>=0);
+ const helper=html.slice(html.indexOf('      function scrollToAtlasTarget('),html.indexOf('      const atlasNav ='));
+ const calls=[],target={setAttribute(){},focus(options){calls.push(['focus',options]);},scrollIntoView(options){calls.push(['rawScroll',options]);},getBoundingClientRect:()=>({top:1000}),closest:()=>({querySelector:()=>({getBoundingClientRect:()=>({height:30})})})};
+ const window={location:{search:'?question=weight-height'},scrollY:0,scrollTo:options=>calls.push(['scroll',options]),matchMedia:()=>({matches:true}),performance:{getEntriesByType:()=>[{type:'navigate'}]}};
+ const document={querySelector:()=>({getBoundingClientRect:()=>({height:50})}),getElementById:id=>id==='column-list'?{querySelector:()=>target}:null};
+ const context=vm.createContext({window,URLSearchParams,isQaRoute:()=>false,parseHashRoute:()=>({subId:'infra-columns'}),document});
+ vm.runInContext(helper+html.slice(start,end)+';focusQuestionArrival();focusQuestionArrival();',context);
+ assert.equal(calls.filter(c=>c[0]==='focus').length,1);assert.equal(calls.filter(c=>c[0]==='scroll').length,1);assert.equal(calls.find(c=>c[0]==='scroll')[1].top,904);
+ calls.length=0;window.performance.getEntriesByType=()=>[{type:'back_forward'}];
+ vm.runInNewContext(helper+html.slice(start,end)+';focusQuestionArrival();',{window,URLSearchParams,isQaRoute:()=>false,parseHashRoute:()=>({subId:'infra-columns'}),document});
+ assert.equal(calls.length,0);
+});

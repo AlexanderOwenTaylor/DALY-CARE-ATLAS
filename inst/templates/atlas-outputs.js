@@ -107,7 +107,44 @@
     summary_caveat:{quantiles_may_use_bounded_stream_sample:'Quartiles may use a sample of source records'},
     summary_caveats:{quantiles_may_use_bounded_stream_sample:'Quartiles may use a sample of source records'}
   };
-  const formatValue=(value,key)=>value===null || value===undefined?'Missing':(reviewedLabels[key] && own(reviewedLabels[key],value)?reviewedLabels[key][value]:String(value));
+  const privacyLabels={
+    protected_field:'Withheld: protected field',
+    withheld_unvalidated_distribution:'Withheld: values and counts need validation',
+    withheld_small_cells:'Withheld: small groups',
+    withheld_residual_small_distribution:'Withheld: small groups and related counts',
+    withheld_small_complementary_cells:'Withheld: small groups and related counts',
+    withheld_exact_clinical_bounds:'Withheld: exact clinical date bounds',
+    withheld_derived_source_range:'Source range withheld',
+    needs_validation_unreviewed_field:'Not shown: field needs review',
+    withheld_unknown_support:'Withheld: supporting count unknown',
+    unavailable_zero_support:'Unavailable: no recorded values',
+    withheld_insufficient_support:'Withheld: too few recorded values',
+    needs_validation_unknown_distinctness:'Not shown: distinct values need review',
+    withheld_constant_profile:'Withheld: constant stored values',
+    withheld_near_unique_profile:'Withheld: nearly unique stored values',
+    needs_validation_missing_range_evidence:'Not shown: stored range needs review',
+    needs_validation_negative_sentinel:'Not shown: invalid stored values need review'
+  };
+  Object.assign(reviewedLabels,{
+    coverage_basis:{event_date_counts:'Recorded event-year counts',streamed_event_date_counts:'Recorded event-year counts (streamed)',source_date_range:'Inferred source date range; bounds withheld'},
+    value_privacy_status:privacyLabels,count_privacy_status:privacyLabels,date_privacy_status:privacyLabels,availability_privacy_status:privacyLabels
+  });
+  Object.assign(reviewedLabels.numeric_privacy_status,privacyLabels);
+  reviewedLabels.summary_method['supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample']='Supplied mean and quantiles; quartiles may use a sample of source records';
+  function formatValue(value,key,row={}) {
+    if(value!==null && value!==undefined) return reviewedLabels[key] && own(reviewedLabels[key],value)?reviewedLabels[key][value]:String(value);
+    let status;
+    if(['mean','median','p25','p75','sd','q25','q75','iqr','min','max'].includes(key)) {
+      status=row.numeric_privacy_status;
+      if(['min','max'].includes(key) && status==='eligible_stored_summary') return 'Withheld: exact stored extrema';
+    } else if(['n_available','n_missing','pct_available','pct_missing'].includes(key)) status=row.availability_privacy_status;
+    else if(['n','n_rows','n_observed','n_patients','count','frequency','pct','pct_rows','pct_patients'].includes(key)) status=row.count_privacy_status || row.value_privacy_status || (row.date_privacy_status==='withheld_derived_source_range'?row.date_privacy_status:null);
+    else if(['value','label','top_value','mode','code','npu_code','lab_code','category','display_value','raw_value'].includes(key)) status=row.value_privacy_status;
+    else if(key==='year' && row.date_privacy_status==='withheld_derived_source_range') status=row.date_privacy_status;
+    else if(['min_date','max_date','date_min','date_max','date_range','display_min_year','display_max_year'].includes(key)) status=row.date_privacy_status;
+    else if(key==='n_distinct_capped') status=row.availability_privacy_status || (row.is_sensitive?row.value_privacy_status:null);
+    return privacyLabels[status] || 'Missing';
+  }
   window.DALYCARE_OUTPUTS={register,loadShard,scanTable,cancel,formatValue,get cacheBytes(){return cacheBytes;}};
   const root = document.getElementById('outputs-app');
   if (!root) return;
@@ -120,6 +157,8 @@
     not_produced: 'Not in this export', metadata_only: 'Metadata only',
     withheld: 'Privacy withheld', unavailable: 'Unavailable'
   };
+  const kindLabels={aggregate_summary:'Aggregate summary',field_metadata:'Field metadata',reference:'Reference definitions',reference_dictionary:'Reference definitions',reference_definitions:'Reference definitions',metadata:'Metadata'};
+  const originLabels={csv_run:'From this run’s CSV outputs',csv_outputs:'From CSV outputs',project_reference:'Reviewed project reference definitions',snapshot_only:'From an earlier atlas snapshot; original scope unknown',legacy_payload:'From an earlier atlas export'};
   let c;
   try {
     c = catalogue();
@@ -166,8 +205,8 @@
     el('table-list').innerHTML = tables.map(t =>
       '<button type="button" class="table-card" data-table="' + escape(t.id) + '">' +
       '<strong>' + escape(t.title) + '</strong><span>' +
-      escape(statusLabels[t.status] || 'Unavailable') + ' · ' + escape(t.group || 'Other') +
-      '</span><small>' + escape(t.source_file || 'File not supplied') + '</small></button>'
+      escape(statusLabels[t.status] || 'Unavailable') + ' · ' + escape(kindLabels[t.kind] || 'Metadata') +
+      '</span><span>' + escape(t.row_grain || 'Row meaning not supplied') + '</span><small>' + escape(t.source_file || 'File not supplied') + '</small></button>'
     ).join('') || '<p>No tables match these metadata filters.</p>';
     el('table-list').querySelectorAll('[data-table]').forEach(button =>
       button.addEventListener('click', () => open(button.dataset.table))
@@ -198,21 +237,21 @@
         ' of ' + result.total_matches + (el('table-query').value ? ' matching rows' : ' rows') :
         'No rows on this page · ' + result.total_matches + ' matching rows';
       el('read-status').textContent = (result.total_matches ? range : 'No matches') +
-        (el('table-query').value ? ' · Full scan complete' : '');
+        (el('table-query').value ? ' · Search complete across published rows' : '');
       el('rows').innerHTML = result.rows.length ?
         '<div class="table-scroll"><table><thead><tr>' +
         t.columns.map(c => '<th scope="col">' + escape(c.label || c.key) + '</th>').join('') +
         '</tr></thead><tbody>' + result.rows.map(row =>
           '<tr>' + t.columns.map(c =>
-            '<td title="' + escape(formatValue(row[c.key])) + '">' +
-            escape(formatValue(row[c.key], c.key)) + '</td>'
+            '<td title="' + escape(formatValue(row[c.key], c.key, row)) + '">' +
+            escape(formatValue(row[c.key], c.key, row)) + '</td>'
           ).join('') + '</tr>'
         ).join('') + '</tbody></table></div>' : '';
       el('next-page').disabled = (page + 1) * PAGE_ROWS >= result.total_matches;
       el('previous-page').disabled = page === 0;
     } catch (error) {
       if (epoch === viewEpoch) {
-        el('read-status').textContent = error.message + '. Try again to complete the search.';
+        el('read-status').textContent = error.message.replace(/shard/gi,'table part') + '. Keep the HTML and accompanying data folder/files together, then try again to complete the search.';
         el('rows').innerHTML = '';
         el('retry-read').hidden = false;
       }
@@ -243,6 +282,13 @@
     }
     const t = selected;
     el('table-title').textContent = t.title;
+    el('table-purpose').textContent = (kindLabels[t.kind] || 'Metadata') + ' · ' + (t.row_grain || 'Row meaning not supplied');
+    const reference = ['reference','reference_dictionary','reference_definitions'].includes(t.kind);
+    el('table-cue').innerHTML = reference ? 'Reference definitions explain meanings; they do not establish observed tests, categories or result values.' :
+      t.id==='lab_npu_code_coverage' ? 'Code values and counts are withheld pending validation. Published rows retain source-field context. <a href="DALYCARE_outputs.html?table=npu_display_dictionary">Reviewed laboratory reference definitions</a> explain meanings, not observed availability.' :
+      t.id==='semantic_code_map' ? 'Code values are withheld. <a href="DALYCARE_outputs.html?table=clinical_display_dictionary">Reviewed reference definitions</a> explain code meanings.' :
+      t.id==='column_top_values' ? 'Observed categorical values and frequencies are not published under the current release policy. Rows, where present, retain summary metadata.' : '';
+    el('table-scope').textContent = t.complete===true ? 'All approved output rows are represented. Searches cover these published rows.' : 'Limited or unknown original scope. Searches cover only the published rows in this export.';
     el('table-state').textContent = (statusLabels[t.status] || 'Unavailable') +
       (t.reason ? ' · ' + t.reason : '');
     el('table-metadata').innerHTML = '<dl>' + [
@@ -252,11 +298,9 @@
       ['Count basis', t.count_basis],
       ['CSV source rows', count(t.source_row_count)],
       ['Represented rows', count(t.represented_row_count)],
-      ['Completeness', t.complete === true ? 'Complete reviewed output' :
-        t.complete === false ? 'Limited / incomplete output' : 'Unknown'],
-      ['Evidence origin', t.provenance === 'csv_outputs' ? 'From CSV outputs' :
-        t.provenance === 'legacy_payload' ? 'From an earlier atlas export' :
-        t.provenance || 'Not supplied']
+      ['Completeness', t.complete === true ? 'All approved output rows represented' :
+        t.complete === false ? 'Limited snapshot or incomplete output' : 'Unknown'],
+      ['Evidence origin', originLabels[t.provenance] || 'Not supplied']
     ].map(([label, value]) =>
       '<dt>' + label + '</dt><dd>' + escape(value || 'Not supplied') + '</dd>'
     ).join('') + '</dl>';

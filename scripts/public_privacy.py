@@ -34,11 +34,29 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
     approved=measurement_policy(project_root)
     # Canonical profile provenance is required for panel copies missing min/distinct.
     profiles={(str(r.get('table_name','')),str(r.get('column_name',''))):r for r in payload.get('column_profile_rows',[]) if isinstance(r,dict)}
+    year_paths = {('panels','atlas_temporal_coverage_years'), ('review_temporal_coverage','years')}
+    has_ranges = any(isinstance(r,dict) and r.get('coverage_basis') == 'source_date_range'
+                     for rows in (payload.get('panels',{}).get('atlas_temporal_coverage_years',[]), payload.get('review_temporal_coverage',{}).get('years',[])) for r in rows)
     def walk(obj, path=()):
         if isinstance(obj,list):
+            if path in year_paths:
+                normalized=[]; seen=set()
+                for row in obj:
+                    if isinstance(row,dict) and row.get('coverage_basis') == 'source_date_range':
+                        identity=tuple(row.get(key) for key in ('table_name','date_column','coverage_basis'))
+                        if identity in seen: continue
+                        seen.add(identity)
+                        row={key:row.get(key) for key in ('table_name','domain','subdomain','atlas_role','date_column','coverage_basis') if key in row}
+                        row.update(year=None,n_rows=None,pct_rows=None,date_privacy_status='withheld_derived_source_range')
+                    normalized.append(row)
+                obj=normalized
             structural_panel_path=(path in {('panel_groups',),('review_overview','panel_groups')} or bool(path and path[-1]=='panels' and path[0].startswith('review_')))
             if structural_panel_path and all(isinstance(x,dict) and set(x)=={'group','panel_name','title','n_rows'} for x in obj):
-                return copy.deepcopy(obj)  # Exported panel sizes, never patient support.
+                out=copy.deepcopy(obj)
+                if has_ranges:
+                    for row in out:
+                        if row.get('panel_name') == 'atlas_temporal_coverage_years': row['n_rows']=None
+                return out  # Inventory sizes must not restore inferred range length.
             out=[walk(x,path) for x in obj]
             if any(isinstance(x,dict) and any(number(x.get(key)) is not None and 0<number(x.get(key))<k for key in ('n','n_rows','n_observed','n_patients','count','frequency','choropleth_value','damyda_n','matched_rows','matched_patients')) for x in obj):
                 for row in out:
@@ -51,6 +69,8 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
             if isinstance(obj,str) and path and path[-1] in {'message','note','story','date_qc','description'}:
                 return re.sub(r'\b\d{4}-\d{2}-\d{2}\b','[clinical date withheld]',obj)
             return copy.deepcopy(obj)
+        if has_ranges and path == ('review_temporal_coverage','summary') and 'n_year_rows' in obj:
+            obj=dict(obj,n_year_rows=None)
         r={key:(copy.deepcopy(v) if key in REFERENCE else walk(v,path+(key,))) for key,v in obj.items()}
         for key in DATES & r.keys(): r[key]=None
         if DATES & r.keys(): r['date_privacy_status']='withheld_exact_clinical_bounds'

@@ -164,7 +164,10 @@ Each run writes `atlas_runs/<run_id>/` with:
 - `logs/atlas_execution_log.tsv`
 - `logs/atlas_memory_log.tsv`
 - `site/DALYCARE_atlas.html`
-- `site/DALYCARE_atlas_payload.js`
+- `site/DALYCARE_clinical.html` and `site/DALYCARE_outputs.html`
+- `site/DALYCARE_atlas_payload.js` and matching `.json`
+- light bootstrap/catalogue scripts, shared runtimes, styles, and `site/output-shards/`
+- `outputs/atlas_build_context.json` (internal rebuild context)
 
 Generated run outputs are local artifacts and should not be committed. The Git
 repository carries the atlas tooling, source maps, static reference code sets,
@@ -189,8 +192,8 @@ Registry-focused runs can include these clinical panels:
 The static atlas is a tabbed, V33-style review artifact with run-level metrics,
 domain cards, searchable source catalog, a safe per-column explorer, a semantic
 Data Dictionary, registry cards, QA triage, generated panel tables, and
-quick-start commands. The HTML remains data-light and loads its run payload from
-`site/DALYCARE_atlas_payload.js`.
+quick-start commands. Home and Data tables load only their small entry/catalogue assets.
+Clinical explorer loads its core from `site/DALYCARE_atlas_payload.js` when opened.
 
 Visual QA mock-ups generated from repository fixtures validate the atlas
 template against fixture outputs. A separate full-output visual QA run is
@@ -246,3 +249,55 @@ both JSON and JavaScript payloads. Intermediate run CSVs are not equivalent
 to these guarded release files and should not be published as public atlas
 outputs. See [Clinician atlas interface and public exports](docs/clinician-atlas-ui.md)
 for build instructions, interpretation limits, disclosure controls and tests.
+
+## Offline and hosted bundles; exact rebuild versus migration
+
+Open `site/DALYCARE_atlas.html` by double-clicking for offline use, or host the
+entire `site/` directory over HTTP. Keep every page, script, style and
+`output-shards/` together. Internal `outputs/` CSVs and the internal manifest
+are not public downloads; do not host the enclosing run directory.
+
+A new R run saves `outputs/atlas_build_context.json`, its supplemental CSVs and
+any selected standalone MCL count bindings. The one-click runner and CLI use
+these saved inputs to build the same guarded site. Rebuild without a database:
+
+```sh
+Rscript scripts/rebuild_atlas_from_outputs.R /path/to/run /path/to/project
+```
+
+Missing, malformed, oversized or incompatible required inputs stop publication;
+the previous site and internal manifest remain available. Optional unknown or
+changed schemas become metadata only. `outputs/output_manifest.csv` includes all
+context inputs and every published asset exactly once. Explicit project templates
+and registry take precedence over installed package resources.
+
+Historical runs without the saved context cannot be claimed as exact CSV rebuilds.
+Use an explicitly labelled snapshot migration, optionally selecting matching CSVs
+for table evidence:
+
+```sh
+python scripts/build_ui_iteration.py --input-dir /path/to/old/site --output-dir /path/to/new/site --run-dir /path/to/matching/run
+```
+
+The clinical core remains an earlier snapshot in this mode; CSV tables and project
+reference definitions have separate origins. Without `--run-dir`, snapshot tables
+have unknown original counts and limited completeness. Only registered artifacts
+in the selected run are considered; other archive contents are not published.
+
+The input pre-read and total public-table limits default to 64 MiB each. Configure
+`DALYCARE_ATLAS_INPUT_MAX_BYTES` and `DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES` in bytes;
+the catalogue reports the limits. Shards have at most 250 rows and 256 KiB, pages
+show 50 rows, and retained serialized shard data is bounded to 1 MiB. Browser heap
+has additional overhead. Search completes only after scanning the selected
+published table, not original withheld records. The clinical core still loads
+as a whole when Clinical explorer opens. Production database access remains
+unverified locally; synthetic entry-point checks do not establish it.
+
+See [build and acceptance details](docs/clinician-atlas-ui.md) for interpretation,
+privacy, and the integrated synthetic acceptance command.
+
+The current package `DESCRIPTION` lacks a maintainer email, so untouched-source
+`R CMD INSTALL` fails metadata validation. The installed-resource acceptance
+test installs a temporary copy with a synthetic test contact; it verifies shipped
+assets and project-resource preference, not production package-install readiness.
+The source one-click, CLI and offline rebuild workflows do not require installation.

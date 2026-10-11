@@ -10,6 +10,18 @@ class PrivacyTests(unittest.TestCase):
   self.assertEqual(out['review_infrastructure_sections']['panels'],rows)
   self.assertEqual(out['review_overview']['panel_groups'],rows)
   self.assertIsNone(out['panels']['observed'][0]['n_rows'])
+ def test_inferred_range_has_no_bounds_or_cardinality_in_any_public_copy(self):
+  def payload(end):
+   rows=[dict(table_name='S',date_column='D',coverage_basis='source_date_range',year=y,n_rows=None,pct=None) for y in range(1980,end)]
+   rows += [dict(table_name='S',date_column='E',coverage_basis='event_date_counts',year=2020,n_rows=20,pct=100),dict(table_name='S',date_column='F',coverage_basis='streamed_event_date_counts',year=2021,n_rows=30,pct=100)]
+   inventory=[dict(group='Coverage',panel_name='atlas_temporal_coverage_years',title='Years',n_rows=len(rows))]
+   return dict(panels={'atlas_temporal_coverage_years':rows},review_temporal_coverage={'years':rows,'summary':[dict(table_name='S',date_column='D',n_year_rows=end-1980)]},panel_groups=inventory,review_overview={'panel_groups':inventory},review_infrastructure_sections={'panels':inventory})
+  a=sanitize_public_payload(payload(1983)); b=sanitize_public_payload(payload(2026))
+  self.assertEqual(a,b)
+  rows=a['panels']['atlas_temporal_coverage_years']
+  self.assertEqual(len(rows),3); self.assertIsNone(rows[0]['year']); self.assertEqual(rows[0]['date_privacy_status'],'withheld_derived_source_range')
+  self.assertEqual([r['year'] for r in rows[1:]],[2020,2021]); self.assertEqual([r['n_rows'] for r in rows[1:]],[20,30])
+  self.assertEqual(a,sanitize_public_payload(a)); self.assertEqual(audit_public_payload(a),[])
  def profile(self, **kw):
   r=dict(table_name="RKKP_CLL",column_name="Reg_Leukocyttal",profile_kind="numeric",n_rows="100",n_available="80",n_missing="20",pct_available="80",pct_missing="20",n_distinct_capped="20",min="0",max="999999.123",mean="7",median="6",p25="4",p75="8")
   r.update(kw); return r

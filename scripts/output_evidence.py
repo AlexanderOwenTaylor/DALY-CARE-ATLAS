@@ -222,7 +222,16 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
         keys = list(spec['projection']) + sorted({k for row in rows or [] for k in row if k in privacy_columns and k not in spec['projection']})
         descriptor['rows'] = [{k: row.get(k) for k in keys} for row in rows or []]
         descriptor['represented_row_count'] = len(descriptor['rows'])
+        if any(row.get('date_privacy_status') == 'withheld_derived_source_range' for row in rows or []):
+            descriptor['source_row_count'] = None
+            descriptor['reason'] = 'Transformed approved scope: inferred source ranges collapsed; original row count withheld'
+
         descriptor['source_terms'] = sorted({str(row[key]) for row in descriptor['rows'] for key in ('table_name', 'source_name', 'registry') if row.get(key) not in (None, '')})
+        terms=set(descriptor['source_terms']) | set(spec.get('navigation_terms',[]))
+        for mapping in spec.get('navigation_fields',[]):
+            if any(row.get('table_name') == mapping['table_name'] and row.get('column_name') == mapping['column_name'] for row in descriptor['rows']): terms.update(mapping['terms'])
+        descriptor['source_terms']=sorted(terms)
+
         types = {k: v for schema in spec['schemas'] for k, v in schema.items()}
         descriptor['columns'] = [{'key': key, 'label': key.replace('_', ' ').capitalize(), 'type': types.get(key, 'boolean' if key == 'is_sensitive' else 'string'), **spec.get('column_meanings', {}).get(key, {})} for key in keys]
     if run is not None:

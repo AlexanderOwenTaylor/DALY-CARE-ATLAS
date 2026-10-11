@@ -1,6 +1,6 @@
 # DALY-CARE Atlas: CSV contents, reliable builds and bounded loading
 
-Status: proposed architecture for iteration 10; no product implementation yet.
+Status: approved and implemented for iteration 10. Integrated synthetic acceptance is recorded in Task 4; final real-bundle browser/benchmark acceptance, independent whole-branch review and release packaging remain delivery gates. Production database access remains unverified.
 
 ## Intended outcome
 

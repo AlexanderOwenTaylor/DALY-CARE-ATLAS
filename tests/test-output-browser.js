@@ -95,3 +95,36 @@ test('string codes keep leading zeros and number schemas keep null separately fr
 test('malformed and duplicate table metadata fail before requesting any rows',async()=>{
  for(const change of [h=>h.tables.push({...h.tables[0]}),h=>h.tables[0]=null,h=>h.tables[0].title=null]){const h=harness();change(h);const p=h.api.loadShard('t0','s0');if(h.scripts.length)h.answer();await assert.rejects(p,/catalogue|schema|identity/i);assert.equal(h.scripts.length,0);}
 });
+
+test('null reasons apply only to reviewed affected columns and preserve zero',()=>{
+ const h=harness(),row={numeric_privacy_status:'needs_validation_negative_sentinel',count_privacy_status:'withheld_residual_small_distribution',value_privacy_status:'withheld_unvalidated_distribution'};
+ assert.match(h.api.formatValue(null,'median',row),/review|invalid/i);
+ assert.match(h.api.formatValue(null,'n',row),/withheld/i);
+ assert.match(h.api.formatValue(null,'lab_code',row),/withheld/i);
+ assert.equal(h.api.formatValue(null,'unrelated',row),'Missing');
+ assert.equal(h.api.formatValue(0,'n',row),'0');
+ assert.match(h.api.formatValue(null,'year',{date_privacy_status:'withheld_derived_source_range'}),/range.*withheld/i);
+ assert.equal(h.api.formatValue(null,'year',{numeric_privacy_status:'needs_validation_negative_sentinel'}),'Missing');
+});
+
+test('selected laboratory rows expose cell withholding and reference meaning before raw metadata',async()=>{
+ const elements=new Map(),scripts=[],listeners={};
+ function el(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,addEventListener(){},querySelectorAll(){return [];}});return elements.get(id);}
+ const row={table_name:'S',lab_code:null,n:null,value_privacy_status:'withheld_unvalidated_distribution'},json=JSON.stringify([row]);
+ const table={id:'lab_npu_code_coverage',title:'Laboratory code occurrence metadata by source',kind:'aggregate_summary',row_grain:'One source/code-field summary',status:'available',source_file:'outputs/panels/lab_npu_code_coverage.csv',provenance:'csv_run',complete:true,columns:Object.keys(row).map(key=>({key,type:key==='n'?'number':'string'})),shards:[{id:'s0',src:'output-shards/lab-s0.js',rows:1,bytes:Buffer.byteLength(json)}]};
+ const document={getElementById:el,body:{classList:{toggle(){}}},documentElement:{dataset:{}},createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);}}};
+ const window={DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'b1',tables:[table]},location:{search:'?table=lab_npu_code_coverage'},history:{replaceState(){},pushState(){}},addEventListener(name,fn){listeners[name]=fn;}};
+ vm.runInNewContext(fs.readFileSync(runtime,'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
+ assert.match(el('table-purpose').textContent,/Aggregate summary/);assert.match(el('table-cue').innerHTML,/withheld.*source.field/i);assert.match(el('table-cue').innerHTML,/href="DALYCARE_outputs.html\?table=npu_display_dictionary"/);
+ assert.match(el('table-metadata').innerHTML,/From this run.s CSV outputs/);
+ document.currentScript=scripts[0];window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'b1',table_id:table.id,shard_id:'s0',rows_json:json});
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
+ assert.match(el('rows').innerHTML,/Withheld/);assert.doesNotMatch(el('rows').innerHTML,/>Missing</);
+ table.id='npu_display_dictionary';table.kind='reference_definitions';table.provenance='project_reference';table.shards=[];window.location.search='?table=npu_display_dictionary';listeners.popstate();
+ assert.match(el('table-purpose').textContent,/Reference definitions/);assert.match(el('table-cue').innerHTML,/do not establish observed/);assert.match(el('table-metadata').innerHTML,/Reviewed project reference definitions/);
+ table.id='missing_table';table.shards=[{id:'s1',src:'output-shards/missing-s1.js',rows:1,bytes:Buffer.byteLength(json)}];window.location.search='?table=missing_table';listeners.popstate();scripts.at(-1).onerror();
+ await Promise.resolve();await Promise.resolve();await Promise.resolve();
+ assert.match(el('read-status').textContent,/incomplete/i);assert.match(el('read-status').textContent,/HTML.*folder\/files together/);assert.doesNotMatch(el('read-status').textContent,/shard|No matches/);
+ // A load failure remains distinct from a completed empty scan.
+ window.DALYCARE_OUTPUTS.cancel();
+});

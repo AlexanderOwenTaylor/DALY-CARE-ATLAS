@@ -11,6 +11,27 @@ class EvidenceTests(unittest.TestCase):
  def write(self,name,headers,rows):
   with (self.run/'outputs'/name).open('w',encoding='utf-8',newline='') as f:
    w=csv.writer(f);w.writerow(headers);w.writerows(rows)
+ def test_coverage_context_and_collapsed_scope_are_published_without_range_length(self):
+  from output_evidence import load_registry
+  specs={s['id']:s for s in load_registry(ROOT)['artifacts']}
+  def write_years(end):
+   spec=specs['atlas_temporal_coverage_years']; keys=list(spec['schemas'][0])
+   rows=[dict(table_name='S',date_column='D',coverage_basis='source_date_range',year=y) for y in range(1980,end)]
+   rows += [dict(table_name='S',date_column='E',coverage_basis='event_date_counts',year=2020,n_rows=1,pct_rows=1)]
+   self.write('panels/atlas_temporal_coverage_years.csv',keys,[[r.get(k) for k in keys] for r in rows])
+   return next(t for t in self.collect() if t['id']==spec['id'])
+  a=write_years(1983); b=write_years(2026)
+  self.assertEqual(a,b); self.assertIsNone(a['source_row_count']); self.assertEqual(a['represented_row_count'],2)
+  self.assertIn('transformed',a['reason'].lower()); self.assertIsNone(a['rows'][0]['year']); self.assertEqual(a['rows'][1]['date_column'],'E'); self.assertEqual(a['rows'][1]['year'],2020); self.assertIsNone(a['rows'][1]['n_rows'])
+  spec=specs['atlas_spatial_region_counts'];keys=list(spec['schemas'][0]);row=dict(table_name='S',region_column='RegionCode',region_code='01',n_rows=1)
+  self.write('panels/atlas_spatial_region_counts.csv',keys,[[row.get(k) for k in keys]])
+  table=next(t for t in self.collect() if t['id']==spec['id']);self.assertEqual(table['rows'][0]['region_column'],'RegionCode');self.assertIsNone(table['rows'][0]['n_rows'])
+ def test_reviewed_discovery_terms_are_not_arbitrary_field_values(self):
+  from output_evidence import collect_output_evidence
+  p={'column_profile_rows':[{'table_name':'SP_PatientInfo','column_name':'weight_in_kg'},{'table_name':'Other','column_name':'FORBIDDEN_ARBITRARY_TERM'}]}
+  t=next(t for t in collect_output_evidence(None,ROOT,payload_snapshot=p) if t['id']=='column_profiles')
+  self.assertIn('weight',t['source_terms']);self.assertIn('weight_in_kg',t['source_terms']);self.assertNotIn('FORBIDDEN_ARBITRARY_TERM',t['source_terms'])
+  self.assertEqual(next(c for c in t['columns'] if c['key']=='n_available')['label'],'Source rows with a value')
  def test_full_distribution_and_unknown_metadata(self):
   shutil.copyfile(ROOT/'tests/fixtures/output-evidence-distribution.csv',self.run/'outputs/panels/registry_clinical_summary.csv')
   self.write('FORBIDDEN_FILENAME.csv',['FORBIDDEN_HEADER'],[['FORBIDDEN_BODY']])

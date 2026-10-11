@@ -622,9 +622,11 @@ review_temporal_summary <- function(coverage, years) {
   }
   out <- merge(out, min_year, by = "domain", all.x = TRUE)
   out <- merge(out, max_year, by = "domain", all.x = TRUE)
-  out$n_year_rows <- if (has_years) {
+  out$n_year_rows <- if (has_years && any(!is.na(years$year))) {
     counts <- aggregate(year ~ domain, data = years, FUN = length)
     counts$year[match(out$domain, counts$domain)]
+  } else if (has_years) {
+    NA_integer_
   } else {
     0L
   }
