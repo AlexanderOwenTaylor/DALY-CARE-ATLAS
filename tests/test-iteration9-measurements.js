@@ -18,6 +18,11 @@ function runtime(extra={}) {
  return {ctx,node,output,run:code=>vm.runInContext(code,ctx)};
 }
 // Broad substring grouping would incorrectly include weight-loss fields; summaries must sort first.
+test('an exact source journey hides unrelated measurement shortcuts and an explicit measurement filter retains them',()=>{
+ const {ctx,node,run,output}=runtime();node('column-dataset-filter').value='SP_PatientInfo';run('renderColumnExplorer()');
+ assert.equal(output['column-measurements'],'');assert.match(output['column-source-context'],/SP_PatientInfo/);
+ ctx.columnMeasurement='weight-height';run('renderColumnExplorer()');assert.match(output['column-measurements'],/data-measurement="weight-height"/);
+});
 test('weight and height shortcut is exact, comparable and ordered by usable summary',()=>{
  const {ctx,run,output}=runtime();ctx.columnMeasurement='weight-height';run('renderColumnExplorer()');
  assert.equal((output['column-list'].match(/data-field-name=/g)||[]).length,4);

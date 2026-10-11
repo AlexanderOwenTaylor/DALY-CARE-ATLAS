@@ -2,9 +2,11 @@
 
 The atlas supports clinical-name and exact-code search, readable source names,
 source-field discovery, and reference definitions for selected coded values.
-Selected weight/height, BMI and haemoglobin shortcuts link exact source/field
-identities to available summary statistics and source coverage. These are not
-complete inventories of every laboratory measurement or harmonized results.
+Home leads with eight clinical topic groups, including diagnoses, treatment,
+hospital contacts, laboratory data, microbiology, imaging, pathology, samples,
+molecular sources, vital signs, social history and notes. Measurement examples
+remain available below this broader inventory. They are not complete inventories
+of every laboratory measurement or harmonized results.
 
 The clinical template remains `inst/templates/DALYCARE_atlas.html` and is emitted
 as `DALYCARE_clinical.html`. Home (`DALYCARE_atlas.html`) and Data tables
@@ -40,11 +42,28 @@ release artifacts and must not be linked or hosted with the site.
 
 ## Clinical explorer
 
-Start offers clinical tasks and measurement shortcuts. Six primary sections keep
+Start offers twelve clinical topics, registry and molecular-field routes, and
+collapsed measurement examples. Six primary sections keep
 registries, clinical data, treatment, laboratory data and source fields close to
 hand. More sections retains the other destinations; existing deep links and the
 mobile section selector remain supported. Export metadata and technical guidance
 are secondary details.
+
+Domain pages show exact current source inventories even when curated panel
+mappings are absent. Source cards distinguish diagnoses from contact-linked
+diagnoses, microbiology workflow layers, full procedure sources from imaging
+events, coded pathology from text availability, and samples from assays. Counts
+describe individual source records and are not added across overlapping views or
+presented as people. Declared aliases do not duplicate an unprofiled source;
+separately profiled identities remain visible. Existing published summaries remain
+available beside the source overview, including registry imaging and Ki-67 coverage.
+
+Clinical fields opens compact, full-width source details with readable names,
+availability or a withholding reason, and exact field-evidence links. Browse all
+source fields preserves access to the complete inventory. Exact field journeys
+hide unrelated measurement shortcuts; selected date-field availability links
+retain both the date field and source. The explicit domain inventory is curated:
+the complete catalogue remains the route to sources not mapped to a topic.
 
 Field cards show the exact source and field beside the readable name, records
 with a value, usable numeric summaries or the reason they are unavailable. A
@@ -253,14 +272,17 @@ may need a UTF-8 locale and the local package-library path. `jsonlite` is needed
 for the shared privacy-fixture test. Optional export-to-export tests and search
 benchmarks require explicitly supplied local exports; these data are not committed.
 
-The local Clinical explorer iteration15 was reviewed by independent researcher,
-clinician and software reviewers. Browser checks covered desktop and offline phone
-use, measurement and reference discovery, exact source coverage links, registry
-unit provenance, search/history, keyboard controls, all existing section routes
-and print rendering. Visual review found and corrected source-count wrapping,
-stretched registry cards and invisible search actions. These bounded checks do not
-certify every atlas section, accessibility requirement or clinical interpretation.
-No whole-project R-suite success is claimed.
+The iteration16 review used researcher (X1), clinician (Z3), older-static-atlas
+comparison (W0) and developer (Y2) roles. The comparison recovers navigation and
+supported source structure, never historical statistics. Browser checks cover
+desktop and offline phone use, exact source/field and coverage links, keyboard
+controls, all existing section routes and print rendering. Independent code review
+identified availability-withholding and partial-panel fallback defects; regression
+tests cover sanitized and retained suppressed counts, registry-only imaging and
+incomplete optional panel metadata. These bounded checks do not certify every
+atlas section, accessibility requirement or clinical interpretation. No whole-project
+R-suite success is claimed. The synthetic one-click, CLI and offline rebuild pipeline
+was exercised, including rollback and installed-resource precedence.
 
 ### Optional local export checks and benchmarks
 

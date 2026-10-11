@@ -143,7 +143,7 @@ test('synthetic masked lab overview uses reference counts and hides observed con
   const {ctx,run}=runtime({labEvidenceRows:payload.panels.lab_npu_code_coverage,formatTimestamp:()=>({display:'Snapshot'}),labDisplayEntry:()=>({resolved:false})});
   load('      function renderClinicianHome(', '      function setHtml(',ctx);
   load('      function renderLaboratoryNPUPanel(', '      function renderLabExplorer(',ctx);
-  const home=run('renderClinicianHome()');assert.doesNotMatch(home,/0 \/ 1|exported lab codes with names/);assert.match(home,/402.*reference/s);assert.equal((home.match(/Browse data sources/g)||[]).length,1);assert.ok(home.indexOf('Browse data sources')<home.indexOf('class="home-routes"'));
+  const home=run('renderClinicianHome()');assert.doesNotMatch(home,/0 \/ 1|exported lab codes with names/);assert.match(home,/402.*reference/s);assert.equal((home.match(/Browse data sources/g)||[]).length,1);
   const lab=run('renderLaboratoryNPUPanel()');assert.match(lab,/Observed code coverage withheld/);assert.match(lab,/data-jump-sub="dictionary-codes"/);assert.match(lab,/class="lab-controls" hidden/);assert.match(lab,/class="lab-shortcuts"[^>]* hidden/);assert.match(lab,/class="lab-refine" hidden/);
 });
 test('empty treatment semantic maps are qualified separately from masked observed codes',()=>{

@@ -4,7 +4,7 @@ const html=fs.readFileSync(require('node:path').join(__dirname,'../inst/template
 function runtime(years=[],regionCounts=[]) {
  const output={},nodes={}; const node=id=>nodes[id]||={value:'',innerHTML:'',options:[],listeners:{},addEventListener(k,fn){this.listeners[k]=fn;}};
  const regions=[{region_code:'01',region_name:'Capital',svg_path:'M0 0',ehr_status:'ehr',lab_status:'nationwide',damyda_n:null,pct_total:null,story:'Nationwide register coverage'},{region_code:'02',region_name:'Zealand',svg_path:'M1 1',damyda_n:0,pct_total:0}];
- const ctx=vm.createContext({reviewTemporal:{years},reviewSpatial:{region_counts:regionCounts,region_coverage:[]},reviewDk:{regions,map_regions:regions},regionState:{code:'01'},sourceDisplayName:x=>x,clinicalDisplayEntry:()=>null,setHtml:(id,v)=>output[id]=v,document:{getElementById:node,querySelectorAll:()=>[]}});
+ const ctx=vm.createContext({URLSearchParams,reviewTemporal:{years},reviewSpatial:{region_counts:regionCounts,region_coverage:[]},reviewDk:{regions,map_regions:regions},regionState:{code:'01'},sourceDisplayName:x=>x,clinicalDisplayEntry:()=>null,setHtml:(id,v)=>output[id]=v,document:{getElementById:node,querySelectorAll:()=>[]}});
  const load=(start,end)=>{const a=html.indexOf(start),b=html.indexOf(end,a);assert.ok(a>=0&&b>a);vm.runInContext(html.slice(a,b),ctx);};
  load('      function text(', '      function metric(');load('      function observedRowsWithheld(', '      function sourceTiles(');load('      function finiteSummary(', '      function fieldPrivacyLabel(');load('      function cssClass(', '      function uniqueValues(');
  return {output,node,ctx,run:code=>vm.runInContext(code,ctx)};

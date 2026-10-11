@@ -10,7 +10,7 @@ test('old Panels queries preserve g as search and validate explicit groups in li
 });
 test('entry and table library initial assets contain no core or table rows',()=>{
  for(const file of ['DALYCARE_entry.html','DALYCARE_outputs.html']){assert.ok(fs.existsSync(path.join(dir,file)),file+' exists');const html=fs.readFileSync(path.join(dir,file),'utf8');assert.doesNotMatch(html,/<script[^>]+(?:atlas_payload|output-shards|clinical\.html)/);assert.match(html,/atlas-pages.css/);}
- const entry=fs.readFileSync(path.join(dir,'DALYCARE_entry.html'),'utf8');assert.match(entry,/Weight and height/);assert.match(entry,/Common values/);assert.match(entry,/Coverage over time/);assert.match(entry,/Coverage by place/);
+ const entry=fs.readFileSync(path.join(dir,'DALYCARE_entry.html'),'utf8');assert.match(entry,/Weight and height/);assert.match(entry,/Common values/);assert.match(entry,/href="DALYCARE_outputs\.html\?view=timeplace"/);assert.match(entry,/href="DALYCARE_outputs\.html\?view=fields"/);
  const clinical=fs.readFileSync(path.join(dir,'DALYCARE_atlas.html'),'utf8');assert.match(clinical,/href="DALYCARE_atlas.html"[^>]*>Home/);assert.match(clinical,/href="DALYCARE_outputs.html"[^>]*>Data tables/);assert.doesNotMatch(clinical,/<a[^>]*href="DALYCARE_(?:atlas|outputs).html"[^>]*class="tab-button"/);
 });
 test('Panels library navigation uses changed or cleared global search at click time',()=>{

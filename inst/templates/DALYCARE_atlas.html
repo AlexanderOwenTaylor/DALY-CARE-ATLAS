@@ -1313,6 +1313,20 @@
     .home-route strong { font-size: 18px; }
     .home-route > span:not(.route-number):not(.route-open) { font-size: 12px; }
     .home-route .route-number,.home-route .route-open { display: none; }
+    #clinician-home .home-routes { gap: 8px; }
+    #clinician-home .home-route { min-height: 86px; padding: 11px 13px; }
+    #clinician-home .home-route strong { font-size: 16px; }
+    .domain-source-overview { grid-column: 1 / -1; }
+    .domain-source-overview .clinical-card { align-self: start; }
+    .domain-source-overview .clinical-card > p { margin: 8px 0; }
+    .domain-source-overview .source-id { margin: 4px 0; font-size: 11px; overflow-wrap: anywhere; }
+    .domain-source-overview .clinical-card:has(> .domain-clinical-fields[open]) { grid-column: 1 / -1; }
+    .domain-clinical-fields > ul { display: grid; grid-template-columns: repeat(auto-fit,minmax(210px,1fr)); gap: 10px 16px; padding: 0; list-style: none; }
+    .domain-clinical-fields > ul > li { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 6px; overflow-wrap: anywhere; }
+    .domain-clinical-fields > summary { color: var(--green); font-weight: 600; }
+    .domain-clinical-fields .source-evidence-links { margin: 6px 0; }
+    .clinical-field-identity { font-size: 11px; color: var(--muted); }
+    .domain-source-overview .caveat-box { padding: 10px 12px; margin: 0 0 12px; font-size: 13px; }
     .home-notes { display: block; margin: 16px 0; }
     .home-export { margin: 14px 0; font-size: 13px; }
     .registry-numeric-card p { margin: 8px 0; }
@@ -1338,7 +1352,13 @@
       .home-route { padding: 10px; }
       .home-route strong { font-size: 16px; }
       .home-route > span:not(.route-number):not(.route-open) { font-size: 11px; }
+      #clinician-home .home-route { min-height: 48px; padding: 8px 10px; }
+      #clinician-home .home-route > span:not(.route-number):not(.route-open) { display: none; }
+      #clinician-home .home-route strong { font-size: 13px; }
       .home-intro h2 { font-size: 20px; }
+      #clinician-home .home-intro { display: block; }
+      #clinician-home .home-intro h2 { margin-bottom: 6px; }
+      .domain-clinical-fields > ul { grid-template-columns: minmax(0,1fr); }
       #clinician-home .measurement-shortcuts { margin: 8px 0; }
       #clinician-home .measurement-shortcuts button { min-height: 40px; font-size: 12px; }
       .home-actions,.registry-actions { gap: 5px; }
@@ -1584,7 +1604,7 @@
           </div>
           <div class="panel-body">
             <div class="toolbar"><label>Source <select id="temporal-source-filter"><option value="">All sources</option></select></label></div>
-            <p class="mini"><a href="DALYCARE_outputs.html?table=atlas_temporal_coverage_years">Open year-count evidence table</a> · <a href="DALYCARE_outputs.html?table=atlas_temporal_coverage">Open selected date-field availability</a></p>
+            <p class="mini"><a id="temporal-year-evidence" href="DALYCARE_outputs.html?view=timeplace&amp;table=atlas_temporal_coverage_years">Open year-count evidence table</a> · <a id="temporal-date-evidence" href="DALYCARE_outputs.html?view=timeplace&amp;table=atlas_temporal_coverage">Open selected date-field availability</a></p>
             <div id="temporal-source-counts"></div>
             <div id="temporal-heatmap" class="heatmap-wrap" tabindex="0" role="region" aria-label="Year counts, scroll horizontally"></div>
             <details class="lineage-block"><summary>Source totals by domain</summary><div id="temporal-summary" class="grid"></div></details>
@@ -1935,12 +1955,12 @@
       </div>
       <div class="sub-pane active" id="clinical-diagnoses"><div class="panel"><div class="panel-head"><h2 class="panel-title">Diagnosis Sources</h2><p class="panel-sub">Diagnosis, tumor, cancer, and DALY diagnosis-view sources detected in the source catalog.</p></div><div class="panel-body"><div id="clinical-diagnoses-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-admissions"><div class="panel"><div class="panel-head"><h2 class="panel-title">Admissions And Contacts</h2><p class="panel-sub">Admission, contact, ICU, and encounter-like sources.</p></div><div class="panel-body"><div id="clinical-admissions-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Procedure-code imaging, DaMyDa registry imaging/bone disease, SP metadata/report availability, and radiotherapy signals.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
-      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Aggregate infection evidence across PERSIMUNE microbiology layers and SP blood-culture workflow parts. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical planning.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Aggregate coded pathology, SNOMED, specimen/material, tumor-coded, and report-text availability evidence. Primary taxonomy: Laboratory & Diagnostics; cross-linked here for clinical planning.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">SP vital-sign source shape, anthropometric descriptors, and numeric summaries for height and weight.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
-      <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Notes And Epikur Sources</h2><p class="panel-sub">Text, notes, and epikur metadata at aggregate source level only.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">SP social-history raw fields, value meanings, and caveats for smoking and alcohol evidence.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
+      <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Explore procedure codes, registry modalities and SP examination metadata. Image pixels are not supplied.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
+      <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Explore analysis, culture, susceptibility, microscopy and SP blood-culture workflows.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Explore coded pathology, specimen/material and separate report-field availability. Report text is not published.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">Explore repeated vital-sign event fields and separate weight, height and BMI source fields.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
+      <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Clinical notes and text availability</h2><p class="panel-sub">Explore note metadata and separate pathology-text availability. Text contents are not published.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
+      <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">Find smoking, alcohol and smoking-intensity fields. Records with a value do not establish current patient status.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
     </section>
 
     <section class="tab-page" id="tab-treatment">
@@ -1960,11 +1980,11 @@
       </div>
       <div class="sub-pane active" id="lab-npu"><div class="panel"><div class="panel-head"><h2 class="panel-title">Explore laboratory tests</h2><p class="panel-sub">Browse laboratory definitions and available source summaries.</p></div><div class="panel-body"><div id="laboratory-npu-dashboard"></div><details class="lineage-block"><summary>Supporting NPU dictionary cards</summary><div id="npu-cards" class="grid"></div></details><details class="lineage-block"><summary>Additional semantic laboratory hits</summary><div id="semantic-laboratory"></div></details></div></div></div>
       <div class="sub-pane" id="lab-detective"><div class="panel"><div class="panel-head"><h2 class="panel-title">NPU Detective</h2><p class="panel-sub">Observed NPU inventory and candidate codes from aggregate code panels.</p></div><div class="panel-body"><div id="detective-cards" class="grid"></div></div></div></div>
-      <div class="sub-pane" id="lab-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging / radiotherapy diagnostics</h2><p class="panel-sub">Primary diagnostics home for UX/BWGC procedure footprints, DaMyDa imaging/bone disease, and SP imaging/report route status. Cross-linked from Clinical Data for study planning.</p></div><div class="panel-body"><div id="laboratory-imaging-cards"></div></div></div></div>
-      <div class="sub-pane" id="lab-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / MiBa diagnostics</h2><p class="panel-sub">Primary diagnostics home for microbiology source, organism/culture, specimen, antibiotic-agent, and susceptibility result evidence. Cross-linked from Clinical Data for infection-study planning.</p></div><div class="panel-body"><div id="laboratory-microbiology-cards"></div></div></div></div>
-      <div class="sub-pane" id="lab-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK diagnostics</h2><p class="panel-sub">Primary diagnostics home for PATOBANK/SDS pathology, SNOMED translation, specimen/material, morphology, procedure, and report-text route status. Cross-linked from Clinical Data for cohort planning.</p></div><div class="panel-body"><div id="laboratory-pathology-cards"></div></div></div></div>
+      <div class="sub-pane" id="lab-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Imaging / radiotherapy diagnostics</h2><p class="panel-sub">Explore procedure codes, registry modalities and SP examination metadata. Image pixels are not supplied.</p></div><div class="panel-body"><div id="laboratory-imaging-cards"></div></div></div></div>
+      <div class="sub-pane" id="lab-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / MiBa diagnostics</h2><p class="panel-sub">Explore analysis, culture, susceptibility, microscopy and SP blood-culture workflows.</p></div><div class="panel-body"><div id="laboratory-microbiology-cards"></div></div></div></div>
+      <div class="sub-pane" id="lab-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK diagnostics</h2><p class="panel-sub">Explore coded pathology, specimen/material and separate report-field availability. Report text is not published.</p></div><div class="panel-body"><div id="laboratory-pathology-cards"></div></div></div></div>
       <div class="sub-pane" id="lab-isotype"><div class="panel"><div class="panel-head"><h2 class="panel-title">Monoclonal proteins</h2><p class="panel-sub">Monoclonal protein (M-protein) tests, protein types and specimens in the aggregate export.</p></div><div class="panel-body"><div id="isotype-cards" class="grid"></div></div></div></div>
-      <div class="sub-pane" id="lab-biobank"><div class="panel"><div class="panel-head"><h2 class="panel-title">Biobank sample atlas</h2><p class="panel-sub">Aggregate sample-source, sample-type/material, availability, and translational/cohort source evidence. Sample identifiers and collection-date values are not emitted.</p></div><div class="panel-body"><div id="biobank-dashboard"></div></div></div></div>
+      <div class="sub-pane" id="lab-biobank"><div class="panel"><div class="panel-head"><h2 class="panel-title">Biobank sample atlas</h2><p class="panel-sub">Find sample source and material fields. Sample presence does not establish assay or molecular results.</p></div><div class="panel-body"><div id="biobank-dashboard"></div></div></div></div>
       <div class="sub-pane" id="lab-sources"><div class="panel"><div class="panel-head"><h2 class="panel-title">Laboratory Sources</h2><p class="panel-sub">Lab-like source metadata and relevant NPU/isotype panels.</p></div><div class="panel-body"><div id="laboratory-source-cards"></div></div></div></div>
     </section>
 
@@ -3372,6 +3392,13 @@
       function renderTemporalCoverage() {
         const years = reviewTemporal.years || [];
         const selected = document.getElementById('temporal-source-filter')?.value || '';
+        for (const [id,table] of [['temporal-year-evidence','atlas_temporal_coverage_years'],['temporal-date-evidence','atlas_temporal_coverage']]) {
+          const link = document.getElementById(id);
+          if (!link) continue;
+          const query = new URLSearchParams({view:'timeplace',table});
+          if (selected) { query.set('source',selected); query.set('returnsource',selected); }
+          link.href = `DALYCARE_outputs.html?${query.toString()}`;
+        }
         setHtml('temporal-source-counts', selected ? `<article class="card"><h3>${escapeHtml(sourceDisplayName(selected))}</h3><p><code>${escapeHtml(selected)}</code></p>${renderSourceYearCounts(selected)}<p class="mini">Source-level date counts; not measurement dates or completeness by year.</p></article>` : '');
         if (selected) { setHtml('temporal-summary',''); setHtml('temporal-heatmap',''); return; }
         setHtml('temporal-summary', (reviewTemporal.summary || []).map(row => `<article class="card"><h3>${escapeHtml(row.domain || 'Unassigned')}</h3><p>${formatNumber(row.n_sources)} sources</p><p class="mini">Exact date bounds are withheld.</p></article>`).join(''));
@@ -3808,18 +3835,25 @@
         const codes = new Set(labEvidenceRows.map(row => row.lab_code).filter(Boolean)).size;
         const referenceCount = (payload.npu_display_dictionary || []).length;
         const routes = [
-          ['01', 'Laboratory tests', 'Find haemoglobin, creatinine, CRP and other tests by name or code.', 'laboratory', 'lab-npu', 'cyan'],
+          ['01', 'Diagnoses & registries', 'Find diagnosis codes, problem lists and disease-specific registry evidence.', 'clinical', 'clinical-diagnoses', 'green'],
           ['02', 'Admissions and contacts', 'Inspect the documented hospital contact sources.', 'clinical', 'clinical-admissions', 'blue'],
           ['03', 'Treatments', 'Explore medicines, treatment plans and administration evidence.', 'treatment', 'treatment-dashboard', 'violet'],
-          ['04', 'Pathology & Ki-67', 'Inspect coded pathology evidence and proliferation markers.', 'laboratory', 'lab-pathology', 'plum'],
-          ['05', 'Clinical data', 'Explore admissions, vital signs, smoking and alcohol history.', 'clinical', 'clinical-vitals', 'green'],
-          ['06', 'Study feasibility', 'Review the available evidence for the MCL / TRIANGLE question.', 'clinical-feasibility', 'mcl-triangle-feasibility', 'amber']
+          ['04', 'Laboratory tests', 'Find haemoglobin, creatinine, CRP and other tests by name or code.', 'laboratory', 'lab-npu', 'cyan'],
+          ['05', 'Microbiology', 'Find analysis, culture, susceptibility, microscopy and blood-culture workflows.', 'laboratory', 'lab-microbiology', 'blue'],
+          ['06', 'Imaging', 'Explore procedure codes, registry modalities and examination metadata.', 'laboratory', 'lab-imaging', 'violet'],
+          ['07', 'Pathology & Ki-67', 'Inspect coded pathology, specimen and report-field evidence.', 'laboratory', 'lab-pathology', 'plum'],
+          ['08', 'Biobank samples', 'Find sample source and material fields; inspect their availability.', 'laboratory', 'lab-biobank', 'green'],
+          ['09', 'Lab & molecular sources', 'Browse the shared laboratory source inventory, including IGHV, FISH and flow-cytometry sources.', 'laboratory', 'lab-npu', 'plum'],
+          ['10', 'Vital signs', 'Find repeated physiological event descriptors, values and timing fields.', 'clinical', 'clinical-vitals', 'cyan'],
+          ['11', 'Smoking & alcohol', 'Inspect exact social-history fields and recordedness.', 'clinical', 'clinical-social', 'amber'],
+          ['12', 'Clinical notes', 'Find note metadata and text-field availability without report contents.', 'clinical', 'clinical-notes', 'blue']
         ];
-        return `<div class="home-intro"><h2>Find clinical evidence</h2></div>
-          ${measurementShortcuts('',true)}
-          <div class="home-actions"><button type="button" data-jump-tab="infrastructure" data-jump-sub="infra-columns">Find source fields →</button><button type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button></div>
-          <div class="registry-actions" aria-label="Disease registries"><span class="mini">Registries</span><button type="button" data-jump-tab="registries" data-jump-sub="reg-damyda">Myeloma</button><button type="button" data-jump-tab="registries" data-jump-sub="reg-lyfo">Lymphoma</button><button type="button" data-jump-tab="registries" data-jump-sub="reg-cll">CLL</button></div>
+        return `<div class="home-intro"><h2>Explore the clinical data</h2><p class="mini">Choose a topic to find documented sources, available field profiles and source-specific years and regions.</p></div>
           <div class="home-routes">${routes.map(([number, title, description, tab, sub, tone]) => `<button type="button" class="home-route ${tone}" data-jump-tab="${tab}" data-jump-sub="${sub}"><span class="route-number">${number}</span><strong>${title}</strong><span>${description}</span><span class="route-open">Explore <span aria-hidden="true">→</span></span></button>`).join('')}</div>
+          <div class="registry-actions" aria-label="Disease registries"><span class="mini">Registries</span><button type="button" data-jump-tab="registries" data-jump-sub="reg-damyda">Myeloma</button><button type="button" data-jump-tab="registries" data-jump-sub="reg-lyfo">Lymphoma</button><button type="button" data-jump-tab="registries" data-jump-sub="reg-cll">CLL</button></div>
+          <div class="registry-actions" aria-label="Molecular source fields"><span class="mini">Molecular source fields</span>${['IGHVIMGT','Flowcytometry','CLLPANEL_WIDE','FISH'].map(source=>browseFieldsLink(source,sourceDisplayName(source))).join('')}</div>
+          <div class="home-actions"><button type="button" data-jump-tab="infrastructure" data-jump-sub="infra-columns">Find source fields →</button><button type="button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button><button type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-codes">Find codes and definitions →</button><button type="button" data-jump-tab="overview" data-jump-sub="overview-temporal">Source years →</button><button type="button" data-jump-tab="overview" data-jump-sub="overview-spatial">Source regions →</button><button type="button" data-jump-tab="clinical-feasibility" data-jump-sub="mcl-triangle-feasibility">Study feasibility →</button></div>
+          <details class="lineage-block"><summary>Selected measurement examples</summary>${measurementShortcuts('',true)}</details>
           <div class="home-notes"><p>Counts describe source records unless labelled as people. Field listings and reference codes do not establish complete measurement results.</p></div>
           <details class="home-export"><summary>Snapshot scope and interpretation</summary><p>${escapeHtml(formatTimestamp(payload.generated_at || '').display)} · ${formatNumber(payload.loaded_source_count)} sources loaded or resolved · ${formatNumber(payload.column_count)} fields profiled.</p><p>${withheld ? `${referenceCount} laboratory reference definitions; observed code coverage withheld.` : `${resolved} of ${codes} exported laboratory codes have names.`} Clinical labels are incomplete; missing mappings do not mean the underlying data is absent.</p></details>`;
       }
@@ -4679,9 +4713,136 @@
         setHtml("clinical-variable-distributions", rowsForTable(panelDistributionRows.filter(row => ids.has(row.clinical_concept_id)).slice(0, 500), 500));
         setHtml("clinical-variable-panel-links", rowsForTable(domainPanelRows.filter(row => (filtered.map(c => c.related_panel_ids || "").join(";")).includes(row.panel_id)), 200));
       }
+      /* DOMAIN_SOURCE_EVIDENCE_START */
+      // Maintained exact domain inventories supplement the review arrays. Legacy review lists
+      // can be incomplete or contain stem-based false positives; matching catalog identities
+      // establish which declared sources are represented in this export.
+      const domainCurrentSourceSpecs = {
+        diagnosis_atlas: { review: 'diagnoses', title: 'Diagnoses and disease sources', purpose: 'Find diagnosis codes, diagnosis types and source-specific cohort definitions. Derived views can overlap; source records are not unique people.', sources: [
+          {source:'SDS_t_diag',label:'Diagnosis codes (LPR)',fields:['c_diag','c_diagtype','c_tildiag']},
+          {source:'SDS_diagnoser',label:'Diagnosis codes (LPR3)',fields:['diagnosekode','diagnosetype','senere_afkraeftet','diagnosekode_parent']},
+          {source:'SDS_t_tumor',label:'Tumor registry diagnoses',fields:['c_icd10','d_diagnosedato','c_tnm_t']},
+          ...['t_dalycare_diagnoses','view_diagnosses_all','view_diagnoses_all_hosp_region','view_dalycare_diagnoses','diagnoses_all'].map(source=>({source,role:'Derived diagnosis view; validate its cohort and overlap before use.'})),
+          {source:'Aktive_Problemliste_Diagnoser',label:'Active problem-list diagnoses (SP)'},
+          {source:'Behandlingskontakter_diagnoser',label:'Contact-linked diagnoses (SP)',role:'Diagnoses attached to care contacts; not an admission count.'}
+        ]},
+        clinical_adt: { review: 'admissions', title: 'Admissions and care contacts', purpose: 'Explore admissions, discharges, transfers, intensive care and national contact records. A contact or workflow row does not establish a unique admission or person.', sources: [
+          {source:'SP_ADT_haendelser',fields:['event_type_name','effective_time','admission_type','kontakt_start_local_dttm'],role:'Admission, discharge and transfer event workflow.'},
+          {source:'SP_ITAOphold',fields:['icu_stay_start','icu_stay_end','resp_yn'],role:'Intensive care stay and respiratory-support fields.'},
+          {source:'SDS_t_adm',label:'Admissions (LPR)',fields:['d_inddto','d_uddto','c_pattype','c_adiag']},
+          {source:'SDS_kontakter',label:'Care contacts (LPR3)',fields:['kontakttype','dato_start','dato_slut','aktionsdiagnose']},
+          {source:'Behandlingskontakter_diagnoser',label:'Contact-linked diagnoses (SP)',role:'Diagnosis context for contacts; validate event linkage separately.'},
+          {source:'Flytningshistorik',label:'Patient movement history (SP)',fields:['tidspunkt','region_name'],role:'Movement context; movement rows are not admissions.'},
+          {source:'SDS_t_udtilsgh',label:'Hospital-transfer context (LPR)',fields:['c_udtilsgh','c_udtilafd'],role:'Transfer context; source rows are not a count of unique admissions.'},
+          {source:'SDS_forloeb',label:'Care pathways (LPR3)',fields:['dato_start'],role:'Secondary pathway context; pathway records are distinct from contacts and admissions.'},
+          {source:'forloebsmarkoerer',label:'Care pathway markers',fields:['dato_markoer'],role:'Secondary pathway-marker context; markers are not admissions.'}
+        ]},
+        clinical_notes: { review: 'notes', title: 'Clinical notes and pathology text sources', purpose: 'Inspect note metadata and documented text-field availability. Note and report contents are not published in this atlas. Pathology text remains a separate evidence layer.', sources: [
+          {source:'SP_Journalnotater_Del1',fields:['notat_type','notat_status','service','notat_text'],role:'General SP clinical-note metadata and text availability.'},
+          {source:'Journalnotater_del2',fields:['dato','handling'],role:'Second SP note source; interpret its metadata separately.'},
+          {source:'t_mikro',label:'Pathology microscopy text',fields:['v_fritekst'],role:'Pathology report-text availability, separate from general clinical notes.'},
+          {source:'t_konk',label:'Pathology conclusion text',fields:['v_fritekst'],role:'Pathology conclusion-text availability, separate from general clinical notes.'}
+        ]},
+        clinical_microbiology: { title:'Microbiology sources', purpose:'Analysis, culture, susceptibility and microscopy are separate evidence layers. The four SP blood-culture parts describe a linked workflow; source rows do not define infection episodes.', sources:[
+          {source:'microbiology_analysis',label:'Microbiology analysis',fields:['c_analysisgroup','samplematerial','investigationinterpretation','resultvalue','resultunit'],role:'Analysis/test layer; PERSIMUNE coverage may be regional or research-specific.'},
+          {source:'microbiology_culture',label:'Microbiology culture',fields:['c_analysisgroup','samplematerial','c_domain','investigationinterpretation'],role:'Culture investigation layer; detailed organism values remain protected or grouped.'},
+          {source:'microbiology_culture_resistance',label:'Resistance and susceptibility',fields:['susceptibility','susceptibilityinterpretation','susceptibilityvaluevalue','susceptibilityvalueunit','susceptibilityvalueoperator'],role:'Interpretation, result value, unit and method fields; these rows do not establish resistant infection episodes.'},
+          {source:'microbiology_microscopy',label:'Microbiology microscopy',fields:['c_analysisgroup','samplematerial','investigationinterpretation','microscopicresult'],role:'Microscopy examination layer; result text is not emitted.'},
+          {source:'SP_Bloddyrkning_Del1',label:'SP blood culture — part 1',fields:['type','komponentnavn'],role:'Order/specimen and component workflow fields.'},
+          {source:'SP_Bloddyrkning_Del2',label:'SP blood culture — part 2',fields:['type','komponentnavn','resultat_tekst'],role:'Component and result-text availability; text contents are not published.'},
+          {source:'SP_Bloddyrkning_Del3',label:'SP blood culture — part 3',fields:['organisme','antibiotika','sensitivitet_resultat'],role:'Organism, antibiotic and susceptibility workflow fields.'},
+          {source:'SP_Bloddyrkning_Del4',label:'SP blood culture — part 4',fields:['kliniske_oplysninger','linje'],role:'Clinical-information and remaining workflow fields; no text contents are published.'}
+        ]},
+        clinical_imaging: {title:'Imaging source evidence',purpose:'Explore national procedure codes, disease-registry imaging and SP examination metadata. These sources do not establish image-pixel availability. Full procedure-source totals are not imaging-event counts.',sources:[
+          {source:'SP_BilleddiagnostikeUndersoegelser_Del1',fields:['bestillingsnavn','bld_kode','bestillingstidspunkt','status'],role:'SP examination/order metadata and code fields.'},
+          {source:'SP_BilleddiagnostikeUndersoegelser_Del2',fields:['bestillingsnavn','bld_kode','beskrivelse','status'],role:'SP examination/report availability; report contents are not published.'},
+          {source:'SDS_t_sksube',label:'Procedure codes (LPR)',fields:['c_opr','d_odto'],role:'Full procedure source; imaging and radiotherapy code signals require exact code selection.'},
+          {source:'SDS_procedurer_andre',label:'Other procedures (LPR3)',fields:['procedurekode','proceduretype','dato_start'],role:'Full procedure source; its total includes procedures beyond imaging.'},
+          {source:'SDS_procedurer_kirurgi',label:'Surgical procedures (LPR3)',fields:['procedurekode','proceduretype'],role:'Full surgical-procedure source; validate any imaging-related code signal.'},
+          {source:'RKKP_DaMyDa',fields:['Reg_Knogleundersoegelser_ct','Reg_Knogleundersoegelser_mri','Reg_Knogleundersoegelser_pet','Reg_Knogleforandringer'],role:'Disease-specific modality and bone-disease fields; not a full imaging-event stream.'}
+        ]},
+        clinical_pathology: {title:'Pathology source evidence',purpose:'Find coded pathology, specimen/material, institution and tumor-registry fields. Microscopy and conclusion text availability is a separate layer; no report text is published.',sources:[
+          {source:'SDS_pato',label:'Coded pathology (PATOBANK / SDS)',fields:['c_snomedkode','c_mattype','k_inst','v_fritekst'],role:'Coded findings, specimen/material and institution fields; code meaning needs source-specific validation.'},
+          {source:'t_mikro',label:'Pathology microscopy text',fields:['v_fritekst','k_inst'],role:'Report-text availability only; no raw microscopy text or examples.'},
+          {source:'t_konk',label:'Pathology conclusion text',fields:['v_fritekst','k_inst'],role:'Conclusion-text availability only; no raw report text or examples.'},
+          {source:'SDS_t_tumor',label:'Tumor-coded registry evidence',fields:['c_icd10','c_tnm_t','c_tnm_n','c_tnm_m'],role:'Tumor registry evidence remains separate from PATOBANK SNOMED records.'}
+        ]},
+        clinical_biobank: {title:'Sample inventory',purpose:'Inspect documented sample source, material and collection-date fields. Sample presence does not imply assay completion, sequencing, molecular results, immune profiling or biomarker results.',sources:[
+          {source:'BIOBANK_SAMPLES',aliases:['LAB_BIOBANK_SAMPLES'],label:'Biobank sample inventory',fields:['Sample_source','Type','date_samplecollection'],role:'One declared sample-source identity; material labels require source-specific interpretation.'}
+        ]},
+        clinical_vitals: {review:'vitals',title:'SP vital-sign events',purpose:'Repeated physiological observations include descriptor, value and timing fields. Event-level weight and height aggregates are not supplied in this export; repeated measurements require a study-specific baseline window.',sources:[
+          {source:'SP_VitaleVaerdier',fields:['displayname','meas_value','numericvalue','recorded_time','val_type_c'],role:'Repeated vital-sign event source; source rows are not people or a descriptor-specific measurement count.'}
+        ]},
+        clinical_social_history: {review:'social_history',title:'Social history source',purpose:'Find smoking, alcohol and smoking-intensity fields. Recordedness describes source records with a value; it does not establish known or current patient status.',sources:[
+          {source:'SP_SocialHX',aliases:['SP_Social_Hx'],fields:['ryger','drikker','pakkeromdagen'],role:'Smoking-intensity field pakkeromdagen has no validated pack-year unit in this export.'}
+        ]}
+      };
+      function domainSourceSpecs(panelId) {
+        const config = domainCurrentSourceSpecs[panelId];
+        return config ? config.sources : [];
+      }
+      function domainSourceInventory(specs) {
+        const seen = new Set();
+        const inventory = [];
+        for (const spec of specs || []) {
+          const identities = [spec.source,...(spec.aliases || [])];
+          if (identities.some(source=>seen.has(source))) continue;
+          const candidates = identities.map(source=>catalogRows.find(row=>row.table_name === source)).filter(Boolean);
+          const profiled = candidates.filter(row=>columnRows.some(field=>field.table_name === row.table_name));
+          const shown = profiled.length > 1 ? profiled : [profiled[0] || candidates[0]].filter(Boolean);
+          if (!shown.length) continue;
+          identities.forEach(source=>seen.add(source));
+          shown.forEach(catalog=>inventory.push({...spec,source:catalog.table_name,aliases:identities.filter(source=>source !== catalog.table_name),aliasAmbiguity:shown.length > 1,catalog,profiles:columnRows.filter(field=>field.table_name === catalog.table_name)}));
+        }
+        return inventory;
+      }
+      function domainDistributionCandidates(panelId) {
+        return panelId === 'clinical_imaging' ? imagingPanelDistributionRows() : (panelDistributionRows || []).filter(row=>row.panel_id === panelId);
+      }
+      function domainPublishedDistributions(panelId) {
+        return domainDistributionCandidates(panelId).filter(row=>row.distribution_type !== 'clinical_section' && !observedRowsWithheld([row]) && finiteSummary(row.n ?? row.statistic_value) !== null);
+      }
+      function domainSummaryStatus(panelId) {
+        const rows = domainDistributionCandidates(panelId).filter(row=>row.distribution_type !== 'clinical_section');
+        const published = domainPublishedDistributions(panelId);
+        if (published.length && published.length === rows.length) return '';
+        const separateKi67 = panelId === 'clinical_pathology' && typeof patobankKi67Percent !== 'undefined' && ['summary','code_counts','validation'].some(key=>Array.isArray(patobankKi67Percent[key]) && patobankKi67Percent[key].length);
+        const reason = rows.some(row=>observedRowsWithheld([row])) ? 'Observed values and frequencies are withheld in this snapshot.' : separateKi67 ? 'General pathology distributions are not supplied. Separately published coded Ki-67 coverage is shown below.' : 'Observed domain summaries are not supplied in this export.';
+        return `<p class="caveat-box" data-domain-summary-status="${escapeHtml(panelId)}">${reason} Documented sources and field profiles below remain available where supplied. Field availability does not establish clinical completeness.</p>`;
+      }
+      function renderDomainFieldProfile(row) {
+        const entry = clinicalDisplayEntry('field',row.table_name,row.column_name);
+        const available = finiteSummary(row.n_available), missing = finiteSummary(row.n_missing);
+        const blocked = /withheld/.test(row.availability_privacy_status || '');
+        const reason = row.availability_privacy_status === 'withheld_small_complementary_cells' ? 'Withheld: small groups and related counts' : row.availability_privacy_reason || 'Availability counts withheld';
+        const counts = blocked ? `<p class="mini">${escapeHtml(reason)}</p>` : available !== null ? `<p class="mini">${formatNumber(available)} source records with a value${missing !== null ? ` · ${formatNumber(missing)} missing source records` : ''}</p>` : '<p class="mini">Records with a value: counts are not supplied.</p>';
+        return `<li><strong>${escapeHtml(entry?.label || row.column_name)}</strong>${counts}${sourceEvidenceLinks(row.table_name,row.column_name,{coverage:false})}<details class="clinical-field-identity"><summary>Original field</summary><code>${escapeHtml(row.column_name)}</code></details></li>`;
+      }
+      function renderDomainSourceCards(specs) {
+        const sources = domainSourceInventory(specs);
+        if (!sources.length) return '<p class="mini">No exact current catalog source is supplied for this domain. Browse the source catalog to inspect documented resource status.</p><button type="button" class="concept-link-button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button>';
+        return `<div class="grid grid-3">${sources.map(item=>{
+          const count = finiteSummary(item.catalog.n_rows), fields = finiteSummary(item.catalog.n_cols);
+          const selected = (item.fields || []).map(name=>item.profiles.find(row=>row.column_name === name)).filter(Boolean);
+          const countWithheld = Boolean(item.catalog.count_privacy_status);
+          return `<article class="clinical-card" data-domain-source="${escapeHtml(item.source)}"><h3>${escapeHtml(item.label || sourceDisplayName(item.source))}</h3><p class="source-id"><code>${escapeHtml(item.source)}</code></p><p><strong>${countWithheld ? 'Full-source count withheld' : count === null ? 'Full-source record count not supplied' : `${formatNumber(count)} full-source records`}</strong><br>${fields === null ? 'Catalog field count not supplied' : `${formatNumber(fields)} catalog fields`} · ${formatNumber(item.profiles.length)} published field profiles</p>${item.role ? `<p class="mini">${escapeHtml(item.role)}</p>` : ''}${selected.length ? `<details class="lineage-block domain-clinical-fields"><summary>${item.source === "microbiology_culture_resistance" ? "Clinical fields: susceptibility, interpretation, value and unit" : `Clinical fields (${selected.length})`}</summary><p class="mini">Records with a value are source records, not known patient status.</p><ul>${selected.map(renderDomainFieldProfile).join('')}</ul></details>` : ''}${sourceEvidenceLinks(item.source,"",{inventoryLabel:"Browse all source fields"})}${item.aliases?.length ? `<details class="lineage-block"><summary>Declared source identity</summary><p class="mini">Declared alias: ${item.aliases.map(source=>`<code>${escapeHtml(source)}</code>`).join(', ')}. ${item.aliasAmbiguity ? 'Both current identities have field profiles and are shown separately; validate their relationship.' : 'This is one source identity.'} Counts are not added.</p></details>` : ''}</article>`;
+        }).join('')}</div>`;
+      }
+      function renderDomainSourceOverview(panelId) {
+        const config = domainCurrentSourceSpecs[panelId];
+        if (!config) return '';
+        return `<section class="domain-source-overview">${domainSummaryStatus(panelId)}${renderDomainSourceCards(domainSourceSpecs(panelId))}<details class="lineage-block"><summary>Source interpretation and count scope</summary><p>${escapeHtml(config.purpose)}</p><p class="mini">Counts describe each full source separately. Sources and derived views may overlap; do not add source totals or interpret them as people, domain events or positive findings.</p></details></section>`;
+      }
+      /* DOMAIN_SOURCE_EVIDENCE_END */
       function renderDomainPanel(panelId) {
+        const sourceOverview = renderDomainSourceOverview(panelId);
+        if (sourceOverview && !panelRawFieldRows.some(row=>row.panel_id === panelId) && !domainPublishedDistributions(panelId).length) return sourceOverview;
         const panel = domainPanelRows.find(row => row.panel_id === panelId);
-        if (!panel) return `<div class="empty">No generated product-layer domain panel for ${escapeHtml(panelId)}.</div>`;
+        if (!panel) {
+          const published = domainPublishedDistributions(panelId);
+          const raw = panelRawFieldRows.filter(row=>row.panel_id === panelId);
+          return `${sourceOverview}${published.length ? renderSectionCard('Published summaries',renderDistributionRows(published,10),'green') : ''}${raw.length ? `<details class="lineage-block"><summary>Supplied field lineage</summary>${renderCollapsedRawLineage(raw,{limit:10})}</details>` : ''}${!sourceOverview && !published.length && !raw.length ? '<p class="mini">Domain metadata and summaries are not supplied.</p>' : ''}`;
+        }
         const kpis = panelKpiRows.filter(row => row.panel_id === panelId);
         const distributions = panelDistributionRows.filter(row => row.panel_id === panelId);
         const sections = distributions.filter(row => row.distribution_type === "clinical_section");
@@ -4689,7 +4850,7 @@
         const conceptIds = Array.from(new Set(raw.map(row => row.clinical_concept_id).filter(Boolean)));
         const concepts = clinicalConceptRows.filter(row => conceptIds.includes(row.clinical_concept_id));
         const nonSectionDistributions = distributions.filter(row => row.distribution_type !== "clinical_section");
-        return `<div class="domain-panel" data-domain-panel="${escapeHtml(panelId)}">
+        return `${sourceOverview}<div class="domain-panel" data-domain-panel="${escapeHtml(panelId)}">
           <div>${renderBadge(panel.panel_status || "unknown", panel.panel_status === "restored" ? "green" : "amber")} ${renderBadge(panel.panel_section || "Panel", "blue")}</div>
           <h3>${escapeHtml(panel.panel_title || panelId)}</h3>
           <p>${escapeHtml(panel.clinical_purpose || "")}</p>
@@ -4765,7 +4926,7 @@
         const otherRaw = raw.filter(row => !priorityKeys.has(row.semantic_id || rawFieldDisplay(row)));
         const allVitalsDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_vitals");
         const fieldJourneys = `<section class="measurement-shortcuts"><h3>Weight, height and BMI fields</h3><p class="mini">Selected fields in Patient information (SP) <code>SP_PatientInfo</code> and the Myeloma registry <code>RKKP_DaMyDa</code>. These are separate from SP vital-sign events.</p><div class="toolbar"><button class="concept-link-button" type="button" data-measurement="weight-height">Weight and height →</button><button class="concept-link-button" type="button" data-measurement="bmi">BMI →</button></div></section>`;
-        if (!allVitalsDistributions.length) return `${fieldJourneys}<article class="card"><h3>SP vital-sign events</h3><p><code>SP_VitaleVaerdier</code></p><p>Event-level weight and height aggregates are not supplied in this export. The selected fields above do not supply this missing event evidence.</p>${sourceEvidenceLinks('SP_VitaleVaerdier')}<details class="lineage-block"><summary>Source schema and interpretation</summary><p>Descriptors use <code>displayname</code>; stored values use <code>numericvalue</code>. Repeated measures require a diagnosis-relative baseline window and source validation before deriving patient-level height, weight or BMI.</p>${priorityRows.length ? renderVitalsPriorityLineage(priorityRows) : ''}</details></article>`;
+        if (!domainPublishedDistributions("clinical_vitals").length) return `${renderDomainSourceOverview("clinical_vitals")}${fieldJourneys}${priorityRows.length ? `<details class="lineage-block"><summary>Source schema and interpretation</summary>${renderVitalsPriorityLineage(priorityRows)}</details>` : ""}`;
         return `<div class="focused-panel vitals-panel">
           ${fieldJourneys}
           <div class="source-shape">
@@ -4802,23 +4963,22 @@
         </div>`;
       }
       function renderSocialValueRows(rawColumn, expected) {
-        const rows = panelDistributionRows.filter(row =>
-          row.panel_id === "clinical_social_history" &&
+        const rows = domainPublishedDistributions('clinical_social_history').filter(row =>
           normalizeClinicalKey(row.raw_column) === normalizeClinicalKey(rawColumn)
         );
-        const maxValue = Math.max(...rows.map(row => numberValue(row.n)), 1);
+        const maxValue = Math.max(...rows.map(row => Number(row.n ?? row.statistic_value)), 1);
         return expected.map(item => {
           const hit = rows.find(row => normalizeClinicalKey(row.raw_value) === normalizeClinicalKey(item.raw));
-          const pct = hit ? percentFromRow(hit, maxValue) : 0;
+          const pct = hit ? percentFromRow(hit, maxValue) : null;
           const display = hit ? (hit.display_value || item.display) : item.display;
           const tone = item.tone || "blue";
           return `<div class="social-value-row">
-            <div class="h-bar">
+            ${hit ? `<div class="h-bar">
               <div class="label" title="${escapeHtml(display)}">${escapeHtml(display)}</div>
               <div class="track"><div class="fill" style="width:${pct}%;background:var(--${escapeHtml(tone)})"></div></div>
-              <div class="val">${hit ? formatNumber(hit.n) : "n/a"}</div>
-            </div>
-            <div class="mini"><code>${escapeHtml(item.raw)}</code>${hit && hasDisplayValue(hit.pct) ? ` - ${escapeHtml(hit.pct)}%` : ""} ${hit ? scopeLabel(hit) : "not available in current aggregate output"}</div>
+              <div class="val">${formatNumber(hit.n ?? hit.statistic_value)}</div>
+            </div>` : `<strong>${escapeHtml(display)}</strong>`}
+            <div class="mini"><code>${escapeHtml(item.raw)}</code>${hit && hasDisplayValue(hit.pct) ? ` - ${escapeHtml(hit.pct)}%` : ""} ${hit ? scopeLabel(hit) : ''}</div>
           </div>`;
         }).join("");
       }
@@ -4854,37 +5014,27 @@
           : "Unknown and true missing were not separately quantified in this output.";
         const socialDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_social_history");
         return `<div class="focused-panel social-history-panel">
-          <div class="source-shape">
-            <div class="source-fact"><span class="mini">Source</span><b>SP_Social_Hx</b></div>
-            <div class="source-fact"><span class="mini">Smoking raw column</span><b>ryger</b></div>
-            <div class="source-fact"><span class="mini">Alcohol raw column</span><b>drikker</b></div>
-          </div>
+          ${renderDomainSourceOverview('clinical_social_history')}
+          <details class="lineage-block"><summary>Smoking and alcohol reference meanings</summary><p class="mini">These documented category meanings are not observed frequencies. Not asked and deferred categories are distinct from missing values.</p>
           <div class="value-map-grid">
             <article class="value-map-card red">
               <h3>Smoking status</h3>
-              <p class="mini"><code>SP_Social_Hx.ryger</code></p>
+              <p class="mini"><code>SP_SocialHX.ryger</code></p>
               ${renderSocialValueRows("ryger", smokingExpected)}
             </article>
             <article class="value-map-card amber">
               <h3>Alcohol use</h3>
-              <p class="mini"><code>SP_Social_Hx.drikker</code></p>
+              <p class="mini"><code>SP_SocialHX.drikker</code></p>
               ${renderSocialValueRows("drikker", alcoholExpected)}
             </article>
-          </div>
-          <details class="raw-lineage-card">
+          </div></details>
+          ${raw.length ? `<details class="raw-lineage-card">
             <summary>Raw names / data lineage</summary>
             <h3>Raw names / data lineage</h3>
             ${renderRawFieldList(raw.filter(row => fieldMatches(row, ["ryger", "drikker"])), 8)}
-          </details>
+          </details>` : ''}
           <div class="caveat-box warn">
-            <strong>Caveat:</strong> Not asked, unknown, deferred, not applicable, and true missing values require separate handling. ${escapeHtml(unknownNote)} Row-level social-history observations do not necessarily equal current patient-level status. ${escapeHtml(scanScopeNote(socialDistributions))}
-          </div>
-          <div class="lineage-block">
-            <h3>Clinical Variables links</h3>
-            ${conceptButtons([
-              { label: "Open Smoking Status concept", query: "Smoking status ryger" },
-              { label: "Open Alcohol Use concept", query: "Alcohol use drikker" }
-            ])}
+            <strong>Caveat:</strong> Not asked, unknown, deferred, not applicable, and true missing values require separate handling. ${escapeHtml(unknownNote)} Social-history source records do not necessarily equal current patient status.
           </div>
         </div>`;
       }
@@ -5532,7 +5682,7 @@
         </div>`;
       }
 
-      document.getElementById("hero-copy").textContent = "Find measurements, source fields and reference definitions.";
+      document.getElementById("hero-copy").textContent = "Explore diagnoses, treatments, admissions, tests, tissue, samples and routine-care evidence.";
       document.getElementById("run-id").textContent = `Run ${payload.run_id || "unknown"}`;
       const heroGeneratedAt = formatTimestamp(payload.generated_at || runSummaryValue("generated_at", ""));
       document.getElementById("generated-at").textContent = `Generated ${heroGeneratedAt.display}`;
@@ -6547,27 +6697,7 @@
         });
       }
       function renderImagingSourceCoverage() {
-        const cards = imagingSourceNames.map(source => {
-          const sourceKey = normalizeClinicalKey(source);
-          const catalog = (catalogRows || []).find(row => normalizeClinicalKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" ")).includes(sourceKey));
-          const kpi = (panelKpiRows || []).find(row => row.panel_id === "clinical_imaging" && normalizeClinicalKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const distributions = imagingPanelDistributionRows(row => normalizeClinicalKey(row.source_name || "").includes(sourceKey));
-          const rawRows = imagingAllRawRows().filter(row => normalizeClinicalKey(row.source_name || "").includes(sourceKey));
-          const count = numberValue(catalog && catalog.n_rows) || numberValue(kpi && kpi.value) || distributions.reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0) || rawRows.reduce((sum, row) => sum + numberValue(row.n_rows), 0);
-          const found = catalog || kpi || distributions.length || rawRows.length;
-          const layer = rawRows[0] ? imagingLayer(rawRows[0]) : distributions[0] ? imagingLayer(distributions[0]) : imagingLayer({ source_name: source });
-          const reportUnavailable = /Del2|del2/.test(source) && !found;
-          return `<article class="clinical-card">
-            ${renderBadge(layer.label, layer.tone)}
-            <h3>${escapeHtml(source)}</h3>
-            ${renderKpiStrip([
-              { label: "aggregate rows", value: count || (reportUnavailable ? "SP imaging report-text table not available in current aggregate output" : "not available in current aggregate output"), tone: layer.tone },
-              { label: "fields/codes", value: rawRows.length || "not available", tone: "cyan" }
-            ], { tone: layer.tone })}
-            <p class="mini">${escapeHtml(layer.caveat)}</p>
-          </article>`;
-        }).join("");
-        return `<div class="grid grid-4">${cards}</div>`;
+        return renderDomainSourceCards(domainSourceSpecs("clinical_imaging"));
       }
       function renderImagingLayerCards() {
         return `<div class="grid grid-4">${imagingLayerSpecs.filter(layer => layer.id !== "candidate").map(layer => `
@@ -6635,6 +6765,7 @@
         const radiotherapyRouteMessage = radiotherapyRows.length
           ? "Radiotherapy procedure evidence is available through SKS/BWGC procedure codes. SP radiotherapy plan/report detail is not available in the current aggregate block."
           : "No radiotherapy procedure-code aggregate rows were generated in the current output; check SKS/BWGC and SP radiotherapy route activation.";
+        if (!allRows.length && !domainPublishedDistributions("clinical_imaging").length) return `<div class="dashboard-grid">${renderDomainSourceOverview('clinical_imaging')}<details class="lineage-block"><summary>How to interpret the evidence layers</summary>${renderImagingLayerCards()}</details></div>`;
         return `
           <div class="dashboard-grid imaging-dashboard">
             ${renderKpiStrip([
@@ -6895,29 +7026,7 @@
           .reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0);
       }
       function renderMicrobiologySourceCoverage(rows) {
-        const bySource = {};
-        (rows || []).forEach(row => {
-          const source = row.source_name || "Microbiology source";
-          if (!bySource[source]) bySource[source] = { source, rawCount: 0, fields: new Set(), layer: microbiologyLayer(row) };
-          bySource[source].rawCount += numberValue(row.n_rows);
-          if (row.raw_column) bySource[source].fields.add(row.raw_column);
-        });
-        const cards = Object.values(bySource).slice(0, 8).map(item => {
-          const sourceCount = microbiologyCatalogCount(item.source) || microbiologyPanelKpiCount(item.source) || microbiologyDistributionCount(item.source) || item.rawCount;
-          const countValue = sourceCount || "Aggregate rows not available in current output";
-          return `
-          <article class="clinical-card">
-            ${renderBadge(item.layer.label, item.layer.tone)}
-            <h3>${escapeHtml(item.source)}</h3>
-            ${renderKpiStrip([
-              { label: "aggregate rows", value: countValue, tone: item.layer.tone },
-              { label: "fields", value: item.fields.size || "not available", tone: "cyan" }
-            ], { tone: item.layer.tone })}
-            <p class="mini">${escapeHtml(item.layer.captures)}</p>
-          </article>
-        `;
-        }).join("");
-        return cards ? `<div class="grid grid-4">${cards}</div>` : `<div class="empty">not available in current aggregate output</div>`;
+        return renderDomainSourceCards(domainSourceSpecs("clinical_microbiology"));
       }
       function renderMicrobiologyLayerCards() {
         return `<div class="grid grid-3">${microbiologyLayerSpecs.map(layer => `
@@ -6991,6 +7100,7 @@
         const rows = microbiologyRawRows();
         const distributions = (panelDistributionRows || []).filter(row => row.panel_id === "clinical_microbiology");
         const kpis = (panelKpiRows || []).filter(row => row.panel_id === "clinical_microbiology");
+        if (!rows.length && !domainPublishedDistributions("clinical_microbiology").length) return `<div class="dashboard-grid">${renderDomainSourceOverview('clinical_microbiology')}<details class="lineage-block"><summary>How to interpret the evidence layers</summary>${renderMicrobiologyLayerCards()}</details></div>`;
         return `
           <div class="dashboard-grid microbiology-dashboard">
             ${renderTermHelp(["PCR","MIC","MRSA","VRE","ESBL","CMV","EBV","HIV","HCV","HBsAg","anti-HBc"])}
@@ -7161,27 +7271,7 @@
         })));
       }
       function renderPathologySourceCoverage() {
-        const wanted = ["SDS_pato", "PATOBANK", "SDS_t_mikro", "SDS_t_konk", "SDS_t_tumor", "tumor"];
-        const cards = wanted.map(source => {
-          const sourceKey = normalizeClinicalKey(source);
-          const catalog = (catalogRows || []).find(row => normalizeClinicalKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" ")).includes(sourceKey));
-          const kpi = (panelKpiRows || []).find(row => row.panel_id === "clinical_pathology" && normalizeClinicalKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const distRows = pathologyDistributionRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const rawRows = pathologyRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const layer = rawRows[0] ? pathologyLayer(rawRows[0]) : distRows[0] ? pathologyLayer(distRows[0]) : pathologyLayer({ source_name: source });
-          const count = numberValue(catalog && catalog.n_rows) || numberValue(kpi && kpi.value) || distRows.reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0) || rawRows.reduce((sum, row) => sum + numberValue(row.n_rows), 0);
-          const fields = new Set(rawRows.map(row => row.raw_column).filter(Boolean));
-          return `<article class="clinical-card">
-            ${renderBadge(layer.label, layer.tone)}
-            <h3>${escapeHtml(source)}</h3>
-            ${renderKpiStrip([
-              { label: "aggregate rows", value: count || "not available in current aggregate output", tone: layer.tone },
-              { label: "fields/codes", value: fields.size || "not available", tone: "cyan" }
-            ], { tone: layer.tone })}
-            <p class="mini">${escapeHtml(layer.caveat)}</p>
-          </article>`;
-        }).join("");
-        return `<div class="grid grid-3">${cards}</div>`;
+        return renderDomainSourceCards(domainSourceSpecs("clinical_pathology"));
       }
       function renderPathologyKi67Signpost() {
         const rows = (mclTriangleFeasibility && mclTriangleFeasibility.pathology_ki67_signpost) || [];
@@ -7460,6 +7550,7 @@
         const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_pathology") || {};
         const rows = pathologyRawRows();
         const distributions = pathologyDistributionRows();
+        if (!rows.length && !domainPublishedDistributions("clinical_pathology").length) return `<div class="dashboard-grid">${renderDomainSourceOverview('clinical_pathology')}<details class="lineage-block"><summary>How to interpret the evidence layers</summary>${renderPathologyLayerCards()}</details>${[patobankKi67Percent.summary,patobankKi67Percent.code_counts,patobankKi67Percent.validation].some(rows=>Array.isArray(rows) && rows.length) ? renderSectionCard("Coded Ki-67 coverage", renderPatobankKi67PercentCoverage(), "green") : ""}</div>`;
         return `
           <div class="dashboard-grid pathology-dashboard">
             ${renderKpiStrip([
@@ -7832,27 +7923,7 @@
         }));
       }
       function renderBiobankSourceCoverage() {
-        const wanted = ["LAB_BIOBANK_SAMPLES", "BIOBANK_SAMPLES", "biobank sample table"];
-        const cards = wanted.map(source => {
-          const sourceKey = normalizeClinicalKey(source);
-          const catalog = (catalogRows || []).find(row => normalizeClinicalKey([row.table_name, row.source, row.domain, row.subdomain, row.atlas_role].map(text).join(" ")).includes(sourceKey));
-          const kpi = (panelKpiRows || []).find(row => row.panel_id === "clinical_biobank" && normalizeClinicalKey([row.source_name, row.label, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const distRows = biobankPanelDistributionRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const rawRows = biobankRawRows(row => normalizeClinicalKey([row.source_name, row.object_name, row.evidence_file].map(text).join(" ")).includes(sourceKey));
-          const count = numberValue(catalog && catalog.n_rows) || numberValue(kpi && kpi.value) || distRows.reduce((sum, row) => sum + numberValue(row.n || row.statistic_value), 0) || rawRows.reduce((sum, row) => sum + numberValue(row.n_rows), 0);
-          const fields = new Set(rawRows.map(row => row.raw_column).filter(Boolean));
-          const found = catalog || kpi || distRows.length || rawRows.length;
-          return `<article class="clinical-card">
-            ${renderBadge("Biobank sample table", "blue")}
-            <h3>${escapeHtml(source)}</h3>
-            ${renderKpiStrip([
-              { label: "aggregate rows", value: count || "not available in current aggregate output", tone: "blue" },
-              { label: "fields", value: fields.size || (found ? "not available" : "not available"), tone: "cyan" }
-            ], { tone: "blue" })}
-            <p class="mini">Sample availability evidence only; no assay completion or molecular result is implied.</p>
-          </article>`;
-        }).join("");
-        return `<div class="grid grid-3">${cards}</div>`;
+        return renderDomainSourceCards(domainSourceSpecs("clinical_biobank"));
       }
       function renderBiobankLayerCards() {
         return `<div class="grid grid-3">${biobankLayerSpecs.filter(layer => layer.id !== "candidate").map(layer => `
@@ -7911,6 +7982,7 @@
         const panel = (domainPanelRows || []).find(row => row.panel_id === "clinical_biobank") || {};
         const rawRows = biobankRawRows();
         const distributions = biobankPanelDistributionRows();
+        if (!rawRows.length && !domainPublishedDistributions("clinical_biobank").length) return `<div class="dashboard-grid">${renderDomainSourceOverview('clinical_biobank')}<details class="lineage-block"><summary>How to interpret the evidence layers</summary>${renderBiobankLayerCards()}</details></div>`;
         return `
           <div class="dashboard-grid biobank-dashboard">
             ${renderKpiStrip([
@@ -9158,13 +9230,13 @@
         if (n < 100 && Math.round(n * 10) / 10 === 100) return '<100';
         return n.toLocaleString(undefined, {maximumFractionDigits:1});
       }
-      function sourceEvidenceLinks(source, field = '') {
+      function sourceEvidenceLinks(source, field = '', options = {}) {
         if (!source) return '';
         const coverage = new URLSearchParams({view:'timeplace',source});
         const profile = new URLSearchParams({view:'fields',table:'column_profiles',source});
         if (field) profile.set('field',field);
-        const fields = field ? `<a href="DALYCARE_outputs.html?${escapeHtml(profile.toString())}">Published field evidence →</a>` : browseFieldsLink(source) || '<span class="mini">Field profiles are not included for this exact source.</span>';
-        return `<div class="source-evidence-links">${fields}<a href="DALYCARE_outputs.html?${escapeHtml(coverage.toString())}">Source years and regions →</a></div>`;
+        const fields = field ? `<a href="DALYCARE_outputs.html?${escapeHtml(profile.toString())}">Published field evidence →</a>` : browseFieldsLink(source,options.inventoryLabel || 'Browse fields') || '<span class="mini">Field profiles are not included for this exact source.</span>';
+        return `<div class="source-evidence-links">${fields}${options.coverage === false ? '' : `<a href="DALYCARE_outputs.html?${escapeHtml(coverage.toString())}">Source years and regions →</a>`}</div>`;
       }
       function fieldUnitCopy(row) {
         if (row.unit || row.units) return `Source unit metadata: ${row.unit || row.units}`;
@@ -9328,7 +9400,7 @@
         const kind = document.getElementById('column-kind-filter').value;
         const filtered = columnRows.filter(row => measurementMatches(row, columnMeasurement) && (columnExactField && dataset ? row.column_name === columnExactField : clinicalFieldMatches(row, q)) && (!dataset || row.table_name === dataset) && (!domain || row.domain === domain) && (!kind || row.profile_kind === kind));
         if (columnMeasurement) filtered.sort((a,b) => Number(b.numeric_privacy_status === 'eligible_stored_summary' && finiteSummary(b.median) !== null) - Number(a.numeric_privacy_status === 'eligible_stored_summary' && finiteSummary(a.median) !== null));
-        setHtml('column-measurements', measurementShortcuts(columnMeasurement));
+        setHtml('column-measurements', dataset && !columnMeasurement ? '' : measurementShortcuts(columnMeasurement));
         const page = columnPage(filtered, columnPageIndex);
         columnPageIndex = page.page;
         document.getElementById('column-count').textContent = page.total ? `Showing ${page.start + 1}–${page.start + page.rows.length} of ${page.total} matching fields (${columnRows.length} in this snapshot).` : 'No fields match these filters.';
@@ -9841,7 +9913,10 @@
       }
       setHtml("clinician-home", renderClinicianHome());
       document.addEventListener("toggle", event => {
-        if (event.target.tagName === "DETAILS" && event.target.open) flushPendingRenders();
+        if (event.target.tagName === "DETAILS" && event.target.open) {
+          flushPendingRenders();
+          if (event.target.classList.contains('domain-clinical-fields')) window.requestAnimationFrame(()=>scrollToAtlasTarget(event.target));
+        }
       }, true);
       document.addEventListener("input", event => {
         if (event.target.id === "lab-name-search") renderLabExplorerAndRoute();
