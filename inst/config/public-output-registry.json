@@ -761,7 +761,7 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One source/code-field/NPU-like-code summary enriched with dictionary and detective-surface metadata.",
+      "row_grain": "One source/code-field/NPU-like-code summary enriched with dictionary and configured laboratory review-group metadata.",
       "count_basis": "normalized code occurrences in source field; denominator is all source records; observed codes and counts may be withheld; not people",
       "supplementary": false,
       "column_meanings": {
@@ -806,8 +806,8 @@
           "definition": "LabTerm status from the matched dictionary entry; not patient/test status."
         },
         "surface": {
-          "label": "Detective surface",
-          "definition": "Curated detective-surface grouping obtained by code lookup."
+          "label": "Laboratory review group",
+          "definition": "Configured laboratory review group assigned by code lookup."
         },
         "candidate_label": {
           "label": "Candidate reference label",
@@ -912,8 +912,8 @@
           "definition": "Whether the normalized source code matched an entry in the curated NPU dictionary."
         },
         "surface": {
-          "label": "Detective surface",
-          "definition": "Curated detective-surface grouping obtained by code lookup."
+          "label": "Laboratory review group",
+          "definition": "Configured laboratory review group assigned by code lookup."
         },
         "candidate_label": {
           "label": "Candidate reference label",

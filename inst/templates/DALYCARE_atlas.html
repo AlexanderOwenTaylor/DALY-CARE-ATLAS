@@ -726,6 +726,16 @@
       font-weight: 800;
       text-transform: uppercase;
     }
+    .region-matrix-scroll { min-width: 0; max-width: 100%; }
+    .region-matrix-scroll:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+    #regionMatrix { min-width: 940px; }
+    #regionMatrix th, #regionMatrix td { min-width: 150px; }
+    #regionMatrix th:first-child, #regionMatrix td:first-child { min-width: 120px; }
+    #regionMatrix th, #regionMatrix td, #regionMatrix .coverage-pill {
+      overflow-wrap: normal;
+      word-break: normal;
+      white-space: normal;
+    }
     .coverage-pill.nationwide, .coverage-pill.observed { background: var(--green-soft); color: var(--green); }
     .coverage-pill.ehr, .coverage-pill.available { background: var(--blue-soft); color: var(--blue); }
     .coverage-pill.none, .coverage-pill.mapped_not_loaded { background: var(--red-soft); color: var(--red); }
@@ -1542,7 +1552,7 @@
                 <div class="card" style="margin-top:12px">
                   <h3>Region source status</h3>
                   <p class="mini region-status-legend">Recorded region evidence: at least one source has counts for this region. National source scope: inferred from source metadata; does not establish complete regional records. Source metadata available: a source is loaded. Default EHR support and No default EHR support describe configured source support; neither establishes presence or absence of clinical data.</p>
-                  <div class="table-wrap"><table id="regionMatrix"></table></div>
+                  <div class="table-wrap region-matrix-scroll" tabindex="0" role="region" aria-label="Regional source status matrix, scroll horizontally"><table id="regionMatrix"></table></div>
                 </div>
               </div>
               <div id="regionDetail"></div>
