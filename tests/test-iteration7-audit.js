@@ -44,7 +44,7 @@ for(const [targetId,viewName] of [['semantic-overlay-map','semantic-overlay'],['
 test('navigation reserves actual wrapped toolbar space on desktop and mobile',()=>{
   let scrolled;const subnav={getBoundingClientRect:()=>({height:54})};const target={closest:()=>({querySelector:()=>subnav}),getBoundingClientRect:()=>({top:600}),setAttribute(){},focus(){}};
   const context=vm.createContext({document:{querySelector:()=>({getBoundingClientRect:()=>({height:100})})},getComputedStyle:()=>({position:'static'}),window:{scrollY:200,matchMedia:()=>({matches:true}),scrollTo:x=>scrolled=x}});
-  load('      function scrollToAtlasTarget(', '      const atlasNav =',context);context.target=target;vm.runInContext('scrollToAtlasTarget(target)',context);assert.equal(scrolled.top,630);assert.equal(scrolled.behavior,'auto');
+  load('      function scrollToAtlasTarget(', '      /* REGISTRY_THEME_ACTION_START */',context);context.target=target;vm.runInContext('scrollToAtlasTarget(target)',context);assert.equal(scrolled.top,630);assert.equal(scrolled.behavior,'auto');
 });
 test('zero semantic source rows differ from nonzero source filtered to no matches',()=>{
   const output={};const button={disabled:false};const elements={};

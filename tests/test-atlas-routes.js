@@ -11,7 +11,7 @@ const run = code => vm.runInContext(code, context);
 
 test('laboratory links retain local filters independently of global search', () => {
   const route = JSON.parse(run(`JSON.stringify(readAtlasRoute(atlasRouteHash('laboratory', 'lab-npu', {q:'creatinine', specimen:'Urine', source:'SP_AlleProvesvar', translation:'resolved', sort:'name', g:'admissions'})))`));
-  assert.deepEqual(route, {tabId:'laboratory', subId:'lab-npu', q:'creatinine', specimen:'Urine', source:'SP_AlleProvesvar', translation:'resolved', sort:'name', g:'admissions', item:'', category:'', page:'', scope:'', measurement:''});
+  assert.deepEqual(route, {tabId:'laboratory', subId:'lab-npu', q:'creatinine', specimen:'Urine', source:'SP_AlleProvesvar', translation:'resolved', sort:'name', g:'admissions', item:'', category:'', page:'', scope:'', measurement:'', theme:''});
 });
 test('clearing global search does not revive it or erase local laboratory filters', () => {
   assert.equal(run(`readAtlasRoute(atlasRouteHash('laboratory','lab-npu',{q:'creatinine',specimen:'Urine',g:''})).g`), '');

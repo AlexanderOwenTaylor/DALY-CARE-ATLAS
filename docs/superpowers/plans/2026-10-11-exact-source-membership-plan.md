@@ -58,7 +58,7 @@ Node domain/readiness tests. No R/Python/resource edits.
   important fixes by original owners, scoped re-review; root inspects images.
 - [x] Full applicable Node/Python plus focused R and real one-click/CLI/offline/
   installed-resource pipeline acceptance. Verify manifests and byte budgets.
-- [ ] Package local release, update docs, commit/push source-only checkpoint to
+- [x] Package local release, update docs, commit/push source-only checkpoint to
   existing draft PR, continue active goal with registry usability findings.
 
 Acceptance record: final Node225/225; full Python57 run with two optional local

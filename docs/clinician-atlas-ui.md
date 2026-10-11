@@ -339,6 +339,28 @@ failure preserves the prior site. Its installation still uses the temporary
 synthetic-contact fixture described below; the untouched package metadata has
 not been changed.
 
+### Registry field discovery
+
+Myeloma, lymphoma and CLL now have direct routes to stage, baseline, treatment,
+response and workup fields. Lymphoma disease sites remain a separate theme. Each
+reviewed card joins a current profile by its exact source and field, keeps the
+readable name beside that identity, and opens the corresponding Data tables
+evidence. Canonical field lists do not transfer to an alias. Unknown or missing
+pairs remain accessible through their source inventory without an asserted
+clinical mapping.
+
+Source records, catalog fields and published profiles are separate measures.
+Recordedness is not a patient denominator, treatment exposure, completed assay
+or response distribution. Stage encodings, FISH performed/probe/result roles,
+treatment phases and configured versus source units retain their local limits.
+Date fields remain discoverable without reconstructing withheld date bounds.
+
+Category charts inspect original privacy and sensitivity markers before labels
+or counts are selected. Mixed summaries retain permitted rows and one withholding
+notice; zero remains zero, and absent or restricted values do not become empty
+bars. Separate exact source/field/scope summaries are not combined. Theme links
+preserve copied routes, refresh and Back, and all sections remain printable.
+
 ### Optional local export checks and benchmarks
 
 Historical export-to-export checks are optional. Set

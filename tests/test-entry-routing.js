@@ -32,7 +32,7 @@ test('Home question arrival focuses answers once below sticky navigation without
  const html=fs.readFileSync(path.join(dir,'DALYCARE_atlas.html'),'utf8');
  const start=html.indexOf('      function focusQuestionArrival()'),end=html.indexOf('      function overflowReport()',start);
  assert.ok(start>=0);
- const helper=html.slice(html.indexOf('      function scrollToAtlasTarget('),html.indexOf('      const atlasNav ='));
+ const helper=html.slice(html.indexOf('      function scrollToAtlasTarget('),html.indexOf('      /* REGISTRY_THEME_ACTION_START */'));
  const calls=[],target={setAttribute(){},focus(options){calls.push(['focus',options]);},scrollIntoView(options){calls.push(['rawScroll',options]);},getBoundingClientRect:()=>({top:1000}),closest:()=>({querySelector:()=>({getBoundingClientRect:()=>({height:30})})})};
  const window={location:{search:'?question=weight-height'},scrollY:0,scrollTo:options=>calls.push(['scroll',options]),matchMedia:()=>({matches:true}),performance:{getEntriesByType:()=>[{type:'navigate'}]}};
  const document={querySelector:()=>({getBoundingClientRect:()=>({height:50})}),getElementById:id=>id==='column-list'?{querySelector:()=>target}:null};
