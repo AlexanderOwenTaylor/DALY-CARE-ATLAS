@@ -1,5 +1,5 @@
 product_scope_values <- function() {
-  c("full_table", "full_source", "cartography_scan", "top_n_scan", "max_scan_100000", "unknown", "not_available")
+  c("full_table", "full_source", "cartography_scan", "top_n_scan", "max_scan_100000", "unknown", "not_available", "source_identity_metadata")
 }
 
 empty_clinical_concepts <- function() {
@@ -142,7 +142,8 @@ empty_product_layer_outputs <- function() {
 
 build_product_layer_outputs <- function(semantic_outputs, sources = NULL, panels = list(),
                                         column_profiles = NULL, min_cell_count = atlas_min_cell_count(),
-                                        project_root = ".") {
+                                        project_root = ".", membership_spec = NULL) {
+  if (is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
   dictionary <- semantic_outputs$dictionary %||% empty_semantic_data_dictionary()
   value_map <- semantic_outputs$value_map %||% empty_semantic_value_map()
   code_map <- semantic_outputs$code_map %||% empty_semantic_code_map()
@@ -151,7 +152,7 @@ build_product_layer_outputs <- function(semantic_outputs, sources = NULL, panels
   raw_fields <- product_panel_raw_fields(dictionary, panel_links, project_root = project_root)
   concepts <- product_clinical_concepts(dictionary, value_map, code_map, panel_links, raw_fields)
   distributions <- product_panel_distributions(dictionary, value_map, code_map, panels, project_root = project_root)
-  kpis <- product_panel_kpis(sources, panels, raw_fields, distributions, project_root = project_root)
+  kpis <- product_panel_kpis(sources, panels, raw_fields, distributions, project_root = project_root, membership_spec = membership_spec)
   domain_panels <- product_domain_panels(raw_fields, kpis, distributions, concepts)
   parity <- product_panel_parity(domain_panels, kpis, distributions, raw_fields)
 
@@ -654,7 +655,7 @@ product_registry_section_distributions <- function(start_sort = 1L) {
   rows
 }
 
-product_panel_kpis <- function(sources, panels, raw_fields, distributions, project_root = ".") {
+product_panel_kpis <- function(sources, panels, raw_fields, distributions, project_root = ".", membership_spec = NULL) {
   specs <- product_panel_specs()
   rows <- list()
   sort_order <- 1L
@@ -669,7 +670,7 @@ product_panel_kpis <- function(sources, panels, raw_fields, distributions, proje
     rows[[length(rows) + 1L]] <- product_kpi_row(panel_id, "distributions", "Distribution rows", nrow(panel_dist), "", "", "", "cartography_scan", sort_order)
     sort_order <- sort_order + 1L
   }
-  rows <- c(rows, product_source_kpis(sources, specs, sort_order))
+  rows <- c(rows, product_source_kpis(sources, specs, sort_order, membership_spec = membership_spec))
   rows <- c(rows, product_vital_kpis(project_root, length(rows) + 1L))
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(empty_panel_kpis())
@@ -694,11 +695,24 @@ product_kpi_row <- function(panel_id, kpi_id, label, value, unit = "", source_na
   )
 }
 
-product_source_kpis <- function(sources, specs, start_sort = 1L) {
-  if (!is.data.frame(sources) || !nrow(sources)) return(list())
+product_source_kpis <- function(sources, specs, start_sort = 1L, membership_spec = NULL) {
+  if (is.null(membership_spec) && (!is.data.frame(sources) || !nrow(sources))) return(list())
   rows <- list()
   sort_order <- start_sort
+  inventory <- if (!is.null(membership_spec)) clinical_source_inventory(sources, membership_spec) else NULL
   for (i in seq_len(nrow(specs))) {
+    panel_id <- specs$panel_id[[i]]
+    if (!is.null(inventory) && panel_id %in% clinical_source_panel_ids()) {
+      selected <- clinical_source_rows_for_panel(inventory, panel_id)
+      keys <- vapply(selected, function(row) row$source_key, character(1))
+      count <- if (inventory$inventory_state == 'unavailable') 'Not supplied' else as.character(length(keys))
+      rows[[length(rows) + 1L]] <- product_kpi_row(panel_id, 'mapped_sources', 'Current source identities', count, '', paste(keys, collapse = '; '), 'atlas_sources.csv', 'source_identity_metadata', sort_order)
+      sort_order <- sort_order + 1L
+      rows[[length(rows) + 1L]] <- product_kpi_row(panel_id, 'source_rows', 'Source records (not additive)', 'Not summed', '', paste(keys, collapse = '; '), 'atlas_sources.csv', 'source_identity_metadata', sort_order)
+      sort_order <- sort_order + 1L
+      next
+    }
+    if (!is.data.frame(sources) || !nrow(sources)) next
     patterns <- product_source_patterns_for_panel(specs$panel_id[[i]])
     if (!length(patterns)) next
     src <- review_sources_like(public_sources(sources), patterns)
@@ -1041,7 +1055,7 @@ product_scope_for_evidence <- function(evidence_file) {
 product_merge_scopes <- function(scopes) {
   scopes <- unique_nonblank(scopes)
   if (!length(scopes)) return("not_available")
-  priority <- c("full_table", "full_source", "cartography_scan", "top_n_scan", "max_scan_100000", "unknown", "not_available")
+  priority <- c("full_table", "full_source", "cartography_scan", "top_n_scan", "max_scan_100000", "source_identity_metadata", "unknown", "not_available")
   hit <- intersect(priority, scopes)
   hit[[1]] %||% "unknown"
 }

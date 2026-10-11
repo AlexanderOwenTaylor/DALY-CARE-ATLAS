@@ -1,0 +1,1656 @@
+{
+  "fixture_schema_version": 1,
+  "resource_path": "inst/config/clinical-source-membership.json",
+  "covered_panel_ids": [
+    "diagnosis_atlas",
+    "clinical_adt",
+    "clinical_notes",
+    "clinical_microbiology",
+    "clinical_imaging",
+    "clinical_pathology",
+    "clinical_biobank",
+    "clinical_vitals",
+    "clinical_social_history",
+    "reg_damyda",
+    "reg_lyfo",
+    "reg_cll"
+  ],
+  "resource_cases": [
+    {
+      "name": "valid_minimal_resource",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES",
+                  "LAB_BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": true
+    },
+    {
+      "name": "unsupported_version",
+      "input": {
+        "schema_version": 2,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES",
+                  "LAB_BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "unsupported_schema_version"
+    },
+    {
+      "name": "non_integer_version",
+      "input": {
+        "schema_version": "1",
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES",
+                  "LAB_BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "unsupported_schema_version"
+    },
+    {
+      "name": "blank_inventory_version",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES",
+                  "LAB_BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "invalid_inventory_version"
+    },
+    {
+      "name": "unknown_panel",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_molecular",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "invalid_panel_id"
+    },
+    {
+      "name": "duplicate_panel",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          },
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "duplicate_panel_id"
+    },
+    {
+      "name": "duplicate_membership_in_panel",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              },
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "duplicate_membership_id"
+    },
+    {
+      "name": "empty_source_keys",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "invalid_source_keys"
+    },
+    {
+      "name": "duplicate_source_key",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES",
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "duplicate_source_key"
+    },
+    {
+      "name": "invalid_role",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "cohort",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "invalid_membership_role"
+    },
+    {
+      "name": "blank_layer",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": ""
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "invalid_evidence_layer"
+    },
+    {
+      "name": "prototype_object_key",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES",
+                  "LAB_BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ],
+        "__proto__": {}
+      },
+      "expected_valid": false,
+      "expected_error": "unsafe_resource_key"
+    },
+    {
+      "name": "prototype_identity",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "constructor"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "unsafe_resource_key"
+    },
+    {
+      "name": "conflicting_alias_family",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              },
+              {
+                "membership_id": "unrelated_family",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "conflicting_source_key"
+    },
+    {
+      "name": "cross_panel_family_alias_mismatch",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          },
+          {
+            "panel_id": "clinical_pathology",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "LAB_BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "conflicting_membership_family"
+    },
+    {
+      "name": "cross_panel_family_canonical_mismatch",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          },
+          {
+            "panel_id": "clinical_pathology",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "pato",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": false,
+      "expected_error": "conflicting_membership_family"
+    },
+    {
+      "name": "valid_cross_panel_different_roles",
+      "input": {
+        "schema_version": 1,
+        "inventory_version": "fixture-1",
+        "panels": [
+          {
+            "panel_id": "clinical_biobank",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "primary",
+                "evidence_layer": "sample_inventory"
+              }
+            ]
+          },
+          {
+            "panel_id": "clinical_pathology",
+            "sources": [
+              {
+                "membership_id": "biobank_samples",
+                "source_keys": [
+                  "BIOBANK_SAMPLES"
+                ],
+                "canonical_resource_id": "BIOBANK_SAMPLES",
+                "membership_role": "context",
+                "evidence_layer": "sample_context"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_valid": true
+    }
+  ],
+  "selector_cases": [
+    {
+      "name": "stem_collisions_and_exact_registry",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "SP_AdministreretMedicin",
+            "load_status": "ok",
+            "n_rows": 900
+          },
+          {
+            "table_name": "SP_ADT_haendelser",
+            "load_status": "ok",
+            "n_rows": 20
+          },
+          {
+            "table_name": "SP_BilleddiagnostikeUndersoegelser_Del1",
+            "load_status": "ok",
+            "n_rows": 30
+          },
+          {
+            "table_name": "SDS_diagnoser",
+            "load_status": "ok",
+            "n_rows": 40
+          },
+          {
+            "table_name": "SDS_kontakter",
+            "load_status": "ok",
+            "n_rows": 50
+          },
+          {
+            "table_name": "Behandlingskontakter_diagnoser",
+            "load_status": "ok",
+            "n_rows": 60
+          },
+          {
+            "table_name": "RKKP_CLL",
+            "load_status": "ok",
+            "n_rows": 70
+          },
+          {
+            "table_name": "CLL_TREAT",
+            "load_status": "ok",
+            "n_rows": 80
+          },
+          {
+            "table_name": "CLL_TREAT_IBRUTINIB",
+            "load_status": "ok",
+            "n_rows": 90
+          },
+          {
+            "table_name": "CLLPANEL_WIDE",
+            "load_status": "ok",
+            "n_rows": 100
+          },
+          {
+            "table_name": "MM_TREAT_DARA",
+            "load_status": "ok",
+            "n_rows": 110
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "diagnoses_lpr3",
+            "source_key": "SDS_diagnoser",
+            "canonical_resource_id": "diagnoser",
+            "membership_role": "primary",
+            "evidence_layer": "diagnosis_codes",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "sp_contact_diagnoses",
+            "source_key": "Behandlingskontakter_diagnoser",
+            "canonical_resource_id": "Behandlingskontakter_diagnoser",
+            "membership_role": "context",
+            "evidence_layer": "contact_linked_diagnoses",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_adt",
+            "membership_id": "sp_adt_events",
+            "source_key": "SP_ADT_haendelser",
+            "canonical_resource_id": "SP_ADT_Haendelser",
+            "membership_role": "primary",
+            "evidence_layer": "adt_workflow",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_adt",
+            "membership_id": "contacts_lpr3",
+            "source_key": "SDS_kontakter",
+            "canonical_resource_id": "kontakter",
+            "membership_role": "primary",
+            "evidence_layer": "care_contacts",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_adt",
+            "membership_id": "sp_contact_diagnoses",
+            "source_key": "Behandlingskontakter_diagnoser",
+            "canonical_resource_id": "Behandlingskontakter_diagnoser",
+            "membership_role": "context",
+            "evidence_layer": "contact_linked_diagnoses",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_imaging",
+            "membership_id": "sp_imaging_part1",
+            "source_key": "SP_BilleddiagnostikeUndersoegelser_Del1",
+            "canonical_resource_id": "BilleddiagnostikeUndersøgelser_Del1",
+            "membership_role": "primary",
+            "evidence_layer": "imaging_examination_metadata",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "reg_cll",
+            "membership_id": "registry_cll",
+            "source_key": "RKKP_CLL",
+            "canonical_resource_id": "RKKP_CLL",
+            "membership_role": "primary",
+            "evidence_layer": "disease_registry",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "declared_aliases_and_excluded_lookalikes",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "LAB_BIOBANK_SAMPLES",
+            "load_status": "loaded",
+            "n_rows": 0
+          },
+          {
+            "table_name": "SP_Social_Hx",
+            "load_status": "loaded",
+            "n_rows": null
+          },
+          {
+            "table_name": "SP_SocialHX_archive",
+            "load_status": "loaded",
+            "n_rows": 999
+          },
+          {
+            "table_name": "biobank sample table",
+            "load_status": "loaded",
+            "n_rows": 999
+          },
+          {
+            "table_name": "SP_BIOBANK_SAMPLES",
+            "load_status": "loaded",
+            "n_rows": 999
+          },
+          {
+            "table_name": "diagnoses",
+            "load_status": "loaded",
+            "n_rows": 999
+          },
+          {
+            "table_name": "clean_RKKP_CLL",
+            "load_status": "loaded",
+            "n_rows": 999
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": [
+          {
+            "table_name": "LAB_BIOBANK_SAMPLES",
+            "column_name": "Type",
+            "n_available": 0
+          }
+        ]
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "clinical_biobank",
+            "membership_id": "biobank_samples",
+            "source_key": "LAB_BIOBANK_SAMPLES",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "membership_role": "primary",
+            "evidence_layer": "sample_inventory",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_social_history",
+            "membership_id": "sp_social_history",
+            "source_key": "SP_Social_Hx",
+            "canonical_resource_id": "SP_Social_Hx",
+            "membership_role": "primary",
+            "evidence_layer": "social_history",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "both_alias_identities_with_unequal_profiles",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "LAB_BIOBANK_SAMPLES",
+            "load_status": "loaded",
+            "n_rows": 7
+          },
+          {
+            "table_name": "BIOBANK_SAMPLES",
+            "load_status": "loaded",
+            "n_rows": 70
+          },
+          {
+            "table_name": "SP_Social_Hx",
+            "load_status": "ok",
+            "n_rows": 5
+          },
+          {
+            "table_name": "SP_SocialHX",
+            "load_status": "ok",
+            "n_rows": 50
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": [
+          {
+            "table_name": "LAB_BIOBANK_SAMPLES",
+            "column_name": "Type",
+            "n_available": 7
+          },
+          {
+            "table_name": "SP_SocialHX",
+            "column_name": "ryger",
+            "n_available": 40
+          }
+        ]
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "clinical_biobank",
+            "membership_id": "biobank_samples",
+            "source_key": "BIOBANK_SAMPLES",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "membership_role": "primary",
+            "evidence_layer": "sample_inventory",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "multiple",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_biobank",
+            "membership_id": "biobank_samples",
+            "source_key": "LAB_BIOBANK_SAMPLES",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "membership_role": "primary",
+            "evidence_layer": "sample_inventory",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "multiple",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_social_history",
+            "membership_id": "sp_social_history",
+            "source_key": "SP_SocialHX",
+            "canonical_resource_id": "SP_Social_Hx",
+            "membership_role": "primary",
+            "evidence_layer": "social_history",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "multiple",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_social_history",
+            "membership_id": "sp_social_history",
+            "source_key": "SP_Social_Hx",
+            "canonical_resource_id": "SP_Social_Hx",
+            "membership_role": "primary",
+            "evidence_layer": "social_history",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "multiple",
+            "load_status": "ok",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "multiple_family_identities",
+            "source_key": null,
+            "membership_id": "biobank_samples"
+          },
+          {
+            "code": "multiple_family_identities",
+            "source_key": null,
+            "membership_id": "sp_social_history"
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate_identity_and_conflicting_lineage",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "BIOBANK_SAMPLES",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "load_status": "ok",
+            "n_rows": 7
+          },
+          {
+            "table_name": "BIOBANK_SAMPLES",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "load_status": "failed",
+            "n_rows": 70
+          },
+          {
+            "table_name": "SP_SocialHX",
+            "canonical_resource_id": "RKKP_CLL",
+            "load_status": "ok",
+            "n_rows": 50
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "clinical_biobank",
+            "membership_id": "biobank_samples",
+            "source_key": "BIOBANK_SAMPLES",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "membership_role": "primary",
+            "evidence_layer": "sample_inventory",
+            "catalog_identity_state": "duplicate",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": null,
+            "load_state": "unknown"
+          },
+          {
+            "panel_id": "clinical_social_history",
+            "membership_id": "sp_social_history",
+            "source_key": "SP_SocialHX",
+            "canonical_resource_id": null,
+            "membership_role": "primary",
+            "evidence_layer": "social_history",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "conflicting",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "duplicate_source_identity",
+            "source_key": "BIOBANK_SAMPLES",
+            "membership_id": null
+          },
+          {
+            "code": "canonical_lineage_conflict",
+            "source_key": "SP_SocialHX",
+            "membership_id": "sp_social_history"
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate_identity_with_conflicting_supplied_lineage",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "SDS_t_diag",
+            "canonical_resource_id": "t_diag",
+            "load_status": "ok",
+            "n_rows": 7
+          },
+          {
+            "table_name": "SDS_t_diag",
+            "canonical_resource_id": "BIOBANK_SAMPLES",
+            "load_status": "ok",
+            "n_rows": 70
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "diagnoses_lpr",
+            "source_key": "SDS_t_diag",
+            "canonical_resource_id": null,
+            "membership_role": "primary",
+            "evidence_layer": "diagnosis_codes",
+            "catalog_identity_state": "duplicate",
+            "canonical_lineage_state": "conflicting",
+            "family_identity_state": "single",
+            "load_status": null,
+            "load_state": "unknown"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "duplicate_source_identity",
+            "source_key": "SDS_t_diag",
+            "membership_id": null
+          },
+          {
+            "code": "canonical_lineage_conflict",
+            "source_key": "SDS_t_diag",
+            "membership_id": "diagnoses_lpr"
+          }
+        ]
+      }
+    },
+    {
+      "name": "overlapping_views_and_full_procedure_context",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "diagnoses_all",
+            "load_status": "loaded",
+            "n_rows": 100
+          },
+          {
+            "table_name": "view_diagnosses_all",
+            "load_status": "loaded",
+            "n_rows": 100
+          },
+          {
+            "table_name": "view_diagnoses_all_hosp_region",
+            "load_status": "loaded",
+            "n_rows": 100
+          },
+          {
+            "table_name": "view_dalycare_diagnoses",
+            "load_status": "loaded",
+            "n_rows": 100
+          },
+          {
+            "table_name": "SDS_t_sksube",
+            "load_status": "loaded",
+            "n_rows": 99999
+          },
+          {
+            "table_name": "SDS_procedure_andre",
+            "load_status": "loaded",
+            "n_rows": 88888
+          },
+          {
+            "table_name": "RKKP_DaMyDa",
+            "load_status": "loaded",
+            "n_rows": 200
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "diagnoses_view_all",
+            "source_key": "view_diagnosses_all",
+            "canonical_resource_id": null,
+            "membership_role": "derived_view",
+            "evidence_layer": "diagnosis_view",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "unestablished",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "diagnoses_view_hosp_region",
+            "source_key": "view_diagnoses_all_hosp_region",
+            "canonical_resource_id": "diagnoses_all",
+            "membership_role": "derived_view",
+            "evidence_layer": "diagnosis_view",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "diagnoses_view_dalycare",
+            "source_key": "view_dalycare_diagnoses",
+            "canonical_resource_id": "t_dalycare_diagnoses",
+            "membership_role": "derived_view",
+            "evidence_layer": "diagnosis_view",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "diagnosis_atlas",
+            "membership_id": "diagnoses_all",
+            "source_key": "diagnoses_all",
+            "canonical_resource_id": "diagnoses_all",
+            "membership_role": "derived_view",
+            "evidence_layer": "diagnosis_backbone",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_imaging",
+            "membership_id": "procedures_lpr",
+            "source_key": "SDS_t_sksube",
+            "canonical_resource_id": "t_sksube",
+            "membership_role": "context",
+            "evidence_layer": "full_procedure_source",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_imaging",
+            "membership_id": "procedures_other_lpr3",
+            "source_key": "SDS_procedure_andre",
+            "canonical_resource_id": "procedure_andre",
+            "membership_role": "context",
+            "evidence_layer": "full_procedure_source",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_imaging",
+            "membership_id": "registry_damyda",
+            "source_key": "RKKP_DaMyDa",
+            "canonical_resource_id": "RKKP_DaMyDa",
+            "membership_role": "context",
+            "evidence_layer": "registry_imaging_fields",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "reg_damyda",
+            "membership_id": "registry_damyda",
+            "source_key": "RKKP_DaMyDa",
+            "canonical_resource_id": "RKKP_DaMyDa",
+            "membership_role": "primary",
+            "evidence_layer": "disease_registry",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "notes_pathology_microbiology_and_prescription_separation",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "SDS_epikur",
+            "domain": "SDS",
+            "subdomain": "ClinicalText",
+            "load_status": "ok",
+            "n_rows": 100
+          },
+          {
+            "table_name": "EKOKUR",
+            "load_status": "ok",
+            "n_rows": 110
+          },
+          {
+            "table_name": "EKOKUR?",
+            "load_status": "ok",
+            "n_rows": 120
+          },
+          {
+            "table_name": "SP_Journalnotater_Del1",
+            "load_status": "ok",
+            "n_rows": 130
+          },
+          {
+            "table_name": "Journalnotater_del2",
+            "load_status": "ok",
+            "n_rows": 140
+          },
+          {
+            "table_name": "SDS_pato",
+            "load_status": "ok",
+            "n_rows": 150
+          },
+          {
+            "table_name": "t_mikro",
+            "load_status": "ok",
+            "n_rows": 160
+          },
+          {
+            "table_name": "t_konk",
+            "load_status": "ok",
+            "n_rows": 170
+          },
+          {
+            "table_name": "PERSIMUNE_microbiology_microscopy",
+            "load_status": "ok",
+            "n_rows": 180
+          },
+          {
+            "table_name": "SP_Bloddyrkning_Del3",
+            "load_status": "ok",
+            "n_rows": 190
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "clinical_notes",
+            "membership_id": "sp_notes_part1",
+            "source_key": "SP_Journalnotater_Del1",
+            "canonical_resource_id": "Journalnotater_del1",
+            "membership_role": "primary",
+            "evidence_layer": "clinical_note_metadata",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_notes",
+            "membership_id": "sp_notes_part2",
+            "source_key": "Journalnotater_del2",
+            "canonical_resource_id": "Journalnotater_del2",
+            "membership_role": "primary",
+            "evidence_layer": "clinical_note_metadata",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_notes",
+            "membership_id": "pathology_microscopy_text",
+            "source_key": "t_mikro",
+            "canonical_resource_id": "t_mikro",
+            "membership_role": "text_availability",
+            "evidence_layer": "pathology_microscopy_text",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_notes",
+            "membership_id": "pathology_conclusion_text",
+            "source_key": "t_konk",
+            "canonical_resource_id": "t_konk",
+            "membership_role": "text_availability",
+            "evidence_layer": "pathology_conclusion_text",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_microbiology",
+            "membership_id": "microbiology_microscopy",
+            "source_key": "PERSIMUNE_microbiology_microscopy",
+            "canonical_resource_id": "microbiology_microscopy",
+            "membership_role": "primary",
+            "evidence_layer": "microbiology_microscopy",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_microbiology",
+            "membership_id": "sp_blood_culture_part3",
+            "source_key": "SP_Bloddyrkning_Del3",
+            "canonical_resource_id": "Bloddyrkning_del3",
+            "membership_role": "context",
+            "evidence_layer": "blood_culture_workflow_part3",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_pathology",
+            "membership_id": "pathology_coded",
+            "source_key": "SDS_pato",
+            "canonical_resource_id": "pato",
+            "membership_role": "primary",
+            "evidence_layer": "coded_pathology",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_pathology",
+            "membership_id": "pathology_microscopy_text",
+            "source_key": "t_mikro",
+            "canonical_resource_id": "t_mikro",
+            "membership_role": "text_availability",
+            "evidence_layer": "pathology_microscopy_text",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_pathology",
+            "membership_id": "pathology_conclusion_text",
+            "source_key": "t_konk",
+            "canonical_resource_id": "t_konk",
+            "membership_role": "text_availability",
+            "evidence_layer": "pathology_conclusion_text",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "current_load_states_zero_null_and_legacy_absence",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "SP_BilleddiagnostikeUndersoegelser_Del2",
+            "load_status": "ok",
+            "n_rows": 0,
+            "legacy_status": "known_unavailable"
+          },
+          {
+            "table_name": "SP_VitaleVaerdier",
+            "load_status": "mapped",
+            "n_rows": null
+          },
+          {
+            "table_name": "RKKP_LYFO",
+            "load_status": "not_tested",
+            "n_rows": null
+          },
+          {
+            "table_name": "SP_SocialHX",
+            "load_status": null,
+            "n_rows": null
+          }
+        ],
+        "evidence_origin": "fresh_run",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "fresh_run",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "clinical_imaging",
+            "membership_id": "sp_imaging_part2",
+            "source_key": "SP_BilleddiagnostikeUndersoegelser_Del2",
+            "canonical_resource_id": "BilleddiagnostikeUndersøgelser_Del2",
+            "membership_role": "primary",
+            "evidence_layer": "imaging_report_availability",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          },
+          {
+            "panel_id": "clinical_vitals",
+            "membership_id": "sp_vital_events",
+            "source_key": "SP_VitaleVaerdier",
+            "canonical_resource_id": "SP_VitaleVaerdier",
+            "membership_role": "primary",
+            "evidence_layer": "vital_sign_events",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "mapped",
+            "load_state": "not_loaded"
+          },
+          {
+            "panel_id": "clinical_social_history",
+            "membership_id": "sp_social_history",
+            "source_key": "SP_SocialHX",
+            "canonical_resource_id": "SP_Social_Hx",
+            "membership_role": "primary",
+            "evidence_layer": "social_history",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": null,
+            "load_state": "unknown"
+          },
+          {
+            "panel_id": "reg_lyfo",
+            "membership_id": "registry_lyfo",
+            "source_key": "RKKP_LYFO",
+            "canonical_resource_id": "RKKP_LYFO",
+            "membership_role": "primary",
+            "evidence_layer": "disease_registry",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "not_tested",
+            "load_state": "not_loaded"
+          }
+        ],
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "missing_inventory",
+      "input": {
+        "catalog_rows": null,
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "unavailable",
+        "rows": [],
+        "diagnostics": [
+          {
+            "code": "catalog_unavailable",
+            "source_key": null,
+            "membership_id": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "malformed_inventory",
+      "input": {
+        "catalog_rows": {
+          "table_name": "RKKP_CLL"
+        },
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "unavailable",
+        "rows": [],
+        "diagnostics": [
+          {
+            "code": "catalog_malformed",
+            "source_key": null,
+            "membership_id": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "malformed_inventory_row",
+      "input": {
+        "catalog_rows": [
+          {
+            "load_status": "ok"
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "unavailable",
+        "rows": [],
+        "diagnostics": [
+          {
+            "code": "catalog_malformed",
+            "source_key": null,
+            "membership_id": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "empty_present_inventory",
+      "input": {
+        "catalog_rows": [],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [],
+        "diagnostics": []
+      }
+    },
+    {
+      "name": "limited_inventory",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "RKKP_CLL",
+            "load_status": "loaded",
+            "n_rows": 0
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": true,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "limited",
+        "rows": [
+          {
+            "panel_id": "reg_cll",
+            "membership_id": "registry_cll",
+            "source_key": "RKKP_CLL",
+            "canonical_resource_id": "RKKP_CLL",
+            "membership_role": "primary",
+            "evidence_layer": "disease_registry",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "loaded",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "catalog_limited",
+            "source_key": null,
+            "membership_id": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "exact_case_and_unicode_without_normalization",
+      "input": {
+        "catalog_rows": [
+          {
+            "table_name": "sp_socialhx",
+            "load_status": "ok",
+            "n_rows": 1
+          },
+          {
+            "table_name": "SP_SocialHX ",
+            "load_status": "ok",
+            "n_rows": 1
+          },
+          {
+            "table_name": "SP_BilleddiagnostiskeUndersøgelser_Del1",
+            "load_status": "ok",
+            "n_rows": 2
+          },
+          {
+            "table_name": "SP_BilleddiagnostiskeUnderso̸gelser_Del1",
+            "load_status": "ok",
+            "n_rows": 1
+          }
+        ],
+        "evidence_origin": "imported_snapshot",
+        "inventory_limited": false,
+        "column_profile_rows": []
+      },
+      "expected": {
+        "schema_version": 1,
+        "inventory_version": "2026-10-11-clinical-source-1",
+        "basis": "reviewed_exact_source_inventory",
+        "evidence_origin": "imported_snapshot",
+        "inventory_state": "present",
+        "rows": [
+          {
+            "panel_id": "clinical_imaging",
+            "membership_id": "sp_imaging_part1",
+            "source_key": "SP_BilleddiagnostiskeUndersøgelser_Del1",
+            "canonical_resource_id": "BilleddiagnostikeUndersøgelser_Del1",
+            "membership_role": "primary",
+            "evidence_layer": "imaging_examination_metadata",
+            "catalog_identity_state": "unique",
+            "canonical_lineage_state": "established",
+            "family_identity_state": "single",
+            "load_status": "ok",
+            "load_state": "loaded"
+          }
+        ],
+        "diagnostics": []
+      }
+    }
+  ]
+}

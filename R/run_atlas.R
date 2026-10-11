@@ -294,7 +294,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   for (panel_name in names(situation_panels)) {
     panels[[panel_name]] <- situation_panels[[panel_name]]
   }
-  panels$atlas_module_readiness <- atlas_module_readiness(sources, panels)
+  membership_spec <- load_clinical_source_membership(project_root)
+  panels$atlas_module_readiness <- atlas_module_readiness(sources, panels, membership_spec = membership_spec)
   semantic_outputs <- build_semantic_outputs(
     project_root = project_root,
     sources = sources,
@@ -308,7 +309,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels = panels,
     column_profiles = column_profiles,
     min_cell_count = atlas_min_cell_count(),
-    project_root = project_root
+    project_root = project_root,
+    membership_spec = membership_spec
   )
   legacy_resource_audit <- build_legacy_cartography_source_resolution_audit(project_root = project_root)
   source_resolution_attempts <- build_source_resolution_attempts(
@@ -692,11 +694,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility
   )
   output_paths$atlas_build_context <- atlas_save_build_context(run_dir, payload_args, output_paths, panel_paths, project_root)
-  reconstructed <- atlas_payload_from_run_outputs(run_dir, project_root)
+  reconstructed <- atlas_payload_from_run_outputs(run_dir, project_root, membership_spec = membership_spec)
   payload <- reconstructed$payload
   memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
   manifest_paths <- c(output_paths,panel_paths,atlas_context_input_paths(run_dir,reconstructed$context,project_root),list(memory_log=memory_log_path))
-  site_paths <- write_static_atlas(run_dir,payload,project_root=project_root,output_evidence=reconstructed$tables,manifest_paths=manifest_paths)
+  site_paths <- write_static_atlas(run_dir,payload,project_root=project_root,output_evidence=reconstructed$tables,manifest_paths=manifest_paths,membership_spec=membership_spec)
   manifest_path <- site_paths$manifest
   log_event("info", "", "Static atlas written")
   log_event("info", "", "Output manifest written")

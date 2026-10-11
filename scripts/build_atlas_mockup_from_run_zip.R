@@ -168,6 +168,8 @@ project_artifacts <- c(
   "R/utils.R",
   "R/dalycare_preflight.R",
   "R/source_map.R",
+  "R/clinical_source_membership.R",
+  "inst/config/clinical-source-membership.json",
   "R/db_profile.R",
   "R/ki67_discovery.R",
   "R/patobank_ki67_cartography.R",
@@ -278,13 +280,15 @@ semantic_outputs <- build_semantic_outputs(
   panels = panels,
   min_cell_count = atlas_min_cell_count()
 )
+membership_spec <- load_clinical_source_membership(project_root)
 product_outputs <- build_product_layer_outputs(
   semantic_outputs = semantic_outputs,
   sources = sources,
   panels = panels,
   column_profiles = column_profiles,
   min_cell_count = atlas_min_cell_count(),
-  project_root = project_root
+  project_root = project_root,
+  membership_spec = membership_spec
 )
 write_csv(semantic_outputs$dictionary, file.path(mock_output_dir, "atlas_semantic_data_dictionary.csv"))
 write_csv(semantic_outputs$value_map, file.path(mock_output_dir, "atlas_semantic_value_map.csv"))
@@ -596,9 +600,11 @@ payload <- atlas_payload(
   remaining_activation_plan = remaining_activation_plan,
   ki67_discovery = ki67_discovery,
   patobank_ki67_percent = patobank_ki67_percent,
-  mcl_triangle_feasibility = mcl_triangle_feasibility
+  mcl_triangle_feasibility = mcl_triangle_feasibility,
+  membership_spec = membership_spec,
+  membership_origin = 'imported_snapshot'
 )
-site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root)
+site_paths <- write_static_atlas(mock_dir, payload, project_root = project_root, membership_spec = membership_spec)
 
 readme <- c(
   "DALY-CARE Atlas V33 coverage mock-up",

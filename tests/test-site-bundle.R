@@ -19,7 +19,11 @@ actual <- normalizePath(list.files(file.path(tmp,'site'),recursive=TRUE,full.nam
 stopifnot(setequal(actual,normalizePath(unlist(paths$assets),winslash='/')))
 stopifnot(!is.null(paths$manifest),file.exists(paths$manifest))
 manifest <- read.csv(paths$manifest,stringsAsFactors=FALSE)
-stopifnot(setequal(manifest$relative_path,paste0('site/',list.files(file.path(tmp,'site'),recursive=TRUE))))
+stopifnot(setequal(manifest$relative_path,c(paste0('site/',list.files(file.path(tmp,'site'),recursive=TRUE)),
+  relative_path(clinical_source_membership_path(root),tmp))))
+member <- manifest[manifest$artifact_id=='clinical_source_membership',,drop=FALSE]
+stopifnot(nrow(member)==1L,member$clinical_source_inventory_version=='2026-10-11-clinical-source-1',
+  member$input_md5==unname(tools::md5sum(clinical_source_membership_path(root))))
 prior <- tools::md5sum(c(actual,paths$manifest))
 Sys.setenv(DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES='1')
 failed <- try(atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload'),silent=TRUE)

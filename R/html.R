@@ -1,4 +1,5 @@
-write_static_atlas <- function(run_dir, payload, project_root = ".", output_evidence = NULL, manifest_paths = list()) {
+write_static_atlas <- function(run_dir, payload, project_root = ".", output_evidence = NULL, manifest_paths = list(), membership_spec = NULL) {
+  if (is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
   if (!exists("atlas_public_privacy", mode = "function")) {
     source(file.path(project_root, "R", "public_privacy.R"), encoding = "UTF-8")
   }
@@ -14,7 +15,7 @@ write_static_atlas <- function(run_dir, payload, project_root = ".", output_evid
   payload <- atlas_public_privacy(payload,project_root,atlas_effective_threshold(payload))
   if(is.null(output_evidence)) output_evidence <- atlas_output_evidence(NULL,project_root,payload)
   provenance <- if(any(vapply(output_evidence,function(t) identical(t$provenance,'csv_run'),logical(1)))) 'csv_outputs' else 'legacy_payload'
-  atlas_write_site_bundle(file.path(run_dir,'site'),payload,output_evidence,project_root,provenance,manifest_paths)
+  atlas_write_site_bundle(file.path(run_dir,'site'),payload,output_evidence,project_root,provenance,manifest_paths,membership_spec=membership_spec)
 }
 
 empty_streaming_progress_summary <- function() {
@@ -119,7 +120,8 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           remaining_activation_plan = NULL,
                           ki67_discovery = NULL,
                           patobank_ki67_percent = NULL,
-                          mcl_triangle_feasibility = NULL) {
+                          mcl_triangle_feasibility = NULL, membership_spec = NULL,
+                          membership_origin = 'fresh_run') {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -205,7 +207,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     x
   })
   module_readiness <- panel_or_empty(panels, "atlas_module_readiness")
-  list(
+  payload <- list(
     run_id = run_id,
     generated_at = generated_at,
     builder_credit = atlas_builder_credit(),
@@ -242,7 +244,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
       action_items = action_items
     ),
     review_registry_sections = review_registry_sections(panels),
-    review_clinical_sections = review_clinical_sections(sources),
+    review_clinical_sections = review_clinical_sections(sources, membership_spec = membership_spec),
     review_treatment_sections = review_treatment_sections(sources, panels),
     review_laboratory_sections = review_laboratory_sections(sources, panels),
     review_situation_sections = review_situation_sections(panels),
@@ -315,6 +317,12 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     checks = public_rows(public_checks, max_rows = 500),
     panels = lapply(public_panels, public_rows, max_rows = 250)
   )
+  if (!is.null(membership_spec)) {
+    payload$clinical_source_inventory <- clinical_source_inventory(
+      payload$catalog_rows, membership_spec, evidence_origin = membership_origin,
+      inventory_limited = nrow(sources) > length(payload$catalog_rows))
+  }
+  payload
 }
 
 atlas_builder_credit <- function() {
@@ -464,8 +472,16 @@ review_registry_sections <- function(panels) {
   )
 }
 
-review_clinical_sections <- function(sources) {
+review_clinical_sections <- function(sources, membership_spec = NULL) {
   safe_sources <- public_sources(sources)
+  if (!is.null(membership_spec)) {
+    inventory <- clinical_source_inventory(sources, membership_spec)
+    reviewed <- Filter(function(panel) !is.null(panel[['review_key']]), membership_spec[['panels']])
+    rows <- lapply(reviewed, function(panel) public_rows(
+      clinical_source_frame_for_panel(safe_sources, inventory, panel[['panel_id']]), max_rows = 100))
+    names(rows) <- vapply(reviewed, function(panel) panel[['review_key']], character(1))
+    return(rows)
+  }
   list(
     diagnoses = public_rows(review_sources_like(safe_sources, c("diagnos", "diagnos", "diag", "cancer", "tumor")), max_rows = 100),
     admissions = public_rows(review_sources_like(safe_sources, c("adt", "adm", "kontakt", "contact", "skadestue", "icu")), max_rows = 100),
@@ -717,7 +733,7 @@ review_sources_by_status <- function(sources, patterns) {
   out[, keep, drop = FALSE]
 }
 
-atlas_module_readiness <- function(sources, panels = list()) {
+atlas_module_readiness <- function(sources, panels = list(), membership_spec = NULL) {
   specs <- list(
     list("Overview", "Temporal coverage", c("date", "dt", "dato", "time"), c("atlas_temporal")),
     list("Overview", "Regional coverage", c("region", "shak", "organisation", "hospital"), c("atlas_spatial", "choropleth")),
@@ -737,13 +753,22 @@ atlas_module_readiness <- function(sources, panels = list()) {
     list("Laboratory & Diagnostics", "Isotype finder", c("isotype", "mspike", "m_component", "lab", "npu"), c("isotype")),
     list("Laboratory & Diagnostics", "Microbiology / MiBa diagnostics", c("microbiology", "miba", "culture", "resistance", "susceptibility"), character()),
     list("Laboratory & Diagnostics", "Pathology / PATOBANK diagnostics", c("molecular", "patholog", "pato", "snomed", "biopsy"), character()),
-    list("Laboratory & Diagnostics", "Molecular, pathology, and biobank readiness", c("molecular", "patholog", "pato", "biobank", "snomed"), character()),
+    list("Laboratory & Diagnostics", "Biobank sample inventory", c("biobank"), character()),
     list("EHR Modules", "SP modules", c("^sp_", "sp "), character()),
     list("EHR Modules", "SDS/LPR modules", c("^sds", "^lpr", "lpr3", "sksube", "procedure"), character()),
     list("EHR Modules", "DALY views", c("dalycare", "view_", "views", "survival"), character()),
     list("Infrastructure", "Resolution and DB streaming", c(""), c("source_availability_drift", "atlas_streaming_progress_summary", "atlas_module_readiness"))
   )
+  covered <- c('DaMyDa registry' = 'reg_damyda', 'LYFO registry' = 'reg_lyfo', 'CLL registry' = 'reg_cll',
+    'Diagnoses and tumors' = 'diagnosis_atlas', 'Admissions and ADT' = 'clinical_adt',
+    'Imaging and radiotherapy diagnostics' = 'clinical_imaging', 'Vitals' = 'clinical_vitals',
+    'Notes' = 'clinical_notes', 'Social history' = 'clinical_social_history',
+    'Microbiology / MiBa diagnostics' = 'clinical_microbiology',
+    'Pathology / PATOBANK diagnostics' = 'clinical_pathology', 'Biobank sample inventory' = 'clinical_biobank')
+  inventory <- if (!is.null(membership_spec)) clinical_source_inventory(sources, membership_spec) else NULL
   rows <- lapply(specs, function(spec) {
+    if (!is.null(inventory) && spec[[2]] %in% names(covered)) return(
+      clinical_source_readiness_row(inventory, unname(covered[[spec[[2]]]]), spec[[1]], spec[[2]]))
     atlas_module_readiness_row(
       sources = sources,
       panels = panels,
@@ -754,6 +779,22 @@ atlas_module_readiness <- function(sources, panels = list()) {
     )
   })
   bind_rows_base(rows)
+}
+
+clinical_source_readiness_row <- function(inventory, panel_id, domain, module) {
+  rows <- clinical_source_rows_for_panel(inventory, panel_id)
+  unavailable <- identical(inventory$inventory_state, 'unavailable')
+  source_count <- if (unavailable) NA_integer_ else length(rows)
+  loaded_count <- if (unavailable) NA_integer_ else sum(vapply(rows, function(row) identical(row$load_state, 'loaded'), logical(1)))
+  unknown <- any(vapply(rows, function(row) identical(row$load_state, 'unknown'), logical(1)))
+  status <- if (unavailable) 'source_inventory_unavailable' else if (loaded_count > 0L) 'source_ready' else if (unknown) 'source_state_unknown' else if (source_count > 0L) 'mapped_not_loaded' else 'not_mapped'
+  message <- paste('Reviewed exact source identities in the supplied catalog; source totals, fields and dates are not additive.',
+    'Source state does not establish eligible clinical summaries.',
+    if (unavailable) 'Source inventory unavailable.' else if (inventory$inventory_state == 'limited') 'Supplied source inventory is limited; omitted identities are unknown.' else 'Missing identities are not evidence of upstream absence.',
+    if (any(vapply(rows, function(row) row$catalog_identity_state == 'duplicate', logical(1)))) 'Duplicate identity counts and load states are ambiguous.' else '')
+  data.frame(domain = domain, module = module, status = status, source_count = source_count,
+    loaded_count = loaded_count, n_rows = NA_real_, n_columns = NA_real_, date_min = '', date_max = '',
+    evidence_panels = '', message = trimws(message), stringsAsFactors = FALSE)
 }
 
 atlas_module_readiness_row <- function(sources, panels, domain, module, source_patterns, panel_patterns) {

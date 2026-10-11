@@ -8,6 +8,7 @@ source(file.path(project_root, "R", "utils.R"))
 source(file.path(project_root, "R", "source_map.R"))
 source(file.path(project_root, "R", "db_profile.R"))
 source(file.path(project_root, "R", "source_reconciliation.R"))
+source(file.path(project_root, "R", "clinical_source_membership.R"))
 
 rows <- list()
 add <- function(status, check_id, message, detail = "") {
@@ -35,6 +36,8 @@ required_files <- c(
   "config/source-map.dalycare64.production.tsv",
   "config/source-map.example.tsv",
   "R/source_reconciliation.R",
+  "R/clinical_source_membership.R",
+  "inst/config/clinical-source-membership.json",
   "R/db_profile.R",
   "R/run_atlas.R",
   "scripts/source_recovery_dry_run.R",
@@ -47,6 +50,13 @@ for (file in required_files) {
   } else {
     add("error", "required_file_missing", paste("File missing:", file))
   }
+}
+
+membership <- tryCatch(load_clinical_source_membership(project_root), error = identity)
+if (inherits(membership, 'error')) {
+  add('error', 'clinical_source_membership_invalid', conditionMessage(membership))
+} else {
+  add('ok', 'clinical_source_membership_reviewed', paste('Reviewed source inventory:', membership$inventory_version))
 }
 
 expected <- tryCatch(read_expected_dalycare_resources(project_root), error = function(e) e)

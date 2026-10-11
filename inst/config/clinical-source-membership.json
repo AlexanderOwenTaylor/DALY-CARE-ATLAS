@@ -1,0 +1,591 @@
+{
+  "schema_version": 1,
+  "inventory_version": "2026-10-11-clinical-source-1",
+  "panels": [
+    {
+      "panel_id": "diagnosis_atlas",
+      "sources": [
+        {
+          "membership_id": "diagnoses_lpr",
+          "source_keys": [
+            "SDS_t_diag",
+            "t_diag"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "diagnosis_codes",
+          "canonical_resource_id": "t_diag"
+        },
+        {
+          "membership_id": "diagnoses_lpr3",
+          "source_keys": [
+            "SDS_diagnoser",
+            "diagnoser"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "diagnosis_codes",
+          "canonical_resource_id": "diagnoser"
+        },
+        {
+          "membership_id": "tumor_registry",
+          "source_keys": [
+            "SDS_t_tumor",
+            "t_tumor",
+            "SDS_tumor"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "tumor_registry",
+          "canonical_resource_id": "t_tumor"
+        },
+        {
+          "membership_id": "dalycare_diagnoses",
+          "source_keys": [
+            "t_dalycare_diagnoses",
+            "T_DALYCARE_DIAGNOSES",
+            "dalycare_diagnoses"
+          ],
+          "membership_role": "derived_view",
+          "evidence_layer": "diagnosis_backbone",
+          "canonical_resource_id": "t_dalycare_diagnoses"
+        },
+        {
+          "membership_id": "diagnoses_view_all",
+          "source_keys": [
+            "view_diagnosses_all"
+          ],
+          "membership_role": "derived_view",
+          "evidence_layer": "diagnosis_view"
+        },
+        {
+          "membership_id": "diagnoses_view_hosp_region",
+          "source_keys": [
+            "view_diagnoses_all_hosp_region"
+          ],
+          "membership_role": "derived_view",
+          "evidence_layer": "diagnosis_view",
+          "canonical_resource_id": "diagnoses_all"
+        },
+        {
+          "membership_id": "diagnoses_view_dalycare",
+          "source_keys": [
+            "view_dalycare_diagnoses"
+          ],
+          "membership_role": "derived_view",
+          "evidence_layer": "diagnosis_view",
+          "canonical_resource_id": "t_dalycare_diagnoses"
+        },
+        {
+          "membership_id": "diagnoses_all",
+          "source_keys": [
+            "diagnoses_all",
+            "Diagnoses_all",
+            "view_diagnoses_all"
+          ],
+          "membership_role": "derived_view",
+          "evidence_layer": "diagnosis_backbone",
+          "canonical_resource_id": "diagnoses_all"
+        },
+        {
+          "membership_id": "sp_problem_diagnoses",
+          "source_keys": [
+            "Aktive_Problemliste_Diagnoser",
+            "SP_Aktive_Problemliste_Diagnoser",
+            "SP_AktiveProblemlisteDiagnoser"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "problem_list_diagnoses",
+          "canonical_resource_id": "Aktive_Problemliste_Diagnoser"
+        },
+        {
+          "membership_id": "sp_contact_diagnoses",
+          "source_keys": [
+            "Behandlingskontakter_diagnoser",
+            "SP_Behandlingskontakter_diagnoser",
+            "SP_BehandlingskontakterOgDiagnoser"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "contact_linked_diagnoses",
+          "canonical_resource_id": "Behandlingskontakter_diagnoser"
+        }
+      ],
+      "review_key": "diagnoses"
+    },
+    {
+      "panel_id": "clinical_adt",
+      "sources": [
+        {
+          "membership_id": "sp_adt_events",
+          "source_keys": [
+            "SP_ADT_haendelser",
+            "SP_ADT_Haendelser",
+            "ADT_Haendelser"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "adt_workflow",
+          "canonical_resource_id": "SP_ADT_Haendelser"
+        },
+        {
+          "membership_id": "sp_icu_stays",
+          "source_keys": [
+            "SP_ITAOphold",
+            "SP_ITA_Ophold",
+            "ITAOphold",
+            "ITA_Ophold"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "icu_stay",
+          "canonical_resource_id": "ITAOphold"
+        },
+        {
+          "membership_id": "admissions_lpr",
+          "source_keys": [
+            "SDS_t_adm",
+            "t_adm"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "admissions",
+          "canonical_resource_id": "t_adm"
+        },
+        {
+          "membership_id": "contacts_lpr3",
+          "source_keys": [
+            "SDS_kontakter",
+            "kontakter"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "care_contacts",
+          "canonical_resource_id": "kontakter"
+        },
+        {
+          "membership_id": "sp_contact_diagnoses",
+          "source_keys": [
+            "Behandlingskontakter_diagnoser",
+            "SP_Behandlingskontakter_diagnoser",
+            "SP_BehandlingskontakterOgDiagnoser"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "contact_linked_diagnoses",
+          "canonical_resource_id": "Behandlingskontakter_diagnoser"
+        },
+        {
+          "membership_id": "sp_movement_history",
+          "source_keys": [
+            "Flytningshistorik",
+            "SP_Flytningshistorik"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "movement_history",
+          "canonical_resource_id": "Flytningshistorik"
+        },
+        {
+          "membership_id": "hospital_transfer_lpr",
+          "source_keys": [
+            "SDS_t_udtilsgh",
+            "t_udtilsgh",
+            "SDS_udtilsgh"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "hospital_transfer",
+          "canonical_resource_id": "t_udtilsgh"
+        },
+        {
+          "membership_id": "pathways_lpr3",
+          "source_keys": [
+            "SDS_forloeb",
+            "forloeb"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "care_pathways",
+          "canonical_resource_id": "forloeb"
+        },
+        {
+          "membership_id": "pathway_markers_lpr3",
+          "source_keys": [
+            "forloebsmarkoerer",
+            "SDS_forloebsmarkoerer"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "pathway_markers",
+          "canonical_resource_id": "forloebsmarkoerer"
+        }
+      ],
+      "review_key": "admissions"
+    },
+    {
+      "panel_id": "clinical_notes",
+      "sources": [
+        {
+          "membership_id": "sp_notes_part1",
+          "source_keys": [
+            "SP_Journalnotater_Del1",
+            "SP_Journalnotater_del1",
+            "Journalnotater_del1",
+            "Journalnotater_Del1"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "clinical_note_metadata",
+          "canonical_resource_id": "Journalnotater_del1"
+        },
+        {
+          "membership_id": "sp_notes_part2",
+          "source_keys": [
+            "Journalnotater_del2",
+            "SP_Journalnotater_del2",
+            "SP_Journalnotater_Del2",
+            "Journalnotater_Del2"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "clinical_note_metadata",
+          "canonical_resource_id": "Journalnotater_del2"
+        },
+        {
+          "membership_id": "pathology_microscopy_text",
+          "source_keys": [
+            "t_mikro",
+            "SDS_t_mikro",
+            "SDS_t_mikro_ny",
+            "t_mikro_ny"
+          ],
+          "membership_role": "text_availability",
+          "evidence_layer": "pathology_microscopy_text",
+          "canonical_resource_id": "t_mikro"
+        },
+        {
+          "membership_id": "pathology_conclusion_text",
+          "source_keys": [
+            "t_konk",
+            "SDS_t_konk",
+            "SDS_t_konk_ny",
+            "t_konk_ny"
+          ],
+          "membership_role": "text_availability",
+          "evidence_layer": "pathology_conclusion_text",
+          "canonical_resource_id": "t_konk"
+        }
+      ],
+      "review_key": "notes"
+    },
+    {
+      "panel_id": "clinical_microbiology",
+      "sources": [
+        {
+          "membership_id": "microbiology_analysis",
+          "source_keys": [
+            "microbiology_analysis",
+            "PERSIMUNE_microbiology_analysis"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "microbiology_analysis",
+          "canonical_resource_id": "microbiology_analysis"
+        },
+        {
+          "membership_id": "microbiology_culture",
+          "source_keys": [
+            "microbiology_culture",
+            "PERSIMUNE_microbiology_culture"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "microbiology_culture",
+          "canonical_resource_id": "microbiology_culture"
+        },
+        {
+          "membership_id": "microbiology_resistance",
+          "source_keys": [
+            "microbiology_culture_resistance",
+            "PERSIMUNE_microbiology_culture_resistance"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "microbiology_susceptibility",
+          "canonical_resource_id": "microbiology_culture_resistance"
+        },
+        {
+          "membership_id": "microbiology_microscopy",
+          "source_keys": [
+            "microbiology_microscopy",
+            "PERSIMUNE_microbiology_microscopy"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "microbiology_microscopy",
+          "canonical_resource_id": "microbiology_microscopy"
+        },
+        {
+          "membership_id": "sp_blood_culture_part1",
+          "source_keys": [
+            "SP_Bloddyrkning_Del1",
+            "SP_Bloddyrkning_del1",
+            "Bloddyrkning_del1"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "blood_culture_workflow_part1",
+          "canonical_resource_id": "Bloddyrkning_del1"
+        },
+        {
+          "membership_id": "sp_blood_culture_part2",
+          "source_keys": [
+            "SP_Bloddyrkning_Del2",
+            "SP_Bloddyrkning_del2",
+            "Bloddyrkning_del2"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "blood_culture_workflow_part2",
+          "canonical_resource_id": "Bloddyrkning_del2"
+        },
+        {
+          "membership_id": "sp_blood_culture_part3",
+          "source_keys": [
+            "SP_Bloddyrkning_Del3",
+            "SP_Bloddyrkning_del3",
+            "Bloddyrkning_del3"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "blood_culture_workflow_part3",
+          "canonical_resource_id": "Bloddyrkning_del3"
+        },
+        {
+          "membership_id": "sp_blood_culture_part4",
+          "source_keys": [
+            "SP_Bloddyrkning_Del4",
+            "SP_Bloddyrkning_del4",
+            "Bloddyrkning_del4"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "blood_culture_workflow_part4",
+          "canonical_resource_id": "Bloddyrkning_del4"
+        }
+      ]
+    },
+    {
+      "panel_id": "clinical_imaging",
+      "sources": [
+        {
+          "membership_id": "sp_imaging_part1",
+          "source_keys": [
+            "SP_BilleddiagnostikeUndersoegelser_Del1",
+            "SP_BilleddiagnostiskeUndersoegelser_Del1",
+            "SP_BilleddiagnostiskeUndersøgelser_Del1",
+            "BilleddiagnostikeUndersøgelser_Del1"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "imaging_examination_metadata",
+          "canonical_resource_id": "BilleddiagnostikeUndersøgelser_Del1"
+        },
+        {
+          "membership_id": "sp_imaging_part2",
+          "source_keys": [
+            "SP_BilleddiagnostikeUndersoegelser_Del2",
+            "SP_BilleddiagnostiskeUndersoegelser_Del2",
+            "SP_BilleddiagnostikeUndersogelser_Del2",
+            "SP_BilleddiagnostiskeUndersogelser_Del2",
+            "SP_BilleddiagnostikeUndersøgelser_Del2",
+            "SP_BilleddiagnostiskeUndersøgelser_Del2",
+            "BilleddiagnostikeUndersøgelser_Del2",
+            "BilleddiagnostiskeUndersøgelser_Del2",
+            "BilleddiagnostikeUndersogelser_Del2",
+            "BilleddiagnostiskeUndersogelser_Del2"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "imaging_report_availability",
+          "canonical_resource_id": "BilleddiagnostikeUndersøgelser_Del2"
+        },
+        {
+          "membership_id": "procedures_lpr",
+          "source_keys": [
+            "SDS_t_sksube",
+            "t_sksube",
+            "SDS_sksube"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "full_procedure_source",
+          "canonical_resource_id": "t_sksube"
+        },
+        {
+          "membership_id": "procedures_other_lpr3",
+          "source_keys": [
+            "SDS_procedurer_andre",
+            "SDS_procedure_andre",
+            "procedure_andre",
+            "procedurer_andre"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "full_procedure_source",
+          "canonical_resource_id": "procedure_andre"
+        },
+        {
+          "membership_id": "procedures_surgical_lpr3",
+          "source_keys": [
+            "SDS_procedurer_kirurgi",
+            "SDS_procedure_kirurgi",
+            "procedure_kirurgi",
+            "procedurer_kirurgi"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "full_surgical_procedure_source",
+          "canonical_resource_id": "procedure_kirurgi"
+        },
+        {
+          "membership_id": "registry_damyda",
+          "source_keys": [
+            "RKKP_DaMyDa",
+            "rkkp_damyda",
+            "DaMyDa",
+            "damyda"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "registry_imaging_fields",
+          "canonical_resource_id": "RKKP_DaMyDa"
+        }
+      ],
+      "review_key": "imaging"
+    },
+    {
+      "panel_id": "clinical_pathology",
+      "sources": [
+        {
+          "membership_id": "pathology_coded",
+          "source_keys": [
+            "SDS_pato",
+            "pato",
+            "PATOBANK"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "coded_pathology",
+          "canonical_resource_id": "pato"
+        },
+        {
+          "membership_id": "pathology_microscopy_text",
+          "source_keys": [
+            "t_mikro",
+            "SDS_t_mikro",
+            "SDS_t_mikro_ny",
+            "t_mikro_ny"
+          ],
+          "membership_role": "text_availability",
+          "evidence_layer": "pathology_microscopy_text",
+          "canonical_resource_id": "t_mikro"
+        },
+        {
+          "membership_id": "pathology_conclusion_text",
+          "source_keys": [
+            "t_konk",
+            "SDS_t_konk",
+            "SDS_t_konk_ny",
+            "t_konk_ny"
+          ],
+          "membership_role": "text_availability",
+          "evidence_layer": "pathology_conclusion_text",
+          "canonical_resource_id": "t_konk"
+        },
+        {
+          "membership_id": "tumor_registry",
+          "source_keys": [
+            "SDS_t_tumor",
+            "t_tumor",
+            "SDS_tumor"
+          ],
+          "membership_role": "context",
+          "evidence_layer": "tumor_registry",
+          "canonical_resource_id": "t_tumor"
+        }
+      ]
+    },
+    {
+      "panel_id": "clinical_biobank",
+      "sources": [
+        {
+          "membership_id": "biobank_samples",
+          "source_keys": [
+            "BIOBANK_SAMPLES",
+            "LAB_BIOBANK_SAMPLES"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "sample_inventory",
+          "canonical_resource_id": "BIOBANK_SAMPLES"
+        }
+      ]
+    },
+    {
+      "panel_id": "clinical_vitals",
+      "sources": [
+        {
+          "membership_id": "sp_vital_events",
+          "source_keys": [
+            "SP_VitaleVaerdier",
+            "VitaleVaerdier"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "vital_sign_events",
+          "canonical_resource_id": "SP_VitaleVaerdier"
+        }
+      ],
+      "review_key": "vitals"
+    },
+    {
+      "panel_id": "clinical_social_history",
+      "sources": [
+        {
+          "membership_id": "sp_social_history",
+          "source_keys": [
+            "SP_SocialHX",
+            "SP_Social_Hx",
+            "SP_SocialHx",
+            "SocialHX",
+            "SocialHx"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "social_history",
+          "canonical_resource_id": "SP_Social_Hx"
+        }
+      ],
+      "review_key": "social_history"
+    },
+    {
+      "panel_id": "reg_damyda",
+      "sources": [
+        {
+          "membership_id": "registry_damyda",
+          "source_keys": [
+            "RKKP_DaMyDa",
+            "rkkp_damyda",
+            "DaMyDa",
+            "damyda"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "disease_registry",
+          "canonical_resource_id": "RKKP_DaMyDa"
+        }
+      ]
+    },
+    {
+      "panel_id": "reg_lyfo",
+      "sources": [
+        {
+          "membership_id": "registry_lyfo",
+          "source_keys": [
+            "RKKP_LYFO",
+            "rkkp_lyfo",
+            "LYFO"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "disease_registry",
+          "canonical_resource_id": "RKKP_LYFO"
+        }
+      ]
+    },
+    {
+      "panel_id": "reg_cll",
+      "sources": [
+        {
+          "membership_id": "registry_cll",
+          "source_keys": [
+            "RKKP_CLL",
+            "rkkp_cll",
+            "CLL",
+            "DCLLR"
+          ],
+          "membership_role": "primary",
+          "evidence_layer": "disease_registry",
+          "canonical_resource_id": "RKKP_CLL"
+        }
+      ]
+    }
+  ]
+}

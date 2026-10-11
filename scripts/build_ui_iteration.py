@@ -7,10 +7,12 @@ from pathlib import Path
 from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold
 from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, read_build_context, _bound_source_file
 from site_bundle import write_site_bundle, decode_transport
+from clinical_source_membership import load_membership_resource, clinical_source_inventory
 
 
 def build(input_dir, output_dir, project_root, run_dir=None):
     input_dir, output_dir, project_root = map(Path, (input_dir, output_dir, project_root))
+    membership_spec, membership_input = load_membership_resource(project_root)
     registry = load_registry(project_root)
     source = input_dir / 'DALYCARE_atlas_payload.js'
     if source.stat().st_size > registry['input_max_bytes']:
@@ -36,11 +38,18 @@ def build(input_dir, output_dir, project_root, run_dir=None):
     }
     payload = sanitize_public_payload(payload, min_cell_count=minimum, project_root=project_root)
     payload['display_metadata'].update(payload['privacy_metadata'])
+    # The legacy Clinical catalog has a 1000-row guard ceiling. Saturation means
+    # possible truncation, not proof of omitted rows or complete upstream coverage.
+    # Matching CSV evidence stays separate; it never replaces this snapshot basis.
+    catalog = payload.get('catalog_rows')
+    payload['clinical_source_inventory'] = clinical_source_inventory(
+        catalog, membership_spec, evidence_origin='imported_snapshot',
+        inventory_limited=isinstance(catalog, list) and len(catalog) >= 1000)
     errors = audit_public_payload(payload)
     if errors:
         raise ValueError(f'Public privacy audit failed at {len(errors)} paths')
     tables = collect_output_evidence(run_dir, project_root, payload)
-    inputs = [dict(path=str(source.resolve()),bytes=source.stat().st_size,provenance='legacy_payload')]
+    inputs = [dict(path=str(source.resolve()),bytes=source.stat().st_size,provenance='legacy_payload'), membership_input]
     for spec in registry['artifacts']:
         base = project_root if spec.get('resource') else run_dir
         if base is not None:

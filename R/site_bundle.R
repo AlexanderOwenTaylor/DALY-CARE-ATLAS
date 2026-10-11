@@ -34,7 +34,12 @@ atlas_bundle_field_labels <- function(dictionary) {
   }
   labels
 }
-atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list()) {
+atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list(),membership_spec=NULL) {
+  if(is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
+  membership_path <- clinical_source_membership_path(project_root)
+  if(!is.null(payload$clinical_source_inventory) && !identical(payload$clinical_source_inventory$inventory_version,membership_spec$inventory_version)) stop('Clinical-source inventory version differs from required resource.',call.=FALSE)
+  manifest_paths <- manifest_paths[!vapply(manifest_paths,function(path)identical(normalizePath(path,winslash='/',mustWork=FALSE),membership_path),logical(1))]
+  manifest_paths$clinical_source_membership <- membership_path
   registry <- atlas_output_registry(project_root); minimum <- atlas_effective_threshold(payload)
   if(!exists('atlas_public_privacy',mode='function')) source(file.path(project_root,'R/public_privacy.R'),encoding='UTF-8')
   if(!provenance %in% c('csv_outputs','legacy_payload')) stop('Invalid entry provenance',call.=FALSE)
@@ -133,6 +138,13 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   if(any(file.info(file.path(stage,files))$size==0)) stop('Empty site asset',call.=FALSE)
   stage_assets <- as.list(setNames(file.path(stage,files),paste0('site_',seq_along(files))))
   internal <- output_manifest(c(manifest_paths,stage_assets),parent)
+  internal$clinical_source_inventory_version <- ''
+  internal$clinical_source_inventory_schema_version <- NA_integer_
+  internal$input_md5 <- ''
+  membership_row <- internal$artifact_id == 'clinical_source_membership'
+  internal$clinical_source_inventory_version[membership_row] <- membership_spec$inventory_version
+  internal$clinical_source_inventory_schema_version[membership_row] <- membership_spec$schema_version
+  internal$input_md5[membership_row] <- unname(tools::md5sum(membership_path))
   site_rows <- match(unlist(stage_assets,use.names=FALSE),internal$path)
   if(anyNA(site_rows)) stop('Incomplete staged manifest',call.=FALSE)
   internal$relative_path[site_rows] <- paste0(basename(output),'/',files)

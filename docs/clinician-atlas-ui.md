@@ -304,6 +304,41 @@ parity; its R Unicode-whitespace validation finding was fixed and rechecked.
 Unknown names and dictionary-only pairs do not create labels for another source
 or invent observed profiles. All published row objects remain unchanged.
 
+Iteration18 replaces broad source-name grouping in twelve covered Clinical
+topics and fresh R review/readiness producers with a shared installed exact-key
+inventory. It covers diagnoses, encounters, notes, microbiology, imaging,
+pathology, biobank, vital events, social history and the three disease registries.
+Aliases remain distinct current identities; the inventory never adds their
+counts or copies field/coverage evidence between them. Duplicate catalog keys,
+conflicting lineage, missing metadata and limited exports have explicit states.
+Other source resolvers and clinical concepts are outside this finite change.
+
+The historical Python rebuild adds only a derived membership object; original
+clinical evidence and CSV-derived rows remain unchanged. Fresh R runs deliberately
+regenerate covered review/readiness metadata and avoid additive source KPIs.
+Both publication paths require the complete reviewed resource. A historical
+catalog at its 1,000-row cap is conservatively marked possibly incomplete;
+fresh R detects actual truncation. Current readiness uses compact topic cards,
+with raw and historical supplied metadata available in disclosures.
+
+The shared literal fixtures exercise exact identities, retained aliases,
+duplicates, missing/malformed input and bounded diagnostics. Independent review
+also checks R exact list access, duplicate JSON keys, Unicode blankness and
+relocation without trusting stale external manifest paths. X1 rejected the first
+wide readiness table; the compact replacement was checked on desktop and phone.
+Z3 and W0 followed exact biobank, social history, microbiology, pathology and CLL
+source/field/coverage routes. These checks do not validate registry value codes.
+The existing product-layer test's missing clinical-concept assertion also fails
+on pristine iteration17 with the same environment; it is a recorded baseline
+limitation, not a passing whole-project R suite.
+
+The final iteration18 synthetic pipeline passed one-click, CLI, offline and
+relocated-project rebuilds, rollback, complete manifests, coverage controls and
+actual publication through the installed R namespace. Required installed-resource
+failure preserves the prior site. Its installation still uses the temporary
+synthetic-contact fixture described below; the untouched package metadata has
+not been changed.
+
 ### Optional local export checks and benchmarks
 
 Historical export-to-export checks are optional. Set

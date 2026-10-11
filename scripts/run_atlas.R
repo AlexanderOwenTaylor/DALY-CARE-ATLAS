@@ -71,6 +71,7 @@ load_atlas_runtime <- function(project_root = find_project_root()) {
   source(file.path(project_root, "R", "profiler.R"))
   source(file.path(project_root, "R", "db_profile.R"))
   source(file.path(project_root, "R", "source_reconciliation.R"))
+  source(file.path(project_root, "R", "clinical_source_membership.R"))
   source(file.path(project_root, "R", "situation_report.R"))
   source(file.path(project_root, "R", "action_items.R"))
   source(file.path(project_root, "R", "semantic_dictionary.R"))

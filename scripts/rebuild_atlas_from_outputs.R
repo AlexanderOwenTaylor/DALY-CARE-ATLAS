@@ -11,9 +11,12 @@ manifest_path <- file.path(run_dir,'outputs/output_manifest.csv')
 existing <- if(file.exists(manifest_path)) utils::read.csv(manifest_path,stringsAsFactors=FALSE,check.names=FALSE,fileEncoding='UTF-8') else data.frame()
 inputs <- atlas_context_input_paths(run_dir,rebuilt$context,project_root)
 if(nrow(existing) && all(c('artifact_id','relative_path') %in% names(existing))) {
+  # The reviewed installed/project input is re-manifested from the current
+  # explicit resource; it is not a CSV output to rehydrate inside run_dir.
+  existing <- existing[existing$artifact_id!='clinical_source_membership',,drop=FALSE]
   previous <- setNames(lapply(existing$relative_path,function(p)atlas_confined_path(run_dir,p)),existing$artifact_id)
   previous <- previous[!startsWith(existing$relative_path,'site/')]
   inputs <- c(previous,inputs)
 }
-paths <- write_static_atlas(run_dir,rebuilt$payload,project_root=project_root,output_evidence=rebuilt$tables,manifest_paths=inputs)
+paths <- write_static_atlas(run_dir,rebuilt$payload,project_root=project_root,output_evidence=rebuilt$tables,manifest_paths=inputs,membership_spec=rebuilt$membership_spec)
 cat('Rebuilt from strict CSV inputs:',paths$html,'\n')

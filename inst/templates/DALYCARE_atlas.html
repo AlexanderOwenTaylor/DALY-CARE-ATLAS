@@ -1327,6 +1327,13 @@
     .domain-clinical-fields .source-evidence-links { margin: 6px 0; }
     .clinical-field-identity { font-size: 11px; color: var(--muted); }
     .domain-source-overview .caveat-box { padding: 10px 12px; margin: 0 0 12px; font-size: 13px; }
+    .source-readiness-card { align-self: start; overflow-wrap: normal; word-break: normal; }
+    .source-readiness-card h5 { margin: 0; font-size: 16px; line-height: 1.3; }
+    .source-readiness-facts { margin: 12px 0; }
+    .source-readiness-facts > div { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1.6fr); gap: 10px; margin: 8px 0; }
+    .source-readiness-facts dt { color: var(--muted); font-size: 12px; }
+    .source-readiness-facts dd { margin: 0; font-size: 13px; }
+    .source-readiness-facts dd span { display: block; }
     .home-notes { display: block; margin: 16px 0; }
     .home-export { margin: 14px 0; font-size: 13px; }
     .registry-numeric-card p { margin: 8px 0; }
@@ -4714,85 +4721,182 @@
         setHtml("clinical-variable-panel-links", rowsForTable(domainPanelRows.filter(row => (filtered.map(c => c.related_panel_ids || "").join(";")).includes(row.panel_id)), 200));
       }
       /* DOMAIN_SOURCE_EVIDENCE_START */
-      // Maintained exact domain inventories supplement the review arrays. Legacy review lists
-      // can be incomplete or contain stem-based false positives; matching catalog identities
-      // establish which declared sources are represented in this export.
+      // Labels and selected fields are presentation data. Supported supplied memberships
+      // govern source identities; maintained local identities support older exports only.
       const domainCurrentSourceSpecs = {
         diagnosis_atlas: { review: 'diagnoses', title: 'Diagnoses and disease sources', purpose: 'Find diagnosis codes, diagnosis types and source-specific cohort definitions. Derived views can overlap; source records are not unique people.', sources: [
-          {source:'SDS_t_diag',label:'Diagnosis codes (LPR)',fields:['c_diag','c_diagtype','c_tildiag']},
-          {source:'SDS_diagnoser',label:'Diagnosis codes (LPR3)',fields:['diagnosekode','diagnosetype','senere_afkraeftet','diagnosekode_parent']},
-          {source:'SDS_t_tumor',label:'Tumor registry diagnoses',fields:['c_icd10','d_diagnosedato','c_tnm_t']},
-          ...['t_dalycare_diagnoses','view_diagnosses_all','view_diagnoses_all_hosp_region','view_dalycare_diagnoses','diagnoses_all'].map(source=>({source,role:'Derived diagnosis view; validate its cohort and overlap before use.'})),
-          {source:'Aktive_Problemliste_Diagnoser',label:'Active problem-list diagnoses (SP)'},
-          {source:'Behandlingskontakter_diagnoser',label:'Contact-linked diagnoses (SP)',role:'Diagnoses attached to care contacts; not an admission count.'}
+          {membership_id:'diagnoses_lpr',source:'SDS_t_diag',label:'Diagnosis codes (LPR)',fields:['c_diag','c_diagtype','c_tildiag']},
+          {membership_id:'diagnoses_lpr3',source:'SDS_diagnoser',label:'Diagnosis codes (LPR3)',fields:['diagnosekode','diagnosetype','senere_afkraeftet','diagnosekode_parent']},
+          {membership_id:'tumor_registry',source:'SDS_t_tumor',label:'Tumor registry diagnoses',fields:['c_icd10','d_diagnosedato','c_tnm_t']},
+          ...[['dalycare_diagnoses','t_dalycare_diagnoses'],['diagnoses_view_all','view_diagnosses_all'],['diagnoses_view_hosp_region','view_diagnoses_all_hosp_region'],['diagnoses_view_dalycare','view_dalycare_diagnoses'],['diagnoses_all','diagnoses_all']].map(([membership_id,source])=>({membership_id,source,role:'Derived diagnosis view; validate its cohort and overlap before use.'})),
+          {membership_id:'sp_problem_diagnoses',source:'Aktive_Problemliste_Diagnoser',label:'Active problem-list diagnoses (SP)'},
+          {membership_id:'sp_contact_diagnoses',source:'Behandlingskontakter_diagnoser',label:'Contact-linked diagnoses (SP)',role:'Diagnoses attached to care contacts; not an admission count.'}
         ]},
         clinical_adt: { review: 'admissions', title: 'Admissions and care contacts', purpose: 'Explore admissions, discharges, transfers, intensive care and national contact records. A contact or workflow row does not establish a unique admission or person.', sources: [
-          {source:'SP_ADT_haendelser',fields:['event_type_name','effective_time','admission_type','kontakt_start_local_dttm'],role:'Admission, discharge and transfer event workflow.'},
-          {source:'SP_ITAOphold',fields:['icu_stay_start','icu_stay_end','resp_yn'],role:'Intensive care stay and respiratory-support fields.'},
-          {source:'SDS_t_adm',label:'Admissions (LPR)',fields:['d_inddto','d_uddto','c_pattype','c_adiag']},
-          {source:'SDS_kontakter',label:'Care contacts (LPR3)',fields:['kontakttype','dato_start','dato_slut','aktionsdiagnose']},
-          {source:'Behandlingskontakter_diagnoser',label:'Contact-linked diagnoses (SP)',role:'Diagnosis context for contacts; validate event linkage separately.'},
-          {source:'Flytningshistorik',label:'Patient movement history (SP)',fields:['tidspunkt','region_name'],role:'Movement context; movement rows are not admissions.'},
-          {source:'SDS_t_udtilsgh',label:'Hospital-transfer context (LPR)',fields:['c_udtilsgh','c_udtilafd'],role:'Transfer context; source rows are not a count of unique admissions.'},
-          {source:'SDS_forloeb',label:'Care pathways (LPR3)',fields:['dato_start'],role:'Secondary pathway context; pathway records are distinct from contacts and admissions.'},
-          {source:'forloebsmarkoerer',label:'Care pathway markers',fields:['dato_markoer'],role:'Secondary pathway-marker context; markers are not admissions.'}
+          {membership_id:'sp_adt_events',source:'SP_ADT_haendelser',fields:['event_type_name','effective_time','admission_type','kontakt_start_local_dttm'],role:'Admission, discharge and transfer event workflow.'},
+          {membership_id:'sp_icu_stays',source:'SP_ITAOphold',fields:['icu_stay_start','icu_stay_end','resp_yn'],role:'Intensive care stay and respiratory-support fields.'},
+          {membership_id:'admissions_lpr',source:'SDS_t_adm',label:'Admissions (LPR)',fields:['d_inddto','d_uddto','c_pattype','c_adiag']},
+          {membership_id:'contacts_lpr3',source:'SDS_kontakter',label:'Care contacts (LPR3)',fields:['kontakttype','dato_start','dato_slut','aktionsdiagnose']},
+          {membership_id:'sp_contact_diagnoses',source:'Behandlingskontakter_diagnoser',label:'Contact-linked diagnoses (SP)',role:'Diagnosis context for contacts; validate event linkage separately.'},
+          {membership_id:'sp_movement_history',source:'Flytningshistorik',label:'Patient movement history (SP)',fields:['tidspunkt','region_name'],role:'Movement context; movement rows are not admissions.'},
+          {membership_id:'hospital_transfer_lpr',source:'SDS_t_udtilsgh',label:'Hospital-transfer context (LPR)',fields:['c_udtilsgh','c_udtilafd'],role:'Transfer context; source rows are not a count of unique admissions.'},
+          {membership_id:'pathways_lpr3',source:'SDS_forloeb',label:'Care pathways (LPR3)',fields:['dato_start'],role:'Secondary pathway context; pathway records are distinct from contacts and admissions.'},
+          {membership_id:'pathway_markers_lpr3',source:'forloebsmarkoerer',label:'Care pathway markers',fields:['dato_markoer'],role:'Secondary pathway-marker context; markers are not admissions.'}
         ]},
         clinical_notes: { review: 'notes', title: 'Clinical notes and pathology text sources', purpose: 'Inspect note metadata and documented text-field availability. Note and report contents are not published in this atlas. Pathology text remains a separate evidence layer.', sources: [
-          {source:'SP_Journalnotater_Del1',fields:['notat_type','notat_status','service','notat_text'],role:'General SP clinical-note metadata and text availability.'},
-          {source:'Journalnotater_del2',fields:['dato','handling'],role:'Second SP note source; interpret its metadata separately.'},
-          {source:'t_mikro',label:'Pathology microscopy text',fields:['v_fritekst'],role:'Pathology report-text availability, separate from general clinical notes.'},
-          {source:'t_konk',label:'Pathology conclusion text',fields:['v_fritekst'],role:'Pathology conclusion-text availability, separate from general clinical notes.'}
+          {membership_id:'sp_notes_part1',source:'SP_Journalnotater_Del1',fields:['notat_type','notat_status','service','notat_text'],role:'General SP clinical-note metadata and text availability.'},
+          {membership_id:'sp_notes_part2',source:'Journalnotater_del2',fields:['dato','handling'],role:'Second SP note source; interpret its metadata separately.'},
+          {membership_id:'pathology_microscopy_text',source:'t_mikro',label:'Pathology microscopy text',fields:['v_fritekst'],role:'Pathology report-text availability, separate from general clinical notes.'},
+          {membership_id:'pathology_conclusion_text',source:'t_konk',label:'Pathology conclusion text',fields:['v_fritekst'],role:'Pathology conclusion-text availability, separate from general clinical notes.'}
         ]},
         clinical_microbiology: { title:'Microbiology sources', purpose:'Analysis, culture, susceptibility and microscopy are separate evidence layers. The four SP blood-culture parts describe a linked workflow; source rows do not define infection episodes.', sources:[
-          {source:'microbiology_analysis',label:'Microbiology analysis',fields:['c_analysisgroup','samplematerial','investigationinterpretation','resultvalue','resultunit'],role:'Analysis/test layer; PERSIMUNE coverage may be regional or research-specific.'},
-          {source:'microbiology_culture',label:'Microbiology culture',fields:['c_analysisgroup','samplematerial','c_domain','investigationinterpretation'],role:'Culture investigation layer; detailed organism values remain protected or grouped.'},
-          {source:'microbiology_culture_resistance',label:'Resistance and susceptibility',fields:['susceptibility','susceptibilityinterpretation','susceptibilityvaluevalue','susceptibilityvalueunit','susceptibilityvalueoperator'],role:'Interpretation, result value, unit and method fields; these rows do not establish resistant infection episodes.'},
-          {source:'microbiology_microscopy',label:'Microbiology microscopy',fields:['c_analysisgroup','samplematerial','investigationinterpretation','microscopicresult'],role:'Microscopy examination layer; result text is not emitted.'},
-          {source:'SP_Bloddyrkning_Del1',label:'SP blood culture — part 1',fields:['type','komponentnavn'],role:'Order/specimen and component workflow fields.'},
-          {source:'SP_Bloddyrkning_Del2',label:'SP blood culture — part 2',fields:['type','komponentnavn','resultat_tekst'],role:'Component and result-text availability; text contents are not published.'},
-          {source:'SP_Bloddyrkning_Del3',label:'SP blood culture — part 3',fields:['organisme','antibiotika','sensitivitet_resultat'],role:'Organism, antibiotic and susceptibility workflow fields.'},
-          {source:'SP_Bloddyrkning_Del4',label:'SP blood culture — part 4',fields:['kliniske_oplysninger','linje'],role:'Clinical-information and remaining workflow fields; no text contents are published.'}
+          {membership_id:'microbiology_analysis',source:'microbiology_analysis',label:'Microbiology analysis',fields:['c_analysisgroup','samplematerial','investigationinterpretation','resultvalue','resultunit'],role:'Analysis/test layer; PERSIMUNE coverage may be regional or research-specific.'},
+          {membership_id:'microbiology_culture',source:'microbiology_culture',label:'Microbiology culture',fields:['c_analysisgroup','samplematerial','c_domain','investigationinterpretation'],role:'Culture investigation layer; detailed organism values remain protected or grouped.'},
+          {membership_id:'microbiology_resistance',source:'microbiology_culture_resistance',label:'Resistance and susceptibility',fields:['susceptibility','susceptibilityinterpretation','susceptibilityvaluevalue','susceptibilityvalueunit','susceptibilityvalueoperator'],role:'Interpretation, result value, unit and method fields; these rows do not establish resistant infection episodes.'},
+          {membership_id:'microbiology_microscopy',source:'microbiology_microscopy',label:'Microbiology microscopy',fields:['c_analysisgroup','samplematerial','investigationinterpretation','microscopicresult'],role:'Microscopy examination layer; result text is not emitted.'},
+          {membership_id:'sp_blood_culture_part1',source:'SP_Bloddyrkning_Del1',label:'SP blood culture — part 1',fields:['type','komponentnavn'],role:'Order/specimen and component workflow fields.'},
+          {membership_id:'sp_blood_culture_part2',source:'SP_Bloddyrkning_Del2',label:'SP blood culture — part 2',fields:['type','komponentnavn','resultat_tekst'],role:'Component and result-text availability; text contents are not published.'},
+          {membership_id:'sp_blood_culture_part3',source:'SP_Bloddyrkning_Del3',label:'SP blood culture — part 3',fields:['organisme','antibiotika','sensitivitet_resultat'],role:'Organism, antibiotic and susceptibility workflow fields.'},
+          {membership_id:'sp_blood_culture_part4',source:'SP_Bloddyrkning_Del4',label:'SP blood culture — part 4',fields:['kliniske_oplysninger','linje'],role:'Clinical-information and remaining workflow fields; no text contents are published.'}
         ]},
         clinical_imaging: {title:'Imaging source evidence',purpose:'Explore national procedure codes, disease-registry imaging and SP examination metadata. These sources do not establish image-pixel availability. Full procedure-source totals are not imaging-event counts.',sources:[
-          {source:'SP_BilleddiagnostikeUndersoegelser_Del1',fields:['bestillingsnavn','bld_kode','bestillingstidspunkt','status'],role:'SP examination/order metadata and code fields.'},
-          {source:'SP_BilleddiagnostikeUndersoegelser_Del2',fields:['bestillingsnavn','bld_kode','beskrivelse','status'],role:'SP examination/report availability; report contents are not published.'},
-          {source:'SDS_t_sksube',label:'Procedure codes (LPR)',fields:['c_opr','d_odto'],role:'Full procedure source; imaging and radiotherapy code signals require exact code selection.'},
-          {source:'SDS_procedurer_andre',label:'Other procedures (LPR3)',fields:['procedurekode','proceduretype','dato_start'],role:'Full procedure source; its total includes procedures beyond imaging.'},
-          {source:'SDS_procedurer_kirurgi',label:'Surgical procedures (LPR3)',fields:['procedurekode','proceduretype'],role:'Full surgical-procedure source; validate any imaging-related code signal.'},
-          {source:'RKKP_DaMyDa',fields:['Reg_Knogleundersoegelser_ct','Reg_Knogleundersoegelser_mri','Reg_Knogleundersoegelser_pet','Reg_Knogleforandringer'],role:'Disease-specific modality and bone-disease fields; not a full imaging-event stream.'}
+          {membership_id:'sp_imaging_part1',source:'SP_BilleddiagnostikeUndersoegelser_Del1',fields:['bestillingsnavn','bld_kode','bestillingstidspunkt','status'],role:'SP examination/order metadata and code fields.'},
+          {membership_id:'sp_imaging_part2',source:'SP_BilleddiagnostikeUndersoegelser_Del2',fields:['bestillingsnavn','bld_kode','beskrivelse','status'],role:'SP examination/report availability; report contents are not published.'},
+          {membership_id:'procedures_lpr',source:'SDS_t_sksube',label:'Procedure codes (LPR)',fields:['c_opr','d_odto'],role:'Full procedure source; imaging and radiotherapy code signals require exact code selection.'},
+          {membership_id:'procedures_other_lpr3',source:'SDS_procedurer_andre',label:'Other procedures (LPR3)',fields:['procedurekode','proceduretype','dato_start'],role:'Full procedure source; its total includes procedures beyond imaging.'},
+          {membership_id:'procedures_surgical_lpr3',source:'SDS_procedurer_kirurgi',label:'Surgical procedures (LPR3)',fields:['procedurekode','proceduretype'],role:'Full surgical-procedure source; validate any imaging-related code signal.'},
+          {membership_id:'registry_damyda',source:'RKKP_DaMyDa',fields:['Reg_Knogleundersoegelser_ct','Reg_Knogleundersoegelser_mri','Reg_Knogleundersoegelser_pet','Reg_Knogleforandringer'],role:'Disease-specific modality and bone-disease fields; not a full imaging-event stream.'}
         ]},
         clinical_pathology: {title:'Pathology source evidence',purpose:'Find coded pathology, specimen/material, institution and tumor-registry fields. Microscopy and conclusion text availability is a separate layer; no report text is published.',sources:[
-          {source:'SDS_pato',label:'Coded pathology (PATOBANK / SDS)',fields:['c_snomedkode','c_mattype','k_inst','v_fritekst'],role:'Coded findings, specimen/material and institution fields; code meaning needs source-specific validation.'},
-          {source:'t_mikro',label:'Pathology microscopy text',fields:['v_fritekst','k_inst'],role:'Report-text availability only; no raw microscopy text or examples.'},
-          {source:'t_konk',label:'Pathology conclusion text',fields:['v_fritekst','k_inst'],role:'Conclusion-text availability only; no raw report text or examples.'},
-          {source:'SDS_t_tumor',label:'Tumor-coded registry evidence',fields:['c_icd10','c_tnm_t','c_tnm_n','c_tnm_m'],role:'Tumor registry evidence remains separate from PATOBANK SNOMED records.'}
+          {membership_id:'pathology_coded',source:'SDS_pato',label:'Coded pathology (PATOBANK / SDS)',fields:['c_snomedkode','c_mattype','k_inst','v_fritekst'],role:'Coded findings, specimen/material and institution fields; code meaning needs source-specific validation.'},
+          {membership_id:'pathology_microscopy_text',source:'t_mikro',label:'Pathology microscopy text',fields:['v_fritekst','k_inst'],role:'Report-text availability only; no raw microscopy text or examples.'},
+          {membership_id:'pathology_conclusion_text',source:'t_konk',label:'Pathology conclusion text',fields:['v_fritekst','k_inst'],role:'Conclusion-text availability only; no raw report text or examples.'},
+          {membership_id:'tumor_registry',source:'SDS_t_tumor',label:'Tumor-coded registry evidence',fields:['c_icd10','c_tnm_t','c_tnm_n','c_tnm_m'],role:'Tumor registry evidence remains separate from PATOBANK SNOMED records.'}
         ]},
         clinical_biobank: {title:'Sample inventory',purpose:'Inspect documented sample source, material and collection-date fields. Sample presence does not imply assay completion, sequencing, molecular results, immune profiling or biomarker results.',sources:[
-          {source:'BIOBANK_SAMPLES',aliases:['LAB_BIOBANK_SAMPLES'],label:'Biobank sample inventory',fields:['Sample_source','Type','date_samplecollection'],role:'One declared sample-source identity; material labels require source-specific interpretation.'}
+          {membership_id:'biobank_samples',source:'BIOBANK_SAMPLES',aliases:['LAB_BIOBANK_SAMPLES'],label:'Biobank sample inventory',fields:['Sample_source','Type','date_samplecollection'],role:'Sample inventory; material labels require source-specific interpretation.'}
         ]},
         clinical_vitals: {review:'vitals',title:'SP vital-sign events',purpose:'Repeated physiological observations include descriptor, value and timing fields. Event-level weight and height aggregates are not supplied in this export; repeated measurements require a study-specific baseline window.',sources:[
-          {source:'SP_VitaleVaerdier',fields:['displayname','meas_value','numericvalue','recorded_time','val_type_c'],role:'Repeated vital-sign event source; source rows are not people or a descriptor-specific measurement count.'}
+          {membership_id:'sp_vital_events',source:'SP_VitaleVaerdier',fields:['displayname','meas_value','numericvalue','recorded_time','val_type_c'],role:'Repeated vital-sign event source; source rows are not people or a descriptor-specific measurement count.'}
         ]},
         clinical_social_history: {review:'social_history',title:'Social history source',purpose:'Find smoking, alcohol and smoking-intensity fields. Recordedness describes source records with a value; it does not establish known or current patient status.',sources:[
-          {source:'SP_SocialHX',aliases:['SP_Social_Hx'],fields:['ryger','drikker','pakkeromdagen'],role:'Smoking-intensity field pakkeromdagen has no validated pack-year unit in this export.'}
-        ]}
+          {membership_id:'sp_social_history',source:'SP_SocialHX',aliases:['SP_Social_Hx'],fields:['ryger','drikker','pakkeromdagen'],role:'Smoking-intensity field pakkeromdagen has no validated pack-year unit in this export.'}
+        ]},
+        reg_damyda: {title:'DaMyDa registry sources',purpose:'Disease-specific registry identities remain separate from companion treatment sources. Registry fields require their own definitions and disclosure rules.',sources:[{membership_id:'registry_damyda',source:'RKKP_DaMyDa',label:'DaMyDa registry'}]},
+        reg_lyfo: {title:'LYFO registry sources',purpose:'Lymphoma registry identities remain separate from companion treatment sources. Registry fields require their own definitions and disclosure rules.',sources:[{membership_id:'registry_lyfo',source:'RKKP_LYFO',label:'LYFO registry'}]},
+        reg_cll: {title:'CLL registry sources',purpose:'CLL registry identities remain separate from companion treatment sources. Registry fields require their own definitions and disclosure rules.',sources:[{membership_id:'registry_cll',source:'RKKP_CLL',label:'CLL registry'}]}
       };
+      const clinicalSourceReadinessSpecs = [
+        ['diagnosis_atlas','Clinical Data','Diagnoses and tumors'],
+        ['clinical_adt','Clinical Data','Admissions and ADT'],
+        ['clinical_notes','Clinical Data','Notes'],
+        ['clinical_microbiology','Laboratory & Diagnostics','Microbiology / MiBa diagnostics'],
+        ['clinical_imaging','Laboratory & Diagnostics','Imaging and radiotherapy diagnostics'],
+        ['clinical_pathology','Laboratory & Diagnostics','Pathology / PATOBANK diagnostics'],
+        ['clinical_biobank','Laboratory & Diagnostics','Biobank sample inventory'],
+        ['clinical_vitals','Clinical Data','Vitals'],
+        ['clinical_social_history','Clinical Data','Social history'],
+        ['reg_damyda','Disease Registries','DaMyDa registry'],
+        ['reg_lyfo','Disease Registries','LYFO registry'],
+        ['reg_cll','Disease Registries','CLL registry']
+      ];
+      function clinicalSourceRecord(value, keys) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+        const own = key => Object.prototype.hasOwnProperty.call(value,key);
+        if (Object.keys(value).some(key=>!keys.includes(key)) || keys.some(key=>!own(key))) return false;
+        for (const key in value) if (!own(key)) return false;
+        return keys.every(key=>Object.prototype.hasOwnProperty.call(Object.getOwnPropertyDescriptor(value,key),'value'));
+      }
+      function clinicalSourceToken(value) {
+        return typeof value === 'string' && value.trim() !== '' && value === value.trim() && !['__proto__','prototype','constructor'].includes(value);
+      }
+      function clinicalSourceLoadState(status) {
+        return ['ok','loaded'].includes(status) ? 'loaded' : ['failed','mapped','not_loaded','not_tested','not_attempted','unavailable'].includes(status) ? 'not_loaded' : 'unknown';
+      }
+      function readClinicalSourceInventory(supplied) {
+        if (!supplied || !Object.prototype.hasOwnProperty.call(supplied,'clinical_source_inventory')) return {present:false,supported:false,rows:[]};
+        const invalid = {present:true,supported:false,rows:[],inventory_state:'unsupported'};
+        try {
+          const value = supplied.clinical_source_inventory;
+          if (!clinicalSourceRecord(value,['schema_version','inventory_version','basis','evidence_origin','inventory_state','rows','diagnostics']) ||
+            value.schema_version !== 1 || !clinicalSourceToken(value.inventory_version) || value.basis !== 'reviewed_exact_source_inventory' ||
+            !['fresh_run','imported_snapshot'].includes(value.evidence_origin) || !['present','limited','unavailable'].includes(value.inventory_state) ||
+            !Array.isArray(value.rows) || !Array.isArray(value.diagnostics) || value.diagnostics.length > 101 || (value.inventory_state === 'unavailable' && value.rows.length)) return invalid;
+          const rowKeys = ['panel_id','membership_id','source_key','canonical_resource_id','membership_role','evidence_layer','catalog_identity_state','canonical_lineage_state','family_identity_state','load_status','load_state'];
+          const panelIds = clinicalSourceReadinessSpecs.map(spec=>spec[0]);
+          const seen = new Set(), sourceFamilies = new Map(), familyLineage = new Map();
+          for (const row of value.rows) {
+            if (!clinicalSourceRecord(row,rowKeys) || !panelIds.includes(row.panel_id) ||
+              !['membership_id','source_key','evidence_layer'].every(key=>clinicalSourceToken(row[key])) ||
+              !(row.canonical_resource_id === null || clinicalSourceToken(row.canonical_resource_id)) ||
+              !['primary','context','derived_view','text_availability'].includes(row.membership_role) ||
+              !['unique','duplicate'].includes(row.catalog_identity_state) || !['established','unestablished','conflicting'].includes(row.canonical_lineage_state) ||
+              !['single','multiple'].includes(row.family_identity_state) || !(row.load_status === null || typeof row.load_status === 'string') ||
+              !['loaded','not_loaded','unknown'].includes(row.load_state) || row.load_state !== clinicalSourceLoadState(row.load_status) ||
+              (row.catalog_identity_state === 'duplicate' && (row.load_status !== null || row.load_state !== 'unknown')) ||
+              (row.canonical_lineage_state === 'established' ? row.canonical_resource_id === null : row.canonical_resource_id !== null)) return invalid;
+            const identity = JSON.stringify([row.panel_id,row.source_key]);
+            if (seen.has(identity) || (sourceFamilies.has(row.source_key) && sourceFamilies.get(row.source_key) !== row.membership_id)) return invalid;
+            seen.add(identity); sourceFamilies.set(row.source_key,row.membership_id);
+            if (row.canonical_resource_id !== null) {
+              if (familyLineage.has(row.membership_id) && familyLineage.get(row.membership_id) !== row.canonical_resource_id) return invalid;
+              familyLineage.set(row.membership_id,row.canonical_resource_id);
+            }
+          }
+          const diagnosticCodes = ['catalog_unavailable','catalog_malformed','catalog_limited','duplicate_source_identity','canonical_lineage_conflict','multiple_family_identities','diagnostics_truncated'];
+          for (const row of value.diagnostics) {
+            if (!clinicalSourceRecord(row,['code','source_key','membership_id']) || !diagnosticCodes.includes(row.code) ||
+              !['source_key','membership_id'].every(key=>row[key] === null || (typeof row[key] === 'string' && row[key].trim() && !['__proto__','prototype','constructor'].includes(row[key])))) return invalid;
+          }
+          return {...value,present:true,supported:true};
+        } catch { return invalid; }
+      }
+      const clinicalSourceMetadata = readClinicalSourceInventory(typeof payload === 'undefined' ? null : payload);
+      function renderClinicalSourceInventoryNotice() {
+        if (!clinicalSourceMetadata.present) return '';
+        if (!clinicalSourceMetadata.supported || clinicalSourceMetadata.inventory_state === 'unavailable') {
+          const reason = clinicalSourceMetadata.supported ? 'The supplied catalog is unavailable or malformed; current source membership cannot be established.' : 'Supplied source-inventory metadata is malformed or unsupported; current source membership cannot be established.';
+          return `<p class="caveat-box" data-source-inventory-limitation><strong>Source-inventory limitation.</strong> ${reason} Original source and field evidence remains inspectable.</p><button type="button" class="concept-link-button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button>`;
+        }
+        const origin = clinicalSourceMetadata.evidence_origin === 'imported_snapshot' ? 'imported snapshot' : 'fresh run';
+        const scope = clinicalSourceMetadata.inventory_state === 'limited' ? 'Limited supplied inventory: source inventory may be incomplete.' : 'This describes the supplied inventory; it does not establish full upstream coverage.';
+        return `<p class="mini" data-source-inventory-basis>Reviewed exact source identities · ${origin}. ${scope}</p>`;
+      }
       function domainSourceSpecs(panelId) {
         const config = domainCurrentSourceSpecs[panelId];
-        return config ? config.sources : [];
+        if (!config) return [];
+        if (!clinicalSourceMetadata.present) return config.sources;
+        if (!clinicalSourceMetadata.supported || clinicalSourceMetadata.inventory_state === 'unavailable') return [];
+        const memberships = clinicalSourceMetadata.rows.filter(row=>row.panel_id === panelId);
+        return memberships.map(row=>{
+          const presentation = config.sources.find(spec=>spec.membership_id === row.membership_id) || {};
+          return {...presentation,source:row.source_key,membership:row,
+            aliases:memberships.filter(other=>other.membership_id === row.membership_id && other.source_key !== row.source_key).map(other=>other.source_key),aliasAmbiguity:row.family_identity_state === 'multiple'};
+        });
+      }
+      function domainSourceEvidence(spec) {
+        const evidence = (Array.isArray(catalogRows) ? catalogRows : []).filter(row=>row && row.table_name === spec.source);
+        const duplicate = evidence.length > 1 || spec.membership?.catalog_identity_state === 'duplicate';
+        const catalog = evidence.length === 1 && !duplicate ? evidence[0] : null;
+        const profiles = (Array.isArray(columnRows) ? columnRows : []).filter(row=>row && row.table_name === spec.source);
+        return {...spec,catalog,catalogEvidence:evidence,profiles,duplicate,loadState:catalog && !duplicate ? spec.membership?.load_state || clinicalSourceLoadState(catalog.load_status) : 'unknown'};
       }
       function domainSourceInventory(specs) {
+        if (clinicalSourceMetadata.present) {
+          if (!clinicalSourceMetadata.supported || clinicalSourceMetadata.inventory_state === 'unavailable') return [];
+          return (specs || []).filter(spec=>spec.membership).map(domainSourceEvidence);
+        }
         const seen = new Set();
         const inventory = [];
         for (const spec of specs || []) {
           const identities = [spec.source,...(spec.aliases || [])];
           if (identities.some(source=>seen.has(source))) continue;
-          const candidates = identities.map(source=>catalogRows.find(row=>row.table_name === source)).filter(Boolean);
-          const profiled = candidates.filter(row=>columnRows.some(field=>field.table_name === row.table_name));
+          const candidates = identities.filter(source=>catalogRows.some(row=>row.table_name === source));
+          const profiled = candidates.filter(source=>columnRows.some(field=>field.table_name === source));
           const shown = profiled.length > 1 ? profiled : [profiled[0] || candidates[0]].filter(Boolean);
           if (!shown.length) continue;
           identities.forEach(source=>seen.add(source));
-          shown.forEach(catalog=>inventory.push({...spec,source:catalog.table_name,aliases:identities.filter(source=>source !== catalog.table_name),aliasAmbiguity:shown.length > 1,catalog,profiles:columnRows.filter(field=>field.table_name === catalog.table_name)}));
+          shown.forEach(source=>inventory.push(domainSourceEvidence({...spec,source,aliases:identities.filter(alias=>alias !== source),aliasAmbiguity:shown.length > 1})));
         }
         return inventory;
       }
@@ -4820,18 +4924,82 @@
       }
       function renderDomainSourceCards(specs) {
         const sources = domainSourceInventory(specs);
-        if (!sources.length) return '<p class="mini">No exact current catalog source is supplied for this domain. Browse the source catalog to inspect documented resource status.</p><button type="button" class="concept-link-button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button>';
-        return `<div class="grid grid-3">${sources.map(item=>{
-          const count = finiteSummary(item.catalog.n_rows), fields = finiteSummary(item.catalog.n_cols);
+        const notice = renderClinicalSourceInventoryNotice();
+        if (clinicalSourceMetadata.present && (!clinicalSourceMetadata.supported || clinicalSourceMetadata.inventory_state === 'unavailable')) return notice;
+        if (!sources.length) return notice + '<p class="mini">No exact current catalog source is supplied for this domain. Browse the source catalog to inspect documented resource status.</p><button type="button" class="concept-link-button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button>';
+        return notice + `<div class="grid grid-3">${sources.map(item=>{
+          const count = finiteSummary(item.catalog?.n_rows), fields = finiteSummary(item.catalog?.n_cols);
           const selected = (item.fields || []).map(name=>item.profiles.find(row=>row.column_name === name)).filter(Boolean);
-          const countWithheld = Boolean(item.catalog.count_privacy_status);
-          return `<article class="clinical-card" data-domain-source="${escapeHtml(item.source)}"><h3>${escapeHtml(item.label || sourceDisplayName(item.source))}</h3><p class="source-id"><code>${escapeHtml(item.source)}</code></p><p><strong>${countWithheld ? 'Full-source count withheld' : count === null ? 'Full-source record count not supplied' : `${formatNumber(count)} full-source records`}</strong><br>${fields === null ? 'Catalog field count not supplied' : `${formatNumber(fields)} catalog fields`} · ${formatNumber(item.profiles.length)} published field profiles</p>${item.role ? `<p class="mini">${escapeHtml(item.role)}</p>` : ''}${selected.length ? `<details class="lineage-block domain-clinical-fields"><summary>${item.source === "microbiology_culture_resistance" ? "Clinical fields: susceptibility, interpretation, value and unit" : `Clinical fields (${selected.length})`}</summary><p class="mini">Records with a value are source records, not known patient status.</p><ul>${selected.map(renderDomainFieldProfile).join('')}</ul></details>` : ''}${sourceEvidenceLinks(item.source,"",{inventoryLabel:"Browse all source fields"})}${item.aliases?.length ? `<details class="lineage-block"><summary>Declared source identity</summary><p class="mini">Declared alias: ${item.aliases.map(source=>`<code>${escapeHtml(source)}</code>`).join(', ')}. ${item.aliasAmbiguity ? 'Both current identities have field profiles and are shown separately; validate their relationship.' : 'This is one source identity.'} Counts are not added.</p></details>` : ''}</article>`;
+          const countWithheld = Boolean(item.catalog?.count_privacy_status);
+          const countLabel = item.duplicate ? 'Full-source record count ambiguous' : countWithheld ? 'Full-source count withheld' : count === null ? 'Full-source record count not supplied' : `${formatNumber(count)} full-source records`;
+          const limitation = item.duplicate ? '<p class="caveat-box">Duplicate catalog identity: counts, catalog fields and load status are ambiguous. No row is chosen and counts are not summed.</p>' : !item.catalog ? '<p class="caveat-box">Catalog evidence is not supplied for this exact identity; its counts and load status cannot be established.</p>' : '';
+          const lineage = item.membership?.canonical_lineage_state === 'conflicting' ? '<p class="caveat-box">Canonical lineage is conflicting. The original source key is retained; no canonical relationship is chosen.</p>' : '';
+          const state = item.membership ? `<p class="mini">${escapeHtml({loaded:'Supplied load status: loaded',not_loaded:'Supplied load status: not loaded or not tested',unknown:'Supplied load status: unknown'}[item.loadState])} · ${escapeHtml(item.membership.membership_role.replace(/_/g,' '))} · ${escapeHtml(item.membership.evidence_layer.replace(/_/g,' '))}</p>` : '';
+          return `<article class="clinical-card" data-domain-source="${escapeHtml(item.source)}"><h3>${escapeHtml(item.label || sourceDisplayName(item.source))}</h3><p class="source-id"><code>${escapeHtml(item.source)}</code></p><p><strong>${countLabel}</strong><br>${fields === null ? 'Catalog field count not supplied' : `${formatNumber(fields)} catalog fields`} · ${formatNumber(item.profiles.length)} published field profiles</p>${limitation}${lineage}${state}${item.role ? `<p class="mini">${escapeHtml(item.role)}</p>` : ''}${selected.length ? `<details class="lineage-block domain-clinical-fields"><summary>${item.membership_id === "microbiology_resistance" ? "Clinical fields: susceptibility, interpretation, value and unit" : `Clinical fields (${selected.length})`}</summary><p class="mini">Records with a value are source records, not known patient status.</p><ul>${selected.map(renderDomainFieldProfile).join('')}</ul></details>` : ''}${sourceEvidenceLinks(item.source,"",{inventoryLabel:"Browse all source fields"})}${item.aliases?.length ? `<details class="lineage-block"><summary>Declared source identity</summary><p class="mini">Related exact identities: ${item.aliases.map(source=>`<code>${escapeHtml(source)}</code>`).join(', ')}. ${item.aliasAmbiguity ? 'Current identities are shown separately regardless of field-profile availability; validate their relationship.' : 'This is one supplied source identity.'} Counts are not added.</p></details>` : ''}${item.duplicate || lineage ? renderOriginalDomainSourceEvidence(item) : ''}</article>`;
         }).join('')}</div>`;
+      }
+      function renderOriginalDomainSourceEvidence(item) {
+        return `<details class="lineage-block"><summary>Original catalog evidence (${item.catalogEvidence.length} rows)</summary><p class="mini">Each supplied row retains its own count and status. These rows are not added or chosen as a single identity count.</p>${item.catalogEvidence.map((row,index)=>{
+          const count = finiteSummary(row.n_rows), fields = finiteSummary(row.n_cols);
+          return `<div class="source-fact"><strong>Supplied catalog row ${index + 1}</strong><p><code>${escapeHtml(row.table_name)}</code> · ${row.count_privacy_status ? 'Count withheld' : count === null ? 'Record count not supplied' : `${formatNumber(count)} source records`} · ${row.count_privacy_status || fields === null ? 'Catalog field count not supplied' : `${formatNumber(fields)} catalog fields`}</p><p class="mini">Load status: ${escapeHtml(row.load_status ?? 'Not supplied')} · Supplied canonical lineage: ${escapeHtml(typeof row.canonical_resource_id === 'string' ? row.canonical_resource_id : row.canonical_resource_id === undefined || row.canonical_resource_id === null ? 'Not supplied' : 'Malformed')}</p></div>`;
+        }).join('')}<button type="button" class="concept-link-button" data-field-source-context="${escapeHtml(item.source)}">Inspect source catalog →</button></details>`;
       }
       function renderDomainSourceOverview(panelId) {
         const config = domainCurrentSourceSpecs[panelId];
         if (!config) return '';
         return `<section class="domain-source-overview">${domainSummaryStatus(panelId)}${renderDomainSourceCards(domainSourceSpecs(panelId))}<details class="lineage-block"><summary>Source interpretation and count scope</summary><p>${escapeHtml(config.purpose)}</p><p class="mini">Counts describe each full source separately. Sources and derived views may overlap; do not add source totals or interpret them as people, domain events or positive findings.</p></details></section>`;
+      }
+      function clinicalSourceReadinessRows() {
+        if (!clinicalSourceMetadata.present) return [];
+        const available = clinicalSourceMetadata.supported && clinicalSourceMetadata.inventory_state !== 'unavailable';
+        return clinicalSourceReadinessSpecs.map(([panel_id,domain,module])=>{
+          const sources = available ? domainSourceInventory(domainSourceSpecs(panel_id)) : [];
+          const loaded = sources.filter(item=>item.loadState === 'loaded').length;
+          const notLoaded = sources.filter(item=>item.loadState === 'not_loaded').length;
+          const unknown = sources.length - loaded - notLoaded;
+          const status = !available ? 'source_inventory_unavailable' : loaded ? 'source_ready' : unknown ? 'source_status_unknown' : sources.length ? 'supplied_not_loaded' : 'no_current_source_supplied';
+          return {panel_id,domain,module,status,source_count:available ? sources.length : null,
+            loaded_count:available ? loaded : null,not_loaded_count:available ? notLoaded : null,unknown_load_count:available ? unknown : null,
+            field_profiled_source_count:available ? sources.filter(item=>item.profiles.length).length : null,
+            n_rows:null,n_columns:null,date_min:'',date_max:'',
+            inventory_scope:clinicalSourceMetadata.inventory_state,evidence_origin:clinicalSourceMetadata.supported ? clinicalSourceMetadata.evidence_origin : 'unsupported supplied metadata',
+            message:!available ? 'Source-inventory limitation: current membership cannot be established.' : 'Exact supplied source identities only. Source totals, fields and dates are not additive; source state does not establish eligible clinical summaries.'};
+        });
+      }
+      function renderClinicalSourceReadinessCards(rows) {
+        return `<div class="grid source-readiness-grid">${rows.map(row=>{
+          const topic = typeof clinicalTopicDefinitions === 'undefined' ? null : clinicalTopicDefinitions[row.panel_id];
+          const identities = finiteSummary(row.source_count), profiles = finiteSummary(row.field_profiled_source_count);
+          const loadKnown = ['loaded_count','not_loaded_count','unknown_load_count'].every(key=>finiteSummary(row[key]) !== null);
+          const load = loadKnown ? `<span>${formatNumber(row.loaded_count)} loaded</span><span>${formatNumber(row.not_loaded_count)} not loaded or not tested</span><span>${formatNumber(row.unknown_load_count)} unknown</span>` : 'Not established';
+          const action = topic ? `<button type="button" class="concept-link-button" data-jump-tab="${escapeHtml(topic[1])}" data-jump-sub="${escapeHtml(topic[2])}">Explore topic →</button>` : '<button type="button" class="concept-link-button" data-jump-tab="infrastructure" data-jump-sub="infra-catalog">Browse data sources →</button>';
+          return `<article class="card source-readiness-card" data-readiness-topic="${escapeHtml(row.panel_id)}"><h5>${escapeHtml(topic?.[0] || row.module)}</h5><dl class="source-readiness-facts"><div data-readiness-fact="identities"><dt>Source identities</dt><dd>${identities === null ? 'Not established' : formatNumber(identities)}</dd></div><div data-readiness-fact="load"><dt>Reported load</dt><dd>${load}</dd></div><div data-readiness-fact="profiles"><dt>With field profiles</dt><dd>${profiles === null ? 'Not established' : `${formatNumber(profiles)} source ${profiles === 1 ? 'identity' : 'identities'}`}</dd></div></dl>${action}</article>`;
+        }).join('')}</div>`;
+      }
+      function renderClinicalModuleReadiness() {
+        const supplied = reviewModuleReadiness.length ? reviewModuleReadiness : (reviewOverview.module_readiness || []);
+        if (!clinicalSourceMetadata.present) return rowsForTable(supplied,100);
+        const outside = supplied.filter(row=>!clinicalSourceReadinessSpecs.some(([panel_id,,module])=>row.panel_id === panel_id || row.module === module));
+        const historical = clinicalSourceMetadata.supported && clinicalSourceMetadata.evidence_origin === 'imported_snapshot';
+        const current = clinicalSourceReadinessRows();
+        return `<section data-current-readiness><h4>Reviewed current-source state</h4>${renderClinicalSourceInventoryNotice()}<p class="mini" data-readiness-scope>Counts describe exact source identities in the supplied catalog, not people or clinical events. Source records, fields and dates are not additive. Reported load and field profiles do not establish eligible clinical summaries.</p>${renderClinicalSourceReadinessCards(current)}</section><details class="lineage-block" data-readiness-technical><summary>Technical current-source metadata (${current.length} rows)</summary>${rowsForTable(current,100)}</details>${outside.length ? `<h4>${historical ? 'Historical supplied' : 'Supplied'} readiness outside the reviewed source inventory</h4><p class="mini">These modules retain their supplied metadata. The molecular, pathology and biobank composite has no molecular authority from the reviewed pathology or sample inventory.</p>${rowsForTable(outside,100)}` : ''}<details class="lineage-block"><summary>${historical ? 'Historical supplied readiness metadata' : 'Original supplied readiness metadata'} (${supplied.length} rows)</summary><p class="mini">Original rows are preserved for inspection and are not used for covered current-source grouping. Pooled records, fields and dates may combine overlapping sources.</p>${rowsForTable(supplied,100)}</details>`;
+      }
+      function renderDomainKpis(panelId) {
+        const supplied = panelKpiRows.filter(row=>row.panel_id === panelId);
+        const covered = clinicalSourceReadinessSpecs.some(spec=>spec[0] === panelId);
+        const display = rows => renderKpiStrip(rows.slice(0,12).map(row=>({label:row.label || '',value:row.value,tone:'cyan'})),{tone:'cyan'});
+        if (!clinicalSourceMetadata.present || !covered) return supplied.length ? display(supplied) : '<div class="empty">No KPI rows were generated for this panel.</div>';
+        const sourceKpis = supplied.filter(row=>['mapped_sources','source_rows'].includes(row.kpi_id));
+        const clinicalKpis = supplied.filter(row=>!['mapped_sources','source_rows'].includes(row.kpi_id));
+        const readiness = clinicalSourceReadinessRows().find(row=>row.panel_id === panelId);
+        const current = [{label:'Current source identities',value:readiness.source_count},{label:'Source records (not additive)',value:'Not summed'}];
+        const historical = clinicalSourceMetadata.supported && clinicalSourceMetadata.evidence_origin === 'imported_snapshot';
+        return `${display(current)}${clinicalKpis.length ? display(clinicalKpis) : ''}<p class="mini">Source identity counts describe the supplied catalog; source records are not summed. Dedicated clinical KPIs retain their supplied evidence.</p>${sourceKpis.length ? `<details class="lineage-block"><summary>${historical ? 'Historical supplied source KPIs' : 'Original supplied source KPIs'}</summary><p class="mini">Original source KPI rows are preserved for inspection and do not define the covered current-source inventory.</p>${rowsForTable(sourceKpis,100)}</details>` : ''}`;
+      }
+      function renderRegistrySourceInventory(panelId) {
+        if (!clinicalSourceMetadata.present) return '';
+        if (!clinicalSourceMetadata.supported || clinicalSourceMetadata.inventory_state === 'unavailable') return renderClinicalSourceInventoryNotice();
+        return `<details class="lineage-block"><summary>Current registry source identities</summary>${renderDomainSourceOverview(panelId)}</details>`;
       }
       /* DOMAIN_SOURCE_EVIDENCE_END */
       function renderDomainPanel(panelId) {
@@ -4843,7 +5011,6 @@
           const raw = panelRawFieldRows.filter(row=>row.panel_id === panelId);
           return `${sourceOverview}${published.length ? renderSectionCard('Published summaries',renderDistributionRows(published,10),'green') : ''}${raw.length ? `<details class="lineage-block"><summary>Supplied field lineage</summary>${renderCollapsedRawLineage(raw,{limit:10})}</details>` : ''}${!sourceOverview && !published.length && !raw.length ? '<p class="mini">Domain metadata and summaries are not supplied.</p>' : ''}`;
         }
-        const kpis = panelKpiRows.filter(row => row.panel_id === panelId);
         const distributions = panelDistributionRows.filter(row => row.panel_id === panelId);
         const sections = distributions.filter(row => row.distribution_type === "clinical_section");
         const raw = panelRawFieldRows.filter(row => row.panel_id === panelId);
@@ -4861,7 +5028,7 @@
             caveats: [panel.caveats || "Validate source-specific definitions before analysis."]
           })}
           ${renderSectionCard("Clinical sections", sections.length ? `<div class="grid">${sections.map((row, i) => renderSectionCard(row.display_value || row.clinical_variable || "", `<p class="mini">${escapeHtml(row.value_class || "section")}</p>`, ["blue","green","amber","plum","cyan"][i % 5])).join("")}</div>` : `<div class="empty">No structured section rows were generated for this panel.</div>`, "blue")}
-          ${renderSectionCard("KPIs", kpis.length ? renderKpiStrip(kpis.slice(0, 12).map(row => ({ label: row.label || "", value: row.value, tone: "cyan" })), { tone: "cyan" }) : `<div class="empty">No KPI rows were generated for this panel.</div>`, "cyan")}
+          ${renderSectionCard("KPIs", renderDomainKpis(panelId), "cyan")}
           ${renderSectionCard("Distributions", renderDistributionRows(nonSectionDistributions, 10), "green")}
           ${renderSectionCard("Key raw fields / What are these called in the data?", renderCollapsedRawLineage(raw, { limit: 10 }), "plum")}
           <div class="lineage-block"><h3>Related clinical variables</h3>${concepts.length ? concepts.slice(0, 16).map(row => `<span class="lineage-chip">${escapeHtml(row.clinical_variable)} (${escapeHtml(row.concept_status || "")})</span>`).join("") : `<div class="empty">No related clinical concept rows were linked to this panel.</div>`}</div>
@@ -4928,6 +5095,7 @@
         const fieldJourneys = `<section class="measurement-shortcuts"><h3>Weight, height and BMI fields</h3><p class="mini">Selected fields in Patient information (SP) <code>SP_PatientInfo</code> and the Myeloma registry <code>RKKP_DaMyDa</code>. These are separate from SP vital-sign events.</p><div class="toolbar"><button class="concept-link-button" type="button" data-measurement="weight-height">Weight and height →</button><button class="concept-link-button" type="button" data-measurement="bmi">BMI →</button></div></section>`;
         if (!domainPublishedDistributions("clinical_vitals").length) return `${renderDomainSourceOverview("clinical_vitals")}${fieldJourneys}${priorityRows.length ? `<details class="lineage-block"><summary>Source schema and interpretation</summary>${renderVitalsPriorityLineage(priorityRows)}</details>` : ""}`;
         return `<div class="focused-panel vitals-panel">
+          ${clinicalSourceMetadata.present ? renderDomainSourceOverview('clinical_vitals') : ''}
           ${fieldJourneys}
           <div class="source-shape">
             <div class="source-fact"><span class="mini">Source</span><b>SP_VitaleVaerdier</b></div>
@@ -5264,6 +5432,7 @@
       function renderDaMyDaPanel() {
         const summary = damydaSummaryRow();
         return `<div class="focused-panel damyda-panel">
+          ${renderRegistrySourceInventory('reg_damyda')}
           ${renderTermHelp(["MGUS","FISH","LDH","CRP","ISS","R-ISS","CR","VGPR","PR","SD","PD"])}
           ${renderKpiStrip([
             { label: "registry source", value: "RKKP_DaMyDa", tone: "plum" },
@@ -5426,6 +5595,7 @@
       function renderLYFOPanel() {
         const summary = lyfoSummaryRow();
         return `<div class="focused-panel lyfo-panel">
+          ${renderRegistrySourceInventory('reg_lyfo')}
           ${renderTermHelp(["LDH","ASCT","HDT","CIT","MIPI","MIPI-c","ECOG","IPI","aaIPI","FLIPI","FLIPI2","IPS"])}
           ${renderSectionCard("Source / coverage", renderKpiStrip([
             { label: "registry source", value: "RKKP_LYFO", tone: "blue" },
@@ -5643,6 +5813,7 @@
       function renderCLLPanel() {
         const summary = cllSummaryRow();
         return `<div class="focused-panel cll-panel">
+          ${renderRegistrySourceInventory('reg_cll')}
           ${renderTermHelp(["IGHV","FISH","MRD","CLL-IPI","CIRS"])}
           ${renderSectionCard("Source / coverage", renderKpiStrip([
             { label: "registry source", value: "RKKP_CLL", tone: "violet" },
@@ -6142,7 +6313,7 @@
       `).join("") || `<div class="empty">No source domains were available.</div>`);
       deferRender("review-largest-sources", () => setHtml("review-largest-sources", rowsForTable(reviewOverview.largest_sources || [], 20)));
       deferRender("review-source-availability", () => setHtml("review-source-availability", rowsForTable(reviewOverview.source_availability || [], 200)));
-      deferRender("module-readiness", () => setHtml("module-readiness", rowsForTable(reviewModuleReadiness.length ? reviewModuleReadiness : (reviewOverview.module_readiness || []), 100)));
+      deferRender("module-readiness", () => setHtml("module-readiness", renderClinicalModuleReadiness()));
       deferRender("temporal-summary", () => renderTemporalCoverage());
       deferRender("dkMap", () => renderSpatialCoverage());
 

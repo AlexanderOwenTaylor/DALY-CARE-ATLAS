@@ -227,7 +227,8 @@ atlas_read_build_context <- function(run_dir,registry) {
   x
 }
 
-atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
+atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_spec=NULL) {
+  if(is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
   registry <- atlas_output_registry(project_root); context <- atlas_read_build_context(run_dir,registry)
   minimum <- atlas_effective_threshold(context=context)
   args <- list(run_id=context$run_id,generated_at=context$generated_at,panels=list())
@@ -283,8 +284,9 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
     }
   }
   args$mcl_triangle_feasibility$ki67_discovery <- args$ki67_discovery
+  args$membership_spec <- membership_spec
   payload <- atlas_public_privacy(do.call(atlas_payload,args),project_root,minimum)
-  list(payload=payload,tables=atlas_output_evidence(run_dir,project_root),context=context)
+  list(payload=payload,tables=atlas_output_evidence(run_dir,project_root,discard_membership_input=TRUE),context=context,membership_spec=membership_spec)
 }
 
 atlas_evidence_audit <- function(x) {
@@ -301,19 +303,31 @@ atlas_evidence_audit <- function(x) {
   visit(x); invisible(TRUE)
 }
 
-atlas_validate_output_manifest <- function(run_dir,max_bytes) {
+atlas_validate_output_manifest <- function(run_dir,max_bytes,project_root='.',discard_membership_input=FALSE) {
   path <- atlas_confined_path(run_dir,'outputs/output_manifest.csv')
   if(!file.exists(path)) return(invisible(NULL))
   if(file.info(path)$size>max_bytes) stop('Output manifest exceeds pre-read limit',call.=FALSE)
   rows <- withCallingHandlers(read.csv(path,colClasses='character',check.names=FALSE,stringsAsFactors=FALSE,fileEncoding='UTF-8'),warning=function(w)stop('Malformed output manifest',call.=FALSE))
   if(!'relative_path' %in% names(rows)) stop('Invalid output manifest',call.=FALSE)
-  for(relative in rows$relative_path) atlas_confined_path(run_dir,relative)
+  if(isTRUE(discard_membership_input) && 'artifact_id' %in% names(rows)) {
+    # An old resource input is never rehydrated. Drop it from this saved-run view
+    # before path validation, so the current project/installation can replace it.
+    rows <- rows[is.na(rows[['artifact_id']]) | rows[['artifact_id']]!='clinical_source_membership',,drop=FALSE]
+  }
+  for(i in seq_len(nrow(rows))) {
+    relative <- rows$relative_path[[i]]
+    if('artifact_id' %in% names(rows) && identical(rows$artifact_id[[i]],'clinical_source_membership')) {
+      # This required installed/project input is metadata outside the run, never
+      # an arbitrary output path. Permit only its explicitly resolved exact path.
+      if(!identical(relative,clinical_source_membership_path(project_root))) stop('Invalid membership resource manifest input',call.=FALSE)
+    } else atlas_confined_path(run_dir,relative)
+  }
   invisible(NULL)
 }
 
-atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL) {
+atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL,discard_membership_input=FALSE) {
   registry <- atlas_output_registry(project_root); logical <- list(); descriptors <- list()
-  if(!is.null(run_dir)) atlas_validate_output_manifest(run_dir,registry$input_max_bytes)
+  if(!is.null(run_dir)) atlas_validate_output_manifest(run_dir,registry$input_max_bytes,project_root,discard_membership_input=discard_membership_input)
   context <- if (!is.null(run_dir) && file.exists(atlas_confined_path(run_dir,'outputs/atlas_build_context.json'))) atlas_read_build_context(run_dir,registry) else NULL
   minimum <- atlas_effective_threshold(payload_snapshot,context)
   required <- unlist(context$bindings,use.names=FALSE)
@@ -422,5 +436,6 @@ atlas_context_input_paths <- function(run_dir,context,project_root='.') {
   specs <- Filter(function(s)s$id %in% unlist(context$bindings),registry$artifacts)
   paths <- lapply(specs,function(s)atlas_confined_path(run_dir,atlas_bound_source_file(s,context)))
   names(paths) <- vapply(specs,function(s)paste0('input_',s$id),character(1))
-  c(list(atlas_build_context=atlas_confined_path(run_dir,'outputs/atlas_build_context.json')),paths)
+  c(list(atlas_build_context=atlas_confined_path(run_dir,'outputs/atlas_build_context.json'),
+         clinical_source_membership=clinical_source_membership_path(project_root)),paths)
 }
