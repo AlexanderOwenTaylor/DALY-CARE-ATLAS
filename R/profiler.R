@@ -84,7 +84,7 @@ atlas_min_cell_count <- function() {
 normalize_min_cell_count <- function(x) {
   out <- suppressWarnings(as.integer(x[[1]] %||% 5L))
   if (is.na(out) || out < 1L) return(5L)
-  out
+  max(5L, out)
 }
 
 source_date_range <- function(data) {

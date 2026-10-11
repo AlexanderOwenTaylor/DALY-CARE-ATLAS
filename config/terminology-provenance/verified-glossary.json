@@ -1,0 +1,165 @@
+{
+  "verified_on": "2026-10-10",
+  "scope": "Bounded public terminology verification. Definitions only; no clinical advice, phenotype derivation, source-field recoding, or local clinical data transmitted.",
+  "patobank_ki67_percent": {
+    "status": "verified_code_family",
+    "official_code_family": "ÆKI000..ÆKI100",
+    "local_canonical_code_family": "AEKI000..AEKI100",
+    "label": "Ki-67 index (%)",
+    "definition": "Danish pathology code whose three-digit suffix gives the recorded Ki-67 index as an integer percentage from 0 through 100.",
+    "mapping_rule": "For an exact ÆKI followed by three digits with numeric value 0..100, the recorded percentage equals that suffix. Apply the same lookup to AEKI only through the atlas's documented Æ-to-AE normalization.",
+    "official_regex": "^ÆKI(0[0-9]{2}|100)$",
+    "canonical_regex": "^AEKI(0[0-9]{2}|100)$",
+    "mapping_examples": [
+      {"official_code": "ÆKI000", "canonical_code": "AEKI000", "parsed_percent": 0},
+      {"official_code": "ÆKI050", "canonical_code": "AEKI050", "parsed_percent": 50},
+      {"official_code": "ÆKI100", "canonical_code": "AEKI100", "parsed_percent": 100}
+    ],
+    "sources": ["patobankEtiology", "patobankBreastGuide", "patobankSnomed"],
+    "verification": "Patobank's full Ætiologi codebook explicitly enumerates all 101 rows ÆKI000 through ÆKI100 with matching percentages. Its breast-cancer coding guide separately explains the ÆKIxxx suffix rule.",
+    "locators": {
+      "patobankEtiology": "ÆKI000..ÆKI100; web text lines 1463..1563 as retrieved on verification date",
+      "patobankBreastGuide": "Printed page 4 (PDF page index 3), section Ki-67 proliferationsindex"
+    },
+    "caveats": [
+      "The official code spelling uses Æ. AEKI is an atlas/export normalization; no claim is made that this ASCII spelling is itself the published terminology identifier.",
+      "This establishes a code-to-percentage definition only. It does not establish patient-level availability, a distinct specimen count, a disease-specific phenotype, specimen site, diagnosis date, baseline status, method equivalence, or a clinical risk group.",
+      "Do not infer MIPI-c or another score from a percentage code alone.",
+      "A true 0% code is a recorded value, not missingness. Out-of-range or nonnumeric suffixes are outside this verified family.",
+      "The explanatory PDF is a breast-cancer coding guide. The general code-family enumeration is verified independently in the full Patobank Ætiologi codebook.",
+      "Historical effective dates and the correctness of any particular exported clinical record were not audited. Existing aggregate rows and counts were not re-derived in this research task."
+    ]
+  },
+  "glossary": [
+    {
+      "token": "HDT",
+      "expansion": "High-dose therapy",
+      "definition": "Therapy administered at high dose; in the cited lymphoma context, used in connection with autologous stem cell transplantation.",
+      "status": "verified_term_in_oncology_context",
+      "sources": ["nciHDTTrial", "nciHighDoseChemotherapy"],
+      "locator": "NCI lymphoma trial eligibility explicitly spells out high-dose therapy (HDT); dictionary defines high-dose chemotherapy.",
+      "caveat": "HDT alone does not identify a regimen, prove transplantation occurred, or specify a dose. Do not silently expand every HDT field to high-dose chemotherapy without its source definition."
+    },
+    {
+      "token": "CIT",
+      "expansion": "Chemoimmunotherapy",
+      "definition": "Treatment combining chemotherapy and immunotherapy.",
+      "status": "verified_term_in_oncology_context",
+      "sources": ["nciCITTrial", "nciChemoimmunotherapy"],
+      "locator": "NCI trial description explicitly spells out chemo-immunotherapy (CIT); dictionary supplies the general definition.",
+      "caveat": "This is the intended oncology treatment expansion, not an export-specific codebook finding. CIT can have other meanings in other contexts; it does not identify a drug combination."
+    },
+    {
+      "token": "BTK",
+      "expansion": "Bruton tyrosine kinase",
+      "definition": "A protein involved in the development and maturation of B cells; BTK inhibitors block its activity.",
+      "status": "verified_term",
+      "sources": ["nciBTK"],
+      "caveat": "BTK names the protein. A BTK-inhibitor class label is not proof of a particular drug, exposure, mutation, or biomarker result."
+    },
+    {
+      "token": "MIPI",
+      "expansion": "Mantle Cell Lymphoma International Prognostic Index",
+      "definition": "A prognostic index for mantle cell lymphoma incorporating age, ECOG performance status, LDH, and peripheral blood leukocyte count.",
+      "status": "verified_term",
+      "sources": ["nciMCLWorkshop"],
+      "locator": "Printed pages 4 and 6; prognostic tools paragraph on page 6.",
+      "caveat": "A glossary definition does not establish which MIPI variant or calculation was used in an exported field. No score or risk group is derived here."
+    },
+    {
+      "token": "MIPI-c",
+      "expansion": "Combined MIPI (MIPI with Ki-67)",
+      "definition": "A mantle cell lymphoma prognostic classification combining MIPI with the Ki-67 proliferation index.",
+      "status": "verified_definition",
+      "sources": ["nciMCLWorkshop"],
+      "locator": "Printed page 7 explicitly describes Ki-67 score plus MIPI as MIPI-c.",
+      "caveat": "Do not conflate MIPI-c with the distinct biologic MIPI (MIPI-b), or calculate it from a lone Ki-67 pathology code. No threshold or risk-group assignment is supplied here."
+    },
+    {
+      "token": "ECOG",
+      "expansion": "Eastern Cooperative Oncology Group",
+      "definition": "In clinical data, commonly refers to the ECOG Performance Status Scale, which describes daily functioning, self-care, and physical activity.",
+      "status": "verified_term",
+      "sources": ["ecogScale"],
+      "caveat": "ECOG is the originating group's abbreviation; label a score field as ECOG performance status when its source supports that meaning. No score conversion is inferred."
+    },
+    {
+      "token": "CT",
+      "expansion": "Computed tomography",
+      "definition": "Imaging that uses x-rays and computer processing to create detailed views of structures inside the body.",
+      "status": "verified_term_in_imaging_context",
+      "sources": ["nciCT"],
+      "caveat": "Use this expansion for imaging context. A modality or procedure code does not establish report-text or image-pixel availability."
+    },
+    {
+      "token": "MRI",
+      "expansion": "Magnetic resonance imaging",
+      "definition": "Imaging that uses a strong magnet, radio waves, and computer processing to depict internal structures.",
+      "status": "verified_term",
+      "sources": ["nciMRI"],
+      "caveat": "A modality or procedure code does not establish report-text or image-pixel availability."
+    },
+    {
+      "token": "PET",
+      "expansion": "Positron emission tomography",
+      "definition": "Imaging using a radioactive tracer and a scanner to show where the tracer is taken up in the body.",
+      "status": "verified_term",
+      "sources": ["nciPET"],
+      "caveat": "The cited NCI entry describes radioactive glucose. PET alone does not identify a specific tracer, establish a positive finding, or imply image-pixel availability."
+    },
+    {
+      "token": "SNOMED",
+      "expansion": "Systematized Nomenclature of Medicine",
+      "definition": "A medical terminology family. For Danish pathology records, use the Danish pathology SNOMED / patoSnoMed classification identified by the source.",
+      "status": "verified_term_with_source_specific_scope",
+      "sources": ["nlmSnomed", "patobankSnomed", "sdsClassifications"],
+      "caveat": "Do not treat Danish pathology SNOMED codes as interchangeable with SNOMED CT identifiers. Preserve the code system and version provenance."
+    },
+    {
+      "token": "ATC",
+      "expansion": "Anatomical Therapeutic Chemical classification",
+      "definition": "A classification that groups active drug substances by the organ or system affected and their therapeutic, pharmacological, and chemical properties.",
+      "status": "verified_term",
+      "sources": ["whoATC"],
+      "caveat": "An ATC code identifies a classification entry; it does not on its own establish administered dose, schedule, indication, or confirmed exposure."
+    },
+    {
+      "token": "SKS",
+      "expansion": "Sundhedsvæsenets Klassifikationssystem (Danish healthcare classification system)",
+      "definition": "The collection of Danish clinical and administrative classifications maintained by the Danish Health Data Authority for documenting healthcare information and services.",
+      "status": "verified_term",
+      "sources": ["sdsSKS"],
+      "caveat": "Preserve the particular SKS code family and validity period. A generic SKS label alone does not identify the clinical meaning of a record."
+    }
+  ],
+  "sources": {
+    "patobankEtiology": "https://www.patobank.dk/kodebog/?tag=all_%C3%86",
+    "patobankBreastGuide": "https://www.patobank.dk/wp-content/uploads/2021/02/KODEVEJLEDNING-MAMMACANCER.pdf",
+    "patobankSnomed": "https://www.patobank.dk/snomed/",
+    "nciHDTTrial": "https://www.cancer.gov/research/participate/clinical-trials-search/v?id=NCI-2016-01966",
+    "nciHighDoseChemotherapy": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/high-dose-chemotherapy",
+    "nciCITTrial": "https://www.cancer.gov/research/participate/clinical-trials-search/v?id=NCI-2023-03817",
+    "nciChemoimmunotherapy": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/chemoimmunotherapy",
+    "nciBTK": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/btk-inhibitor",
+    "nciMCLWorkshop": "https://www.cancer.gov/about-nci/organization/ccct/steering-committees/nctn/lymphoma/lysc-ctpm-spurgeon.et.al.jncij2017.pdf",
+    "ecogScale": "https://ecog-acrin.org/resources/ecog-performance-status/",
+    "nciCT": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/ct-scan",
+    "nciMRI": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/mri",
+    "nciPET": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/pet-scan",
+    "nlmSnomed": "https://www.nlm.nih.gov/research/umls/sourcereleasedocs/current/SNM/",
+    "sdsClassifications": "https://sundhedsdatastyrelsen.dk/indberetning/klassifikationer",
+    "whoATC": "https://www.who.int/tools/atc-ddd-toolkit/atc-classification",
+    "sdsSKS": "https://sundhedsdatastyrelsen.dk/indberetning/klassifikationer/sks-klassifikationer"
+  },
+  "source_notes": {
+    "nciMCLWorkshop": "Spurgeon et al., Recommendations for Clinical Trial Development in Mantle Cell Lymphoma. JNCI 2017;109(1):djw263. DOI 10.1093/jnci/djw263. Official NCI-hosted workshop publication used for terminology only.",
+    "nciHDTTrial": "Abbreviation evidence from an NCI trial entry; no treatment recommendation or current trial-status claim is imported.",
+    "nciCITTrial": "Abbreviation evidence from an NCI trial entry; no treatment recommendation or current trial-status claim is imported."
+  },
+  "unresolved_legacy_tokens": [
+    {"token": "NK", "status": "unchanged_unresolved", "reason": "No export-specific codebook verification; no renewed research in this bounded task."},
+    {"token": "HD-LP", "status": "unchanged_unresolved", "reason": "No export-specific codebook verification; no renewed research in this bounded task."},
+    {"token": "MF/SZ", "status": "unchanged_unresolved", "reason": "No export-specific codebook verification; no renewed research in this bounded task."},
+    {"token": "PCTCL", "status": "unchanged_unresolved", "reason": "No export-specific codebook verification; no renewed research in this bounded task."}
+  ]
+}

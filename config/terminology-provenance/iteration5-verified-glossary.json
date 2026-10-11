@@ -1,0 +1,201 @@
+{
+  "verified_on": "2026-10-10",
+  "scope": "Eighteen additional glossary entries verified from public primary or issuing-authority sources. Definitions only; no response criteria, score thresholds, derivations, risk assignment, clinical-record searches, or application edits.",
+  "verified_count": 18,
+  "unresolved_count": 0,
+  "integration_note": "Add to the existing dictionary without replacing its existing entries. DEXA and DXA are aliases of one glossary entry. A verified expansion does not verify an unknown source field's meaning.",
+  "glossary": [
+    {
+      "token": "ISS",
+      "expansion": "International Staging System",
+      "definition": "A prognostic staging system for multiple myeloma based on serum beta-2 microglobulin and albumin.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/15809451/",
+      "sourceLabel": "Greipp et al., International staging system for multiple myeloma (J Clin Oncol, 2005; PubMed)",
+      "context": "Multiple myeloma staging.",
+      "caveat": "Use this expansion only in the myeloma staging context. ISS can denote other concepts elsewhere. Preserve the recorded system and stage; do not infer a stage from this definition."
+    },
+    {
+      "token": "R-ISS",
+      "expansion": "Revised International Staging System",
+      "definition": "A revised prognostic staging system for newly diagnosed multiple myeloma that incorporates ISS, selected cytogenetic abnormalities, and lactate dehydrogenase.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/26240224/",
+      "sourceLabel": "Palumbo et al., Revised International Staging System for Multiple Myeloma (J Clin Oncol, 2015; PubMed)",
+      "context": "Multiple myeloma staging.",
+      "caveat": "R-ISS is a specific revision and is distinct from ISS and R2-ISS. No stage, cytogenetic category, or prognosis is assigned here."
+    },
+    {
+      "token": "CR",
+      "expansion": "Complete response",
+      "definition": "A treatment response in which detectable signs of cancer have disappeared; also called complete remission.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/complete-response",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: complete response",
+      "supportingSources": [
+        {"url": "https://imf-ons.myeloma.org/ONS_2023.pdf", "label": "International Myeloma Foundation, ONS 2023 educational slides: CR abbreviation"}
+      ],
+      "context": "Cancer treatment-response assessment.",
+      "caveat": "CR may be expanded as complete response or complete remission in a source. It does not mean cure. The disease, assessment method, and source-specific response framework remain necessary."
+    },
+    {
+      "token": "sCR",
+      "expansion": "Stringent complete response",
+      "definition": "A distinct, more stringent complete-response category used in International Myeloma Working Group assessment of myeloma treatment response.",
+      "sourceURL": "https://www.myeloma.org/imwg/uniform-response-criteria-multiple-myeloma",
+      "sourceLabel": "International Myeloma Working Group / International Myeloma Foundation: uniform response criteria",
+      "supportingSources": [
+        {"url": "https://imf-ons.myeloma.org/ONS_2023.pdf", "label": "International Myeloma Foundation, ONS 2023 educational slides: sCR abbreviation"}
+      ],
+      "context": "Multiple myeloma treatment-response assessment.",
+      "caveat": "Retain the lower-case s in the display token. This label alone does not establish cure, MRD negativity, or which response-criteria version was used."
+    },
+    {
+      "token": "PR",
+      "expansion": "Partial response",
+      "definition": "A treatment-related reduction in tumour size or the extent of cancer; also called partial remission.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/partial-response",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: partial response",
+      "supportingSources": [
+        {"url": "https://imf-ons.myeloma.org/ONS_2023.pdf", "label": "International Myeloma Foundation, ONS 2023 educational slides: PR abbreviation"}
+      ],
+      "context": "Cancer treatment-response assessment.",
+      "caveat": "Use this expansion in a response context; PR can have other medical meanings. The required evidence and assessment method depend on the disease and source framework."
+    },
+    {
+      "token": "VGPR",
+      "expansion": "Very good partial response",
+      "definition": "A distinct category used to describe a very good partial treatment response in multiple myeloma.",
+      "sourceURL": "https://www.myeloma.org/imwg/uniform-response-criteria-multiple-myeloma",
+      "sourceLabel": "International Myeloma Working Group / International Myeloma Foundation: uniform response criteria",
+      "supportingSources": [
+        {"url": "https://imf-ons.myeloma.org/ONS_2023.pdf", "label": "International Myeloma Foundation, ONS 2023 educational slides: VGPR abbreviation"}
+      ],
+      "context": "Multiple myeloma treatment-response assessment.",
+      "caveat": "This entry establishes the myeloma expansion. Other disease frameworks may use VGPR differently; the token does not identify a response-criteria version or imply complete response."
+    },
+    {
+      "token": "SD",
+      "expansion": "Stable disease",
+      "definition": "A response-assessment category describing cancer without a meaningful improvement or worsening under the applicable disease framework.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/stable-disease",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: stable disease",
+      "supportingSources": [
+        {"url": "https://www.cancer.gov/research/participate/clinical-trials-search/v?id=NCI-2019-01224", "label": "NCI lymphoma trial listing: stable disease (SD) in response assessment"}
+      ],
+      "context": "Cancer treatment-response assessment only.",
+      "caveat": "Do not expand statistical SD as stable disease; it commonly means standard deviation. Stable disease is not the same as remission, and source-specific assessment rules are not supplied here."
+    },
+    {
+      "token": "PD",
+      "expansion": "Progressive disease",
+      "definition": "Cancer that is increasing in extent, spreading, or otherwise worsening.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/progressive-disease",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: progressive disease",
+      "supportingSources": [
+        {"url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3710442/", "label": "International Myeloma Workshop Consensus Panel 1 (Blood, 2011): progressive disease (PD)"}
+      ],
+      "context": "Cancer response or progression assessment.",
+      "caveat": "Use only in the disease-response context. This abbreviation does not identify the disease-specific progression rules, assessment date, or evidence used."
+    },
+    {
+      "token": "ORR",
+      "expansion": "Overall response rate",
+      "definition": "The proportion of assessed patients whose cancer responds to treatment; also termed objective response rate.",
+      "sourceURL": "https://www.fda.gov/about-fda/oncology-center-excellence/patient-friendly-language-cancer-clinical-trials",
+      "sourceLabel": "FDA Oncology Center of Excellence: patient-friendly language for cancer clinical trials",
+      "context": "Group-level cancer treatment-response endpoint.",
+      "caveat": "ORR is a rate for a defined group, not an individual response category. The source must specify the qualifying response categories, denominator, and assessment framework. No rate is calculated here."
+    },
+    {
+      "token": "PFS",
+      "expansion": "Progression-free survival",
+      "definition": "The time patients remain alive without their disease worsening during or after treatment.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/progression-free-survival",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: progression-free survival",
+      "context": "Cancer time-to-event endpoint.",
+      "caveat": "The time origin, event definition, and censoring rules depend on the study or source. PFS does not mean that the cancer has disappeared. No endpoint is derived here."
+    },
+    {
+      "token": "OS",
+      "expansion": "Overall survival",
+      "definition": "The time patients remain alive from a defined starting point, such as diagnosis or treatment initiation.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/overall-survival",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: overall survival",
+      "context": "Cancer survival endpoint.",
+      "caveat": "Preserve the source's time origin and follow-up definition. Overall survival is distinct from a survival percentage at a specified time; neither is derived here."
+    },
+    {
+      "token": "DEXA/DXA",
+      "aliases": ["DEXA", "DXA"],
+      "expansion": "Dual-energy X-ray absorptiometry",
+      "definition": "An imaging measurement that uses X-rays at two energy levels to assess bone mineral density.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/dual-energy-x-ray-absorptiometry",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: dual energy X-ray absorptiometry",
+      "context": "Bone-density imaging; DEXA and DXA refer to the same technique.",
+      "caveat": "A modality label does not establish a measured bone-density value, a diagnosis of osteoporosis, image availability, or myeloma bone lesions. DEXA is not dexamethasone."
+    },
+    {
+      "token": "CNS",
+      "expansion": "Central nervous system",
+      "definition": "The part of the nervous system comprising the brain and spinal cord.",
+      "sourceURL": "https://www.cancer.gov/publications/dictionaries/cancer-terms/def/central-nervous-system",
+      "sourceLabel": "NCI Dictionary of Cancer Terms: central nervous system",
+      "context": "Anatomy; may qualify oncology involvement, relapse, or prophylaxis fields.",
+      "caveat": "CNS alone is an anatomical term. It does not establish CNS disease, CNS prophylaxis, or a CNS-IPI score."
+    },
+    {
+      "token": "IPI",
+      "expansion": "International Prognostic Index",
+      "definition": "A clinical prognostic index developed for aggressive non-Hodgkin lymphoma using features recorded before treatment.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/8141877/",
+      "sourceLabel": "International Non-Hodgkin's Lymphoma Prognostic Factors Project (N Engl J Med, 1993; PubMed)",
+      "supportingSources": [
+        {"url": "https://staging.seer.cancer.gov/cs/input/02.05.50/lymphoma/ssf3/", "label": "NCI SEER: International Prognostic Index (IPI)"}
+      ],
+      "context": "Lymphoma prognostic assessment, especially aggressive non-Hodgkin lymphoma.",
+      "caveat": "Keep IPI distinct from aaIPI, revised IPI, NCCN-IPI, CNS-IPI, FLIPI, and Hodgkin IPS. This definition neither identifies a field's variant nor assigns a score or risk group."
+    },
+    {
+      "token": "aaIPI",
+      "expansion": "Age-adjusted International Prognostic Index",
+      "definition": "An age-adjusted variant of the lymphoma IPI using disease stage, lactate dehydrogenase, and performance status.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/8141877/",
+      "sourceLabel": "International Non-Hodgkin's Lymphoma Prognostic Factors Project (N Engl J Med, 1993; PubMed)",
+      "supportingSources": [
+        {"url": "https://pubmed.ncbi.nlm.nih.gov/32380536/", "label": "Leppa et al., Blood Advances 2020: age-adjusted International Prognostic Index (aaIPI)"}
+      ],
+      "context": "Aggressive non-Hodgkin lymphoma prognostic assessment.",
+      "caveat": "Preserve the source's timing and variant, including any explicitly second-line version. Do not assume aaIPI and IPI are interchangeable or compute a score from this entry."
+    },
+    {
+      "token": "FLIPI",
+      "expansion": "Follicular Lymphoma International Prognostic Index",
+      "definition": "A clinical prognostic index developed for follicular lymphoma using features recorded at diagnosis.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/15126323/",
+      "sourceLabel": "Solal-Celigny et al., Follicular lymphoma international prognostic index (Blood, 2004; PubMed)",
+      "context": "Follicular lymphoma prognostic assessment.",
+      "caveat": "Disease-specific: do not use as a generic lymphoma index or equate it with FLIPI2. No score, risk category, or treatment recommendation is supplied."
+    },
+    {
+      "token": "FLIPI2",
+      "aliases": ["FLIPI-2"],
+      "expansion": "Follicular Lymphoma International Prognostic Index 2",
+      "definition": "A distinct follicular lymphoma prognostic index developed prospectively with progression-free survival as its principal endpoint.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/19652063/",
+      "sourceLabel": "Federico et al., Follicular lymphoma international prognostic index 2 (J Clin Oncol, 2009; PubMed)",
+      "context": "Follicular lymphoma prognostic assessment.",
+      "caveat": "FLIPI2 is distinct from the original FLIPI and should retain its own source label. No component thresholds, score, or risk category are supplied."
+    },
+    {
+      "token": "IPS",
+      "expansion": "International Prognostic Score",
+      "definition": "A prognostic score developed for advanced Hodgkin lymphoma using clinical and laboratory features at diagnosis.",
+      "sourceURL": "https://pubmed.ncbi.nlm.nih.gov/9819449/",
+      "sourceLabel": "Hasenclever and Diehl, A prognostic score for advanced Hodgkin's disease (N Engl J Med, 1998; PubMed)",
+      "supportingSources": [
+        {"url": "https://staging.seer.cancer.gov/cs/input/02.05.50/lymphoma/ssf5/", "label": "NCI SEER: International Prognostic Score (IPS), Hodgkin lymphoma"}
+      ],
+      "context": "Advanced Hodgkin lymphoma prognostic assessment only.",
+      "caveat": "Use this expansion only when Hodgkin lymphoma prognostic context is explicit. Do not equate IPS with IPI or IPSS, or assume a specific IPS variant from the abbreviation alone. No score or risk group is assigned."
+    }
+  ],
+  "unresolved": []
+}

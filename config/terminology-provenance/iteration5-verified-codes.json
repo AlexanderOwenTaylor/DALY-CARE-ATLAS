@@ -1,0 +1,158 @@
+{
+  "research_date": "2026-10-10",
+  "scope": "Bounded public terminology lookup of four SKS codes and five current WHO ATC codes; no user data searched and no application files edited.",
+  "counts": {
+    "requested_codes": 9,
+    "verified_current_codes": 9,
+    "unresolved_codes": 0,
+    "historical_validity_intervals_verified": 0
+  },
+  "source_scope": {
+    "SKS": {
+      "publisher": "Sundhedsdatastyrelsen; public SKS browser at medinfo.dk",
+      "official_linkage_url": "https://sundhedsdatastyrelsen.dk/indberetning/klassifikationer/sks-klassifikationer/vaerktoejer",
+      "browser_url": "https://medinfo.dk/sks/brows.php",
+      "data_last_updated_displayed": "2026-09-30",
+      "scope": "Current valid SKS codes only. The browser publishes full Danish labels; historical validity intervals were not obtained.",
+      "verification_method": "Direct SKS-code searches in the public browser, read from rendered accessibility results; exact-code row distinguished from ancestors and descendants.",
+      "source_url_caveat": "Detail URLs were taken from the rendered official browser links. The web text tool could not fetch those detail URLs, but direct browser search results verified each code and label. Numeric node identifiers belong to the current browser database."
+    },
+    "WHO_ATC": {
+      "publisher": "WHO Collaborating Centre for Drug Statistics Methodology, Norwegian Institute of Public Health",
+      "index_url": "https://atcddd.fhi.no/atc_ddd_index/",
+      "data_last_updated_displayed": "2026-01-20",
+      "scope": "Current online 2026 ATC/DDD Index. Historical replacement dates and predecessor-code equivalence were not verified.",
+      "verification_method": "WHO index code/group pages; Danish ingredient spelling independently corroborated in current medinfo SKS M-prefixed ATC rows."
+    }
+  },
+  "codes": [
+    {
+      "code_system": "SKS",
+      "code": "APAA4",
+      "status": "verified_current",
+      "danish_label": "Sygehuslæge",
+      "english_label": "Hospital physician",
+      "english_label_basis": "Concise translation of the official Danish label; not an official English SKS label.",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=953",
+      "source_hierarchy": ["Administrative forhold", "Personaleklassifikation", "Lægeligt personale", "Ansatte speciallæger med flere"],
+      "current_historical_scope": "Current medinfo SKS dataset displayed as updated 2026-09-30; historical validity dates not checked.",
+      "caveat": "Administrative personnel code, not a CT or other imaging procedure. It must not independently imply imaging modality or imaging availability."
+    },
+    {
+      "code_system": "SKS",
+      "code": "UXCD10",
+      "status": "verified_current",
+      "danish_label": "CT-skanning af øvre abdomen",
+      "english_label": "CT of upper abdomen",
+      "english_label_basis": "Concise translation of the official Danish label; not an official English SKS label.",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=49109",
+      "source_hierarchy": ["Klassifikation af undersøgelser", "Radiologiske procedurer", "CT-skanninger", "CT-skanninger af abdomen og bækken"],
+      "current_historical_scope": "Current medinfo SKS dataset displayed as updated 2026-09-30; historical validity dates not checked.",
+      "caveat": "CT is explicit in this exact label, not inferred from its prefix. A coded procedure does not establish report-text availability, image-pixel availability, contrast protocol, or examination result."
+    },
+    {
+      "code_system": "SKS",
+      "code": "UXCD15",
+      "status": "verified_current",
+      "danish_label": "CT-skanning af nedre abdomen, inkl. bækken",
+      "english_label": "CT of lower abdomen, including pelvis",
+      "english_label_basis": "Concise translation of the official Danish label; not an official English SKS label.",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=49110",
+      "source_hierarchy": ["Klassifikation af undersøgelser", "Radiologiske procedurer", "CT-skanninger", "CT-skanninger af abdomen og bækken"],
+      "current_historical_scope": "Current medinfo SKS dataset displayed as updated 2026-09-30; historical validity dates not checked.",
+      "caveat": "CT is explicit in this exact label, not inferred from its prefix. A coded procedure does not establish report-text availability, image-pixel availability, contrast protocol, or examination result."
+    },
+    {
+      "code_system": "SKS",
+      "code": "UXCA00",
+      "status": "verified_current",
+      "danish_label": "CT-skanning af cerebrum",
+      "english_label": "CT of cerebrum",
+      "english_label_basis": "Concise translation of the official Danish label; not an official English SKS label.",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=49078",
+      "source_hierarchy": ["Klassifikation af undersøgelser", "Radiologiske procedurer", "CT-skanninger", "CT-skanninger af hoved"],
+      "current_historical_scope": "Current medinfo SKS dataset displayed as updated 2026-09-30; historical validity dates not checked.",
+      "caveat": "Exact UXCA00 row verified separately from descendant UXCA00A. CT is explicit in the label. A coded procedure does not establish report-text availability, image-pixel availability, contrast protocol, or examination result."
+    },
+    {
+      "code_system": "WHO ATC",
+      "code": "L01EL01",
+      "status": "verified_current",
+      "danish_label": "ibrutinib",
+      "english_label": "ibrutinib",
+      "english_label_basis": "Exact WHO ATC ingredient label.",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01EL01&showdescription=no",
+      "danish_label_source_code_system": "SKS ATC",
+      "danish_label_source_code": "ML01EL01",
+      "danish_label_source_url": "https://medinfo.dk/sks/brows.php?s_nod=45758",
+      "who_group_label": "Bruton's tyrosine kinase (BTK) inhibitors",
+      "current_historical_scope": "Current WHO online index, last updated 2026-01-20; corroborated in current SKS. Historical predecessor codes and replacement dates not verified.",
+      "caveat": "An ingredient-level code identifies a substance, not a regimen, treatment line, indication, administration event, or result. WHO ATC L01EL01 and SKS ML01EL01 are distinct code representations and must remain source-aware."
+    },
+    {
+      "code_system": "WHO ATC",
+      "code": "L01FA01",
+      "status": "verified_current",
+      "danish_label": "rituximab",
+      "english_label": "rituximab",
+      "english_label_basis": "Exact WHO ATC ingredient label.",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01FA&showdescription=no",
+      "danish_label_source_code_system": "SKS ATC",
+      "danish_label_source_code": "ML01FA01",
+      "danish_label_source_url": "https://medinfo.dk/sks/brows.php?s_nod=45808",
+      "who_group_label": "CD20 (Clusters of Differentiation 20) inhibitors",
+      "current_historical_scope": "Current WHO online index, last updated 2026-01-20; corroborated in current SKS. Historical predecessor codes and replacement dates not verified.",
+      "caveat": "An ingredient-level code identifies a substance, not a regimen, treatment line, indication, administration event, or result. WHO ATC L01FA01 and SKS ML01FA01 are distinct code representations and must remain source-aware."
+    },
+    {
+      "code_system": "WHO ATC",
+      "code": "L01FA03",
+      "status": "verified_current",
+      "danish_label": "obinutuzumab",
+      "english_label": "obinutuzumab",
+      "english_label_basis": "Exact WHO ATC ingredient label.",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01FA&showdescription=no",
+      "danish_label_source_code_system": "SKS ATC",
+      "danish_label_source_code": "ML01FA03",
+      "danish_label_source_url": "https://medinfo.dk/sks/brows.php?s_nod=45810",
+      "who_group_label": "CD20 (Clusters of Differentiation 20) inhibitors",
+      "current_historical_scope": "Current WHO online index, last updated 2026-01-20; corroborated in current SKS. Historical predecessor codes and replacement dates not verified.",
+      "caveat": "An ingredient-level code identifies a substance, not a regimen, treatment line, indication, administration event, or result. WHO ATC L01FA03 and SKS ML01FA03 are distinct code representations and must remain source-aware."
+    },
+    {
+      "code_system": "WHO ATC",
+      "code": "L01XG01",
+      "status": "verified_current",
+      "danish_label": "bortezomib",
+      "english_label": "bortezomib",
+      "english_label_basis": "Exact WHO ATC ingredient label.",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01XG&showdescription=no",
+      "danish_label_source_code_system": "SKS ATC",
+      "danish_label_source_code": "ML01XG01",
+      "danish_label_source_url": "https://medinfo.dk/sks/brows.php?s_nod=45915",
+      "who_group_label": "Proteasome inhibitors",
+      "current_historical_scope": "Current WHO online index, last updated 2026-01-20; corroborated in current SKS. Historical predecessor codes and replacement dates not verified.",
+      "caveat": "An ingredient-level code identifies a substance, not a regimen, treatment line, indication, administration event, or result. WHO ATC L01XG01 and SKS ML01XG01 are distinct code representations and must remain source-aware."
+    },
+    {
+      "code_system": "WHO ATC",
+      "code": "L01XG02",
+      "status": "verified_current",
+      "danish_label": "carfilzomib",
+      "english_label": "carfilzomib",
+      "english_label_basis": "Exact WHO ATC ingredient label.",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01XG&showdescription=no",
+      "danish_label_source_code_system": "SKS ATC",
+      "danish_label_source_code": "ML01XG02",
+      "danish_label_source_url": "https://medinfo.dk/sks/brows.php?s_nod=45916",
+      "who_group_label": "Proteasome inhibitors",
+      "current_historical_scope": "Current WHO online index, last updated 2026-01-20; corroborated in current SKS. Historical predecessor codes and replacement dates not verified.",
+      "caveat": "An ingredient-level code identifies a substance, not a regimen, treatment line, indication, administration event, or result. WHO ATC L01XG02 and SKS ML01XG02 are distinct code representations and must remain source-aware."
+    }
+  ],
+  "integration_findings": [
+    "Remove APAA4 as an imaging/CT code trigger and as a CT example; the verified code is a personnel category.",
+    "UXCD10, UXCD15 and UXCA00 can carry CT labels only through exact SKS code matching in an appropriate procedure-code source.",
+    "All five requested WHO replacement-code labels are verified current, but this lookup does not establish the historical replacement relationship or effective dates."
+  ]
+}

@@ -1,4 +1,7 @@
 write_static_atlas <- function(run_dir, payload, project_root = ".") {
+  if (!exists("atlas_public_privacy", mode = "function")) {
+    source(file.path(project_root, "R", "public_privacy.R"), encoding = "UTF-8")
+  }
   site_dir <- file.path(run_dir, "site")
   dir_create(site_dir)
 
@@ -14,7 +17,19 @@ write_static_atlas <- function(run_dir, payload, project_root = ".") {
   payload_path <- file.path(site_dir, "DALYCARE_atlas_payload.js")
   file.copy(template_path, html_path, overwrite = TRUE)
 
+  display_path <- file.path(project_root, "config", "npu-display-dictionary.csv")
+  if (file.exists(display_path)) {
+    display_rows <- utils::read.csv(display_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", na.strings = NULL)
+    payload$npu_display_dictionary <- public_rows(display_rows, max_rows = nrow(display_rows))
+  }
+  clinical_display_path <- file.path(project_root, "config", "clinical-display-dictionary.csv")
+  if (file.exists(clinical_display_path)) {
+    clinical_display_rows <- utils::read.csv(clinical_display_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8", na.strings = NULL)
+    payload$clinical_display_dictionary <- public_rows(clinical_display_rows, max_rows = nrow(clinical_display_rows))
+  }
+  payload <- atlas_public_privacy(payload, project_root, atlas_min_cell_count())
   json <- atlas_to_json(atlas_sanitize_payload_text(payload))
+  writeLines(enc2utf8(json), con = file.path(site_dir, "DALYCARE_atlas_payload.json"), useBytes = TRUE)
   writeLines(enc2utf8(c("window.DALYCARE_ATLAS_PAYLOAD = ", json, ";")), con = payload_path, useBytes = TRUE)
   list(html = html_path, payload = payload_path)
 }
@@ -1244,7 +1259,7 @@ public_column_profile_rows <- function(column_profiles) {
     for (nm in intersect(c("min", "mean", "median", "p25", "p75", "max", "min_date", "max_date"), names(out))) {
       out[[nm]][sensitive] <- NA
     }
-    out$column_name[sensitive] <- "[sensitive]"
+    # Field names describe schema; the final guard protects their values.
   }
   out
 }

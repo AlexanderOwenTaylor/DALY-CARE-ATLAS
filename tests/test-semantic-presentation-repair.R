@@ -40,7 +40,7 @@ for (alias in c("HVH", "HER", "RHM", "RGH", "Rigshospitalet", "Herlev", "Hvidovr
 }
 
 expect_true(grepl("Radiotherapy procedure evidence is available through SKS/BWGC procedure codes. SP radiotherapy plan/report detail is not available in the current aggregate block.", template, fixed = TRUE), "Radiotherapy wording should distinguish BWGC procedure evidence from SP plan/report detail.")
-expect_true(grepl("imagingCodeLabels", template, fixed = TRUE) && grepl("BWGC1: \"Radiotherapy fraction\"", template, fixed = TRUE), "Imaging renderer should translate UX/BWGC procedure codes.")
+expect_true(grepl("imagingCodeLabels", template, fixed = TRUE) && grepl("BWGC1: \"Conventional external beam radiotherapy\"", template, fixed = TRUE), "Imaging renderer should translate UX/BWGC procedure codes.")
 
 expect_true(grepl("function damydaImagingBoneLabel", template, fixed = TRUE), "DaMyDa imaging/bone renderer should group raw fields into concepts.")
 for (concept in c("PET/CT", "DEXA", "Scintigraphy", "Bone lesion type", "Bone lesions")) {

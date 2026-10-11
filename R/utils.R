@@ -222,7 +222,7 @@ class_scalar <- function(x) {
 
 atlas_to_json <- function(x) {
   if (requireNamespace("jsonlite", quietly = TRUE)) {
-    return(jsonlite::toJSON(x, auto_unbox = TRUE, dataframe = "rows", null = "null", pretty = TRUE))
+    return(jsonlite::toJSON(x, auto_unbox = TRUE, dataframe = "rows", null = "null", pretty = FALSE))
   }
   atlas_json_value(x)
 }

@@ -1,0 +1,115 @@
+{
+  "verified_on": "2026-10-11",
+  "organism": "Homo sapiens",
+  "verified_count": 13,
+  "requested_verified_count": 12,
+  "optional_verified_symbols": ["BTK"],
+  "method": "Official human gene names checked in NCBI Gene records, where supplied by HGNC. Definitions paraphrase the NCBI RefSeq summaries. NCBI Datasets supplied the BTK summary. No variant-level or patient-level interpretation was performed.",
+  "entries": [
+    {
+      "symbol": "TP53",
+      "label": "tumor protein p53",
+      "definition": "Human gene encoding p53, a tumour-suppressor protein involved in cellular stress responses, cell-cycle control and DNA repair.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/7157",
+      "source_label": "NCBI Gene 7157: TP53 (human); HGNC:11998 approved name; RefSeq summary, December 2016",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 15 September 2026."
+    },
+    {
+      "symbol": "ATM",
+      "label": "ATM serine/threonine kinase",
+      "definition": "Human gene encoding a kinase involved in cell-cycle checkpoints and the response to DNA damage.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/472/",
+      "source_label": "NCBI Gene 472: ATM (human); HGNC:795 approved name; RefSeq summary, August 2010",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 13 September 2026."
+    },
+    {
+      "symbol": "NOTCH1",
+      "label": "notch receptor 1",
+      "definition": "Human gene encoding a cell-surface receptor that carries signals between neighbouring cells and contributes to cell and tissue development.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/4851",
+      "source_label": "NCBI Gene 4851: NOTCH1 (human); HGNC:7881 approved name; RefSeq summary, January 2016",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 3 October 2026."
+    },
+    {
+      "symbol": "SF3B1",
+      "label": "splicing factor 3b subunit 1",
+      "definition": "Human gene encoding part of the RNA-splicing machinery that processes precursor messenger RNA.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/23451/",
+      "source_label": "NCBI Gene 23451: SF3B1 (human); HGNC:10768 approved name; RefSeq summary, July 2008",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 13 September 2026."
+    },
+    {
+      "symbol": "BIRC3",
+      "label": "baculoviral IAP repeat containing 3",
+      "definition": "Human gene encoding an inhibitor-of-apoptosis family protein involved in regulating programmed cell death.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/330",
+      "source_label": "NCBI Gene 330: BIRC3 (human); HGNC:591 approved name; RefSeq summary, August 2011",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 5 August 2026."
+    },
+    {
+      "symbol": "PLCG2",
+      "label": "phospholipase C gamma 2",
+      "definition": "Human gene encoding an enzyme that generates messenger molecules used to relay signals from immune-system and growth-factor receptors.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/5336/",
+      "source_label": "NCBI Gene 5336: PLCG2 (human); HGNC:9066 approved name; RefSeq summary, March 2014",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 13 September 2026."
+    },
+    {
+      "symbol": "MYD88",
+      "label": "MYD88 innate immune signal transduction adaptor",
+      "definition": "Human gene encoding an adaptor protein that relays signals in immune-response pathways, including Toll-like and interleukin-1 receptor pathways.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/4615",
+      "source_label": "NCBI Gene 4615: MYD88 (human); HGNC:7562 approved name; RefSeq summary, February 2010",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. The current approved gene name differs from the older name myeloid differentiation primary response 88, retained among the NCBI protein names. Verified NCBI record updated 13 September 2026."
+    },
+    {
+      "symbol": "BRAF",
+      "label": "B-Raf proto-oncogene, serine/threonine kinase",
+      "definition": "Human gene encoding a kinase in the MAP kinase/ERK signalling pathway, which helps regulate cell division and differentiation.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/673/",
+      "source_label": "NCBI Gene 673: BRAF (human); HGNC:1097 approved name; RefSeq summary, August 2017",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. The gene name does not identify a specific variant such as V600E. Verified NCBI record updated 10 September 2026."
+    },
+    {
+      "symbol": "KRAS",
+      "label": "KRas proto-oncogene, GTPase",
+      "definition": "Human gene encoding a member of the RAS family of small GTPase proteins.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/3845",
+      "source_label": "NCBI Gene 3845: KRAS (human); HGNC:6407 approved name; RefSeq summary, July 2008",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Preserve the official full-name capitalisation KRas. Verified NCBI record updated 19 September 2026."
+    },
+    {
+      "symbol": "NRAS",
+      "label": "NRAS proto-oncogene, GTPase",
+      "definition": "Human gene encoding the NRas GTPase, a membrane-associated protein regulated between active and inactive states.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/4893",
+      "source_label": "NCBI Gene 4893: NRAS (human); HGNC:7989 approved name; RefSeq summary, June 2011",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 13 September 2026."
+    },
+    {
+      "symbol": "XPO1",
+      "label": "exportin 1",
+      "definition": "Human gene encoding a transport protein that moves selected proteins out of the cell nucleus.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/7514",
+      "source_label": "NCBI Gene 7514: XPO1 (human); HGNC:12825 approved name; RefSeq summary, January 2015",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 13 September 2026."
+    },
+    {
+      "symbol": "POT1",
+      "label": "protection of telomeres 1",
+      "definition": "Human gene encoding a protein that helps maintain telomeres and protect chromosome ends.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/gene/25913/",
+      "source_label": "NCBI Gene 25913: POT1 (human); HGNC:17284 approved name; RefSeq summary, July 2008",
+      "note": "The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. Verified NCBI record updated 12 August 2026."
+    },
+    {
+      "symbol": "BTK",
+      "label": "Bruton tyrosine kinase",
+      "definition": "Human gene encoding a tyrosine kinase involved in B-cell development.",
+      "source_url": "https://www.ncbi.nlm.nih.gov/datasets/gene/695/",
+      "source_label": "NCBI Datasets Gene 695: BTK (human); HGNC:1133; RefSeq summary, December 2013",
+      "note": "Optional verification of the existing BTK glossary entry. The molecular field identifies this gene. Field presence alone does not establish that testing was performed, that a variant was detected, its pathogenicity, gene or protein expression, or a positive result. Interpret with the source field definition, assay and recorded result. This gene expansion must not conflate BTK molecular fields with BTK-inhibitor treatment fields."
+    }
+  ],
+  "unresolved": []
+}

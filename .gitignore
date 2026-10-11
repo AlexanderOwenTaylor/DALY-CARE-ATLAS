@@ -5,6 +5,8 @@ atlas_runs/
 logs/
 *.log
 *.tmp
+__pycache__/
+*.py[cod]
 DALYCARE_atlas_V33_coverage_mockup_*/
 DALYCARE_atlas_V33_coverage_mockup_*.zip
 mockups/

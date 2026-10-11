@@ -1,0 +1,135 @@
+{
+  "verified_on": "2026-10-10",
+  "scope": "Bounded exact-code verification of six Danish pathology codes and five SKS imaging codes. Public codebook searches only; no local datasets transmitted and no phenotype or patient-level interpretation.",
+  "code_systems": {
+    "pathology": "Danish pathology SNOMED / patoSnoMed; not interchangeable with SNOMED CT identifiers",
+    "sks": "Sundhedsvæsenets Klassifikationssystem (SKS), Danish Health Data Authority"
+  },
+  "method": {
+    "patobank": "Read the official Patobank bone marrow/blood codebook and exact-code GET searches using searchbook=<code>&closed_codes=true; extracted matching table rows. Inclusion of closed codes was deliberate and does not establish current lifecycle status.",
+    "sks": "Read the Danish Health Data Authority's SKS classification via its linked medinfo.dk publishing browser. Submitted public exact-code search forms (s_nod=0, ord empty, kode=<code>); extracted exact matching rows and their stable node links.",
+    "sks_data_version_observed": "SKS browser states data last updated 30-09-2026; application version 4.06, updated 28-03-2026.",
+    "translation_note": "English labels below are concise translations of the verified Danish code labels, not additional clinical assertions."
+  },
+  "pathology": [
+    {
+      "code": "T06002",
+      "legacy_label": "Bone marrow biopsy",
+      "official_label_da": "Cristamarv",
+      "verified_label_en": "Iliac crest bone marrow",
+      "status": "verified_label_requires_refinement",
+      "source": "https://www.patobank.dk/kodebog/?searchbook=T06002&closed_codes=true",
+      "source_group": "https://www.patobank.dk/kodebog/?tag=D",
+      "caveat": "This is a topography code for marrow from the iliac crest. It does not alone establish a biopsy procedure or distinguish biopsy from aspirate. Prefer the anatomical label."
+    },
+    {
+      "code": "T0X000",
+      "legacy_label": "Blood",
+      "official_label_da": "Blod",
+      "verified_label_en": "Blood",
+      "status": "verified_legacy_label_supported",
+      "source": "https://www.patobank.dk/kodebog/?searchbook=T0X000&closed_codes=true",
+      "source_group": "https://www.patobank.dk/kodebog/?tag=D",
+      "caveat": "Topography label only; no test, method, result, or disease inferred."
+    },
+    {
+      "code": "T06000",
+      "legacy_label": "Bone marrow",
+      "official_label_da": "Knoglemarv",
+      "verified_label_en": "Bone marrow",
+      "status": "verified_legacy_label_supported",
+      "source": "https://www.patobank.dk/kodebog/?searchbook=T06000&closed_codes=true",
+      "source_group": "https://www.patobank.dk/kodebog/?tag=D",
+      "caveat": "Topography label only; no sampling procedure, method, result, or disease inferred."
+    },
+    {
+      "code": "P28260",
+      "legacy_label": "Flow cytometry",
+      "official_label_da": "knoglemarvsundersøgelse",
+      "verified_label_en": "Bone marrow examination",
+      "status": "verified_legacy_label_incorrect",
+      "source": "https://www.patobank.dk/kodebog/?searchbook=P28260&closed_codes=true",
+      "caveat": "The official code labels a bone marrow examination. It does not specifically identify flow cytometry; do not infer flow-cytometry availability from this code."
+    },
+    {
+      "code": "M97323",
+      "legacy_label": "Diffuse large B-cell lymphoma morphology",
+      "official_label_da": "myelomatose",
+      "verified_label_en": "Multiple myeloma morphology code",
+      "status": "verified_legacy_label_incorrect",
+      "source": "https://www.patobank.dk/kodebog/?searchbook=M97323&closed_codes=true",
+      "source_group": "https://www.patobank.dk/kodebog/?tag=D",
+      "caveat": "This is the published morphology-code meaning, not a complete patient-level disease definition. The legacy DLBCL label is contradicted by the official codebook."
+    },
+    {
+      "code": "M98233",
+      "legacy_label": "CLL morphology",
+      "official_label_da": "kronisk lymfocytær leukæmi",
+      "verified_label_en": "Chronic lymphocytic leukemia morphology code",
+      "status": "verified_legacy_label_supported",
+      "source": "https://www.patobank.dk/kodebog/?searchbook=M98233&closed_codes=true",
+      "source_group": "https://www.patobank.dk/kodebog/?tag=D",
+      "caveat": "The literal Danish code label is chronic lymphocytic leukemia. Do not silently broaden to additional entities or use this label as a complete patient phenotype."
+    }
+  ],
+  "sks": [
+    {
+      "code": "UXCC00",
+      "legacy_label": "CT thorax",
+      "official_label_da": "CT-skanning af thorax",
+      "verified_label_en": "CT of the thorax",
+      "status": "verified_legacy_label_supported",
+      "source": "https://medinfo.dk/sks/brows.php?s_nod=49097",
+      "caveat": "Procedure meaning only; no contrast status, indication, report, result, or image availability inferred."
+    },
+    {
+      "code": "UXCD00",
+      "legacy_label": "CT abdomen",
+      "official_label_da": "CT-skanning af abdomen",
+      "verified_label_en": "CT of the abdomen",
+      "status": "verified_legacy_label_supported",
+      "source": "https://medinfo.dk/sks/brows.php?s_nod=49107",
+      "caveat": "Procedure meaning only; no contrast status, indication, report, result, or image availability inferred."
+    },
+    {
+      "code": "UXZ10",
+      "legacy_label": "CT",
+      "official_label_da": "med intravenøs kontrast",
+      "verified_label_en": "With intravenous contrast",
+      "status": "verified_legacy_label_incorrect",
+      "source": "https://medinfo.dk/sks/brows.php?s_nod=53306",
+      "caveat": "This specifies intravenous contrast, not a CT modality. Do not classify it as CT without a separately supported procedure context."
+    },
+    {
+      "code": "UXZ11",
+      "legacy_label": "MRI",
+      "official_label_da": "uden intravenøs kontrast",
+      "verified_label_en": "Without intravenous contrast",
+      "status": "verified_legacy_label_incorrect",
+      "source": "https://medinfo.dk/sks/brows.php?s_nod=53308",
+      "caveat": "This specifies absence of intravenous contrast, not an MRI modality. Do not classify it as MRI without a separately supported procedure context."
+    },
+    {
+      "code": "UXRC00",
+      "legacy_label": "X-ray thorax",
+      "official_label_da": "Røntgenundersøgelse af thorax",
+      "verified_label_en": "Chest X-ray",
+      "status": "verified_legacy_label_supported",
+      "source": "https://medinfo.dk/sks/brows.php?s_nod=49269",
+      "caveat": "Procedure meaning only; no report, findings, result, or image-pixel availability inferred."
+    }
+  ],
+  "classification_authority_sources": {
+    "patobank": "https://www.patobank.dk/snomed/",
+    "sds_classifications": "https://sundhedsdatastyrelsen.dk/indberetning/klassifikationer",
+    "sks_browser": "https://medinfo.dk/sks/brows.php"
+  },
+  "summary": {
+    "codes_checked": 11,
+    "legacy_labels_incorrect": ["P28260", "M97323", "UXZ10", "UXZ11"],
+    "legacy_labels_requiring_refinement": ["T06002"],
+    "legacy_labels_supported": ["T0X000", "T06000", "M98233", "UXCC00", "UXCD00", "UXRC00"],
+    "unresolved": [],
+    "lifecycle_status": "Historical effective dates and closure dates were not audited; verification concerns code meanings."
+  }
+}

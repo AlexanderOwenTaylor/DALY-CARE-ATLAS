@@ -21,7 +21,7 @@ treatment_context <- extract_regex(
   "Treatment source-context classifier should be present."
 )
 treatment_labels <- extract_regex(
-  "const treatmentKnownCodeLabels[\\s\\S]*?function treatmentBarRows",
+  "function treatmentDisplayLabel[\\s\\S]*?function treatmentBarRows",
   "Treatment code label renderer should be present."
 )
 antineoplastic_terms <- extract_regex(
@@ -62,7 +62,7 @@ for (supportive in c("aciclovir", "paracetamol", "pantoprazole", "trimethoprim",
 
 expect_contains(treatment_context, 'ctx("sks", "SKS procedure/treatment signals"', "SKS rows should be classified as procedure/treatment signals.")
 expect_contains(treatment_context, "Procedure or treatment-code signal; not an ATC drug exposure or medication administration row.", "SKS/BWGC procedure evidence should not be described as medication.")
-expect_contains(treatment_labels, '"BWGC": "Radiotherapy procedure family"', "BWGC should remain radiotherapy/procedure evidence.")
+expect_contains(treatment_labels, "clinicalDisplayEntry('code',row.code_system,row.code || row.raw_code)", "Treatment labels must use the exact coding system.")
 expect_false(grepl("BWGC", antineoplastic_terms, fixed = TRUE), "BWGC radiotherapy should not appear in antineoplastic drug terms.")
 expect_false(grepl("BWGC", supportive_terms, fixed = TRUE), "BWGC radiotherapy should not appear in supportive medication terms.")
 

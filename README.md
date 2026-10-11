@@ -236,3 +236,13 @@ subject to `DALYCARE_MIN_CELL_COUNT` suppression.
 Legacy WoMMen V06 cartography files are preserved under
 `inst/legacy/wommen_v06/` as read-only reference evidence. They are not sourced
 by the active package runtime.
+
+## Clinician interface and guarded static exports
+
+The static atlas includes clinical-name search, source-field comparisons,
+reference code definitions, and source-specific time and regional coverage.
+The R writer and offline Python builder apply a final disclosure filter to
+both JSON and JavaScript payloads. Intermediate run CSVs are not equivalent
+to these guarded release files and should not be published as public atlas
+outputs. See [Clinician atlas interface and public exports](docs/clinician-atlas-ui.md)
+for build instructions, interpretation limits, disclosure controls and tests.

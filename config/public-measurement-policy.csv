@@ -1,0 +1,45 @@
+table_name,column_name,label,policy_basis
+RKKP_CLL,Reg_Leukocyttal,Leukocyte count,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_CLL,Beh_Leukocyttal,Leukocyte count at treatment assessment,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Haemoglobin,Haemoglobin,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Thrombocytter,Platelet count,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Leukocytter,Leukocyte count,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Albumin_gL,Albumin (mass concentration field),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Albumin_mikmoll,Albumin (substance concentration field),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_CalciumAlbuminkorrigeret,Albumin-adjusted calcium,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_CalciumIoniseret,Ionized calcium,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Creatinin_mikmoll,Creatinine,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Creatinin_millimoll,Creatinine,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_Lactatdehydrogenase,Lactate dehydrogenase (LDH),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_LDHVaerdi,Lactate dehydrogenase (LDH) value,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_ImmunglobulinA_gL,Immunoglobulin A (IgA),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_ImmunglobulinG_gL,Immunoglobulin G (IgG),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_ImmunglobulinM_gL,Immunoglobulin M (IgM),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_ImmunglobulinA_Mikmoll,Immunoglobulin A (IgA),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_ImmunglobulinG_Mikmoll,Immunoglobulin G (IgG),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_LYFO,Reg_ImmunglobulinM_Mikmoll,Immunoglobulin M (IgM),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Haemoglobin,Haemoglobin,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Creatinin_mikmoll,Creatinine,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_LDH,Lactate dehydrogenase (LDH),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_CReaktivtProtein_gl,C-reactive protein (CRP),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_IgG_gl,Immunoglobulin G (IgG),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_IgA_gl,Immunoglobulin A (IgA),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_IgM_gl,Immunoglobulin M (IgM),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Albumin_gl,Albumin,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_CalciumIoniseret,Ionised calcium,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_CalciumAlbuminkorrigeret,Albumin-corrected calcium,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Hoejde,Height,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Vaegt,Weight,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Albumin_mMoll,Albumin (substance concentration field),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_Creatinin_mmoll,Creatinine (substance concentration field),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_CReaktivtProtein_nMoll,C-reactive protein (substance concentration field),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_IgA_mikmoll,Immunoglobulin A (IgA),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,Reg_IgG_mikmoll,Immunoglobulin G (IgG),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,PB_Haemoglobin,Haemoglobin at primary treatment,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,PB_Albumin_gl,Albumin at primary treatment (mass concentration),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,PB_Albumin_mMoll,Albumin at primary treatment (substance concentration),Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,PB_Creatinin_MikMoll,Creatinine at primary treatment,Exact field reviewed as measurement; units and cleaning not independently validated
+RKKP_DaMyDa,PB_Creatinin_mMoll,Creatinine at primary treatment,Exact field reviewed as measurement; units and cleaning not independently validated
+SP_PatientInfo,bmi,Body mass index (BMI),Exact field reviewed as measurement; units and cleaning not independently validated
+SP_PatientInfo,weight_in_kg,Weight (kg),Exact field reviewed as measurement; units and cleaning not independently validated
+SP_PatientInfo,height_in_cm,Height (cm),Exact field reviewed as measurement; units and cleaning not independently validated

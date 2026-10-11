@@ -1,0 +1,127 @@
+{
+  "verified_on": "2026-10-11",
+  "scope": "Clinical glossary expansions for atlas metadata; definitions do not interpret individual results or assign diagnoses, resistance categories, prognosis, or treatment.",
+  "entries": [
+    {
+      "token": "PCR",
+      "label": "Polymerase chain reaction",
+      "definition": "Laboratory method that makes many copies of a selected DNA segment so it can be detected or studied.",
+      "source_url": "https://www.genome.gov/about-genomics/fact-sheets/Polymerase-Chain-Reaction-Fact-Sheet",
+      "source_label": "NIH NHGRI — Polymerase Chain Reaction Fact Sheet",
+      "note": "A method label does not establish a positive result, active infection, or availability of a particular assay. RNA testing requires a reverse-transcription step; do not conflate every PCR label with a specific PCR variant."
+    },
+    {
+      "token": "MIC",
+      "label": "Minimum inhibitory concentration",
+      "definition": "Laboratory concentration endpoint for inhibition of microbial growth during antimicrobial susceptibility testing.",
+      "source_url": "https://www.eucast.org/fileadmin/eucast/pdf/MIC/Reading_guide_BMD_v_5.0_2024.pdf",
+      "source_label": "EUCAST — Reading guide for broth microdilution, version 5.0 (2024), pages 3 and 19",
+      "note": "Usually the lowest concentration inhibiting visible growth; specific organism–agent combinations have defined endpoint exceptions. An MIC field alone is not an S/I/R category; interpretation depends on the applicable method and breakpoint."
+    },
+    {
+      "token": "MRSA",
+      "label": "Methicillin-resistant Staphylococcus aureus",
+      "definition": "Name for Staphylococcus aureus with methicillin resistance, used in microbiology organism and resistance records.",
+      "source_url": "https://www.cdc.gov/mrsa/php/laboratories/index.html",
+      "source_label": "CDC — Laboratory Testing for Methicillin (oxacillin)-resistant Staphylococcus aureus",
+      "note": "Explains the recorded concept only. The presence of this term in atlas metadata does not demonstrate patient carriage, infection, or an individual susceptibility finding."
+    },
+    {
+      "token": "VRE",
+      "label": "Vancomycin-resistant enterococci",
+      "definition": "Collective name for enterococci with resistance to vancomycin, used in microbiology organism and resistance records.",
+      "source_url": "https://www.cdc.gov/vre/about/index.html",
+      "source_label": "CDC — Vancomycin-resistant Enterococci (VRE) Basics",
+      "note": "Enterococci is the plural bacterial-group name. A metadata label alone does not demonstrate patient carriage, infection, or an individual susceptibility finding."
+    },
+    {
+      "token": "ESBL",
+      "label": "Extended-spectrum beta-lactamase",
+      "definition": "Bacterial enzyme that can break down certain antibiotics; microbiology records may describe organisms that produce these enzymes.",
+      "source_url": "https://www.cdc.gov/esbl-producing-enterobacterales/about/index.html",
+      "source_label": "CDC — About ESBL-producing Enterobacterales",
+      "note": "ESBL names the enzyme or mechanism; ESBL-producing Enterobacterales names a bacterial group. Do not silently equate an ESBL field with a confirmed patient isolate, active infection, or a complete resistance profile."
+    },
+    {
+      "token": "CMV",
+      "label": "Cytomegalovirus",
+      "definition": "Common virus that can remain in the body for life; CMV labels identify related laboratory tests or clinical metadata.",
+      "source_url": "https://www.cdc.gov/cytomegalovirus/about/index.html",
+      "source_label": "CDC — About Cytomegalovirus",
+      "note": "A virus or assay label does not establish active infection, reactivation, or CMV disease."
+    },
+    {
+      "token": "EBV",
+      "label": "Epstein–Barr virus",
+      "definition": "Herpesvirus also called human herpesvirus 4; it is a cause of infectious mononucleosis and appears in related test labels.",
+      "source_url": "https://www.cdc.gov/epstein-barr/about/index.html",
+      "source_label": "CDC — About Epstein-Barr Virus (EBV)",
+      "note": "A virus or assay label does not establish current infection or an EBV-associated disease."
+    },
+    {
+      "token": "HIV",
+      "label": "Human immunodeficiency virus",
+      "definition": "Virus that affects the immune system; HIV labels identify the virus or related laboratory and clinical records.",
+      "source_url": "https://www.cdc.gov/hiv/about/index.html",
+      "source_label": "CDC — About HIV",
+      "note": "Do not infer HIV infection, test positivity, viral load, or AIDS from the presence of a metadata field."
+    },
+    {
+      "token": "HCV",
+      "label": "Hepatitis C virus",
+      "definition": "Virus that causes hepatitis C; the abbreviation can identify virus-related antibody or RNA testing and clinical records.",
+      "source_url": "https://www.cdc.gov/hepatitis-c/about/",
+      "source_label": "CDC — Hepatitis C Basics",
+      "note": "HCV is the virus name, not a test result. Preserve the distinction between antibody and RNA assay labels; metadata does not establish current infection."
+    },
+    {
+      "token": "HBsAg",
+      "label": "Hepatitis B surface antigen",
+      "definition": "Protein on the surface of hepatitis B virus that is measured by a hepatitis B antigen test.",
+      "source_url": "https://www.cdc.gov/hepatitis-b/hcp/diagnosis-testing/index.html",
+      "source_label": "CDC — Clinical Testing and Diagnosis for Hepatitis B",
+      "note": "An antigen-test field is not the same as a positive result. Do not infer current infection from field availability or provide patient-level interpretation in this glossary."
+    },
+    {
+      "token": "anti-HBc",
+      "label": "Antibody to hepatitis B core antigen",
+      "definition": "Antibody directed against the hepatitis B virus core antigen, measured in hepatitis B serology.",
+      "source_url": "https://www.cdc.gov/std/treatment-guidelines/table-5.htm",
+      "source_label": "CDC — Hepatitis B serologic markers, Table 5",
+      "note": "The unqualified term does not specify total antibody or IgM. Preserve any total, IgM, or IgG qualifier in the source field; do not assign one or infer an infection phase."
+    },
+    {
+      "token": "ICU",
+      "label": "Intensive care unit",
+      "definition": "Hospital unit providing close monitoring and specialized care for people with critical illness or injury.",
+      "source_url": "https://medlineplus.gov/criticalcare.html",
+      "source_label": "NIH NLM MedlinePlus — Critical Care",
+      "note": "A care-location or encounter label does not identify the reason for admission or prove that a specific organ-support treatment occurred."
+    },
+    {
+      "token": "ADT",
+      "label": "Admission, discharge and transfer",
+      "definition": "Patient-administration events and messages describing registration, admission, discharge, transfer, and encounter updates.",
+      "source_url": "https://dev3.hl7.org/implement/standards/product_brief.cfm?product_id=92",
+      "source_label": "HL7 International — Patient Administration (ADT) standard brief",
+      "note": "HL7 expands ADT as Admit, Discharge, and Transfer. Use this expansion only in the EHR/encounter context; ADT has other clinical meanings outside that context. Operational events are not diagnoses."
+    },
+    {
+      "token": "CLL-IPI",
+      "label": "Chronic lymphocytic leukaemia International Prognostic Index",
+      "definition": "CLL prognostic score combining age, clinical stage, TP53 status, IGHV mutation status, and serum beta-2 microglobulin.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/27185642/",
+      "source_label": "International CLL-IPI working group — Original index publication, Lancet Oncology (2016)",
+      "note": "Describes the score and its components only. The glossary does not calculate a score, assign a risk group, give an individual prognosis, or imply that all components are available in the atlas."
+    },
+    {
+      "token": "CIRS",
+      "label": "Cumulative Illness Rating Scale",
+      "definition": "Clinical rating scale used to summarize physical illness burden from medical information.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/8418120/",
+      "source_label": "Conwell et al. — Validation of the Cumulative Illness Rating Scale, Journal of the American Geriatrics Society (1993)",
+      "note": "Use in the comorbidity-score context. The original instrument title is also verified in Linn et al. (1968), https://pubmed.ncbi.nlm.nih.gov/5646906/. CIRS alone does not identify the geriatric adaptation CIRS-G; do not add G, assert a version, or transfer version-specific scoring details without source-field evidence."
+    }
+  ],
+  "unresolved": []
+}

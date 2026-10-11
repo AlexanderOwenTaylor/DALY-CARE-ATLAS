@@ -1,0 +1,199 @@
+{
+  "retrieved": "2026-10-10",
+  "scope": "Public terminology verification only; raw observed codes are preserved. No inference of treatment indication or validity on an individual observation date.",
+  "publishers": {
+    "SKS": "medinfo.dk, official SKS publishing tool linked by Sundhedsdatastyrelsen",
+    "ATC": "WHO Collaborating Centre for Drug Statistics Methodology, Norwegian Institute of Public Health"
+  },
+  "sks_publisher_endorsement_url": "https://sundhedsdatastyrelsen.dk/indberetning/klassifikationer/sks-klassifikationer/vaerktoejer",
+  "sks_current_only_source_url": "https://medinfo.dk/sks/",
+  "sks_source_dataset_updated": "2026-09-30",
+  "atc_current_index_updated": "2026-01-20",
+  "atc_alterations_source_url": "https://atcddd.fhi.no/atc_ddd_alterations__cumulative/atc_alterations/",
+  "atc_alterations_scope": "Cumulative alterations 2005-2026; year changed is the year implemented in the ATC/DDD Index.",
+  "code_mappings": [
+    {
+      "code_system": "SKS",
+      "code": "BWHA169",
+      "danish_label": "Behandling med vinblastin",
+      "english_label": "Treatment with vinblastine",
+      "english_label_is_translation": true,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_publisher_database",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=6058",
+      "source_saved_html": "BWHA169.html",
+      "primary_code_marked": true
+    },
+    {
+      "code_system": "SKS",
+      "code": "BWGC1",
+      "danish_label": "Konventionel ekstern strålebehandling",
+      "english_label": "Conventional external beam radiotherapy",
+      "english_label_is_translation": true,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_publisher_database",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=5934",
+      "source_saved_html": "BWGC1.html",
+      "primary_code_marked": true
+    },
+    {
+      "code_system": "SKS",
+      "code": "BWGC4A",
+      "danish_label": "Intensitetsmoduleret radioterapi (IMRT), image guided radiotherapy (IGRT)",
+      "english_label": "Intensity-modulated radiotherapy (IMRT), image-guided radiotherapy (IGRT)",
+      "english_label_is_translation": true,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_publisher_database",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=5945",
+      "source_saved_html": "BWGC4A.html",
+      "primary_code_marked": true
+    },
+    {
+      "code_system": "SKS",
+      "code": "BOHJ",
+      "danish_label": "Behandling med antistoffer og immunmodulerende behandling",
+      "english_label": "Treatment with antibodies and immunomodulatory treatment",
+      "english_label_is_translation": true,
+      "kind": "prefix_group",
+      "confidence": "high",
+      "status": "current_in_publisher_database",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=4002",
+      "source_saved_html": "BOHJ.html",
+      "primary_code_marked": false
+    },
+    {
+      "code_system": "SKS",
+      "code": "BWGC",
+      "danish_label": "Ekstern strålebehandling",
+      "english_label": "External beam radiotherapy",
+      "english_label_is_translation": true,
+      "kind": "prefix_group",
+      "confidence": "high",
+      "status": "current_in_publisher_database",
+      "source_url": "https://medinfo.dk/sks/brows.php?s_nod=5933",
+      "source_saved_html": "BWGC.html",
+      "primary_code_marked": true
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XE27",
+      "english_label": "ibrutinib",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "historical_code_reclassified",
+      "replacement_code": "L01EL01",
+      "replacement_year": 2021,
+      "source_url": "https://atcddd.fhi.no/atc_ddd_alterations__cumulative/atc_alterations/",
+      "replacement_current_index_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01EL01&showdescription=no"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XK02",
+      "english_label": "niraparib",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_2026_atc_index",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01XK02&showdescription=yes",
+      "caution": "Verified as niraparib. Do not relabel this code from a neighbouring treatment family or inferred clinical context."
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XX52",
+      "english_label": "venetoclax",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_2026_atc_index",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01XX52&showdescription=yes"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XC02",
+      "english_label": "rituximab",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "historical_code_reclassified",
+      "replacement_code": "L01FA01",
+      "replacement_year": 2022,
+      "source_url": "https://atcddd.fhi.no/atc_ddd_alterations__cumulative/atc_alterations/",
+      "replacement_current_index_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01FA01&showdescription=no"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XC15",
+      "english_label": "obinutuzumab",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "historical_code_reclassified",
+      "replacement_code": "L01FA03",
+      "replacement_year": 2022,
+      "source_url": "https://atcddd.fhi.no/atc_ddd_alterations__cumulative/atc_alterations/",
+      "replacement_current_index_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01FA03&showdescription=no"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L04AX04",
+      "english_label": "lenalidomide",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_2026_atc_index",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L04AX04&showdescription=yes"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L04AX06",
+      "english_label": "pomalidomide",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "current_in_2026_atc_index",
+      "source_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L04AX06&showdescription=yes"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XX32",
+      "english_label": "bortezomib",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "historical_code_reclassified",
+      "replacement_code": "L01XG01",
+      "replacement_year": 2021,
+      "source_url": "https://atcddd.fhi.no/atc_ddd_alterations__cumulative/atc_alterations/",
+      "replacement_current_index_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01XG01&showdescription=no"
+    },
+    {
+      "code_system": "ATC",
+      "code": "L01XX45",
+      "english_label": "carfilzomib",
+      "english_label_is_translation": false,
+      "kind": "exact_code",
+      "confidence": "high",
+      "status": "historical_code_reclassified",
+      "replacement_code": "L01XG02",
+      "replacement_year": 2021,
+      "source_url": "https://atcddd.fhi.no/atc_ddd_alterations__cumulative/atc_alterations/",
+      "replacement_current_index_url": "https://atcddd.fhi.no/atc_ddd_index/?code=L01XG02&showdescription=no"
+    }
+  ],
+  "cautions": {
+    "SKS": "Current presence confirms catalogue status at retrieval, not validity on every historical observation date. English labels are translations, not official SKS labels. Prefix groups must not be presented as a particular drug or detailed procedure.",
+    "ATC_current": "Current labels and presence are verified in the 2026 ATC index; historical observation-date validity is not established by this lookup.",
+    "ATC_historical": "Retain the raw historical code and its verified substance label. The documented replacement and year are explanatory metadata, not permission to rewrite historical observations or assert that the old code remains current."
+  },
+  "verification_counts": {
+    "SKS_current": 5,
+    "ATC_current": 4,
+    "ATC_historical": 5,
+    "unresolved": 0,
+    "total": 14
+  }
+}

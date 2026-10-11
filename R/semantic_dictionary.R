@@ -799,7 +799,7 @@ lab_name_key <- function(value) {
 
 lab_concept_definition <- function(code, name) {
   code_key <- lab_code_key(code)
-  name_key <- lab_name_key(name)
+  name_key <- if (grepl("^(NPU|DNK)[0-9]{5}$", code_key)) "" else lab_name_key(name)
   exact <- function(values) code_key %in% lab_code_key(values)
   has_word <- function(pattern) grepl(pattern, name_key, perl = TRUE)
 
@@ -815,14 +815,14 @@ lab_concept_definition <- function(code, name) {
     ))
   }
 
-  if (exact(c("NPU02593", "REGCREATININMIKMOLL", "REGCREATININMMOLL", "REGCREATININMILLIMOLL", "CREA")) ||
+  if (exact(c("NPU04998", "NPU18016", "NPU01807", "REGCREATININMIKMOLL", "REGCREATININMMOLL", "REGCREATININMILLIMOLL", "CREA")) ||
       has_word("\\bcreatinine\\b|\\bcreatinin\\b")) {
     return(list(
       concept_id = "creatinine",
       variable = "Creatinine",
       subgroup = "Renal function",
       meaning = "Creatinine laboratory concept from code dictionary, lab source, or registry field evidence.",
-      terms = c("creatinine", "creatinin", "NPU02593", "CREA"),
+      terms = c("creatinine", "creatinin", "NPU04998", "CREA"),
       caveat = "Creatinine units and calibration require source-specific harmonization."
     ))
   }
@@ -838,26 +838,26 @@ lab_concept_definition <- function(code, name) {
     ))
   }
 
-  if (exact(c("NPU02636", "REGLDH", "REGLACTATDEHYDROGENASE", "REGLDHVAERDI", "LDH")) ||
+  if (exact(c("NPU19658", "REGLDH", "REGLACTATDEHYDROGENASE", "REGLDHVAERDI", "LDH")) ||
       has_word("\\bldh\\b|lactate dehydrogenase|lactatdehydrogenase")) {
     return(list(
       concept_id = "ldh",
       variable = "LDH",
       subgroup = "Inflammation and biochemistry",
       meaning = "Lactate dehydrogenase laboratory concept.",
-      terms = c("LDH", "lactate dehydrogenase", "NPU02636"),
+      terms = c("LDH", "lactate dehydrogenase", "NPU19658"),
       caveat = "LDH interpretation requires unit and source-specific harmonization."
     ))
   }
 
-  if (exact(c("NPU01349", "REGALBUMINGL", "REGALBUMINGL", "ALB")) ||
+  if (exact(c("NPU19673", "REGALBUMINGL", "REGALBUMINGL", "ALB")) ||
       (has_word("\\balbumin\\b") && !has_word("corrected calcium|albumin korrigeret|albuminkorrigeret"))) {
     return(list(
       concept_id = "albumin",
       variable = "Albumin",
       subgroup = "Inflammation and biochemistry",
       meaning = "Albumin laboratory concept.",
-      terms = c("albumin", "NPU01349", "ALB"),
+      terms = c("albumin", "NPU19673", "ALB"),
       caveat = "Albumin units and serum/plasma context require source-specific harmonization."
     ))
   }
@@ -886,31 +886,31 @@ lab_concept_definition <- function(code, name) {
     ))
   }
 
-  if (exact(c("NPU04998", "REGCREAKTIVTPROTEINGL", "REGCREAKTIVTPROTEINNMOLL", "CRP")) ||
+  if (exact(c("NPU19748", "REGCREAKTIVTPROTEINGL", "REGCREAKTIVTPROTEINNMOLL", "CRP")) ||
       has_word("\\bcrp\\b|c reactive protein|c reaktivt protein|creaktivtprotein")) {
     return(list(
       concept_id = "crp",
       variable = "CRP",
       subgroup = "Inflammation and biochemistry",
       meaning = "C-reactive protein laboratory concept.",
-      terms = c("CRP", "C-reactive protein", "NPU04998"),
+      terms = c("CRP", "C-reactive protein", "NPU19748"),
       caveat = "CRP must not be conflated with creatinine despite similar raw-field prefixes."
     ))
   }
 
-  if (exact(c("NPU19748", "REGLEUKOCYTTAL", "REGLEUKOCYTTER", "LEUKOCYTES", "LEU")) ||
+  if (exact(c("NPU02593", "REGLEUKOCYTTAL", "REGLEUKOCYTTER", "LEUKOCYTES", "LEU")) ||
       has_word("\\bleukocytes?\\b|\\bleucocytes?\\b|leukocytter|leukocyttal")) {
     return(list(
       concept_id = "leukocytes",
       variable = "Leukocytes",
       subgroup = "Haematology",
       meaning = "Leukocyte count laboratory concept.",
-      terms = c("leukocytes", "leukocyttal", "NPU19748"),
+      terms = c("leukocytes", "leukocyttal", "NPU02593"),
       caveat = "Leukocyte counts should not be inferred from lymphocyte-doubling fields."
     ))
   }
 
-  if (has_word("neutrophil|neutrofil")) {
+  if (exact(c("NPU02902", "NPU28172")) || has_word("neutrophil|neutrofil")) {
     return(list(
       concept_id = "neutrophils",
       variable = "Neutrophils",
@@ -933,7 +933,7 @@ lab_concept_definition <- function(code, name) {
     ))
   }
 
-  if (has_word("\\blymphocytes?\\b|lymfocytter")) {
+  if (exact("NPU02636") || has_word("\\blymphocytes?\\b|lymfocytter")) {
     return(list(
       concept_id = "lymphocytes",
       variable = "Lymphocytes",
@@ -944,7 +944,7 @@ lab_concept_definition <- function(code, name) {
     ))
   }
 
-  if (has_word("platelet|thrombocyte|thrombocyt|trombocyt")) {
+  if (exact("NPU03568") || has_word("platelet|thrombocyte|thrombocyt|trombocyt")) {
     return(list(
       concept_id = "platelets",
       variable = "Platelets / thrombocytes",
@@ -4018,6 +4018,27 @@ imaging_column_definition <- function(source_name = "", object_name = "", column
       "Hospital-area metadata is source coverage context, not a clinical imaging phenotype."
     ))
   }
+  # APAA4 is a personnel classification (SKS node 953), not CT.
+  if (value_key == "APAA4") {
+    return(mk(
+      "administrative_staff_role", "Hospital physician", "Administrative context",
+      "Hospital physician personnel code; this is not an imaging procedure.",
+      c("hospital physician", value_text), "high", "confirmed", "code", "SKS",
+      "Administrative personnel classification cannot establish imaging availability or modality."
+    ))
+  }
+  # These SKS modifiers describe contrast use, not the imaging modality.
+  # Verified against Medinfo SKS nodes 53306 and 53308 on 2026-10-10.
+  if (value_key %in% c("UXZ10", "UXZ11")) {
+    return(mk(
+      "imaging_contrast",
+      if (value_key == "UXZ10") "With intravenous contrast" else "Without intravenous contrast",
+      "Imaging contrast modifiers",
+      "Intravenous contrast modifier; no CT or MRI modality is established by this code.",
+      c("intravenous contrast", value_text), "high", "confirmed", "code", "SKS",
+      "A separately supported procedure is required to identify the imaging modality."
+    ))
+  }
   if (grepl("^BWGC", value_key) || grepl("\\bBWGC|radioter|straale|strale|strålebehandling|electron beam", combined, ignore.case = TRUE)) {
     return(mk(
       "radiotherapy",
@@ -4046,13 +4067,13 @@ imaging_column_definition <- function(source_name = "", object_name = "", column
       "PET/PET-CT rows are procedure or metadata evidence, not image pixels."
     ))
   }
-  if (value_key %in% c("UXZ11") || grepl("(^|[^A-Z])MRI([^A-Z]|$)|(^|[^A-Z])MR([^A-Z]|$)|magnetic resonance", combined, ignore.case = TRUE)) {
+  if (grepl("(^|[^A-Z])MRI([^A-Z]|$)|(^|[^A-Z])MR([^A-Z]|$)|magnetic resonance", combined, ignore.case = TRUE)) {
     return(mk(
       "imaging_mri",
       "MRI imaging signal",
       "Procedure-code imaging",
       "MRI imaging procedure or SP imaging metadata signal.",
-      c("MRI", "MR", "UXZ11", value_text),
+      c("MRI", "MR", value_text),
       "high",
       "confirmed",
       "code",
@@ -4074,13 +4095,13 @@ imaging_column_definition <- function(source_name = "", object_name = "", column
       "X-ray rows are procedure or metadata evidence, not image pixels."
     ))
   }
-  if (value_key %in% c("APAA4", "UXZ10", "UXCC00", "UXCD00", "UXCD10", "UXCD15", "UXCA00") || grepl("(^|[^A-Z])CT([^A-Z]|$)|CT THORAX|CT ABDOMEN|CT CEREBRUM|CT HELKROP|CT HALS", combined, ignore.case = TRUE)) {
+  if (value_key %in% c("UXCC00", "UXCD00", "UXCD10", "UXCD15", "UXCA00") || grepl("(^|[^A-Z])CT([^A-Z]|$)|CT THORAX|CT ABDOMEN|CT CEREBRUM|CT HELKROP|CT HALS", combined, ignore.case = TRUE)) {
     return(mk(
       "imaging_ct",
       "CT imaging signal",
       "Procedure-code imaging",
       "CT imaging procedure or SP imaging metadata signal.",
-      c("CT", "UXZ10", "UXCC00", "UXCD00", "APAA4", value_text),
+      c("CT", "UXCC00", "UXCD00", value_text),
       "high",
       "confirmed",
       "code",
@@ -4133,7 +4154,7 @@ imaging_column_definition <- function(source_name = "", object_name = "", column
 imaging_value_is_relevant <- function(values) {
   values <- as.character(values)
   grepl(
-    "PET|FDG|F-18|(^|[^A-Z])CT([^A-Z]|$)|MRI|(^|[^A-Z])MR([^A-Z]|$)|R[OØ]NT|RONT|RU THORAX|X[- ]?RAY|UX|BWGC|radioter|straale|strale|stråle|APAA4",
+    "PET|FDG|F-18|(^|[^A-Z])CT([^A-Z]|$)|MRI|(^|[^A-Z])MR([^A-Z]|$)|R[OØ]NT|RONT|RU THORAX|X[- ]?RAY|UX|BWGC|radioter|straale|strale|stråle",
     values,
     ignore.case = TRUE
   )
