@@ -141,3 +141,105 @@ test('year and date-availability shares state their supplied record denominators
  ['atlas_temporal_coverage',{table_name:'S',date_column:'date_field',n_rows:12000,pct_available:0},['0.0%','profiled source records','nonmissing','date validity']]
  ]){const t=readable(id,[row]),h=navigation('?table='+id,[t]);h.answer([row]);await flush();const text=visibleText(h.el('rows').innerHTML);for(const value of expected)assert.ok(text.includes(value),id+': '+value);assert.doesNotMatch(text,/2,020/);}
 });
+
+// A category profile is useful as a field list when its distributions are withheld.
+// These cases fail if the reading view repeats protected categories or discards evidence.
+const profileRow=(extra={})=>({table_name:'RKKP_DaMyDa',registry:'DaMyDa',source_column:'Stadie',label:null,n:null,pct_rows:null,availability_privacy_status:null,value_privacy_status:'withheld_unvalidated_distribution',...extra});
+test('withheld category reading view collapses identical field context and exact view retains every row',async()=>{
+ const rows=[profileRow(),profileRow(),profileRow({source_column:'Reg_Knogleforandringer'})],t=readable('damyda_clinical_profile',rows),h=navigation('?table=damyda_clinical_profile',[t,readable('column_profiles',[{table_name:'RKKP_DaMyDa',column_name:'Stadie'}])]);h.answer(rows);await flush();
+ let text=visibleText(h.el('rows').innerHTML);
+ assert.equal((text.match(/Recorded myeloma stage/g)||[]).length,1);assert.equal((text.match(/Bone changes/g)||[]).length,1);
+ assert.equal((text.match(/RKKP_DaMyDa/g)||[]).length,1,'source is stated once for the field group');
+ assert.equal((h.el('table-result').textContent.match(/withheld pending validation/gi)||[]).length,1,'one reason replaces repeated protected cells');assert.doesNotMatch(text,/withheld pending validation/i);
+ assert.doesNotMatch(text,/Missing|48 categories|3 categories/i);assert.match(h.el('rows').innerHTML,/table=column_profiles&amp;source=RKKP_DaMyDa&amp;field=Stadie/);
+ assert.equal(h.el('exact-columns').hidden,false);h.el('exact-columns').fire('click');
+ assert.equal((h.el('rows').innerHTML.match(/<tr>/g)||[]).length,4);assert.match(h.el('rows').innerHTML,/source_column/);assert.equal(h.scripts.length,1);
+ h.el('exact-columns').fire('click');assert.equal((visibleText(h.el('rows').innerHTML).match(/Recorded myeloma stage/g)||[]).length,1);assert.equal(h.scripts.length,1);
+});
+
+test('reading a category profile preserves extra privacy state, different sources, supplied zero and unexplained missingness',async()=>{
+ const rows=[profileRow(),profileRow({availability_privacy_status:'withheld_small_complementary_cells'}),profileRow({table_name:'Unreviewed',registry:'Other'}),profileRow({label:'Known category',n:0,pct_rows:0,value_privacy_status:null}),profileRow({source_column:'No_reason',value_privacy_status:null}),profileRow({source_column:'New_reason',value_privacy_status:'future_guard'})];
+ const t=readable('damyda_clinical_profile',rows);for(const c of t.columns)if(['n','pct_rows'].includes(c.key))c.type='number';const h=navigation('?table=damyda_clinical_profile',[t]);h.answer(rows);await flush();const text=visibleText(h.el('rows').innerHTML);
+ assert.match(text,/small groups and related counts/);assert.match(text,/Unreviewed/);assert.match(text,/Known category/);assert.match(text,/0\.0%/);assert.match(text,/Missing/);assert.match(text,/future_guard/);
+ assert.equal((text.match(/Recorded myeloma stage/g)||[]).length,3,'reviewed label applies only to its exact source');
+ h.el('exact-columns').fire('click');assert.equal((h.el('rows').innerHTML.match(/<tr>/g)||[]).length,7);
+});
+
+test('English field searches match reviewed identities in category, profile and metadata tables while preserving exact-column search',async()=>{
+ for(const id of ['damyda_clinical_profile','column_profiles','columns']){
+  const category=id==='damyda_clinical_profile';
+  const rows=category?[profileRow({source_column:'Reg_Knogleforandringer'}),profileRow({table_name:'Unreviewed',source_column:'Reg_Knogleforandringer'})]:[{table_name:'RKKP_DaMyDa',column_name:'Reg_Knogleforandringer',profile_kind:'categorical',n_available:0,n_rows:12,pct_available:0},{table_name:'Unreviewed',column_name:'Reg_Knogleforandringer',profile_kind:'categorical',n_available:0,n_rows:12,pct_available:0}];
+  const t=readable(id,rows),h=navigation('?table='+id+'&search=bone%20changes',[t]);h.answer(rows);await flush();
+  assert.match(visibleText(h.el('rows').innerHTML),/Bone changes/);assert.doesNotMatch(visibleText(h.el('rows').innerHTML),/Unreviewed/);assert.equal(h.scripts.length,1);
+  h.el('table-query').value='Unreviewed';h.el('search-table').fire('submit');await flush();assert.match(visibleText(h.el('rows').innerHTML),/Unreviewed/);assert.doesNotMatch(visibleText(h.el('rows').innerHTML),/Bone changes/);assert.equal(h.scripts.length,1);
+ }
+});
+
+test('category grouping is page-scoped when retained evidence spans more than one page',async()=>{
+ const rows=Array.from({length:60},()=>profileRow()),t=readable('damyda_clinical_profile',rows),h=navigation('?table=damyda_clinical_profile',[t]);h.answer(rows);await flush();
+ assert.match(h.el('read-status').textContent,/this page/i);assert.equal(h.el('next-page').disabled,false);assert.equal((visibleText(h.el('rows').innerHTML).match(/Recorded myeloma stage/g)||[]).length,1);
+ h.el('next-page').fire('click');await flush();assert.equal(h.el('next-page').disabled,true);assert.equal(h.el('previous-page').disabled,false);assert.match(h.el('read-status').textContent,/this page/i);
+ h.el('exact-columns').fire('click');assert.equal((h.el('rows').innerHTML.match(/<tr>/g)||[]).length,11);assert.match(h.el('read-status').textContent,/51–60 of 60/);
+});
+
+test('related availability routes match exact source and field, retain scope through history, and allow an explicit clear',async()=>{
+ const rows=[{table_name:'RKKP_DaMyDa',column_name:'Stadie',profile_kind:'categorical',n_rows:14805,n_available:12901,pct_available:87.1394799},{table_name:'Other',column_name:'Stadie',profile_kind:'categorical',n_rows:20,n_available:19,pct_available:95},{table_name:'RKKP_DaMyDa',column_name:'Stadie_other',profile_kind:'categorical',n_rows:30,n_available:29,pct_available:96.6}];
+ const t=readable('column_profiles',rows),h=navigation('?table=column_profiles&source=RKKP_DaMyDa&field=Stadie',[t]);h.answer(rows);await flush();
+ const text=visibleText(h.el('rows').innerHTML);assert.match(text,/12,901/);assert.match(text,/14,805/);assert.doesNotMatch(text,/Other|Stadie_other/);
+ assert.equal(h.el('row-scope').hidden,false);assert.match(h.el('row-scope-label').textContent,/RKKP_DaMyDa.*Stadie/);
+ h.el('table-query').value='stage';h.el('search-table').fire('submit');await flush();assert.equal(new URLSearchParams(h.window.location.search).get('source'),'RKKP_DaMyDa');
+ h.el('clear-row-scope').fire('click');await flush();assert.equal(h.el('row-scope').hidden,true);assert.equal(new URLSearchParams(h.window.location.search).has('source'),false);
+ h.window.history.go(-1);await flush();assert.equal(h.el('row-scope').hidden,false);assert.match(visibleText(h.el('rows').innerHTML),/12,901/);
+ h.el('back-library').fire('click');assert.equal(new URLSearchParams(h.window.location.search).has('source'),false);
+});
+
+test('an exact related field with no published availability row reports the scoped absence',async()=>{
+ const rows=[{table_name:'Other',column_name:'Stadie',profile_kind:'categorical'}],t=readable('column_profiles',rows),h=navigation('?table=column_profiles&source=RKKP_DaMyDa&field=Stadie',[t]);h.answer(rows);await flush();
+ assert.equal(h.el('rows').innerHTML,'');assert.match(h.el('read-status').textContent,/no.*published.*exact source.*field/i);assert.equal(h.el('row-scope').hidden,false);
+});
+
+test('numeric coverage shares one common summary limit while retaining reviewed names, units and exact evidence',async()=>{
+ const rows=[{table_name:'RKKP_DaMyDa',field:'haemoglobin',source_column:'Reg_Haemoglobin',unit:'mmol/L',n_available:10,n_rows:12,pct_available:83.33,mean:null,median:null,p25:null,p75:null,numeric_privacy_status:'needs_validation_unreviewed_field'},
+ {table_name:'RKKP_DaMyDa',field:'creatinine',source_column:'Reg_Creatinin_mikmoll',unit:'µmol/L',n_available:0,n_rows:12,pct_available:0,mean:null,median:null,p25:null,p75:null,numeric_privacy_status:'needs_validation_unreviewed_field'}];
+ const t=readable('damyda_numeric_fields',rows),h=navigation('?table=damyda_numeric_fields',[t]);h.answer(rows);await flush();const text=visibleText(h.el('rows').innerHTML);
+ assert.match(text,/Haemoglobin/);assert.match(text,/Creatinine/);assert.match(text,/mmol\/L/);assert.match(text,/0\.0%/);assert.doesNotMatch(text,/field needs review/);assert.match(h.el('table-result').textContent,/field needs review/i);
+ assert.equal((text.match(/RKKP_DaMyDa/g)||[]).length,1);
+ h.el('exact-columns').fire('click');assert.equal((h.el('rows').innerHTML.match(/<tr>/g)||[]).length,3);assert.match(visibleText(h.el('rows').innerHTML),/field needs review/);
+});
+
+test('numeric coverage keeps different summary reasons separate and never hides a supplied zero summary',async()=>{
+ const rows=[{table_name:'RKKP_DaMyDa',source_column:'Reg_Haemoglobin',unit:'mmol/L',n_available:10,pct_available:50,median:null,numeric_privacy_status:'needs_validation_negative_sentinel'},{table_name:'RKKP_DaMyDa',source_column:'Reg_LDH',unit:'U/L',n_available:0,pct_available:0,median:null,numeric_privacy_status:'needs_validation_unreviewed_field'}];
+ const t=readable('damyda_numeric_fields',rows);t.columns.find(c=>c.key==='median').type='number';const h=navigation('?table=damyda_numeric_fields',[t]);h.answer(rows);await flush();
+ let text=visibleText(h.el('rows').innerHTML);assert.equal((text.match(/invalid stored values need review/g)||[]).length,1);assert.equal((text.match(/field needs review/g)||[]).length,1);
+ rows[0].median=0;const fresh=readable('damyda_numeric_fields',rows),withZero=navigation('?table=damyda_numeric_fields',[fresh]);withZero.answer(rows);await flush();text=visibleText(withZero.el('rows').innerHTML);assert.match(text,/Median:.*0/);assert.match(text,/invalid stored values/);assert.equal(withZero.el('table-result').hidden,true);
+});
+
+test('shared availability suppression is one reason with an independent source total, while zero and missing remain distinct',async()=>{
+ const base={table_name:'RKKP_DaMyDa',column_name:'Reg_Mkomponent',profile_kind:'categorical',n_rows:14805,n_available:null,pct_available:null,availability_privacy_status:'withheld_small_complementary_cells'};
+ const cases=[{row:base,reason:/small groups and related counts/g},{row:{...base,availability_privacy_status:'withheld_unknown_support'},reason:/supporting count unknown/g},{row:{...base,n_available:0,pct_available:0},zero:true},{row:{...base,availability_privacy_status:null},missing:true}];
+ for(const example of cases){const t=readable('column_profiles',[example.row]);for(const c of t.columns)if(['n_available','pct_available'].includes(c.key))c.type='number';const h=navigation('?table=column_profiles',[t]);h.answer([example.row]);await flush();const text=visibleText(h.el('rows').innerHTML);
+  if(example.reason){assert.equal((text.match(example.reason)||[]).length,1);assert.match(text,/Source records:.*14,805/);assert.doesNotMatch(text,/Withheld:[^\n]*of\s+14,805/);}
+  if(example.zero){assert.match(text,/With a value:.*0.*of.*14,805/);assert.match(text,/0\.0%/);assert.doesNotMatch(text,/Withheld/);}
+  if(example.missing){assert.match(text,/Missing/);assert.doesNotMatch(text,/Withheld|0\.0%/);}
+ }
+});
+
+test('rounded numeric coverage distinguishes a near-complete percentage from exactly 100 and retains exact values',async()=>{
+ const base={table_name:'RKKP_DaMyDa',source_column:'Reg_Haemoglobin',unit:'mmol/L',n_available:14799,pct_available:99.9594731509625,median:null,numeric_privacy_status:'needs_validation_negative_sentinel'};
+ const rows=[base,{...base,source_column:'Reg_LDH',pct_available:100}],t=readable('damyda_numeric_fields',rows),h=navigation('?table=damyda_numeric_fields',[t]);h.answer(rows);await flush();
+ const html=h.el('rows').innerHTML,text=visibleText(html);assert.match(text,/rounded/i);assert.match(html,/&lt;100%/);assert.equal((text.match(/100\.0%/g)||[]).length,1);assert.match(html,/Exact supplied value: 99\.9594731509625/);
+ h.el('exact-columns').fire('click');assert.match(visibleText(h.el('rows').innerHTML),/99\.9594731509625/);assert.doesNotMatch(h.el('rows').innerHTML,/&lt;100%/);
+});
+
+test('distinct registries in one exact source remain distinguishable in category group headings',async()=>{
+ const rows=[profileRow({registry:'Registry A'}),profileRow({registry:'Registry B'})],t=readable('damyda_clinical_profile',rows),h=navigation('?table=damyda_clinical_profile',[t]);h.answer(rows);await flush();
+ const headings=[...h.el('rows').innerHTML.matchAll(/<h3>(.*?)<\/h3>/g)].map(match=>visibleText(match[1]));assert.equal(headings.length,2);assert.match(headings[0],/RKKP_DaMyDa.*Registry A/);assert.match(headings[1],/RKKP_DaMyDa.*Registry B/);
+});
+
+test('category status hides only for an unqueried complete reading page and returns for exact, search, limited and failed reads',async()=>{
+ const rows=[profileRow()],t=readable('damyda_clinical_profile',rows),h=navigation('?table=damyda_clinical_profile',[t]);h.answer(rows);await flush();assert.equal(h.el('read-status').hidden,true);assert.equal(h.el('table-state').hidden,true);
+ h.el('exact-columns').fire('click');assert.equal(h.el('read-status').hidden,false);assert.equal(h.el('table-state').hidden,false);
+ h.el('exact-columns').fire('click');h.el('table-query').value='stage';h.el('search-table').fire('submit');await flush();assert.equal(h.el('read-status').hidden,false);assert.equal(h.el('table-state').hidden,false);
+ const limited=readable('damyda_clinical_profile',rows,{complete:false}),l=navigation('?table=damyda_clinical_profile',[limited]);l.answer(rows);await flush();assert.equal(l.el('read-status').hidden,false);assert.equal(l.el('table-state').hidden,false);
+ const failed=navigation('?table=damyda_clinical_profile',[t]);failed.scripts[0].onerror();await flush();assert.equal(failed.el('read-status').hidden,false);assert.match(failed.el('read-status').textContent,/incomplete/i);
+});

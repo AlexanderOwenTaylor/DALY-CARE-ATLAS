@@ -76,9 +76,33 @@ whole-table search always covers every approved column, including columns not
 shown in the reading view. Source lineage, full row meaning, original scope and
 column definitions remain below the rows. No new statistics or units are inferred.
 Reading views group counts and round percentage/statistic displays, while keeping
-exact values in titles and the exact-column view. Coverage percentages retain
+exact values in titles and the exact-column view. A value below 100% that would
+round to 100.0% is shown as less than 100%, rather than implying complete recording.
+Coverage percentages retain
 their source-specific denominator, and domain totals repeated across regions are
 explicitly marked as nonregional totals that must not be summed across regions.
+
+Myeloma, lymphoma and CLL category outputs open as field lists. Identical rows
+whose category, count and share are all withheld pending validation appear once
+in the reading view, with a shared explanation. Additional restrictions remain
+beside the affected field. Different evidence and any supplied values, including
+zero, stay separate. The exact view retains every published row. Grouping is
+limited to the loaded page; it does not estimate category counts or recover
+withheld distributions.
+
+These views reuse 42 reviewed source/field labels from the clinical dictionary
+(27 category fields and 15 myeloma numeric fields). The same exact-pair labels
+and three registry source aliases support searches in field profiles and field
+metadata. Unknown fields keep their exact names. The compact map needs no extra
+dictionary download and is not a complete translation of the atlas.
+
+Inspect field availability opens field profiles with exact `source` and `field`
+URL filters. Both identities must match; another source's similarly named field
+cannot supply the answer. The visible scope can be cleared and survives browser
+history. A missing match is reported explicitly. Myeloma numeric coverage groups
+common known reasons for absent summaries, while keeping availability and units
+beside each field. Unknown reasons or supplied summaries use the full reading
+view, and the original columns remain available.
 
 Category summaries retain bounded/top-N qualifications, registry ID counts may
 be bounded or fall back to records, and dictionary counts describe reference
