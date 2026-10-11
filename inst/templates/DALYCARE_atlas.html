@@ -9541,13 +9541,20 @@
 
       fillSelect("panel-group-filter", uniqueValues(panelGroups, "group"));
       function renderPanels() {
-        const wanted = document.getElementById("panel-group-filter").value;
-        const query = new URLSearchParams();
-        if (wanted) query.set('group', wanted);
-        const search = document.getElementById('global-atlas-search')?.value.trim();
-        if (search) query.set('q', search);
+        const currentHref = () => {
+          const query = new URLSearchParams();
+          const wanted = document.getElementById("panel-group-filter").value;
+          if (wanted) query.set('group', wanted);
+          const search = document.getElementById('global-atlas-search')?.value.trim();
+          if (search) query.set('q', search);
+          return `DALYCARE_outputs.html${query.size ? '?' + query.toString() : ''}`;
+        };
         setHtml("panel-nav", '');
-        setHtml("panel-list", `<a class="sub-tab" href="DALYCARE_outputs.html${query.size ? '?' + escapeHtml(query.toString()) : ''}">Open Data tables</a><p class="mini">Choose one table, inspect its column meanings, then search the complete protected output. Availability and privacy states are shown beside each table.</p>`);
+        setHtml("panel-list", `<a class="sub-tab" href="${escapeHtml(currentHref())}">Open Data tables</a><p class="mini">Choose one table, inspect its column meanings, then search the complete protected output. Availability and privacy states are shown beside each table.</p>`);
+        const link = document.getElementById('panel-list').querySelector('a');
+        ['click', 'auxclick', 'contextmenu'].forEach(eventName => {
+          link?.addEventListener(eventName, () => { link.href = currentHref(); });
+        });
       }
       document.getElementById("panel-group-filter").addEventListener("change", renderPanels);
       deferRender("panel-list", () => renderPanels());

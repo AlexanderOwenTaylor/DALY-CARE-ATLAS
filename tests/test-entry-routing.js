@@ -13,3 +13,17 @@ test('entry and table library initial assets contain no core or table rows',()=>
  const entry=fs.readFileSync(path.join(dir,'DALYCARE_entry.html'),'utf8');assert.match(entry,/Weight and height/);assert.match(entry,/Common values/);assert.match(entry,/Coverage over time/);assert.match(entry,/Coverage by place/);
  const clinical=fs.readFileSync(path.join(dir,'DALYCARE_atlas.html'),'utf8');assert.match(clinical,/href="DALYCARE_atlas.html"[^>]*>Home/);assert.match(clinical,/href="DALYCARE_outputs.html"[^>]*>Data tables/);assert.doesNotMatch(clinical,/<a[^>]*href="DALYCARE_(?:atlas|outputs).html"[^>]*class="tab-button"/);
 });
+test('Panels library navigation uses changed or cleared global search at click time',()=>{
+ const html=fs.readFileSync(path.join(dir,'DALYCARE_atlas.html'),'utf8');
+ const start=html.indexOf('      function renderPanels()');
+ const end=html.indexOf('      document.getElementById("panel-group-filter").addEventListener("change", renderPanels);',start);
+ const link={href:'',listeners:{},addEventListener(name,handler){this.listeners[name]=handler;}};
+ const search={value:'old query'},group={value:'Clinical'};
+ const elements={'global-atlas-search':search,'panel-group-filter':group,'panel-list':{querySelector:()=>link}};
+ const context=vm.createContext({URLSearchParams,document:{getElementById:id=>elements[id]},escapeHtml:value=>String(value).replace(/&/g,'&amp;'),setHtml(id,html){if(id==='panel-list')link.href=html.match(/href="([^"]+)"/)[1].replace(/&amp;/g,'&');}});
+ vm.runInContext(html.slice(start,end)+'\nrenderPanels();',context);
+ search.value='æ & weight';link.listeners.click?.();
+ let params=new URLSearchParams(link.href.split('?')[1]);assert.equal(params.get('q'),'æ & weight');assert.equal(params.get('group'),'Clinical');
+ search.value='';link.listeners.click?.();
+ params=new URLSearchParams(link.href.split('?')[1]);assert.equal(params.has('q'),false);assert.equal(params.get('group'),'Clinical');
+});

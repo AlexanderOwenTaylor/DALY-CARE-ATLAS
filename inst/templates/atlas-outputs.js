@@ -109,46 +109,227 @@
   };
   const formatValue=(value,key)=>value===null || value===undefined?'Missing':(reviewedLabels[key] && own(reviewedLabels[key],value)?reviewedLabels[key][value]:String(value));
   window.DALYCARE_OUTPUTS={register,loadShard,scanTable,cancel,formatValue,get cacheBytes(){return cacheBytes;}};
-  const root=document.getElementById('outputs-app');if(!root)return;
-  const el=id=>document.getElementById(id),escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-  const statusLabels={available:'Available',limited:'Limited',empty_output:'Empty output',not_produced:'Not in this export',metadata_only:'Metadata only',withheld:'Privacy withheld',unavailable:'Unavailable'};
-  let c;try{c=catalogue();}catch(error){el('outputs-status').textContent=error.message+'. Keep all atlas files together and retry.';if(document.documentElement)document.documentElement.dataset.atlasReady='outputs-error';return;}
-  const groups=[...new Set(c.tables.map(t=>t.group).filter(Boolean))].sort(),params=new URLSearchParams(window.location.search);
-  el('metadata-query').value=params.get('q')||'';
-  el('group-filter').innerHTML='<option value="">All groups</option>'+groups.map(g=>'<option>'+escape(g)+'</option>').join('');el('group-filter').value=groups.includes(params.get('group'))?params.get('group'):'';
-  let selected=null,page=0,controller=null,viewEpoch=0;
-  const count=value=>value===null||value===undefined?'Not supplied':formatValue(value);
-  function saveState(replace=false){const p=new URLSearchParams();if(el('metadata-query').value)p.set('q',el('metadata-query').value);if(el('group-filter').value)p.set('group',el('group-filter').value);if(el('availability-filter').value)p.set('status',el('availability-filter').value);if(selected){p.set('table',selected.id);if(el('table-query').value)p.set('search',el('table-query').value);if(page)p.set('page',page+1);}window.history[replace?'replaceState':'pushState']({},'', 'DALYCARE_outputs.html'+(p.size?'?'+p:''));}
-  function list(){const q=el('metadata-query').value.toLocaleLowerCase(),g=el('group-filter').value,s=el('availability-filter').value;
-    const tables=c.tables.filter(t=>(!g||t.group===g)&&(!s||t.status===s)&&[t.title,t.group,t.source_file,t.kind,t.row_grain,...(t.source_terms||[]),...(t.columns||[]).flatMap(c=>[c.key,c.label,c.definition])].some(value=>String(value||'').toLocaleLowerCase().includes(q)));
-    el('table-list').innerHTML=tables.map(t=>'<button type="button" class="table-card" data-table="'+escape(t.id)+'"><strong>'+escape(t.title)+'</strong><span>'+escape(statusLabels[t.status]||'Unavailable')+' · '+escape(t.group||'Other')+'</span><small>'+escape(t.source_file||'File not supplied')+'</small></button>').join('')||'<p>No tables match these metadata filters.</p>';
-    el('table-list').querySelectorAll('[data-table]').forEach(button=>button.addEventListener('click',()=>open(button.dataset.table)));
-    el('outputs-status').textContent=tables.length+(tables.length===1?' table':' tables')+' · Run '+(c.run_id||'not supplied');
+  const root = document.getElementById('outputs-app');
+  if (!root) return;
+  const el = id => document.getElementById(id),
+    escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+  const statusLabels = {
+    available: 'Available', limited: 'Limited', empty_output: 'Empty output',
+    not_produced: 'Not in this export', metadata_only: 'Metadata only',
+    withheld: 'Privacy withheld', unavailable: 'Unavailable'
+  };
+  let c;
+  try {
+    c = catalogue();
+  } catch (error) {
+    el('outputs-status').textContent = error.message + '. Keep all atlas files together and retry.';
+    if (document.documentElement) document.documentElement.dataset.atlasReady = 'outputs-error';
+    return;
   }
-  async function readPage(){controller?.abort();controller=new AbortController();const epoch=++viewEpoch,t=selected;if(!t)return;
-    el('rows').innerHTML='';el('read-status').textContent='Loading table rows…';el('cancel-search').disabled=false;el('next-page').disabled=true;el('previous-page').disabled=true;el('retry-read').hidden=true;
-    try{const result=await scanTable(t.id,el('table-query').value,page,progress=>{if(epoch===viewEpoch)el('read-status').textContent='Searching table… '+progress.scanned_rows+' of '+progress.total_rows+' rows scanned';},controller.signal);if(epoch!==viewEpoch)return;
-      const range=result.rows.length?'Showing '+(page*PAGE_ROWS+1)+'–'+(page*PAGE_ROWS+result.rows.length)+' of '+result.total_matches+(el('table-query').value?' matching rows':' rows'):'No rows on this page · '+result.total_matches+' matching rows';
-      el('read-status').textContent=(result.total_matches?range:'No matches')+(el('table-query').value?' · Full scan complete':'');
-      el('rows').innerHTML=result.rows.length?'<div class="table-scroll"><table><thead><tr>'+t.columns.map(c=>'<th scope="col">'+escape(c.label||c.key)+'</th>').join('')+'</tr></thead><tbody>'+result.rows.map(row=>'<tr>'+t.columns.map(c=>'<td title="'+escape(formatValue(row[c.key]))+'">'+escape(formatValue(row[c.key],c.key))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>':'';
-      el('next-page').disabled=(page+1)*PAGE_ROWS>=result.total_matches;el('previous-page').disabled=page===0;
-    }catch(error){if(epoch===viewEpoch){el('read-status').textContent=error.message+'. Try again to complete the search.';el('rows').innerHTML='';el('retry-read').hidden=false;}}
-    finally{if(epoch===viewEpoch)el('cancel-search').disabled=true;}
+  const groups = [...new Set(c.tables.map(t => t.group).filter(Boolean))].sort(),
+    params = new URLSearchParams(window.location.search);
+  el('metadata-query').value = params.get('q') || '';
+  el('group-filter').innerHTML = '<option value="">All groups</option>' +
+    groups.map(g => '<option>' + escape(g) + '</option>').join('');
+  el('group-filter').value = groups.includes(params.get('group')) ? params.get('group') : '';
+  let selected = null, page = 0, controller = null, viewEpoch = 0;
+  const count = value => value === null || value === undefined ? 'Not supplied' : formatValue(value);
+
+  function saveState(replace = false) {
+    const p = new URLSearchParams();
+    if (el('metadata-query').value) p.set('q', el('metadata-query').value);
+    if (el('group-filter').value) p.set('group', el('group-filter').value);
+    if (el('availability-filter').value) p.set('status', el('availability-filter').value);
+    if (selected) {
+      p.set('table', selected.id);
+      if (el('table-query').value) p.set('search', el('table-query').value);
+      if (page) p.set('page', page + 1);
+    }
+    window.history[replace ? 'replaceState' : 'pushState'](
+      {}, '', 'DALYCARE_outputs.html' + (p.size ? '?' + p : '')
+    );
   }
-  function detailMode(active){document.body.classList.toggle('detail-mode',active);el('catalogue-note').hidden=active;el('outputs-status').hidden=active;}
-  function open(tableId,restore=false){controller?.abort();cancel();viewEpoch++;selected=c.tables.find(t=>t.id===tableId)||null;el('table-detail').hidden=!selected;el('library').hidden=!!selected;detailMode(!!selected);if(!selected)return;
-    if(!restore){page=0;el('table-query').value='';}const t=selected;
-    el('table-title').textContent=t.title;el('table-state').textContent=(statusLabels[t.status]||'Unavailable')+(t.reason?' · '+t.reason:'');
-    el('table-metadata').innerHTML='<dl>'+[['Source file',t.source_file],['Source terms',(t.source_terms||[]).join(', ')],['Row grain',t.row_grain],['Count basis',t.count_basis],['CSV source rows',count(t.source_row_count)],['Represented rows',count(t.represented_row_count)],['Completeness',t.complete===true?'Complete reviewed output':t.complete===false?'Limited / incomplete output':'Unknown'],['Evidence origin',t.provenance==='csv_outputs'?'From CSV outputs':t.provenance==='legacy_payload'?'From an earlier atlas export':t.provenance||'Not supplied']].map(([label,value])=>'<dt>'+label+'</dt><dd>'+escape(value||'Not supplied')+'</dd>').join('')+'</dl>';
-    el('column-meanings').innerHTML=t.columns.map(c=>'<article><strong>'+escape(c.label||c.key)+'</strong> <code>'+escape(c.key)+'</code><p>'+escape(c.definition||'Definition not supplied')+'</p>'+['type','unit','denominator','scope','missing_rule'].filter(k=>c[k]!==undefined).map(k=>'<p><small>'+escape(k.replace('_',' '))+': '+escape(c[k])+'</small></p>').join('')+'</article>').join('');
-    const readable=['available','limited'].includes(t.status)&&t.shards.length>0;el('row-controls').hidden=!readable;el('rows').innerHTML='';el('read-status').textContent=readable?'':t.status==='empty_output'?'This output contains no rows.':(statusLabels[t.status]||'Unavailable')+': table rows are not included in this export.';
-    if(!restore)saveState();if(readable)readPage();
+
+  function list() {
+    const q = el('metadata-query').value.toLocaleLowerCase(),
+      g = el('group-filter').value,
+      s = el('availability-filter').value;
+    const tables = c.tables.filter(t =>
+      (!g || t.group === g) && (!s || t.status === s) && [
+        t.title, t.group, t.source_file, t.kind, t.row_grain,
+        ...(t.source_terms || []),
+        ...(t.columns || []).flatMap(c => [c.key, c.label, c.definition])
+      ].some(value => String(value || '').toLocaleLowerCase().includes(q))
+    );
+    el('table-list').innerHTML = tables.map(t =>
+      '<button type="button" class="table-card" data-table="' + escape(t.id) + '">' +
+      '<strong>' + escape(t.title) + '</strong><span>' +
+      escape(statusLabels[t.status] || 'Unavailable') + ' · ' + escape(t.group || 'Other') +
+      '</span><small>' + escape(t.source_file || 'File not supplied') + '</small></button>'
+    ).join('') || '<p>No tables match these metadata filters.</p>';
+    el('table-list').querySelectorAll('[data-table]').forEach(button =>
+      button.addEventListener('click', () => open(button.dataset.table))
+    );
+    el('outputs-status').textContent = tables.length +
+      (tables.length === 1 ? ' table' : ' tables') + ' · Run ' + (c.run_id || 'not supplied');
   }
-  for(const name of ['metadata-query','group-filter','availability-filter'])el(name).addEventListener(name==='metadata-query'?'input':'change',()=>{list();saveState();});
-  el('search-table').addEventListener('submit',event=>{event.preventDefault();page=0;saveState();readPage();});
-  el('retry-read').addEventListener('click',readPage);el('cancel-search').addEventListener('click',()=>controller?.abort());
-  for(const [name,delta]of [['previous-page',-1],['next-page',1]])el(name).addEventListener('click',()=>{page=Math.max(0,page+delta);saveState();readPage();});
-  el('back-library').addEventListener('click',()=>{controller?.abort();cancel();viewEpoch++;selected=null;el('table-detail').hidden=true;el('library').hidden=false;detailMode(false);saveState();list();});
-  function restore(){const p=new URLSearchParams(window.location.search);el('metadata-query').value=p.get('q')||'';el('group-filter').value=groups.includes(p.get('group'))?p.get('group'):'';el('availability-filter').value=own(statusLabels,p.get('status'))?p.get('status'):'';el('table-query').value=p.get('search')||'';page=Math.max(0,Math.floor(Number(p.get('page'))||1)-1);list();if(p.get('table'))open(p.get('table'),true);else{controller?.abort();cancel();viewEpoch++;selected=null;el('table-detail').hidden=true;el('library').hidden=false;detailMode(false);}}
-  window.addEventListener('popstate',restore);restore();if(document.documentElement)document.documentElement.dataset.atlasReady='outputs';
+
+  async function readPage() {
+    controller?.abort();
+    controller = new AbortController();
+    const epoch = ++viewEpoch, t = selected;
+    if (!t) return;
+    el('rows').innerHTML = '';
+    el('read-status').textContent = 'Loading table rows…';
+    el('cancel-search').disabled = false;
+    el('next-page').disabled = true;
+    el('previous-page').disabled = true;
+    el('retry-read').hidden = true;
+    try {
+      const result = await scanTable(t.id, el('table-query').value, page, progress => {
+        if (epoch === viewEpoch) el('read-status').textContent = 'Searching table… ' +
+          progress.scanned_rows + ' of ' + progress.total_rows + ' rows scanned';
+      }, controller.signal);
+      if (epoch !== viewEpoch) return;
+      const range = result.rows.length ?
+        'Showing ' + (page * PAGE_ROWS + 1) + '–' + (page * PAGE_ROWS + result.rows.length) +
+        ' of ' + result.total_matches + (el('table-query').value ? ' matching rows' : ' rows') :
+        'No rows on this page · ' + result.total_matches + ' matching rows';
+      el('read-status').textContent = (result.total_matches ? range : 'No matches') +
+        (el('table-query').value ? ' · Full scan complete' : '');
+      el('rows').innerHTML = result.rows.length ?
+        '<div class="table-scroll"><table><thead><tr>' +
+        t.columns.map(c => '<th scope="col">' + escape(c.label || c.key) + '</th>').join('') +
+        '</tr></thead><tbody>' + result.rows.map(row =>
+          '<tr>' + t.columns.map(c =>
+            '<td title="' + escape(formatValue(row[c.key])) + '">' +
+            escape(formatValue(row[c.key], c.key)) + '</td>'
+          ).join('') + '</tr>'
+        ).join('') + '</tbody></table></div>' : '';
+      el('next-page').disabled = (page + 1) * PAGE_ROWS >= result.total_matches;
+      el('previous-page').disabled = page === 0;
+    } catch (error) {
+      if (epoch === viewEpoch) {
+        el('read-status').textContent = error.message + '. Try again to complete the search.';
+        el('rows').innerHTML = '';
+        el('retry-read').hidden = false;
+      }
+    }
+    finally {
+      if (epoch === viewEpoch) el('cancel-search').disabled = true;
+    }
+  }
+
+  function detailMode(active) {
+    document.body.classList.toggle('detail-mode', active);
+    el('catalogue-note').hidden = active;
+    el('outputs-status').hidden = active;
+  }
+
+  function open(tableId, restore = false) {
+    controller?.abort();
+    cancel();
+    viewEpoch++;
+    selected = c.tables.find(t => t.id === tableId) || null;
+    el('table-detail').hidden = !selected;
+    el('library').hidden = !!selected;
+    detailMode(!!selected);
+    if (!selected) return;
+    if (!restore) {
+      page = 0;
+      el('table-query').value = '';
+    }
+    const t = selected;
+    el('table-title').textContent = t.title;
+    el('table-state').textContent = (statusLabels[t.status] || 'Unavailable') +
+      (t.reason ? ' · ' + t.reason : '');
+    el('table-metadata').innerHTML = '<dl>' + [
+      ['Source file', t.source_file],
+      ['Source terms', (t.source_terms || []).join(', ')],
+      ['Row grain', t.row_grain],
+      ['Count basis', t.count_basis],
+      ['CSV source rows', count(t.source_row_count)],
+      ['Represented rows', count(t.represented_row_count)],
+      ['Completeness', t.complete === true ? 'Complete reviewed output' :
+        t.complete === false ? 'Limited / incomplete output' : 'Unknown'],
+      ['Evidence origin', t.provenance === 'csv_outputs' ? 'From CSV outputs' :
+        t.provenance === 'legacy_payload' ? 'From an earlier atlas export' :
+        t.provenance || 'Not supplied']
+    ].map(([label, value]) =>
+      '<dt>' + label + '</dt><dd>' + escape(value || 'Not supplied') + '</dd>'
+    ).join('') + '</dl>';
+    el('column-meanings').innerHTML = t.columns.map(c =>
+      '<article><strong>' + escape(c.label || c.key) + '</strong> <code>' + escape(c.key) +
+      '</code><p>' + escape(c.definition || 'Definition not supplied') + '</p>' +
+      ['type', 'unit', 'denominator', 'scope', 'missing_rule']
+        .filter(k => c[k] !== undefined)
+        .map(k => '<p><small>' + escape(k.replace('_', ' ')) + ': ' + escape(c[k]) + '</small></p>')
+        .join('') + '</article>'
+    ).join('');
+    const readable = ['available', 'limited'].includes(t.status) && t.shards.length > 0;
+    el('row-controls').hidden = !readable;
+    el('rows').innerHTML = '';
+    el('read-status').textContent = readable ? '' : t.status === 'empty_output' ?
+      'This output contains no rows.' : (statusLabels[t.status] || 'Unavailable') +
+      ': table rows are not included in this export.';
+    if (!restore) saveState();
+    if (readable) readPage();
+  }
+
+  for (const name of ['metadata-query', 'group-filter', 'availability-filter'])
+    el(name).addEventListener(name === 'metadata-query' ? 'input' : 'change', () => {
+      list();
+      saveState();
+    });
+  el('search-table').addEventListener('submit', event => {
+    event.preventDefault();
+    page = 0;
+    saveState();
+    readPage();
+  });
+  el('retry-read').addEventListener('click', readPage);
+  el('cancel-search').addEventListener('click', () => controller?.abort());
+  for (const [name, delta] of [['previous-page', -1], ['next-page', 1]])
+    el(name).addEventListener('click', () => {
+      page = Math.max(0, page + delta);
+      saveState();
+      readPage();
+    });
+  el('back-library').addEventListener('click', () => {
+    controller?.abort();
+    cancel();
+    viewEpoch++;
+    selected = null;
+    el('table-detail').hidden = true;
+    el('library').hidden = false;
+    detailMode(false);
+    saveState();
+    list();
+  });
+
+  function restore() {
+    const p = new URLSearchParams(window.location.search);
+    el('metadata-query').value = p.get('q') || '';
+    el('group-filter').value = groups.includes(p.get('group')) ? p.get('group') : '';
+    el('availability-filter').value = own(statusLabels, p.get('status')) ? p.get('status') : '';
+    el('table-query').value = p.get('search') || '';
+    page = Math.max(0, Math.floor(Number(p.get('page')) || 1) - 1);
+    list();
+    if (p.get('table')) open(p.get('table'), true);
+    else {
+      controller?.abort();
+      cancel();
+      viewEpoch++;
+      selected = null;
+      el('table-detail').hidden = true;
+      el('library').hidden = false;
+      detailMode(false);
+    }
+  }
+
+  window.addEventListener('popstate', restore);
+  restore();
+  if (document.documentElement) document.documentElement.dataset.atlasReady = 'outputs';
 })(window,document);
