@@ -242,7 +242,7 @@
     },
     {
       "id": "checks",
-      "title": "Checks",
+      "title": "Source check context",
       "source_file": "outputs/atlas_checks.csv",
       "arg_path": [
         "checks"
@@ -264,13 +264,41 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source-check result. This published table includes the associated table only; it does not expose the check identifier, severity, or message.",
+      "count_basis": "source check entries; published table contains source identity only, not record counts",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -326,7 +354,7 @@
     },
     {
       "id": "npu_dictionary_summary",
-      "title": "Panels / npu dictionary summary",
+      "title": "NPU dictionary reference summary",
       "source_file": "outputs/panels/npu_dictionary_summary.csv",
       "arg_path": [
         "panels",
@@ -352,14 +380,55 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One named summary metric about the curated NPU dictionary, not observed laboratory results.",
+      "count_basis": "reference_dictionary_metadata",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "metric": {
+          "label": "Dictionary metric",
+          "definition": "Exact dictionary-summary metric key."
+        },
+        "label": {
+          "label": "Metric description",
+          "definition": "Description supplied by the dictionary-summary producer."
+        },
+        "value": {
+          "label": "Reference metric value",
+          "definition": "Text representation of the dictionary metric; units depend on metric, e.g. dictionary entries, vectors, or systems."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "npu_dictionary_vectors",
-      "title": "Panels / npu dictionary vectors",
+      "title": "Laboratory dictionary groups and entry counts",
       "source_file": "outputs/panels/npu_dictionary_vectors.csv",
       "arg_path": [
         "panels",
@@ -395,14 +464,75 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One dictionary group, with counts of its reference entries and metadata. These counts do not describe observed tests.",
+      "count_basis": "reference_dictionary_metadata",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "consensus_vector": {
+          "label": "Dictionary group",
+          "definition": "Supplied group label in the NPU dictionary. Its identifier alone does not establish a biological meaning."
+        },
+        "n_dictionary_codes": {
+          "label": "Dictionary entries",
+          "definition": "Number of rows in the curated dictionary for this consensus vector; a reference count, not observed tests."
+        },
+        "systems": {
+          "label": "Dictionary systems",
+          "definition": "Distinct nonblank system labels in this dictionary group."
+        },
+        "n_systems": {
+          "label": "Distinct system labels",
+          "definition": "Number of distinct nonblank system labels in this dictionary group."
+        },
+        "n_active": {
+          "label": "Active dictionary entries",
+          "definition": "Dictionary rows in the group whose LabTerm status is active."
+        },
+        "n_with_clinical_role": {
+          "label": "Entries with a clinical role",
+          "definition": "Dictionary rows in the group with a nonblank clinical-role label."
+        },
+        "n_v08_sources": {
+          "label": "Distinct V08 source labels",
+          "definition": "Number of distinct nonblank used_in_v08_classification labels in the group; not current data sources."
+        },
+        "clinical_roles": {
+          "label": "Dictionary clinical roles",
+          "definition": "Distinct nonblank clinical-role labels in this dictionary group."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "npu_lab_usage_by_vector",
-      "title": "Panels / npu lab usage by vector",
+      "title": "Laboratory dictionary-group occurrence context",
       "source_file": "outputs/panels/npu_lab_usage_by_vector.csv",
       "arg_path": [
         "panels",
@@ -437,19 +567,71 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/code-field/consensus-vector summary, with dictionary context; observed counts are subject to withholding.",
+      "count_basis": "normalized code occurrences in source field; denominator is all source records; observed codes and counts may be withheld; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "code_column": {
+          "label": "Code field",
+          "definition": "Exact source field whose code values were counted or matched."
+        },
+        "consensus_vector": {
+          "label": "Dictionary group",
+          "definition": "Curated consensus-vector grouping from the NPU dictionary or isotype mapping, not a measured value."
+        },
+        "clinical_role": {
+          "label": "Dictionary clinical role",
+          "definition": "Curated clinical-role metadata attached to the dictionary group or code."
+        },
+        "n_observed": {
+          "label": "Code occurrences",
+          "definition": "Producer count of source rows with this normalized code or codes in this group. Not unique people; withheld when publication is not validated."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times the occurrence count divided by all source rows supplied to this producer, including rows without this code. Not a share of published rows or people."
+        },
+        "n_dictionary_codes": {
+          "label": "Dictionary entries",
+          "definition": "Number of rows in the curated dictionary for this consensus vector; a reference count, not observed tests."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "npu_lab_unmatched_codes",
-      "title": "Panels / npu lab unmatched codes",
+      "title": "Unmatched laboratory code context",
       "source_file": "outputs/panels/npu_lab_unmatched_codes.csv",
       "arg_path": [
         "panels",
@@ -479,19 +661,63 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/code-field/NPU-like-code summary for a code not found in the curated dictionary. This is a mapping gap, not a clinical finding.",
+      "count_basis": "normalized code occurrences in source field; denominator is all source records; observed codes and counts may be withheld; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "code_column": {
+          "label": "Code field",
+          "definition": "Exact source field whose code values were counted or matched."
+        },
+        "npu_code": {
+          "label": "NPU-like code",
+          "definition": "Normalized NPU-like code from the selected source field; may be withheld and is not a test result."
+        },
+        "n_observed": {
+          "label": "Code occurrences",
+          "definition": "Producer count of source rows with this normalized code or codes in this group. Not unique people; withheld when publication is not validated."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times the occurrence count divided by all source rows supplied to this producer, including rows without this code. Not a share of published rows or people."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "npu_detective_code_inventory",
-      "title": "Panels / npu detective code inventory",
+      "title": "Laboratory code mapping inventory",
       "source_file": "outputs/panels/npu_detective_code_inventory.csv",
       "arg_path": [
         "panels",
@@ -535,19 +761,91 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/code-field/NPU-like-code summary enriched with dictionary and detective-surface metadata.",
+      "count_basis": "normalized code occurrences in source field; denominator is all source records; observed codes and counts may be withheld; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "code_column": {
+          "label": "Code field",
+          "definition": "Exact source field whose code values were counted or matched."
+        },
+        "npu_code": {
+          "label": "NPU-like code",
+          "definition": "Normalized NPU-like code from the selected source field; may be withheld and is not a test result."
+        },
+        "consensus_vector": {
+          "label": "Dictionary group",
+          "definition": "Curated consensus-vector grouping from the NPU dictionary or isotype mapping, not a measured value."
+        },
+        "clinical_role": {
+          "label": "Dictionary clinical role",
+          "definition": "Curated clinical-role metadata attached to the dictionary group or code."
+        },
+        "n_observed": {
+          "label": "Code occurrences",
+          "definition": "Producer count of source rows with this normalized code or codes in this group. Not unique people; withheld when publication is not validated."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times the occurrence count divided by all source rows supplied to this producer, including rows without this code. Not a share of published rows or people."
+        },
+        "dictionary_match": {
+          "label": "Dictionary match",
+          "definition": "Whether the normalized source code matched an entry in the curated NPU dictionary."
+        },
+        "system": {
+          "label": "Dictionary system",
+          "definition": "System label from the matched dictionary entry."
+        },
+        "status_labterm": {
+          "label": "Dictionary LabTerm status",
+          "definition": "LabTerm status from the matched dictionary entry; not patient/test status."
+        },
+        "surface": {
+          "label": "Detective surface",
+          "definition": "Curated detective-surface grouping obtained by code lookup."
+        },
+        "candidate_label": {
+          "label": "Candidate reference label",
+          "definition": "Label from the surface lookup; does not validate a result value."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "npu_detective_candidates",
-      "title": "Panels / npu detective candidates",
+      "title": "Laboratory code review candidates",
       "source_file": "outputs/panels/npu_detective_candidates.csv",
       "arg_path": [
         "panels",
@@ -585,13 +883,73 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/code-field/NPU-like-code candidate that is unmatched to the dictionary or outside the configured laboratory review group.",
+      "count_basis": "normalized code occurrences in source field; denominator is all source records; observed codes and counts may be withheld; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "code_column": {
+          "label": "Code field",
+          "definition": "Exact source field whose code values were counted or matched."
+        },
+        "npu_code": {
+          "label": "NPU-like code",
+          "definition": "Normalized NPU-like code from the selected source field; may be withheld and is not a test result."
+        },
+        "n_observed": {
+          "label": "Code occurrences",
+          "definition": "Producer count of source rows with this normalized code or codes in this group. Not unique people; withheld when publication is not validated."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times the occurrence count divided by all source rows supplied to this producer, including rows without this code. Not a share of published rows or people."
+        },
+        "dictionary_match": {
+          "label": "Dictionary match",
+          "definition": "Whether the normalized source code matched an entry in the curated NPU dictionary."
+        },
+        "surface": {
+          "label": "Detective surface",
+          "definition": "Curated detective-surface grouping obtained by code lookup."
+        },
+        "candidate_label": {
+          "label": "Candidate reference label",
+          "definition": "Label from the surface lookup; does not validate a result value."
+        },
+        "candidate_reason": {
+          "label": "Mapping review reason",
+          "definition": "Producer category: unmatched_npu_like_code or dictionary_code_outside_detective_surface."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -645,7 +1003,7 @@
     },
     {
       "id": "isotype_code_usage",
-      "title": "Panels / isotype code usage",
+      "title": "Immunoglobulin isotype code context",
       "source_file": "outputs/panels/isotype_code_usage.csv",
       "arg_path": [
         "panels",
@@ -683,19 +1041,79 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/code-field/NPU-like-code summary matched to the curated isotype mapping; mapping is not evidence of a measured isotype result.",
+      "count_basis": "normalized code occurrences in source field; denominator is all source records; observed codes and counts may be withheld; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "code_column": {
+          "label": "Code field",
+          "definition": "Exact source field whose code values were counted or matched."
+        },
+        "npu_code": {
+          "label": "NPU-like code",
+          "definition": "Normalized NPU-like code from the selected source field; may be withheld and is not a test result."
+        },
+        "consensus_vector": {
+          "label": "Dictionary group",
+          "definition": "Curated consensus-vector grouping from the NPU dictionary or isotype mapping, not a measured value."
+        },
+        "n_observed": {
+          "label": "Code occurrences",
+          "definition": "Producer count of source rows with this normalized code or codes in this group. Not unique people; withheld when publication is not validated."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times the occurrence count divided by all source rows supplied to this producer, including rows without this code. Not a share of published rows or people."
+        },
+        "isotype_family": {
+          "label": "Isotype family",
+          "definition": "Family label from the curated isotype mapping."
+        },
+        "specimen_class": {
+          "label": "Mapped specimen class",
+          "definition": "Specimen class from the curated code mapping; not observed specimen confirmation."
+        },
+        "bucket": {
+          "label": "Mapped isotype group",
+          "definition": "Bucket label from the curated isotype mapping."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "isotype_bucket_summary",
-      "title": "Panels / isotype bucket summary",
+      "title": "Immunoglobulin isotype group context",
       "source_file": "outputs/panels/isotype_bucket_summary.csv",
       "arg_path": [
         "panels",
@@ -729,23 +1147,71 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/bucket/isotype-family/specimen-class summary, formed from retained code-occurrence summaries; not a unique-person cohort.",
+      "count_basis": "sum of retained isotype code occurrences; denominator is all source records; optional ID counts are separate; not a validated person cohort",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "bucket": {
+          "label": "Mapped isotype group",
+          "definition": "Curated bucket label used to group retained isotype code summaries."
+        },
+        "isotype_family": {
+          "label": "Isotype family",
+          "definition": "Curated isotype-family grouping."
+        },
+        "specimen_class": {
+          "label": "Mapped specimen class",
+          "definition": "Curated specimen-class grouping, not confirmed patient specimen content."
         },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Retained code occurrences",
+          "definition": "Sum of retained n_observed code counts in this mapped group; not necessarily all source records."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times the occurrence count divided by all source rows supplied to this producer, including rows without this code. Not a share of published rows or people."
+        },
+        "n_patients": {
+          "label": "Optional distinct-ID count",
+          "definition": "Optional patient_counts value supplied to this producer; null without such input or when suppressed. Do not infer person anonymity or a count from source records."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "mm_treatment_code_counts",
-      "title": "Panels / mm treatment code counts",
+      "title": "Myeloma treatment-rule occurrence context",
       "source_file": "outputs/panels/mm_treatment_code_counts.csv",
       "arg_path": [
         "panels",
@@ -785,23 +1251,83 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/code-field/treatment-rule match summary. Rules may overlap; do not sum them as unique records or people.",
+      "count_basis": "source field treatment rule matches; overlapping rules and fields are not additive; optional distinct ID counts are separate",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "code_column": {
+          "label": "Code field",
+          "definition": "Exact source field whose code values were counted or matched."
+        },
+        "code_system": {
+          "label": "Rule code system",
+          "definition": "Code-system label from the curated treatment rule."
+        },
+        "family": {
+          "label": "Treatment rule family",
+          "definition": "Family label from the curated treatment rule; not observed treatment response."
+        },
+        "match_type": {
+          "label": "Rule match type",
+          "definition": "Exact or prefix matching specified by the treatment rule."
+        },
+        "code": {
+          "label": "Rule code",
+          "definition": "Curated rule code or prefix against which source values were matched; not necessarily an observed exact code."
+        },
+        "label": {
+          "label": "Rule description",
+          "definition": "Description of the curated treatment rule."
         },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Rule-matching source records",
+          "definition": "Number of source records matching this rule in this field; matches may overlap across rules and fields."
+        },
+        "pct_rows": {
+          "label": "Share of source records (%)",
+          "definition": "100 times this rule-match count divided by all source rows."
+        },
+        "n_patients": {
+          "label": "Distinct matched IDs",
+          "definition": "Distinct nonblank IDs in matching records when an ID field was selected and the count was supported; null in unsupported paths. IDs are not independently validated unique people."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "mm_treatment_source_summary",
-      "title": "Panels / mm treatment source summary",
+      "title": "Myeloma treatment source context",
       "source_file": "outputs/panels/mm_treatment_source_summary.csv",
       "arg_path": [
         "panels",
@@ -831,13 +1357,49 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source treatment-match summary. This published table retains source identity and withheld date-bound fields only.",
+      "count_basis": "source treatment summary context; matched counts are outside this published table",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "min_date": {
+          "label": "Earliest date (withheld)",
+          "definition": "Source date bound is withheld from public output; null does not mean no date records exist."
+        },
+        "max_date": {
+          "label": "Latest date (withheld)",
+          "definition": "Source date bound is withheld from public output; do not reconstruct it from metadata row counts."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -976,7 +1538,7 @@
     },
     {
       "id": "registry_clinical_summary",
-      "title": "Panels / registry clinical summary",
+      "title": "Disease registry source summary",
       "source_file": "outputs/panels/registry_clinical_summary.csv",
       "arg_path": [
         "panels",
@@ -1010,27 +1572,71 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One disease-registry source table, with source-record and field counts and a bounded ID count or source-record fallback.",
+      "count_basis": "Source records and fields; the ID count is bounded or falls back to source records. It is not a validated distinct-person total.",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "registry": {
+          "label": "Registry",
+          "definition": "Disease registry associated with this source table."
+        },
+        "min_date": {
+          "label": "Earliest date (withheld)",
+          "definition": "Source date bound is withheld from public output; null does not mean no date records exist."
+        },
+        "max_date": {
+          "label": "Latest date (withheld)",
+          "definition": "Source date bound is withheld from public output; do not reconstruct it from metadata row counts."
         },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Registry source records",
+          "definition": "Number of source-table rows; not unique people."
         },
         "n_cols": {
-          "definition": "Number of fields in the source table.",
-          "unit": "fields"
+          "label": "Source fields",
+          "definition": "Number of columns in the registry source."
+        },
+        "n_patients": {
+          "label": "Bounded ID / record count",
+          "definition": "Counts distinct nonblank values among the first 100,000 IDs when an ID field is selected; otherwise counts source records. Database summaries may supply no count. This is not a validated full-registry patient total."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "damyda_clinical_profile",
-      "title": "Panels / damyda clinical profile",
+      "title": "Myeloma registry category summaries",
       "source_file": "outputs/panels/damyda_clinical_profile.csv",
       "arg_path": [
         "panels",
@@ -1063,19 +1669,71 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One retained category-summary entry for a selected field in the named registry source. Counts may use a bounded scan and top-N categories. Category values and frequencies may be withheld; these entries do not provide a complete valid-value list.",
+      "count_basis": "retained source category occurrences; may use bounded/top N profile; denominator is all source records; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "registry": {
+          "label": "Registry",
+          "definition": "Disease registry associated with this source table."
+        },
+        "source_column": {
+          "label": "Source field",
+          "definition": "Exact source field summarized in this table."
+        },
+        "label": {
+          "label": "Recorded category (withheld)",
+          "definition": "Category value counted in the selected source field, subject to disclosure withholding; not a reference definition."
+        },
+        "n": {
+          "label": "Retained category occurrences",
+          "definition": "Count supplied by the category profiler; bounded/top-N paths may not represent the complete source distribution."
+        },
+        "pct_rows": {
+          "label": "Retained category share (%)",
+          "definition": "Supplied category count divided by all source rows; do not recompute a complete clinical distribution from retained categories."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
-      }
+      },
+      "navigation_terms": [
+        "DaMyDa",
+        "damyda_clinical_profile"
+      ]
     },
     {
       "id": "damyda_numeric_fields",
-      "title": "Panels / damyda numeric fields",
+      "title": "Myeloma registry stored numeric summaries",
       "source_file": "outputs/panels/damyda_numeric_fields.csv",
       "arg_path": [
         "panels",
@@ -1117,36 +1775,91 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One selected numeric field in the Myeloma registry source, with availability and supplied stored-value summaries. Units are configured for the field; quartiles may use a bounded stream sample. Stored summaries are not clinical reference ranges.",
+      "count_basis": "stored source row numeric profile; available-record denominator is all source records; quantiles may use bounded stream samples",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "registry": {
+          "label": "Registry",
+          "definition": "Disease registry associated with this source table."
+        },
+        "source_column": {
+          "label": "Source field",
+          "definition": "Exact source field summarized in this table."
+        },
+        "field": {
+          "label": "Numeric summary key",
+          "definition": "Configured numeric concept key; use exact source field to confirm meaning."
+        },
+        "unit": {
+          "label": "Configured unit",
+          "definition": "Unit supplied by the registry numeric specification; not a harmonization or unit-validation claim."
         },
         "n_available": {
-          "definition": "Number of source rows with a nonmissing value for this field.",
-          "unit": "source rows",
-          "label": "Source rows with a value"
+          "label": "Numeric-profile available records",
+          "definition": "Supplied available-record count for the selected numeric field: successfully parsed numeric values in memory, nonnull SQL values on a successful numeric query, or available values in the stored stream profile. Subject to complementary-cell protection; not validated clinical measurements."
         },
         "pct_available": {
-          "definition": "Percentage of source rows with a nonmissing field value.",
-          "unit": "percent",
-          "denominator": "profiled source rows",
-          "label": "Source rows with a value (%)"
+          "label": "Numeric-profile availability (%)",
+          "definition": "Supplied available-record count for the selected numeric profile divided by all source rows. Not the percentage of unique people or an independent validity/harmonization measure."
+        },
+        "mean": {
+          "label": "Stored mean",
+          "definition": "Supplied mean of stored numeric values, shown only when approved for publication."
+        },
+        "median": {
+          "label": "Stored median",
+          "definition": "Supplied median, only when eligible; streamed quantiles may use a bounded sample."
         },
         "p25": {
-          "label": "25th percentile"
+          "label": "Stored 25th percentile",
+          "definition": "Supplied lower quartile; streamed quantiles may use a bounded sample."
         },
         "p75": {
-          "label": "75th percentile"
+          "label": "Stored 75th percentile",
+          "definition": "Supplied upper quartile; streamed quantiles may use a bounded sample."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
-      }
+      },
+      "navigation_terms": [
+        "DaMyDa",
+        "damyda_numeric_fields"
+      ]
     },
     {
       "id": "lyfo_clinical_profile",
-      "title": "Panels / lyfo clinical profile",
+      "title": "Lymphoma registry category summaries",
       "source_file": "outputs/panels/lyfo_clinical_profile.csv",
       "arg_path": [
         "panels",
@@ -1179,19 +1892,71 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One retained category-summary entry for a selected field in the named registry source. Counts may use a bounded scan and top-N categories. Category values and frequencies may be withheld; these entries do not provide a complete valid-value list.",
+      "count_basis": "retained source category occurrences; may use bounded/top N profile; denominator is all source records; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "registry": {
+          "label": "Registry",
+          "definition": "Disease registry associated with this source table."
+        },
+        "source_column": {
+          "label": "Source field",
+          "definition": "Exact source field summarized in this table."
+        },
+        "label": {
+          "label": "Recorded category (withheld)",
+          "definition": "Category value counted in the selected source field, subject to disclosure withholding; not a reference definition."
+        },
+        "n": {
+          "label": "Retained category occurrences",
+          "definition": "Count supplied by the category profiler; bounded/top-N paths may not represent the complete source distribution."
+        },
+        "pct_rows": {
+          "label": "Retained category share (%)",
+          "definition": "Supplied category count divided by all source rows; do not recompute a complete clinical distribution from retained categories."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
-      }
+      },
+      "navigation_terms": [
+        "LYFO",
+        "lyfo_clinical_profile"
+      ]
     },
     {
       "id": "cll_clinical_profile",
-      "title": "Panels / cll clinical profile",
+      "title": "CLL registry category summaries",
       "source_file": "outputs/panels/cll_clinical_profile.csv",
       "arg_path": [
         "panels",
@@ -1224,15 +1989,67 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One retained category-summary entry for a selected field in the named registry source. Counts may use a bounded scan and top-N categories. Category values and frequencies may be withheld; these entries do not provide a complete valid-value list.",
+      "count_basis": "retained source category occurrences; may use bounded/top N profile; denominator is all source records; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "registry": {
+          "label": "Registry",
+          "definition": "Disease registry associated with this source table."
+        },
+        "source_column": {
+          "label": "Source field",
+          "definition": "Exact source field summarized in this table."
+        },
+        "label": {
+          "label": "Recorded category (withheld)",
+          "definition": "Category value counted in the selected source field, subject to disclosure withholding; not a reference definition."
+        },
+        "n": {
+          "label": "Retained category occurrences",
+          "definition": "Count supplied by the category profiler; bounded/top-N paths may not represent the complete source distribution."
+        },
+        "pct_rows": {
+          "label": "Retained category share (%)",
+          "definition": "Supplied category count divided by all source rows; do not recompute a complete clinical distribution from retained categories."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
-      }
+      },
+      "navigation_terms": [
+        "CLL",
+        "cll_clinical_profile"
+      ]
     },
     {
       "id": "sp_operational_sources",
@@ -1322,33 +2139,76 @@
         "subdomain",
         "atlas_role",
         "n_rows",
+        "date_column",
         "pct_available"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source table with the selected date field and its stored available-record percentage; exact date bounds are withheld.",
+      "count_basis": "source records; selected date profile availability divided by all source records; not people or yearly completeness",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "subdomain": {
+          "label": "Source subgroup",
+          "definition": "Source subgroup used by the atlas."
+        },
+        "atlas_role": {
+          "label": "Source role",
+          "definition": "Configured role of this source in the atlas."
         },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Source records",
+          "definition": "All records in the source table; not unique people."
         },
         "pct_available": {
-          "definition": "Percentage of source rows with a nonmissing field value.",
-          "unit": "percent",
-          "denominator": "profiled source rows",
-          "label": "Source rows with a value (%)"
+          "label": "Records with selected date (%)",
+          "definition": "Percentage of profiled source records with a nonmissing value in the selected date field. This does not measure date validity, per-year completeness, or measurement availability."
+        },
+        "date_column": {
+          "label": "Selected date field",
+          "definition": "Exact source field selected for this source-date profile; other date fields may exist. A candidate date field does not establish a diagnosis or measurement date."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "atlas_temporal_coverage_years",
-      "title": "Source coverage by year",
+      "title": "Source records by selected date-field year",
       "source_file": "outputs/panels/atlas_temporal_coverage_years.csv",
       "arg_path": [
         "panels",
@@ -1386,26 +2246,73 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One supplied source/date-field/year aggregate, or one metadata row for a withheld source date range. Inferred ranges do not establish recorded events or continuous coverage.",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One supplied source/date-field/year/basis aggregate, or one collapsed metadata row for a withheld inferred source date range. Counts describe records, not people; field selection does not certify an event type, and range metadata does not establish continuous coverage.",
+      "count_basis": "source records by selected date field year; all source record denominator; inferred ranges withheld; not people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
         },
-        "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "subdomain": {
+          "label": "Source subgroup",
+          "definition": "Source subgroup used by the atlas."
+        },
+        "atlas_role": {
+          "label": "Source role",
+          "definition": "Configured role of this source in the atlas."
         },
         "date_column": {
-          "label": "Source date field"
+          "label": "Selected date field",
+          "definition": "Exact field used by the year-count producer."
         },
         "year": {
-          "label": "Year (see evidence basis)"
+          "label": "Year from selected date field",
+          "definition": "Year parsed from the stated source date field for recorded counts. Inferred source-range years are withheld. The field does not by itself establish a diagnosis, measurement, or completed event."
         },
         "coverage_basis": {
-          "label": "Year evidence basis"
+          "label": "Year evidence basis",
+          "definition": "event_date_counts and streamed_event_date_counts are supplied record aggregates; source_date_range is collapsed inferred-bound metadata with year/counts withheld."
+        },
+        "n_rows": {
+          "label": "Source records in year",
+          "definition": "Supplied count of source records whose selected date falls in this year; not unique people. Null for withheld inferred ranges."
+        },
+        "pct_rows": {
+          "label": "Share of all source records (%)",
+          "definition": "100 times records in this year divided by all source rows, including missing/unparseable/out-of-window dates; not percentage of date-available records."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       },
       "navigation_terms": [
@@ -1418,7 +2325,7 @@
     },
     {
       "id": "atlas_temporal_date_quality",
-      "title": "Panels / atlas temporal date quality",
+      "title": "Date-quality source context",
       "source_file": "outputs/panels/atlas_temporal_date_quality.csv",
       "arg_path": [
         "panels",
@@ -1454,13 +2361,53 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One date-quality issue produced for a source/date field. This published table includes source context only, with exact bounds withheld.",
+      "count_basis": "source date quality issue entries; published table retains context only, not records or people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "subdomain": {
+          "label": "Source subgroup",
+          "definition": "Source subgroup used by the atlas."
+        },
+        "atlas_role": {
+          "label": "Source role",
+          "definition": "Configured role of this source in the atlas."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -1506,20 +2453,77 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "Approved source-row counts grouped by the recorded region field. One row describes one source/region grouping; this does not establish residence or treatment location.",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source/recorded-region-field/normalized-region/count-basis summary. The field alone does not establish residence or treatment location.",
+      "count_basis": "source rows or retained registry region counts; denominator depends on row count basis; distinct-person anonymity not established",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
         },
-        "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "subdomain": {
+          "label": "Source subgroup",
+          "definition": "Source subgroup used by the atlas."
+        },
+        "atlas_role": {
+          "label": "Source role",
+          "definition": "Configured role of this source in the atlas."
+        },
+        "region_code": {
+          "label": "Recorded region code",
+          "definition": "Normalized region code or configured region-reference code; geographic meaning depends on the table and field."
+        },
+        "region_name": {
+          "label": "Region label",
+          "definition": "Region name from the Denmark region reference, not proof of residence or treatment location."
         },
         "region_column": {
-          "label": "Recorded region field"
+          "label": "Recorded region field",
+          "definition": "Exact source field selected for region grouping; selection does not validate its residence, provider, or care-location semantics."
+        },
+        "count_basis": {
+          "label": "Region evidence basis",
+          "definition": "region_column_counts and streamed_region_column_counts use direct field counts; registry_region_panel derives normalized region counts from retained DaMyDa categorical panel rows."
+        },
+        "n_rows": {
+          "label": "Grouped source records",
+          "definition": "Supplied record count for this region grouping. Registry-derived counts may reflect a retained categorical scan; not unique people."
+        },
+        "pct_rows": {
+          "label": "Share for stated basis (%)",
+          "definition": "Direct/streamed region counts divide by all source rows. registry_region_panel divides by the sum of retained normalized registry-region counts, which may exclude missing/unmapped/suppressed categories."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       },
       "navigation_terms": [
@@ -1568,13 +2572,65 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One region/domain status entry. Any source-row total covers the domain, not the region; do not sum these totals across regions. Status does not establish geographic completeness.",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One configured region/domain status entry. Source totals, where supplied, are domain-wide totals repeated across regions; status is not a regional completeness measure.",
+      "count_basis": "regional scope status; any n rows total is domain-wide and repeated across regions",
       "supplementary": false,
       "column_meanings": {
+        "region_code": {
+          "label": "Region reference code",
+          "definition": "Region reference code used for this source-domain status entry."
+        },
+        "region_name": {
+          "label": "Region label",
+          "definition": "Region name from the Denmark region reference, not proof of residence or treatment location."
+        },
+        "display_label": {
+          "label": "Region display label",
+          "definition": "Short region label from the Denmark region reference."
+        },
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "coverage_status": {
+          "label": "Regional evidence status",
+          "definition": "Producer state: nationwide source scope; default SP/EHR scope; observed region counts; available source metadata; mapped_not_loaded; none; or unknown. This does not validate geographic completeness."
+        },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Domain source records",
+          "definition": "Sum of source-row counts across this domain, repeated for each region; not a count of records in this region. Never sum across regions."
+        },
+        "basis": {
+          "label": "Status evidence basis",
+          "definition": "source_metadata indicates configured source scope; observed_region_counts indicates an available region count in this region/domain."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       },
       "navigation_terms": [
@@ -1586,7 +2642,7 @@
     },
     {
       "id": "atlas_dk_choropleth_regions",
-      "title": "Panels / atlas dk choropleth regions",
+      "title": "Denmark region reference",
       "source_file": "outputs/panels/atlas_dk_choropleth_regions.csv",
       "arg_path": [
         "panels",
@@ -1622,14 +2678,55 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One configured Denmark region-reference row. This published table includes region identifiers and labels only.",
+      "count_basis": "region_reference_metadata",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "region_code": {
+          "label": "Region reference code",
+          "definition": "Code from the configured Denmark region reference."
+        },
+        "region_name": {
+          "label": "Region label",
+          "definition": "Region name from the Denmark region reference, not proof of residence or treatment location."
+        },
+        "display_label": {
+          "label": "Region display label",
+          "definition": "Short region label from the Denmark region reference."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "situation_report_summary",
-      "title": "Panels / situation report summary",
+      "title": "Situation-report metric context",
       "source_file": "outputs/panels/situation_report_summary.csv",
       "arg_path": [
         "panels",
@@ -1667,19 +2764,59 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One situation-report metric summary for a defined event or care interval, subject to availability and disclosure controls.",
+      "count_basis": "metric matching source records and supported distinct selected IDs; not additive across metrics",
       "supplementary": false,
       "column_meanings": {
+        "metric_id": {
+          "label": "Situation metric",
+          "definition": "Exact identifier of the situation-report metric definition."
+        },
+        "label": {
+          "label": "Metric description",
+          "definition": "Supplied metric label; may be withheld alongside unvalidated breakdown values."
+        },
+        "n_patients": {
+          "label": "Metric distinct-ID count",
+          "definition": "Producer count of distinct nonblank selected patient IDs for the metric or breakdown, where supported; do not combine across metrics or categories as unique people."
+        },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Matching source records",
+          "definition": "Producer count of source records matching the metric condition or breakdown category; multiple records can belong to an ID."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "situation_report_breakdowns",
-      "title": "Panels / situation report breakdowns",
+      "title": "Situation-report breakdown context",
       "source_file": "outputs/panels/situation_report_breakdowns.csv",
       "arg_path": [
         "panels",
@@ -1712,19 +2849,59 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One metric/breakdown-type/category summary, subject to disclosure controls. The published table omits breakdown fields, so rows can share a metric.",
+      "count_basis": "metric breakdown source records and supported distinct selected IDs; categories and count values may be withheld; not additive as people",
       "supplementary": false,
       "column_meanings": {
+        "metric_id": {
+          "label": "Situation metric",
+          "definition": "Exact identifier of the situation-report metric definition."
+        },
+        "label": {
+          "label": "Metric description",
+          "definition": "Supplied metric label; may be withheld alongside unvalidated breakdown values."
+        },
+        "n_patients": {
+          "label": "Metric distinct-ID count",
+          "definition": "Producer count of distinct nonblank selected patient IDs for the metric or breakdown, where supported; do not combine across metrics or categories as unique people."
+        },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Matching source records",
+          "definition": "Producer count of source records matching the metric condition or breakdown category; multiple records can belong to an ID."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "situation_report_freshness",
-      "title": "Panels / situation report freshness",
+      "title": "Situation-report date freshness context",
       "source_file": "outputs/panels/situation_report_freshness.csv",
       "arg_path": [
         "panels",
@@ -1754,14 +2931,51 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One metric/source/date-field freshness summary. The approved projection retains metric identity and a withheld latest-date field.",
+      "count_basis": "metric or source freshness context; exact dates withheld; not a record count",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "metric_id": {
+          "label": "Situation metric",
+          "definition": "Identifier of the metric or source-profile freshness row."
+        },
+        "max_date": {
+          "label": "Latest date (withheld)",
+          "definition": "Source date bound is withheld from public output; do not reconstruct it from metadata row counts."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "atlas_streaming_progress_summary",
-      "title": "Panels / atlas streaming progress summary",
+      "title": "Source streaming status",
       "source_file": "outputs/panels/atlas_streaming_progress_summary.csv",
       "arg_path": [
         "panels",
@@ -1799,19 +3013,63 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source table summarized from its column-stream query log records, describing execution status rather than clinical coverage.",
+      "count_basis": "source stream execution status; not clinical record or person counts",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "subdomain": {
+          "label": "Source subgroup",
+          "definition": "Source subgroup used by the atlas."
+        },
+        "atlas_role": {
+          "label": "Source role",
+          "definition": "Configured role of this source in the atlas."
+        },
+        "status": {
+          "label": "Streaming status",
+          "definition": "ok when all supplied stream statuses are ok; warning when other statuses are present; unknown when none are supplied."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "source_availability_drift",
-      "title": "Panels / source availability drift",
+      "title": "Source loading outcomes by input type",
       "source_file": "outputs/panels/source_availability_drift.csv",
       "arg_path": [
         "panels",
@@ -1836,14 +3094,51 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One source-type/load-status combination aggregated from current-run source inventory; the published table retains the grouping only.",
+      "count_basis": "source type and load status groupings; n sources omitted from published table; no between-run drift estimate",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "source_type": {
+          "label": "Source type",
+          "definition": "Configured input type, such as dataset, database, or file."
+        },
+        "load_status": {
+          "label": "Load status",
+          "definition": "Supplied current-run loading or profiling outcome; distinct from resource resolution."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "atlas_module_readiness",
-      "title": "Panels / atlas module readiness",
+      "title": "Atlas module evidence readiness",
       "source_file": "outputs/panels/atlas_module_readiness.csv",
       "arg_path": [
         "panels",
@@ -1879,13 +3174,57 @@
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One predefined atlas module evaluated against matching source metadata and dedicated panel names; readiness is not clinical completeness.",
+      "count_basis": "module metadata and matched source records; sources may overlap between modules; not people or clinical completeness",
       "supplementary": false,
       "column_meanings": {
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "module": {
+          "label": "Atlas module",
+          "definition": "Name of the predefined module evaluated by the producer."
+        },
+        "status": {
+          "label": "Module readiness",
+          "definition": "panel_ready, source_ready, mapped_not_loaded, panel_only, or not_mapped based on matching sources and panel presence."
+        },
         "n_rows": {
-          "definition": "Number of source rows; does not establish a distinct-person denominator.",
-          "unit": "source rows"
+          "label": "Matched source records",
+          "definition": "Sum of source rows across sources matched by module patterns; not unique people, and sources can match more than one module."
+        },
+        "evidence_panels": {
+          "label": "Matched evidence panels",
+          "definition": "Names of existing producer panels matching this module; presence alone does not establish complete clinical data."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -2143,7 +3482,7 @@
     },
     {
       "id": "run_summary",
-      "title": "Run summary",
+      "title": "Atlas run metrics",
       "source_file": "outputs/atlas_run_summary.csv",
       "arg_path": [
         "run_summary"
@@ -2164,14 +3503,51 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One named build/run metric; values may be counts, configuration, or text and require their metric key.",
+      "count_basis": "mixed run metadata metrics; interpret each metric key; not a patient denominator",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "metric": {
+          "label": "Run metric",
+          "definition": "Exact metric key supplied by the run or reconciliation-summary producer."
+        },
+        "value": {
+          "label": "Supplied metric value",
+          "definition": "Text representation of the metric; may describe build identity, configuration, fields, sources, checks, or resource totals. Never assume a patient count."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "action_items",
-      "title": "Action items",
+      "title": "Source action context",
       "source_file": "outputs/atlas_run_action_items.csv",
       "arg_path": [
         "action_items"
@@ -2203,19 +3579,59 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One generated run action item; the approved published table retains its source context only.",
+      "count_basis": "run action entries; published table retains source context only",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "subdomain": {
+          "label": "Source subgroup",
+          "definition": "Source subgroup used by the atlas."
+        },
+        "atlas_role": {
+          "label": "Source role",
+          "definition": "Configured role of this source in the atlas."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "source_resolution",
-      "title": "Source resolution",
+      "title": "Source resolution status",
       "source_file": "outputs/atlas_source_resolution.csv",
       "arg_path": [
         "source_resolution"
@@ -2254,19 +3670,55 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One configured source-map row and its resolution result; resolution does not establish clinical data completeness.",
+      "count_basis": "configured source map resolution entries; not records or people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "source_type": {
+          "label": "Source type",
+          "definition": "Configured input type, such as dataset, database, or file."
+        },
+        "resolution_status": {
+          "label": "Resolution status",
+          "definition": "Supplied result of finding the configured source; does not itself establish successful profiling."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
     {
       "id": "memory_plan",
-      "title": "Memory plan",
+      "title": "Source profiling plan",
       "source_file": "outputs/atlas_memory_plan.csv",
       "arg_path": [
         "memory_plan"
@@ -2306,13 +3758,57 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One configured source-map row with the selected loading/profiling strategy and its resolution and memory assessment.",
+      "count_basis": "configured source map profiling plan entries; not records or people",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
+        },
+        "source_type": {
+          "label": "Source type",
+          "definition": "Configured input type, such as dataset, database, or file."
+        },
+        "chosen_strategy": {
+          "label": "Profiling strategy",
+          "definition": "Selected source profiling/loading strategy in the run."
+        },
+        "resolution_status": {
+          "label": "Resolution status",
+          "definition": "Supplied result of finding the configured source; does not itself establish successful profiling."
+        },
+        "memory_status": {
+          "label": "Memory plan status",
+          "definition": "Producer assessment of the source loading strategy and memory constraints."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -2364,7 +3860,7 @@
     },
     {
       "id": "db_budget_actions",
-      "title": "Db budget actions",
+      "title": "Database budget action context",
       "source_file": "outputs/atlas_db_budget_actions.csv",
       "arg_path": [
         "db_budget_actions"
@@ -2393,17 +3889,45 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One recorded database budget event or action; the published table retains affected source and field context only.",
+      "count_basis": "database budget action entries; published table retains source and field context only",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
-          "definition": "Exact source table identifier used by the atlas.",
-          "label": "Source table"
+          "label": "Source table",
+          "definition": "Exact source-table identifier used by the atlas."
         },
         "column_name": {
-          "definition": "Exact source field name.",
-          "label": "Source field"
+          "label": "Source field",
+          "definition": "Exact source field to which this metadata row refers; may be blank for a source-level action."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
         }
       }
     },
@@ -2985,7 +4509,7 @@
     },
     {
       "id": "domain_panels",
-      "title": "Domain panels",
+      "title": "Atlas panel catalogue",
       "source_file": "outputs/atlas_domain_panels.csv",
       "arg_path": [
         "domain_panels"
@@ -3028,14 +4552,87 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One predefined atlas panel and its generated availability/scope metadata; not one observed clinical result.",
+      "count_basis": "configured atlas panel metadata; not observed clinical records or people",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "panel_id": {
+          "label": "Panel identifier",
+          "definition": "Exact identifier of the generated atlas atlas panel."
+        },
+        "count_scope": {
+          "label": "Count scope",
+          "definition": "Scope of records included in this count. A bounded scan may cover only part of a source."
+        },
+        "denominator_scope": {
+          "label": "Denominator scope",
+          "definition": "Records used as the percentage denominator. A scan or selected-category summary may cover only part of a source."
+        },
+        "profile_scope": {
+          "label": "Profile scope",
+          "definition": "Records included in the field summary."
+        },
+        "sort_order": {
+          "label": "Display order",
+          "definition": "Order used to display entries; not a clinical rank."
+        },
+        "panel_section": {
+          "label": "Panel section",
+          "definition": "Configured product navigation section."
+        },
+        "panel_title": {
+          "label": "Panel title",
+          "definition": "Configured user-facing panel title."
+        },
+        "panel_status": {
+          "label": "Panel availability",
+          "definition": "Producer state derived from raw-field, KPI, and distribution presence; not proof of validated clinical completeness."
+        },
+        "source_names": {
+          "label": "Related source names",
+          "definition": "Distinct source-name labels associated with this panel raw-field metadata."
+        },
+        "related_clinical_concepts": {
+          "label": "Related concept labels",
+          "definition": "Up to 30 distinct clinical-variable labels attached to the panel."
+        },
+        "parity_status": {
+          "label": "Panel parity status",
+          "definition": "Producer panel status carried into this table; does not independently establish feature equivalence."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "panel_kpis_product",
-      "title": "Panel kpis product",
+      "title": "Atlas panel summary metrics",
       "source_file": "outputs/atlas_panel_kpis.csv",
       "arg_path": [
         "panel_kpis_product"
@@ -3073,14 +4670,83 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One generated panel/KPI/source-or-group summary metric, with explicit producer evidence scope. Metrics can describe fields, mapping, or source rows.",
+      "count_basis": "mixed product metrics; count scope and unit define each metric; not a universal patient denominator",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "panel_id": {
+          "label": "Panel identifier",
+          "definition": "Exact identifier of the generated atlas atlas panel."
+        },
+        "count_scope": {
+          "label": "Count scope",
+          "definition": "Scope of records included in this count. A bounded scan may cover only part of a source."
+        },
+        "denominator_scope": {
+          "label": "Denominator scope",
+          "definition": "Records used as the percentage denominator. A scan or selected-category summary may cover only part of a source."
+        },
+        "profile_scope": {
+          "label": "Profile scope",
+          "definition": "Records included in the field summary."
+        },
+        "sort_order": {
+          "label": "Display order",
+          "definition": "Order used to display entries; not a clinical rank."
+        },
+        "kpi_id": {
+          "label": "Panel metric key",
+          "definition": "Exact KPI identifier, interpreted with panel, label, source, unit, and scope."
+        },
+        "label": {
+          "label": "Metric description",
+          "definition": "Supplied label explaining this KPI."
+        },
+        "value": {
+          "label": "Supplied metric value",
+          "definition": "Text-form KPI value; may be metadata counts or source-row totals, not a universal person count."
+        },
+        "unit": {
+          "label": "Metric unit",
+          "definition": "Supplied unit, if present; blank does not imply patients."
+        },
+        "source_name": {
+          "label": "Metric source context",
+          "definition": "Source/group label supplied for the KPI; may contain multiple source names."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "panel_distributions",
-      "title": "Panel distributions",
+      "title": "Atlas panel field and summary evidence",
       "source_file": "outputs/atlas_panel_distributions.csv",
       "arg_path": [
         "panel_distributions"
@@ -3136,10 +4802,115 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One supplied value/code/statistic summary or structural clinical-section entry assigned to a atlas panel. Row type and scope determine meaning; many clinical values are withheld.",
+      "count_basis": "supplied semantic evidence or structural sections; row type and scope define counts; values may be withheld",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "panel_id": {
+          "label": "Panel identifier",
+          "definition": "Exact identifier of the generated atlas atlas panel."
+        },
+        "count_scope": {
+          "label": "Count scope",
+          "definition": "Scope of records included in this count. A bounded scan may cover only part of a source."
+        },
+        "denominator_scope": {
+          "label": "Denominator scope",
+          "definition": "Records used as the percentage denominator. A scan or selected-category summary may cover only part of a source."
+        },
+        "profile_scope": {
+          "label": "Profile scope",
+          "definition": "Records included in the field summary."
+        },
+        "sort_order": {
+          "label": "Display order",
+          "definition": "Order used to display entries; not a clinical rank."
+        },
+        "clinical_concept_id": {
+          "label": "Concept identifier",
+          "definition": "Identifier of the semantic clinical concept linked to this row."
+        },
+        "clinical_variable": {
+          "label": "Clinical variable",
+          "definition": "Semantic clinical-variable label linked to this row."
+        },
+        "distribution_type": {
+          "label": "Evidence row type",
+          "definition": "Producer type such as value_map, code_map, numeric summary, or clinical_section; structural sections are not observed distributions."
+        },
+        "source_name": {
+          "label": "Evidence source",
+          "definition": "Source-name label attached by the semantic/product producer."
+        },
+        "raw_column": {
+          "label": "Source field",
+          "definition": "Original field name used by the semantic evidence, when supplied."
+        },
+        "raw_descriptor": {
+          "label": "Raw descriptor (withheld)",
+          "definition": "Original descriptor context, withheld unless approved; not a reference label."
+        },
+        "raw_code": {
+          "label": "Observed code (withheld)",
+          "definition": "Source code carried from code-map evidence, subject to disclosure controls."
+        },
+        "raw_value": {
+          "label": "Observed value (withheld)",
+          "definition": "Source category value carried from value-map evidence, subject to disclosure controls."
+        },
+        "display_value": {
+          "label": "Display label",
+          "definition": "Translated semantic label, or a structural clinical-section name for clinical_section rows. Not automatically an observed value."
+        },
+        "value_class": {
+          "label": "Value or section class",
+          "definition": "Producer class identifying a category/code system or the structural section type."
+        },
+        "n": {
+          "label": "Supplied evidence count",
+          "definition": "Count carried from the underlying semantic evidence; scope depends on row type and count_scope. Not a universal full-source or person count."
+        },
+        "pct": {
+          "label": "Supplied evidence percentage",
+          "definition": "Percentage carried from underlying evidence; denominator must be interpreted with denominator_scope. Do not recompute from visible rows."
+        },
+        "statistic": {
+          "label": "Statistic name",
+          "definition": "Name of a supplied numeric summary statistic, when present."
+        },
+        "statistic_value": {
+          "label": "Statistic value (guarded)",
+          "definition": "Supplied summary value; null when its field or publication status is not approved."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "panel_raw_fields",
@@ -3208,7 +4979,7 @@
     },
     {
       "id": "panel_parity",
-      "title": "Panel parity",
+      "title": "Legacy-to-current panel mapping",
       "source_file": "outputs/atlas_panel_parity.csv",
       "arg_path": [
         "panel_parity"
@@ -3237,14 +5008,63 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One configured old-panel to current-panel mapping with producer parity status; several old panels can map to one current panel.",
+      "count_basis": "configured legacy to current panel mapping entries; not clinical records or people",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "old_panel_id": {
+          "label": "Legacy panel identifier",
+          "definition": "Identifier in the configured legacy-to-product mapping."
+        },
+        "new_panel_id": {
+          "label": "Current panel identifier",
+          "definition": "Identifier of the current atlas panel matched by the mapping."
+        },
+        "old_title": {
+          "label": "Legacy panel title",
+          "definition": "Configured title of the legacy panel."
+        },
+        "new_title": {
+          "label": "Current panel title",
+          "definition": "Generated current panel title when a match exists."
+        },
+        "parity_status": {
+          "label": "Mapping parity status",
+          "definition": "Status determined from current panel purpose, raw fields, KPIs, distributions, use cases, and caveats; not clinical record completeness."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "legacy_resource_audit",
-      "title": "Legacy resource audit",
+      "title": "Legacy resource audit context",
       "source_file": "outputs/legacy_cartography_source_resolution_audit.csv",
       "arg_path": [
         "legacy_resource_audit"
@@ -3276,10 +5096,43 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One expected-resource legacy audit result. This published table includes domain only; repeated domains correspond to different hidden resource identities.",
+      "count_basis": "expected resource legacy audit entries; published table contains domain context only; historical counts are not current counts",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "billeddiagnostik_del2_regression_audit",
@@ -3431,7 +5284,7 @@
     },
     {
       "id": "resource_reconciliation",
-      "title": "Resource reconciliation",
+      "title": "Expected resource reconciliation context",
       "source_file": "outputs/atlas_resource_reconciliation.csv",
       "arg_path": [
         "resource_reconciliation"
@@ -3466,14 +5319,47 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One expected resource reconciled against legacy and current-run evidence. This published table includes domain only; it cannot identify the individual resource.",
+      "count_basis": "expected resource reconciliation entries; published table contains domain context only",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "source_truth_evidence",
-      "title": "Source truth evidence",
+      "title": "Resource evidence comparison context",
       "source_file": "outputs/source_truth_evidence_matrix.csv",
       "arg_path": [
         "source_truth_evidence"
@@ -3511,14 +5397,47 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One expected resource compared across V033, legacy, and current-run evidence. This published table includes domain only, not resource or historical/current counts.",
+      "count_basis": "expected resource comparison entries; published table contains domain context only; legacy and current evidence remain separate",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "source_truth_summary",
-      "title": "Source truth summary",
+      "title": "Resource evidence summary metrics",
       "source_file": "outputs/source_truth_summary.csv",
       "arg_path": [
         "source_truth_summary"
@@ -3539,10 +5458,47 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One named resource-comparison summary metric derived from the evidence matrix; distinguishes legacy and current-run states.",
+      "count_basis": "expected resource counts; separate legacy and current-run states; not source records or people",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "metric": {
+          "label": "Resource metric",
+          "definition": "Exact resource-summary key; preserves whether the metric concerns legacy or current-run evidence."
+        },
+        "value": {
+          "label": "Resource metric value",
+          "definition": "Text-form number of resources satisfying this named metric; not source records or people."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "current_run_source_map_audit",
@@ -3582,7 +5538,7 @@
     },
     {
       "id": "canonical_resource_reconciliation",
-      "title": "Canonical resource reconciliation",
+      "title": "Canonical resource reconciliation context",
       "source_file": "outputs/canonical_resource_reconciliation_64.csv",
       "arg_path": [
         "canonical_resource_reconciliation"
@@ -3616,10 +5572,43 @@
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",
-      "row_grain": "One output row; source counts are not unique people",
-      "count_basis": "source_rows; distinct-person anonymity not established",
+      "row_grain": "One canonical resource reconciled against current source-map/profile evidence. This published table includes domain only; it cannot identify the canonical resource.",
+      "count_basis": "canonical resource reconciliation entries; published table contains domain context only",
       "supplementary": false,
-      "column_meanings": {}
+      "column_meanings": {
+        "domain": {
+          "label": "Source domain",
+          "definition": "Source group used by the atlas, such as SP or RKKP."
+        },
+        "value_privacy_status": {
+          "label": "Value disclosure status",
+          "definition": "Supplied reason an observed value is withheld or protected; reference definitions have separate semantics."
+        },
+        "count_privacy_status": {
+          "label": "Count disclosure status",
+          "definition": "Supplied reason record/count cells were withheld; null counts do not imply zero."
+        },
+        "date_privacy_status": {
+          "label": "Date disclosure status",
+          "definition": "Supplied reason exact date bounds or inferred range metadata are withheld."
+        },
+        "availability_privacy_status": {
+          "label": "Availability disclosure status",
+          "definition": "Supplied reason availability and complementary missingness counts/percentages are withheld."
+        },
+        "numeric_privacy_status": {
+          "label": "Stored summary status",
+          "definition": "Supplied eligibility or withholding reason for numeric summaries; only eligible_stored_summary permits displayed stored statistics."
+        },
+        "summary_scope": {
+          "label": "Stored summary scope",
+          "definition": "Scope supplied by disclosure guard; stored_source_row_profile does not mean a patient-level statistic."
+        },
+        "summary_method": {
+          "label": "Stored summary method",
+          "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        }
+      }
     },
     {
       "id": "source_map_crosswalk",

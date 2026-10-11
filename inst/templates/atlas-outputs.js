@@ -126,6 +126,7 @@
     needs_validation_negative_sentinel:'Not shown: invalid stored values need review'
   };
   Object.assign(reviewedLabels,{
+    count_basis:{reference_dictionary_metadata:'Dictionary entries and reference metadata; units depend on the named count',region_reference_metadata:'Configured region reference entries'},
     coverage_basis:{event_date_counts:'Recorded event-year counts',streamed_event_date_counts:'Recorded event-year counts (streamed)',source_date_range:'Inferred source date range; bounds withheld'},
     value_privacy_status:privacyLabels,count_privacy_status:privacyLabels,date_privacy_status:privacyLabels,availability_privacy_status:privacyLabels
   });
@@ -314,7 +315,8 @@
       ['Source file', t.source_file],
       ['Source terms', (t.source_terms || []).join(', ')],
       ['Row grain', t.row_grain],
-      ['Count basis', t.count_basis],
+      ['Count basis', formatValue(t.count_basis,'count_basis')],
+      ...(formatValue(t.count_basis,'count_basis') !== t.count_basis ? [['Raw count basis', t.count_basis]] : []),
       ['CSV source rows', count(t.source_row_count)],
       ['Represented rows', count(t.represented_row_count)],
       ['Completeness', t.complete === true ? 'All approved output rows represented' :

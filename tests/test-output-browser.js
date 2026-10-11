@@ -143,3 +143,10 @@ test('null count and distinctness reasons follow only their actual guard suppres
  assert.equal(f(null,'n_distinct_capped',{}),'Missing');
  assert.equal(f(0,'n_rows',{value_privacy_status:'protected_field'}),'0');
 });
+
+test('reference count bases are readable while unknown basis codes retain their identity',()=>{
+ const f=harness().api.formatValue;
+ assert.equal(f('reference_dictionary_metadata','count_basis'),'Dictionary entries and reference metadata; units depend on the named count');
+ assert.equal(f('region_reference_metadata','count_basis'),'Configured region reference entries');
+ assert.equal(f('unreviewed_basis','count_basis'),'unreviewed_basis');
+});

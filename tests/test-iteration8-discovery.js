@@ -118,7 +118,7 @@ test('synthetic withheld situation metrics never become zero when definitions ar
 test('synthetic supported temporal year entries produce rows without withheld bounds',()=>{
   const {ctx,output,run}=runtime({reviewTemporal:payload.review_temporal_coverage});
   load('      function renderTemporalCoverage(', '      function regionFill(',ctx);run('renderTemporalCoverage()');
-  assert.match(output['temporal-heatmap'],/<tbody><tr>/);assert.match(output['temporal-heatmap'],/source records/);assert.doesNotMatch(output['temporal-heatmap'],/date range coverage|<tbody><\/tbody>|undefined/);
+  assert.match(output['temporal-heatmap'],/<tbody><tr\b/);assert.match(output['temporal-heatmap'],/source records/);assert.doesNotMatch(output['temporal-heatmap'],/date range coverage|<tbody><\/tbody>|undefined/);
   ctx.reviewTemporal={sources:[{table_name:'x',display_min_year:2000,display_max_year:2025}],years:[]};run('renderTemporalCoverage()');
   assert.match(output['temporal-heatmap'],/Grouped year counts are not included/);assert.doesNotMatch(output['temporal-heatmap'],/<table/);
 });

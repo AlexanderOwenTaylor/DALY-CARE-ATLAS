@@ -675,7 +675,11 @@
       align-items: center;
       font-size: 12px;
     }
-    .heatmap-wrap { overflow-x: auto; }
+    .heatmap-wrap { overflow-x: auto; max-height: 70vh; }
+    .heatmap td { min-width: 110px; white-space: nowrap; }
+    .heatmap .row-label { min-width: 290px; white-space: normal; }
+    .region-source-counts article { border-top: 1px solid var(--line); padding: 10px 0; }
+    .region-source-counts code { overflow-wrap: anywhere; word-break: normal; }
     .heatmap {
       min-width: 760px;
       border-spacing: 2px;
@@ -687,12 +691,9 @@
       font-size: 11px;
       white-space: nowrap;
     }
-    .heatmap .row-label {
-      max-width: 220px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-weight: 650;
-    }
+    .heatmap .row-label { min-width: 290px; white-space: normal; font-weight: 650; }
+    .heatmap th, .heatmap td { font-size: 13px; padding: 8px; }
+    #region-select { max-width: 100%; }
     .heat-cell {
       display: block;
       width: 18px;
@@ -1509,14 +1510,15 @@
         <div class="panel">
           <div class="panel-head">
             <p class="section-kicker">Temporal coverage</p>
-            <h2 class="panel-title">Source-Year Coverage Heatmap</h2>
-            <p class="panel-sub">Coverage by year from aggregate source/date metadata and DB-side year counts when available. Sentinel dates are kept out of the displayed figure.</p>
+            <h2 class="panel-title">Coverage over time</h2>
+            <p class="panel-sub">Recorded source records grouped by their stated date field and year, where supplied. Inferred source ranges are separate metadata; they do not establish recorded events or continuous coverage.</p>
           </div>
           <div class="panel-body">
             <div class="toolbar"><label>Source <select id="temporal-source-filter"><option value="">All sources</option></select></label></div>
+            <p class="mini"><a href="DALYCARE_outputs.html?table=atlas_temporal_coverage_years">Open year-count evidence table</a> · <a href="DALYCARE_outputs.html?table=atlas_temporal_coverage">Open selected date-field availability</a></p>
             <div id="temporal-source-counts"></div>
-            <div id="temporal-summary" class="grid" style="margin-bottom:14px"></div>
-            <div id="temporal-heatmap" class="heatmap-wrap"></div>
+            <div id="temporal-heatmap" class="heatmap-wrap" tabindex="0" role="region" aria-label="Year counts, scroll horizontally"></div>
+            <details class="lineage-block"><summary>Source totals by domain</summary><div id="temporal-summary" class="grid"></div></details>
           </div>
         </div>
       </div>
@@ -1524,19 +1526,22 @@
         <div class="panel">
           <div class="panel-head">
             <p class="section-kicker">Regional coverage</p>
-            <h2 class="panel-title">Denmark Choropleth And Source Matrix</h2>
-            <p class="panel-sub">Five-region Denmark view using protected registry counts where present and source-coverage status otherwise.</p>
+            <h2 class="panel-title">Coverage by place</h2>
+            <p class="panel-sub">Recorded region groups and source-availability metadata. Region labels do not establish residence or treatment location, and statuses do not establish geographic completeness.</p>
           </div>
           <div class="panel-body">
+            <p class="mini"><a href="DALYCARE_outputs.html?table=atlas_spatial_region_counts">Open recorded-region evidence, including other or unmapped categories</a></p>
             <div class="dk-shell">
               <div>
                 <div class="card">
                   <h3>Interactive choropleth</h3>
-                  <p class="mini">Click a region to inspect coverage, DaMyDa counts, and regional source status.</p>
+                  <p class="mini">Select a region to inspect recorded counts and source metadata.</p>
+                  <label for="region-select">Region</label> <select id="region-select"></select>
                   <div id="dkMap" class="dk-map"></div>
                 </div>
                 <div class="card" style="margin-top:12px">
-                  <h3>Region matrix</h3>
+                  <h3>Region source status</h3>
+                  <p class="mini region-status-legend">Recorded region evidence: at least one source has counts for this region. National source scope: inferred from source metadata; does not establish complete regional records. Source metadata available: a source is loaded. Default EHR support and No default EHR support describe configured source support; neither establishes presence or absence of clinical data.</p>
                   <div class="table-wrap"><table id="regionMatrix"></table></div>
                 </div>
               </div>
@@ -3288,33 +3293,27 @@
         return text(value).toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
       }
       function renderTemporalCoverage() {
-        const sources = reviewTemporal.sources || [];
         const years = reviewTemporal.years || [];
-        const summary = reviewTemporal.summary || [];
         const selected = document.getElementById('temporal-source-filter')?.value || '';
-        setHtml('temporal-source-counts', selected ? `<article class="card"><h3>${escapeHtml(sourceDisplayName(selected))}</h3>${renderSourceYearCounts(selected)}<p class="mini">Source-level date counts; not measurement dates or completeness by year.</p></article>` : '');
+        setHtml('temporal-source-counts', selected ? `<article class="card"><h3>${escapeHtml(sourceDisplayName(selected))}</h3><p><code>${escapeHtml(selected)}</code></p>${renderSourceYearCounts(selected)}<p class="mini">Source-level date counts; not measurement dates or completeness by year.</p></article>` : '');
         if (selected) { setHtml('temporal-summary',''); setHtml('temporal-heatmap',''); return; }
-        setHtml('temporal-summary', summary.map(row => `<article class="card"><h3>${escapeHtml(row.domain || 'Unassigned')}</h3><p>${formatNumber(row.n_sources)} sources</p><p class="mini">Exact date bounds are withheld.</p></article>`).join(''));
-        const supplied = years.filter(row => row.table_name && suppliedSourceYear(row) !== null);
-        const supported = supplied.filter(row => finiteSummary(row.n_rows) !== null && !sourceAggregateCountWithheld(row));
-        if (!supplied.length) {
-          setHtml('temporal-heatmap', '<div class="empty">Grouped year counts are not included in this snapshot. Exact date bounds are withheld.</div>');
+        setHtml('temporal-summary', (reviewTemporal.summary || []).map(row => `<article class="card"><h3>${escapeHtml(row.domain || 'Unassigned')}</h3><p>${formatNumber(row.n_sources)} sources</p><p class="mini">Exact date bounds are withheld.</p></article>`).join(''));
+        const groups = sourceYearGroups(years.filter(row => row.table_name));
+        const observed = groups.filter(group => group.basis !== 'source_date_range');
+        const yearAxis = sourceYearAxis(observed.flatMap(group => group.rows));
+        const ranges = groups.filter(group => group.basis === 'source_date_range').map(group => `<p>${escapeHtml(sourceDisplayName(group.name))} · <code>${escapeHtml(group.name)}</code> · ${sourceYearGroupLabel(group)}. This metadata does not establish recorded events or continuous coverage.</p>`).join('');
+        const missingYears = observed.filter(group => group.rows.some(row => suppliedSourceYear(row) === null)).map(group => `<p>${escapeHtml(sourceDisplayName(group.name))} · <code>${escapeHtml(group.name)}</code> · ${sourceYearGroupLabel(group)} · Year not supplied: ${escapeHtml(sourceYearCell(group.rows,null))}</p>`).join('');
+        if (!yearAxis.length) {
+          setHtml('temporal-heatmap', `<div class="empty">Grouped year counts are not included in this snapshot. Exact date bounds are withheld.</div>${ranges}${missingYears}`);
           return;
         }
-        const yearAxis = [...new Set(supplied.map(row => Number(row.year)))].sort((a,b) => a-b);
-        const sourceNames = [...new Set(supplied.map(row => row.table_name))];
-        const sourceRows = sourceNames.map(name => sources.find(row => row.table_name === name) || supplied.find(row => row.table_name === name));
-        const counts = new Map(supported.map(row => [`${row.table_name}\u0001${row.year}`, Number(row.n_rows)]));
-        const maxCount = Math.max(...counts.values(),1);
-        const html = `<p class="mini">Supplied source records grouped by year. Missing cells mean no count was supplied; they do not establish zero records.</p><table class="heatmap"><thead><tr><th>Source</th>${yearAxis.map(year => `<th>${year}</th>`).join('')}</tr></thead><tbody>${sourceRows.map(source => `<tr><td class="row-label">${escapeHtml(sourceDisplayName(source.table_name))}</td>${yearAxis.map(year => {
-          const key = `${source.table_name}\u0001${year}`;
-          const n = counts.get(key);
-          const withheld = years.some(row => row.table_name === source.table_name && Number(row.year) === year && sourceAggregateCountWithheld(row));
-          const label = counts.has(key) ? `${formatNumber(n)} source records` : withheld ? 'Count withheld' : 'Not supplied';
-          const intensity = counts.has(key) && n > 0 ? Math.max(1,Math.ceil(n / maxCount * 4)) : 0;
-          return `<td><span class="heat-cell c${intensity}" title="${escapeHtml(sourceDisplayName(source.table_name))} ${year}: ${escapeHtml(label)}" aria-label="${year}: ${escapeHtml(label)}">${counts.has(key) ? '' : '—'}</span></td>`;
-        }).join('')}</tr>`).join('')}</tbody></table>`;
-        setHtml('temporal-heatmap', html);
+        const intro = '<p class="mini">Counts describe source records, not unique people or completeness by year. A missing year means no count was supplied. Time and regional summaries are separate; they do not show counts for a specific year and region together.</p>';
+        const rows = observed.map(group => `<tr data-time-source="${escapeHtml(group.name)}" data-date-field="${escapeHtml(group.date)}" data-coverage-basis="${escapeHtml(group.basis)}"><td class="row-label"><button class="concept-link-button" type="button" data-temporal-source="${escapeHtml(group.name)}">${escapeHtml(sourceDisplayName(group.name))}</button><br><code>${escapeHtml(group.name)}</code><br>${sourceYearGroupLabel(group)}</td>${yearAxis.map(year => {
+          const label = sourceYearCell(group.rows,year);
+          const title = `${sourceDisplayName(group.name)} ${year}: ${label}${/^[\d,.]+$/.test(label) ? ' source records' : ''}`;
+          return `<td><span title="${escapeHtml(title)}">${escapeHtml(label)}</span></td>`;
+        }).join('')}</tr>`).join('');
+        setHtml('temporal-heatmap', `${intro}<table class="heatmap"><thead><tr><th scope="col">Source · date field · basis</th>${yearAxis.map(year => `<th scope="col">${year}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>${ranges}${missingYears}`);
       }
       function regionFill(region, maxValue) {
         const value = numberValue(region.choropleth_value);
@@ -3331,7 +3330,16 @@
           setHtml("regionDetail", `<div class="empty">No regional detail available.</div>`);
           return;
         }
-        if (!regionState.code) regionState.code = regions[0].region_code;
+        if (!regions.some(row => row.region_code === regionState.code)) regionState.code = regions[0].region_code;
+        const select = document.getElementById('region-select');
+        if (select) {
+          if (!select.regionOptionsPopulated) {
+            select.innerHTML = regions.map(row => `<option value="${escapeHtml(row.region_code)}">${escapeHtml(row.region_name)}</option>`).join('');
+            select.regionOptionsPopulated = true;
+            select.addEventListener('change', () => { regionState.code = select.value; renderDenmarkMap(); renderRegionDetail(); });
+          }
+          select.value = regionState.code;
+        }
         const maxValue = Math.max(...regions.map(row => numberValue(row.choropleth_value)), 1);
         const paths = regions.map(row => {
           const active = row.region_code === regionState.code ? " active" : "";
@@ -3357,7 +3365,8 @@
       }
       function coveragePill(status) {
         const s = text(status || "unknown");
-        return `<span class="coverage-pill ${cssClass(s)}">${escapeHtml(s)}</span>`;
+        const label = {observed:'Recorded region evidence',nationwide:'National source scope',available:'Source metadata available',ehr:'Default EHR support',none:'No default EHR support'}[s] || (status ? `Status not reviewed: ${s}` : 'Status not supplied');
+        return `<span class="coverage-pill ${cssClass(s)}" title="${escapeHtml(s)}">${escapeHtml(label)}</span>`;
       }
       function renderRegionMatrix() {
         const coverage = reviewSpatial.region_coverage || [];
@@ -3374,32 +3383,22 @@
         }).join("")}</tr>`).join("");
         setHtml("regionMatrix", head + body);
       }
+      function regionShareLabel(row) {
+        const denominator = {region_column_counts:'all source records',streamed_region_column_counts:'all source records',registry_region_panel:'retained mapped-region counts'}[row.count_basis];
+        if (!denominator) return 'Share not shown: denominator not reviewed';
+        if (sourceAggregateCountWithheld(row)) return 'Share withheld';
+        const pct = finiteSummary(row.pct_rows);
+        return pct === null ? 'Share: Not supplied' : `${fieldPercent(pct)}% of ${denominator}`;
+      }
       function renderRegionDetail() {
         const regions = reviewDk.regions || [];
         const region = regions.find(row => row.region_code === regionState.code) || regions[0];
-        if (!region) {
-          setHtml("regionDetail", `<div class="empty">No region selected.</div>`);
-          return;
-        }
+        if (!region) { setHtml('regionDetail','<div class="empty">No region selected.</div>'); return; }
         const regionCounts = (reviewSpatial.region_counts || []).filter(row => row.region_code === region.region_code);
-        setHtml("regionDetail", `
-          <article class="card">
-            <h3>${escapeHtml(region.region_name)}</h3>
-            <div class="kpi-row">
-              <div class="kpi"><b>${formatNumber(region.damyda_n)}</b><span class="mini">DaMyDa rows</span></div>
-              <div class="kpi"><b>${formatNumber(region.pct_total)}%</b><span class="mini">share of mapped regions</span></div>
-              <div class="kpi"><b>${coveragePill(region.ehr_status)}</b><span class="mini">SP / EHR</span></div>
-              <div class="kpi"><b>${coveragePill(region.lab_status)}</b><span class="mini">lab gradient</span></div>
-            </div>
-            <p class="mini">${escapeHtml(region.story || "")}</p>
-            <p class="mini">Basis: ${escapeHtml(region.choropleth_basis || "")}</p>
-          </article>
-          <div style="height:12px"></div>
-          <article class="card">
-            <h3>Observed Regional Counts</h3>
-            ${regionCounts.length ? rowsForTable(regionCounts, 50) : `<div class="empty">No source-specific region counts for this region.</div>`}
-          </article>
-        `);
+        const mapCount = sourceCountLabel({...region,n_rows:region.damyda_n});
+        const mapPct = finiteSummary(region.pct_total);
+        const mapShare = sourceAggregateCountWithheld(region) ? 'Map share: Withheld' : mapPct === null ? 'Map share: Not supplied' : `Map share: ${fieldPercent(mapPct)}% of mapped Myeloma registry records`;
+        setHtml('regionDetail', `<article class="card"><h3>${escapeHtml(region.region_name)}</h3><p><strong>${escapeHtml(mapCount)}</strong> Myeloma registry records</p><p>${escapeHtml(mapShare)}</p><p class="mini">Map share uses only the supplied mapped registry total; source shares below have their own denominators.</p><p>SP / EHR: ${coveragePill(region.ehr_status)}<br>Laboratory source status: ${coveragePill(region.lab_status)}</p><p class="mini">Status is inferred from source metadata or recorded-region evidence. It does not establish residence, treatment location, or complete regional records.</p><details class="lineage-block"><summary>Map evidence</summary><p>Basis: <code>${escapeHtml(region.choropleth_basis || 'Not supplied')}</code></p></details></article><article class="card" style="margin-top:12px"><h3>Recorded region counts by source</h3><p class="mini">The recorded field determines the meaning of each region. Sources may overlap; counts must not be added.</p><div class="region-source-counts">${regionCounts.length ? regionCounts.map(row => `<article data-region-source="${escapeHtml(row.table_name || '')}"><h4>${escapeHtml(sourceDisplayName(row.table_name))}</h4><p><code>${escapeHtml(row.table_name || 'Not supplied')}</code><br>Recorded region field: <code>${escapeHtml(row.region_column || 'Not supplied')}</code></p><p><strong>${escapeHtml(sourceCountLabel(row))}</strong> source records<br>${escapeHtml(regionShareLabel(row))}</p><details class="lineage-block"><summary>Source evidence</summary><p>Domain: ${escapeHtml(row.domain || 'Not supplied')} · Role: ${escapeHtml(row.atlas_role || 'Not supplied')}<br>Count basis: <code>${escapeHtml(row.count_basis || 'Not supplied')}</code></p></details></article>`).join('') : '<div class="empty">No source-specific region counts are supplied for this region.</div>'}</div></article>`);
       }
       function renderSpatialCoverage() {
         renderDenmarkMap();
@@ -9109,27 +9108,46 @@
         const year = finiteSummary(row.year);
         return year !== null && Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : null;
       }
+      function sourceYearGroups(rows) {
+        const groups = new Map();
+        rows.forEach(row => {
+          const key = JSON.stringify([row.table_name || '', row.date_column || '', row.coverage_basis || '']);
+          if (!groups.has(key)) groups.set(key, {name:row.table_name || '',date:row.date_column || '',basis:row.coverage_basis || '',rows:[]});
+          groups.get(key).rows.push(row);
+        });
+        return [...groups.values()];
+      }
+      function sourceYearBasis(basis) {
+        return {event_date_counts:'Recorded year counts',streamed_event_date_counts:'Recorded year counts (streamed)',source_date_range:'Inferred source date range; bounds withheld'}[basis] || (basis ? `Basis not reviewed: ${basis}` : 'Basis not supplied');
+      }
+      function sourceYearAxis(rows) {
+        const supplied = rows.filter(row => row.coverage_basis !== 'source_date_range').map(suppliedSourceYear).filter(year => year !== null);
+        if (!supplied.length) return [];
+        return Array.from({length:Math.max(...supplied)-Math.min(...supplied)+1},(_,i)=>Math.min(...supplied)+i);
+      }
+      function sourceYearCell(rows, year) {
+        const matches = rows.filter(row => suppliedSourceYear(row) === year);
+        return matches.length > 1 ? 'Duplicate evidence; count not selected' : matches.length ? sourceCountLabel(matches[0]) : 'Not supplied';
+      }
+      function sourceYearGroupLabel(group) {
+        return `${sourceDateLabel(group.date)} · ${escapeHtml(sourceYearBasis(group.basis))}${group.basis ? ` <small>(<code>${escapeHtml(group.basis)}</code>)</small>` : ''}`;
+      }
       function renderSourceYearCounts(name) {
         const evidence = sourceCoverage(name);
         if (!evidence.years.length) return '<p>Grouped year counts are not included for this source.</p>';
-        const dates = [...new Set(evidence.years.map(row => row.date_column || ''))];
-        return dates.map(date => {
-          const rows = evidence.years.filter(row => (row.date_column || '') === date);
-          const supplied = rows.map(suppliedSourceYear).filter(year => year !== null);
-          const cells = [];
-          if (supplied.length) {
-            const byYear = new Map(rows.filter(row => suppliedSourceYear(row) !== null).map(row => [Number(row.year),row]));
-            for (let year = Math.min(...supplied); year <= Math.max(...supplied); year++) cells.push(`<tr><td>${year}</td><td>${byYear.has(year) ? sourceCountLabel(byYear.get(year)) : 'Not supplied'}</td></tr>`);
-          }
-          rows.filter(row => suppliedSourceYear(row) === null).forEach(row => cells.push(`<tr><td>Year not supplied</td><td>${sourceCountLabel(row)}</td></tr>`));
-          return `<p class="mini">${sourceDateLabel(date)}. Source records, not unique people or per-measurement counts. Missing years mean no count was supplied.</p><div class="table-wrap"><table class="source-year-counts"><thead><tr><th scope="col">Year</th><th scope="col">Source records</th></tr></thead><tbody>${cells.join('')}</tbody></table></div>`;
+        return sourceYearGroups(evidence.years).map(group => {
+          const heading = `<p class="mini">${sourceYearGroupLabel(group)}. Counts describe source records, not unique people or per-measurement counts. Missing years mean no count was supplied.</p>`;
+          if (group.basis === 'source_date_range') return heading + '<p>Inferred range withheld. This metadata does not establish recorded events or continuous coverage.</p>';
+          const cells = sourceYearAxis(group.rows).map(year => `<tr><td>${year}</td><td>${sourceYearCell(group.rows,year)}</td></tr>`);
+          group.rows.filter(row => suppliedSourceYear(row) === null).forEach(row => cells.push(`<tr><td>Year not supplied</td><td>${sourceCountLabel(row)}</td></tr>`));
+          return `${heading}<div class="table-wrap"><table class="source-year-counts"><thead><tr><th scope="col">Year</th><th scope="col">Source records</th></tr></thead><tbody>${cells.join('')}</tbody></table></div>`;
         }).join('');
       }
       function renderSourceCoverage(name) {
         const evidence = sourceCoverage(name);
         const dates = [...new Set([...evidence.dates, ...evidence.years].map(row => row.date_column || ''))];
         const dateCopy = dates.map(date => {
-          const years = evidence.years.filter(row => (row.date_column || '') === date).map(suppliedSourceYear).filter(year => year !== null);
+          const years = evidence.years.filter(row => (row.date_column || '') === date && row.coverage_basis !== 'source_date_range').map(suppliedSourceYear).filter(year => year !== null);
           const supplied = [...new Set(years)].sort((a,b) => a-b);
           const gaps = supplied.length ? supplied[supplied.length-1] - supplied[0] + 1 - supplied.length : 0;
           const meta = evidence.dates.find(row => (row.date_column || '') === date);

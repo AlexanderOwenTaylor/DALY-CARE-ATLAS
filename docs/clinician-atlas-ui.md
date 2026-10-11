@@ -38,6 +38,26 @@ Double-click Home or serve the entire `site/` directory over HTTP. Keep all page
 scripts, styles and `output-shards/` together. Internal run CSVs are not public
 release artifacts and must not be linked or hosted with the site.
 
+Coverage over time shows readable counts grouped by exact source, selected date
+field and evidence basis. The local table scrolls horizontally; select a source
+for its year tables. Missing years, zero, withheld counts and duplicate evidence
+remain distinct. Source totals are under a collapsed section. Date availability
+uses nonmissing records in the selected field, not date validity or complete
+follow-up. The evidence links open the existing Data tables library.
+
+Coverage by place includes a native Region selector for keyboard use and compact
+source-count details. Direct and streamed region shares use all source records;
+registry-region shares use retained mapped-region counts. Map share has its own
+supplied mapped Myeloma registry denominator. Unknown percentage bases are not
+shown. Source status describes loaded-source metadata or recorded-region evidence.
+The recorded-region evidence table also includes supplied unmapped categories.
+
+Forty-two table descriptions were reviewed in this iteration, including all 39
+previously generic available tables. This is not a full interpretation of all 147
+tables. Category summaries retain bounded/top-N qualifications, registry ID
+counts may be bounded or fall back to records, and dictionary counts describe
+reference entries rather than observed tests.
+
 ## Interpretation
 
 - A readable field name or reference code definition does not establish observed
