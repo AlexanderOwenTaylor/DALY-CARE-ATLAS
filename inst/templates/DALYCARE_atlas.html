@@ -347,7 +347,7 @@
       padding: 0 20px;
     }
     .mobile-tab-label, .mobile-tab-select { display: none; }
-    .tab-button {
+    .tab-button, .atlas-page-link {
       border: 0;
       border-bottom: 3px solid transparent;
       background: transparent;
@@ -1318,6 +1318,8 @@
         <option value="ehr">EHR Modules</option>
         <option value="infrastructure">Data sources</option>
       </select>
+      <a href="DALYCARE_atlas.html" class="atlas-page-link">Home</a>
+      <a href="DALYCARE_outputs.html" class="atlas-page-link">Data tables</a>
       <button class="tab-button active" data-tab="overview">Overview</button>
       <button class="tab-button" data-tab="variables">Clinical Variables</button>
       <button class="tab-button" data-tab="situation">Situation Report</button>
@@ -1997,7 +1999,7 @@
         <div class="panel">
           <div class="panel-head">
             <h2 class="panel-title">Aggregate Panels</h2>
-            <p class="panel-sub">Every table here corresponds to a generated CSV panel in the run output bundle.</p>
+            <p class="panel-sub">Browse reviewed protected output tables with bounded pages and whole-table search.</p>
           </div>
           <div class="panel-body">
             <div class="toolbar"><label>Panel group <select id="panel-group-filter"><option value="">All groups</option></select></label></div>
@@ -2038,8 +2040,22 @@
   <button class="utility-button back-to-top" type="button" data-back-to-top="true">Back to top</button>
 
   <script src="DALYCARE_atlas_payload.js"></script>
+  <script src="atlas-transport.js"></script>
   <script>
     (function () {
+      /* ATLAS_PAYLOAD_INIT_START */
+      try {
+        if (!window.DALYCARE_ATLAS_PAYLOAD) throw new Error('Clinical data missing');
+        if (window.DALYCARE_TRANSPORT) window.DALYCARE_ATLAS_PAYLOAD = window.DALYCARE_TRANSPORT.decode(window.DALYCARE_ATLAS_PAYLOAD);
+        else if (window.DALYCARE_ATLAS_PAYLOAD.transport_version !== undefined) throw new Error('Clinical decoder missing');
+      } catch (error) {
+        const status = document.getElementById('hero-copy');
+        status.textContent = 'Clinical explorer could not load this export. Keep all atlas files together, then reload or return Home.';
+        status.setAttribute('role', 'alert');
+        document.documentElement.dataset.atlasReady = 'clinical-error';
+        return;
+      }
+      /* ATLAS_PAYLOAD_INIT_END */
       const payload = window.DALYCARE_ATLAS_PAYLOAD || {};
       const panels = payload.panels || {};
       const pendingRenders = new Map();
@@ -9526,18 +9542,12 @@
       fillSelect("panel-group-filter", uniqueValues(panelGroups, "group"));
       function renderPanels() {
         const wanted = document.getElementById("panel-group-filter").value;
-        const groups = wanted ? panelGroups.filter(row => row.group === wanted) : panelGroups;
-        setHtml("panel-nav", groups.map(row => `<button type="button" data-target="panel-${escapeHtml(row.panel_name)}">${escapeHtml(row.title)} (${formatNumber(row.n_rows)})</button>`).join(""));
-        setHtml("panel-list", groups.map(row => `
-          <section class="card" id="panel-${escapeHtml(row.panel_name)}" style="margin-bottom:12px">
-            <h3>${escapeHtml(row.title)}</h3>
-            <p class="mini">${escapeHtml(row.group)} - ${escapeHtml(row.panel_name)}.csv</p>
-            ${rowsForTable(panels[row.panel_name] || [], 100)}
-          </section>
-        `).join("") || `<div class="empty">No panels match the current filter.</div>`);
-        document.querySelectorAll("#panel-nav button").forEach(button => {
-          button.addEventListener("click", () => document.getElementById(button.dataset.target).scrollIntoView({ behavior: "smooth", block: "start" }));
-        });
+        const query = new URLSearchParams();
+        if (wanted) query.set('group', wanted);
+        const search = document.getElementById('global-atlas-search')?.value.trim();
+        if (search) query.set('q', search);
+        setHtml("panel-nav", '');
+        setHtml("panel-list", `<a class="sub-tab" href="DALYCARE_outputs.html${query.size ? '?' + escapeHtml(query.toString()) : ''}">Open Data tables</a><p class="mini">Choose one table, inspect its column meanings, then search the complete protected output. Availability and privacy states are shown beside each table.</p>`);
       }
       document.getElementById("panel-group-filter").addEventListener("change", renderPanels);
       deferRender("panel-list", () => renderPanels());
