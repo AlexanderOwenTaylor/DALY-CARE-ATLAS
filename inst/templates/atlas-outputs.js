@@ -173,7 +173,10 @@
   el('group-filter').innerHTML = '<option value="">All groups</option>' +
     groups.map(g => '<option>' + escape(g) + '</option>').join('');
   el('group-filter').value = groups.includes(params.get('group')) ? params.get('group') : '';
-  let selected = null, page = 0, controller = null, viewEpoch = 0;
+  let selected = null, page = 0, controller = null, viewEpoch = 0, libraryReturn = null;
+  // This page rebuilds views during popstate; native restoration after that event
+  // would otherwise overwrite the library position with the shorter detail viewport.
+  if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
   const count = value => value === null || value === undefined ? 'Not supplied' : formatValue(value);
 
   function saveState(replace = false) {
@@ -187,8 +190,18 @@
       if (page) p.set('page', page + 1);
     }
     window.history[replace ? 'replaceState' : 'pushState'](
-      {}, '', 'DALYCARE_outputs.html' + (p.size ? '?' + p : '')
+      {outputsLibraryReturn: libraryReturn}, '', 'DALYCARE_outputs.html' + (p.size ? '?' + p : '')
     );
+  }
+
+  function restoreLibraryPosition() {
+    if (!libraryReturn) return false;
+    const button = [...el('table-list').querySelectorAll('[data-table]')]
+      .find(button => button.dataset.table === libraryReturn.tableId);
+    if (!button) return false;
+    button.focus({preventScroll: true});
+    window.scrollTo({left: libraryReturn.x, top: libraryReturn.y, behavior: 'instant'});
+    return true;
   }
 
   function list() {
@@ -268,10 +281,16 @@
   }
 
   function open(tableId, restore = false) {
+    const next = c.tables.find(t => t.id === tableId) || null;
+    if (!restore && next && !selected) {
+      // Capture before hiding the long list, which can clamp its scroll position.
+      libraryReturn = {tableId, x: window.scrollX, y: window.scrollY};
+      saveState(true);
+    }
     controller?.abort();
     cancel();
     viewEpoch++;
-    selected = c.tables.find(t => t.id === tableId) || null;
+    selected = next;
     el('table-detail').hidden = !selected;
     el('library').hidden = !!selected;
     detailMode(!!selected);
@@ -319,11 +338,13 @@
       'This output contains no rows.' : (statusLabels[t.status] || 'Unavailable') +
       ': table rows are not included in this export.';
     if (!restore) saveState();
+    el('table-title').focus();
     if (readable) readPage();
   }
 
   for (const name of ['metadata-query', 'group-filter', 'availability-filter'])
     el(name).addEventListener(name === 'metadata-query' ? 'input' : 'change', () => {
+      libraryReturn = null;
       list();
       saveState();
     });
@@ -351,10 +372,13 @@
     detailMode(false);
     saveState();
     list();
+    if (!restoreLibraryPosition()) el('metadata-query').focus();
   });
 
-  function restore() {
+  function restore(event) {
     const p = new URLSearchParams(window.location.search);
+    const saved = window.history.state?.outputsLibraryReturn;
+    libraryReturn = saved && id(saved.tableId) && Number.isFinite(saved.x) && Number.isFinite(saved.y) ? saved : null;
     el('metadata-query').value = p.get('q') || '';
     el('group-filter').value = groups.includes(p.get('group')) ? p.get('group') : '';
     el('availability-filter').value = own(statusLabels, p.get('status')) ? p.get('status') : '';
@@ -370,6 +394,7 @@
       el('table-detail').hidden = true;
       el('library').hidden = false;
       detailMode(false);
+      if (!restoreLibraryPosition() && event) el('metadata-query').focus();
     }
   }
 

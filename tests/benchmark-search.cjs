@@ -15,7 +15,9 @@ const html = fs.readFileSync(template, 'utf8');
 const functions = html.slice(html.indexOf('      function normalizeSearchText'), html.indexOf('      function codeSearchValue'))
   + html.slice(html.indexOf('      function scoreSearchResult'), html.indexOf('      function dedupeSearchResults'));
 const payloadText = fs.readFileSync(payloadPath, 'utf8').replace(/^\uFEFF/, '');
-const payload = JSON.parse(payloadText.trim().replace(/^window.DALYCARE_ATLAS_PAYLOAD\s*=\s*/, '').replace(/;$/, ''));
+const transport = {window:{}};
+vm.runInNewContext(fs.readFileSync(path.join(root, 'inst/templates/atlas-transport.js'), 'utf8'), transport);
+const payload = transport.window.DALYCARE_TRANSPORT.decode(JSON.parse(payloadText.trim().replace(/^window.DALYCARE_ATLAS_PAYLOAD\s*=\s*/, '').replace(/;$/, '')));
 if (!Array.isArray(payload.column_profile_rows)) throw new Error('Payload must provide column_profile_rows');
 const context = vm.createContext({text: value => value == null ? '' : String(value)});
 vm.runInContext(functions, context);
