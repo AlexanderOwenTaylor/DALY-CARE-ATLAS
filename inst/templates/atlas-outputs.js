@@ -179,7 +179,7 @@
     atlas_temporal_coverage_years:['Recorded years','Inspect source records by selected date-field year and the supplied evidence basis.'],
     atlas_temporal_coverage:['Date-field availability','Inspect the selected date field and supplied availability for each source.'],
     atlas_spatial_region_counts:['Recorded regions','Inspect counts by source and recorded region field; location meaning depends on that field.'],
-    atlas_spatial_region_coverage:['Regional coverage status','Inspect supplied source coverage status and basis by region.'],
+    atlas_spatial_region_coverage:['Regional coverage status','Inspect region/domain status; any source total is domain-wide and repeated across regions.'],
     atlas_dk_choropleth_regions:['Reference regions','Configured region labels; not observed residence or treatment location.'],
     npu_display_dictionary:['Reference definitions','Look up laboratory code meanings, systems, and units where supplied.'],
     clinical_display_dictionary:['Reference definitions','Look up clinical code and field meanings in the stated source/system.'],
@@ -259,35 +259,72 @@
   const cell=(row,key)=>escape(formatValue(row[key],key,row));
   const supplied=(row,key)=>row[key]!==null&&row[key]!==undefined&&row[key]!=='';
   const line=(label,value)=>'<span class="cell-line"><span class="cell-key">'+escape(label)+': </span>'+value+'</span>';
-  const lines=(row,keys)=>keys.filter(key=>own(row,key)).map(key=>line(key.replaceAll('_',' '),cell(row,key))).join('');
+  const percentKeys=new Set(['pct_rows','pct_available','pct_missing']);
+  const statisticKeys=new Set(['mean','median','p25','p75']);
+  const countKeys=new Set(['n_rows','n_cols','n_available','n_missing','n_distinct_capped','n_observed','n_patients','n']);
+  function readingCell(row,key){
+    const value=row[key];
+    if(typeof value!=='number'||!Number.isFinite(value)||(!percentKeys.has(key)&&!statisticKeys.has(key)&&!countKeys.has(key)))return cell(row,key);
+    const tiny=value!==0&&Math.abs(value)<(percentKeys.has(key)?0.1:0.01);
+    const options=tiny?{maximumSignificantDigits:3}:percentKeys.has(key)?{minimumFractionDigits:1,maximumFractionDigits:1}:statisticKeys.has(key)?{maximumFractionDigits:2}:{maximumFractionDigits:20};
+    const displayed=value.toLocaleString('en-US',options)+(percentKeys.has(key)?'%':'');
+    return '<span title="Exact supplied value: '+escape(value)+'">'+escape(displayed)+'</span>';
+  }
+  function readingLabel(key){
+    const c=selected.columns.find(c=>c.key===key),fallback={n_rows:'Source records',n_cols:'Fields',n_missing:'Missing source records',pct_missing:'Missing source records (%)',n_distinct_capped:'Distinct values (capped)'};
+    // Keep reviewed semantic labels; replace only generated key labels for counts.
+    if(fallback[key]&&(!c?.label||c.label===key||c.label.toLocaleLowerCase()===key.replaceAll('_',' ').toLocaleLowerCase()))return fallback[key];
+    return c?.label||key.replaceAll('_',' ');
+  }
+  const lines=(row,keys)=>keys.filter(key=>own(row,key)).map(key=>line(readingLabel(key),readingCell(row,key))).join('');
   const identity=(row,field='column_name')=>'<strong>'+cell(row,field)+'</strong>'+line('Source',cell(row,'table_name'));
   function availability(row){
-    let html=own(row,'n_available')?line('With a value',cell(row,'n_available')+(own(row,'n_rows')?' of '+cell(row,'n_rows')+' source rows':' source rows')):'';
-    if(own(row,'pct_available'))html+=line('Supplied percentage',cell(row,'pct_available')+(supplied(row,'pct_available')?'%':''));
+    let html=own(row,'n_available')?line('With a value',readingCell(row,'n_available')+(own(row,'n_rows')?' of '+readingCell(row,'n_rows')+' source rows':' source rows')):'';
+    if(own(row,'pct_available'))html+=line('Supplied percentage',readingCell(row,'pct_available'));
     return html||'Availability not supplied';
   }
+  const hasSummary=row=>['median','p25','p75','mean'].some(key=>supplied(row,key));
   function summaryValues(row){
-    const keys=['median','p25','p75','mean'],present=keys.filter(key=>own(row,key)&&supplied(row,key));
     let html='';
-    if(present.length){for(const [key,label] of [['median','Median'],['p25','25th percentile'],['p75','75th percentile'],['mean','Mean']])if(own(row,key))html+=line(label,cell(row,key));}
-    else if(row.numeric_privacy_status)html=cell(row,'numeric_privacy_status');
+    if(hasSummary(row)){for(const [key,label] of [['median','Median'],['p25','25th percentile'],['p75','75th percentile'],['mean','Mean']])if(own(row,key))html+=line(label,readingCell(row,key));}
+    else if(row.numeric_privacy_status&&row.numeric_privacy_status!=='eligible_stored_summary')html=cell(row,'numeric_privacy_status');
     else html='No stored numeric summary supplied';
-    if(present.length&&row.numeric_privacy_status)html+=line('Summary status',cell(row,'numeric_privacy_status'));
-    return html;
+    if(hasSummary(row)&&row.numeric_privacy_status&&row.numeric_privacy_status!=='eligible_stored_summary')html+=line('Summary status',cell(row,'numeric_privacy_status'));
+    return html+summaryScope(row);
   }
-  function summaryScope(row){return ['summary_method','summary_scope'].filter(key=>supplied(row,key)).map(key=>'<span class="cell-line">'+cell(row,key)+'</span>').join('')||'Summary method and scope not supplied';}
+  function summaryScope(row){
+    if(!hasSummary(row)||row.profile_kind==='categorical')return '';
+    const knownMethods=['supplied_mean_and_quantiles','supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample'];
+    let note=row.summary_method===knownMethods[1]||row.summary_caveat==='quantiles_may_use_bounded_stream_sample'||row.summary_caveats==='quantiles_may_use_bounded_stream_sample'?'<span class="cell-line">Quartiles may use a sample of source records.</span>':'';
+    if(!supplied(row,'summary_method'))note+='<span class="cell-line">Summary method not supplied.</span>';
+    else if(!knownMethods.includes(row.summary_method))note+=line('Supplied method',cell(row,'summary_method'));
+    if(!supplied(row,'summary_scope'))note+='<span class="cell-line">Summary scope not supplied.</span>';
+    else if(row.summary_scope!=='stored_source_row_profile')note+=line('Supplied scope',cell(row,'summary_scope'));
+    return note;
+  }
+  function coverageShare(row,kind){
+    const knownYear=['event_date_counts','streamed_event_date_counts'].includes(row.coverage_basis);
+    const directRegion=['region_column_counts','streamed_region_column_counts'].includes(row.count_basis);
+    const registryRegion=row.count_basis==='registry_region_panel';
+    const denominator=kind==='year'&&knownYear?'Denominator: all source records, including missing, unparseable or out-of-window dates.':kind==='region'&&directRegion?'Denominator: all source records.':kind==='region'&&registryRegion?'Denominator: retained normalized registry-region counts; missing, unmapped or suppressed categories may be excluded.':'The percentage denominator is not supplied for this evidence basis.';
+    return lines(row,['n_rows'])+line('Supplied share',readingCell(row,'pct_rows'))+'<span class="cell-line">'+denominator+'</span>';
+  }
+  function regionBasis(row){
+    const labels={region_column_counts:'Recorded region-field counts',streamed_region_column_counts:'Recorded region-field counts (streamed)',registry_region_panel:'Retained registry-region categories'};
+    return escape(labels[row.count_basis]||row.count_basis||'Basis not supplied');
+  }
   // Primary columns compose existing values only. Exact columns remain available below the toggle.
   const primary={
-    column_profiles:[['Source field','Exact field, source and profile kind',r=>identity(r)+line('Profile',cell(r,'profile_kind'))],['Availability','Source records, not people',availability],['Stored values','Supplied summaries, not reference ranges',summaryValues],['Method and scope','Read with the stored values',summaryScope]],
-    damyda_numeric_fields:[['Source field and unit','Configured unit, not harmonization',r=>identity(r,'source_column')+line('Field key',cell(r,'field'))+line('Unit',cell(r,'unit'))],['Availability','Supplied source-record availability',availability],['Stored values','Supplied summaries or withholding reason',summaryValues],['Method and scope','Read with the stored values',summaryScope]],
+    column_profiles:[['Source field','Exact field, source and profile kind',r=>identity(r)+line('Profile',cell(r,'profile_kind'))],['Availability','Source records, not people',availability],['Stored values','Supplied summaries, not reference ranges',summaryValues]],
+    damyda_numeric_fields:[['Source field and unit','Configured unit, not harmonization',r=>identity(r,'source_column')+line('Field key',cell(r,'field'))+line('Unit',cell(r,'unit'))],['Availability','Supplied source-record availability',availability],['Stored values','Supplied summaries or withholding reason',summaryValues]],
     columns:[['Source field','Exact names',r=>identity(r)],['Field type','Supplied source typing',r=>lines(r,['column_type','column_class'])],['Missingness','Source records, not people',r=>lines(r,['n_missing','pct_missing','availability_privacy_status'])],['Distinctness and protection','Capped count, not a value list',r=>lines(r,['n_distinct_capped','is_sensitive','value_privacy_status'])]],
     sources:[['Source','Exact table and configured type',r=>'<strong>'+cell(r,'table_name')+'</strong>'+lines(r,['source_type','domain'])],['Source size','Records and fields, not people',r=>lines(r,['n_rows','n_cols'])],['Load and profile','Supplied current-run status',r=>lines(r,['load_status','profile_mode'])],['Resolution','Finding a source is not completeness',r=>lines(r,['resolution_status','memory_status'])]],
     npu_display_dictionary:[['Code and meaning','Supplied reference entry',r=>'<strong>'+cell(r,'code')+'</strong>'+line('Meaning',cell(r,'label'))+(supplied(r,'label_da')?line('Danish label',cell(r,'label_da')):'')],['System and unit','As supplied by the dictionary',r=>lines(r,['system','system_spec','unit','property'])],['Definition','Reference meaning, not an observation',r=>cell(r,'definition')],['Reference source','Supplied provenance',r=>lines(r,['source_label','source_url','retrieved_on','note'])]],
     clinical_display_dictionary:[['Code and meaning','Supplied reference entry',r=>'<strong>'+cell(r,'code')+'</strong>'+line('Meaning',cell(r,'label'))+(supplied(r,'label_da')?line('Danish label',cell(r,'label_da')):'')],['Kind and system','Confirm the stated source/system',r=>lines(r,['kind','system'])],['Definition','Reference meaning, not an observation',r=>cell(r,'definition')],['Reference source','Supplied provenance',r=>lines(r,['source_label','source_url','retrieved_on','note'])]],
-    atlas_temporal_coverage_years:[['Source and date field','Exact selected evidence field',r=>identity(r,'date_column')],['Recorded year','Selected date-field year',r=>cell(r,'year')],['Source records','Count and supplied percentage',r=>lines(r,['n_rows','pct_rows'])],['Evidence basis','Interpret counts using this basis',r=>lines(r,['coverage_basis','availability_privacy_status','value_privacy_status'])]],
-    atlas_temporal_coverage:[['Source and date field','Exact selected field',r=>identity(r,'date_column')],['Source records','Not unique people',r=>lines(r,['n_rows'])],['Date availability','Supplied percentage and status',r=>lines(r,['pct_available','availability_privacy_status','date_privacy_status'])]],
-    atlas_spatial_region_counts:[['Source and region field','Location meaning depends on this field',r=>identity(r,'region_column')],['Recorded region','Supplied normalized region',r=>lines(r,['region_name','region_code'])],['Source records','Count and supplied percentage',r=>lines(r,['n_rows','pct_rows'])],['Evidence basis','Not a residence or treatment claim',r=>lines(r,['count_basis'])]],
-    atlas_spatial_region_coverage:[['Region','Configured region labels',r=>lines(r,['region_name','region_code'])],['Source coverage','Supplied group and status',r=>lines(r,['domain','coverage_status'])],['Records and basis','Read the basis with the count',r=>lines(r,['n_rows','basis'])]]
+    atlas_temporal_coverage_years:[['Source and date field','Exact selected evidence field',r=>identity(r,'date_column')],['Recorded year','Selected date-field year',r=>cell(r,'year')],['Source records','Count and supplied percentage',r=>coverageShare(r,'year')],['Evidence basis','Interpret counts using this basis',r=>lines(r,['coverage_basis','availability_privacy_status','value_privacy_status'])]],
+    atlas_temporal_coverage:[['Source and date field','Exact selected field',r=>identity(r,'date_column')],['Source records','Not unique people',r=>lines(r,['n_rows'])],['Date availability','Supplied percentage and status',r=>line('With a nonmissing date',readingCell(r,'pct_available'))+'<span class="cell-line">Share of profiled source records; this does not establish date validity.</span>'+lines(r,['availability_privacy_status','date_privacy_status'])]],
+    atlas_spatial_region_counts:[['Source and region field','Location meaning depends on this field',r=>identity(r,'region_column')],['Recorded region','Supplied normalized region',r=>lines(r,['region_name','region_code'])],['Source records','Count and supplied percentage',r=>coverageShare(r,'region')],['Evidence basis','Not a residence or treatment claim',regionBasis]],
+    atlas_spatial_region_coverage:[['Region','Configured region labels',r=>lines(r,['region_name','region_code'])],['Source coverage','Supplied group and status',r=>lines(r,['domain','coverage_status'])],['Domain records and basis','These totals are not regional counts',r=>line('Domain source records',readingCell(r,'n_rows'))+'<span class="cell-line">The same domain total is repeated across regions; not a regional count. Do not sum across regions.</span>'+lines(r,['basis'])]]
   };
   function renderRows(){
     if(!selected||!lastResult)return;
@@ -295,7 +332,8 @@
     el('exact-columns').hidden=!primary[t.id];el('exact-columns').textContent=exactColumns?'Show reading view':'Show all exact columns';el('exact-columns').setAttribute('aria-pressed',String(exactColumns));
     if(!rows.length){el('rows').innerHTML='';return;}
     const columns=compact?primary[t.id]:t.columns.map(c=>[c.label||c.key,c.definition||('Exact column: '+c.key),r=>cell(r,c.key)]);
-    el('rows').innerHTML='<div class="'+(compact?'reading-table':'table-scroll')+'"><table><thead><tr>'+columns.map(([label,meaning])=>'<th scope="col">'+escape(label)+'<small>'+escape(meaning)+'</small></th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+columns.map(([label,,render])=>'<td data-label="'+escape(label)+'">'+render(row)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+    const precisionNote=compact&&rows.some(row=>[...percentKeys,...statisticKeys].some(key=>typeof row[key]==='number'&&!Number.isInteger(row[key])));
+    el('rows').innerHTML=(precisionNote?'<p class="mini reading-precision">Numbers are rounded for reading where needed. Exact supplied values remain in all exact columns.</p>':'')+'<div class="'+(compact?'reading-table':'table-scroll')+'"><table><thead><tr>'+columns.map(([label,meaning])=>'<th scope="col">'+escape(label)+'<small>'+escape(meaning)+'</small></th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+columns.map(([label,,render])=>'<td data-label="'+escape(label)+'">'+render(row)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   }
   async function readPage(){
     controller?.abort();controller=new AbortController();const epoch=++viewEpoch,t=selected;if(!t)return;

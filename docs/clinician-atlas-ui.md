@@ -75,6 +75,10 @@ becomes a vertical row card. Show all exact columns restores the original schema
 whole-table search always covers every approved column, including columns not
 shown in the reading view. Source lineage, full row meaning, original scope and
 column definitions remain below the rows. No new statistics or units are inferred.
+Reading views group counts and round percentage/statistic displays, while keeping
+exact values in titles and the exact-column view. Coverage percentages retain
+their source-specific denominator, and domain totals repeated across regions are
+explicitly marked as nonregional totals that must not be summed across regions.
 
 Category summaries retain bounded/top-N qualifications, registry ID counts may
 be bounded or fall back to records, and dictionary counts describe reference
