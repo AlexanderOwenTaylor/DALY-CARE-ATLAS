@@ -52,11 +52,34 @@ supplied mapped Myeloma registry denominator. Unknown percentage bases are not
 shown. Source status describes loaded-source metadata or recorded-region evidence.
 The recorded-region evidence table also includes supplied unmapped categories.
 
-Forty-two table descriptions were reviewed in this iteration, including all 39
-previously generic available tables. This is not a full interpretation of all 147
-tables. Category summaries retain bounded/top-N qualifications, registry ID
-counts may be bounded or fall back to records, and dictionary counts describe
-reference entries rather than observed tests.
+Data tables starts with four tasks: Fields and summaries, Sources, Years and
+regions, and Code meanings. These use reviewed exact table identities. All
+outputs retains the complete inventory, including technical context and outputs
+without published rows, in pages of twelve entries. Run and publication details
+offers the remaining technical inventory. A published file is not a promise of
+clinical usefulness: source-only or domain-only projections are labelled Context
+only before opening.
+
+The main search matches table IDs, names, file paths, source terms and supplied
+column meanings. It does not scan table rows. With a search term entered, the
+explicit field-row and reference-definition actions carry that term into the
+selected table without retyping. These actions do not promise a match. Exact
+names and source languages may differ; English search is not exhaustive bilingual
+mapping. Typing replaces the current search state, while task choices, paging,
+table opening and whole-table searches remain meaningful browser history entries.
+
+Frequently used field, dictionary, source and coverage tables have a reading
+view that keeps exact source identity, supplied counts/denominators, units where
+provided, and interpretation details together. On narrow screens each result
+becomes a vertical row card. Show all exact columns restores the original schema;
+whole-table search always covers every approved column, including columns not
+shown in the reading view. Source lineage, full row meaning, original scope and
+column definitions remain below the rows. No new statistics or units are inferred.
+
+Category summaries retain bounded/top-N qualifications, registry ID counts may
+be bounded or fall back to records, and dictionary counts describe reference
+entries rather than observed tests. A no-match reference search means no matching
+definition was supplied in this export; it does not establish code validity.
 
 ## Interpretation
 
