@@ -552,65 +552,65 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     stop(empty_live_run_message(source_map, source_resolution), "\nDiagnostics written to: ", run_dir, call. = FALSE)
   }
 
-  payload_sources <- safe_read_output_csv(output_paths$sources, sources)
-  payload_columns <- safe_read_output_csv(output_paths$columns, columns)
-  payload_checks <- safe_read_output_csv(output_paths$checks, checks)
-  payload_column_profiles <- safe_read_output_csv(output_paths$column_profiles, column_profiles)
-  payload_column_top_values <- safe_read_output_csv(output_paths$column_top_values, column_top_values)
-  payload_run_summary <- safe_read_output_csv(output_paths$run_summary, run_summary)
-  payload_action_items <- safe_read_output_csv(output_paths$action_items, action_items)
-  payload_db_query_log <- safe_read_output_csv(output_paths$db_query_log, db_query_log)
-  payload_db_budget_actions <- safe_read_output_csv(output_paths$db_budget_actions, db_budget_actions)
-  payload_semantic_dictionary <- safe_read_output_csv(output_paths$semantic_dictionary, semantic_outputs$dictionary)
-  payload_semantic_value_map <- safe_read_output_csv(output_paths$semantic_value_map, semantic_outputs$value_map)
-  payload_semantic_code_map <- safe_read_output_csv(output_paths$semantic_code_map, semantic_outputs$code_map)
-  payload_semantic_panel_links <- safe_read_output_csv(output_paths$semantic_panel_links, semantic_outputs$panel_links)
-  payload_semantic_unmapped_entity_overlay <- safe_read_output_csv(output_paths$semantic_unmapped_entity_overlay, semantic_outputs$unmapped_entity_overlay)
-  payload_semantic_overlay_lookup <- safe_read_output_csv(output_paths$semantic_overlay_lookup, semantic_outputs$overlay_lookup)
-  payload_curator_label_promotions <- safe_read_output_csv(output_paths$curator_label_promotions, semantic_outputs$curator_label_promotions)
-  payload_curator_label_lookup <- safe_read_output_csv(output_paths$curator_label_promotion_lookup, semantic_outputs$curator_label_lookup)
-  payload_semantic_mapping_conflicts <- safe_read_output_csv(output_paths$semantic_mapping_conflicts, semantic_outputs$mapping_conflicts)
-  payload_clinical_concepts <- safe_read_output_csv(output_paths$clinical_concepts, product_outputs$clinical_concepts)
-  payload_domain_panels <- safe_read_output_csv(output_paths$domain_panels, product_outputs$domain_panels)
-  payload_panel_kpis <- safe_read_output_csv(output_paths$panel_kpis, product_outputs$panel_kpis)
-  payload_panel_distributions <- safe_read_output_csv(output_paths$panel_distributions, product_outputs$panel_distributions)
-  payload_panel_raw_fields <- safe_read_output_csv(output_paths$panel_raw_fields, product_outputs$panel_raw_fields)
-  payload_panel_parity <- safe_read_output_csv(output_paths$panel_parity, product_outputs$panel_parity)
-  payload_legacy_resource_audit <- safe_read_output_csv(output_paths$legacy_cartography_source_resolution_audit, legacy_resource_audit)
-  payload_billeddiagnostik_del2_audit <- safe_read_output_csv(output_paths$billeddiagnostik_del2_regression_audit, billeddiagnostik_del2_audit)
-  payload_source_resolution_plan_dry_run <- safe_read_output_csv(output_paths$source_resolution_plan_dry_run, source_resolution_plan_dry_run)
-  payload_source_resolution_attempts <- safe_read_output_csv(output_paths$source_resolution_attempts, source_resolution_attempts)
-  payload_source_resolution_delta <- safe_read_output_csv(output_paths$source_resolution_delta_legacy_vs_current, source_resolution_delta)
-  payload_resource_reconciliation <- safe_read_output_csv(output_paths$resource_reconciliation, resource_reconciliation)
-  payload_source_truth_evidence <- safe_read_output_csv(output_paths$source_truth_evidence_matrix, source_truth_evidence)
-  payload_source_truth_summary <- safe_read_output_csv(output_paths$source_truth_summary, source_truth_metrics)
-  payload_current_run_source_map_audit <- safe_read_output_csv(output_paths$current_run_source_map_audit, current_run_source_map_audit)
-  payload_canonical_resource_reconciliation <- safe_read_output_csv(output_paths$canonical_resource_reconciliation_64, canonical_reconciliation)
-  payload_source_map_crosswalk <- safe_read_output_csv(output_paths$source_map_row_to_canonical_resource_crosswalk, source_map_crosswalk)
-  payload_legacy_reference_vs_current <- safe_read_output_csv(output_paths$legacy_reference_vs_current_profiled_evidence, legacy_reference_vs_current)
-  payload_remaining_activation_plan <- safe_read_output_csv(output_paths$remaining_canonical_resources_activation_plan, remaining_activation_plan)
+  payload_sources <- sources
+  payload_columns <- columns
+  payload_checks <- checks
+  payload_column_profiles <- column_profiles
+  payload_column_top_values <- column_top_values
+  payload_run_summary <- run_summary
+  payload_action_items <- action_items
+  payload_db_query_log <- db_query_log
+  payload_db_budget_actions <- db_budget_actions
+  payload_semantic_dictionary <- semantic_outputs$dictionary
+  payload_semantic_value_map <- semantic_outputs$value_map
+  payload_semantic_code_map <- semantic_outputs$code_map
+  payload_semantic_panel_links <- semantic_outputs$panel_links
+  payload_semantic_unmapped_entity_overlay <- semantic_outputs$unmapped_entity_overlay
+  payload_semantic_overlay_lookup <- semantic_outputs$overlay_lookup
+  payload_curator_label_promotions <- semantic_outputs$curator_label_promotions
+  payload_curator_label_lookup <- semantic_outputs$curator_label_lookup
+  payload_semantic_mapping_conflicts <- semantic_outputs$mapping_conflicts
+  payload_clinical_concepts <- product_outputs$clinical_concepts
+  payload_domain_panels <- product_outputs$domain_panels
+  payload_panel_kpis <- product_outputs$panel_kpis
+  payload_panel_distributions <- product_outputs$panel_distributions
+  payload_panel_raw_fields <- product_outputs$panel_raw_fields
+  payload_panel_parity <- product_outputs$panel_parity
+  payload_legacy_resource_audit <- legacy_resource_audit
+  payload_billeddiagnostik_del2_audit <- billeddiagnostik_del2_audit
+  payload_source_resolution_plan_dry_run <- source_resolution_plan_dry_run
+  payload_source_resolution_attempts <- source_resolution_attempts
+  payload_source_resolution_delta <- source_resolution_delta
+  payload_resource_reconciliation <- resource_reconciliation
+  payload_source_truth_evidence <- source_truth_evidence
+  payload_source_truth_summary <- source_truth_metrics
+  payload_current_run_source_map_audit <- current_run_source_map_audit
+  payload_canonical_resource_reconciliation <- canonical_reconciliation
+  payload_source_map_crosswalk <- source_map_crosswalk
+  payload_legacy_reference_vs_current <- legacy_reference_vs_current
+  payload_remaining_activation_plan <- remaining_activation_plan
   payload_ki67_discovery <- list(
-    search_inventory = safe_read_output_csv(output_paths$ki67_search_inventory, ki67_discovery$search_inventory),
-    registry_field_candidates = safe_read_output_csv(output_paths$ki67_registry_field_candidates, ki67_discovery$registry_field_candidates),
-    pathology_code_candidates = safe_read_output_csv(output_paths$ki67_pathology_code_candidates, ki67_discovery$pathology_code_candidates),
-    text_pattern_candidates = safe_read_output_csv(output_paths$ki67_text_pattern_candidates, ki67_discovery$text_pattern_candidates),
-    channel_summary = safe_read_output_csv(output_paths$ki67_channel_summary, ki67_discovery$channel_summary),
-    aeki_validation_plan = safe_read_output_csv(output_paths$ki67_aeki_validation_plan, ki67_discovery$aeki_validation_plan),
-    aeki_code_counts = safe_read_output_csv(output_paths$ki67_aeki_code_counts, ki67_discovery$aeki_code_counts),
-    text_validation_plan = safe_read_output_csv(output_paths$ki67_text_validation_plan, ki67_discovery$text_validation_plan),
-    db_summary = safe_read_output_csv(file.path(output_dir, "ki67_db_summary.csv"), data.frame(stringsAsFactors = FALSE)),
-    db_found_locations = safe_read_output_csv(file.path(output_dir, "ki67_found_locations.csv"), data.frame(stringsAsFactors = FALSE)),
-    db_aeki_code_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_aeki_code_counts.csv"), data.frame(stringsAsFactors = FALSE)),
-    db_p16_dual_stain_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_p16_dual_stain_counts.csv"), data.frame(stringsAsFactors = FALSE)),
-    db_text_pattern_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_text_pattern_counts.csv"), data.frame(stringsAsFactors = FALSE)),
-    db_registry_field_counts = safe_read_output_csv(file.path(output_dir, "ki67_db_registry_field_counts.csv"), data.frame(stringsAsFactors = FALSE)),
+    search_inventory = ki67_discovery$search_inventory,
+    registry_field_candidates = ki67_discovery$registry_field_candidates,
+    pathology_code_candidates = ki67_discovery$pathology_code_candidates,
+    text_pattern_candidates = ki67_discovery$text_pattern_candidates,
+    channel_summary = ki67_discovery$channel_summary,
+    aeki_validation_plan = ki67_discovery$aeki_validation_plan,
+    aeki_code_counts = ki67_discovery$aeki_code_counts,
+    text_validation_plan = ki67_discovery$text_validation_plan,
+    db_summary = atlas_optional_input(run_dir, "ki67_discovery_db_summary", project_root),
+    db_found_locations = atlas_optional_input(run_dir, "ki67_discovery_db_found_locations", project_root),
+    db_aeki_code_counts = atlas_optional_input(run_dir, "ki67_discovery_db_aeki_code_counts", project_root),
+    db_p16_dual_stain_counts = atlas_optional_input(run_dir, "ki67_discovery_db_p16_dual_stain_counts", project_root),
+    db_text_pattern_counts = atlas_optional_input(run_dir, "ki67_discovery_db_text_pattern_counts", project_root),
+    db_registry_field_counts = atlas_optional_input(run_dir, "ki67_discovery_db_registry_field_counts", project_root),
     summary = ki67_discovery$summary
   )
   payload_patobank_ki67_percent <- list(
-    validation = safe_read_output_csv(output_paths$patobank_ki67_validation, patobank_ki67_percent$validation),
-    summary = safe_read_output_csv(output_paths$patobank_ki67_summary, patobank_ki67_percent$summary),
-    code_counts = safe_read_output_csv(output_paths$patobank_ki67_code_counts, patobank_ki67_percent$code_counts),
-    denominator_counts = safe_read_output_csv(output_paths$patobank_ki67_denominator_counts, patobank_ki67_percent$denominator_counts),
+    validation = patobank_ki67_percent$validation,
+    summary = patobank_ki67_percent$summary,
+    code_counts = patobank_ki67_percent$code_counts,
+    denominator_counts = patobank_ki67_percent$denominator_counts,
     query_templates = if (file.exists(output_paths$patobank_ki67_query_templates)) {
       paste(readLines(output_paths$patobank_ki67_query_templates, warn = FALSE), collapse = "\n")
     } else {
@@ -629,13 +629,13 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     list()
   }
   payload_mcl_triangle_feasibility <- list(
-    summary = safe_read_output_csv(output_paths$mcl_triangle_summary, mcl_triangle_feasibility$summary),
-    variable_inventory = safe_read_output_csv(output_paths$mcl_triangle_variable_inventory, mcl_triangle_feasibility$variable_inventory),
-    treatment_inventory = safe_read_output_csv(output_paths$mcl_triangle_treatment_inventory, mcl_triangle_feasibility$treatment_inventory),
-    outcome_inventory = safe_read_output_csv(output_paths$mcl_triangle_outcome_inventory, mcl_triangle_feasibility$outcome_inventory),
-    biology_gap_analysis = safe_read_output_csv(output_paths$mcl_triangle_biology_gap_analysis, mcl_triangle_feasibility$biology_gap_analysis),
-    study_readiness_matrix = safe_read_output_csv(output_paths$mcl_triangle_study_readiness_matrix, mcl_triangle_feasibility$study_readiness_matrix),
-    false_positive_exclusions = safe_read_output_csv(output_paths$mcl_triangle_false_positive_exclusions, mcl_triangle_feasibility$false_positive_exclusions),
+    summary = mcl_triangle_feasibility$summary,
+    variable_inventory = mcl_triangle_feasibility$variable_inventory,
+    treatment_inventory = mcl_triangle_feasibility$treatment_inventory,
+    outcome_inventory = mcl_triangle_feasibility$outcome_inventory,
+    biology_gap_analysis = mcl_triangle_feasibility$biology_gap_analysis,
+    study_readiness_matrix = mcl_triangle_feasibility$study_readiness_matrix,
+    false_positive_exclusions = mcl_triangle_feasibility$false_positive_exclusions,
     cohort_counts = payload_mcl_triangle_counts,
     standalone_output_source = mcl_triangle_count_source$metadata,
     pathology_ki67_signpost = mcl_triangle_pathology_ki67_signpost(payload_mcl_triangle_counts),
@@ -645,12 +645,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     verdict_metadata = mcl_triangle_feasibility$verdict_metadata
   )
   payload_panels <- lapply(names(panels), function(panel_name) {
-    safe_read_output_csv(panel_paths[[panel_name]], panels[[panel_name]])
+    panels[[panel_name]]
   })
   names(payload_panels) <- names(panels)
 
-  payload <- atlas_payload(
-    run_id, generated_at, payload_sources, payload_columns, payload_checks, payload_panels,
+  payload_args <- list(
+    run_id = run_id, generated_at = generated_at, sources = payload_sources, columns = payload_columns, checks = payload_checks, panels = payload_panels,
     column_profiles = payload_column_profiles,
     column_top_values = payload_column_top_values,
     run_summary = payload_run_summary,
@@ -691,6 +691,9 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     patobank_ki67_percent = payload_patobank_ki67_percent,
     mcl_triangle_feasibility = payload_mcl_triangle_feasibility
   )
+  output_paths$atlas_build_context <- atlas_save_build_context(run_dir, payload_args, output_paths, panel_paths, project_root)
+  reconstructed <- atlas_payload_from_run_outputs(run_dir, project_root)
+  payload <- reconstructed$payload
   site_paths <- write_static_atlas(run_dir, payload, project_root = project_root)
   log_event("info", "", "Static atlas written")
 
