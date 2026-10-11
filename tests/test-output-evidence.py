@@ -48,6 +48,33 @@ class EvidenceTests(unittest.TestCase):
   try:
    with self.assertRaises(ValueError):self.collect()
   finally:os.environ.pop('DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES')
+ def test_large_field_uses_and_restores_configured_budget(self):
+  from output_evidence import read_registered_csv
+  spec={'schemas':[{'code':'string','label':'string','n':'number'}]}
+  self.write('large.csv',['code','label','n'],[['0001','x'*140000,0]])
+  path=self.run/'outputs/large.csv'; previous=csv.field_size_limit()
+  self.assertEqual(read_registered_csv(path,spec,200000)[0]['label'],'x'*140000)
+  self.assertEqual(csv.field_size_limit(),previous)
+  with self.assertRaises(ValueError):read_registered_csv(path,spec,140000)
+  self.assertEqual(csv.field_size_limit(),previous)
+  path.write_text('code,label,n\n0001,"unterminated',encoding='utf8')
+  with self.assertRaises(ValueError):read_registered_csv(path,spec,200000)
+  self.assertEqual(csv.field_size_limit(),previous)
+ def test_selected_mcl_binding_is_confined_and_required(self):
+  from output_evidence import load_registry
+  spec=next(s for s in load_registry(ROOT)['artifacts'] if s['id']=='mcl_triangle_feasibility_cohort_counts_count_summary')
+  headers=list(spec['schemas'][0]); row={k:'' for k in headers};row.update(metric='synthetic_count',label='Selected source',value='23',status='available')
+  (self.run/'outputs/selected_mcl').mkdir()
+  self.write('selected_mcl/mcl_triangle_count_summary.csv',headers,[[row[k] for k in headers]])
+  self.write('mcl_triangle_count_summary.csv',['UNREVIEWED'],[['CONFLICTING_CURRENT']])
+  context={'schema_version':1,'registry_version':1,'bindings':[spec['id']],'binding_files':{spec['id']:'outputs/selected_mcl/mcl_triangle_count_summary.csv'}}
+  path=self.run/'outputs/atlas_build_context.json';path.write_text(json.dumps(context),encoding='utf8')
+  self.assertEqual(next(t for t in self.collect() if t['id']==spec['id'])['status'],'metadata_only')
+  context['binding_files'][spec['id']]='../escape.csv';path.write_text(json.dumps(context),encoding='utf8')
+  with self.assertRaises(ValueError):self.collect()
+  context['binding_files'][spec['id']]='outputs/selected_mcl/mcl_triangle_count_summary.csv';path.write_text(json.dumps(context),encoding='utf8')
+  (self.run/context['binding_files'][spec['id']]).unlink()
+  with self.assertRaises(ValueError):self.collect()
  def test_manifest_escape_and_snapshot_scope(self):
   self.write('output_manifest.csv',['relative_path'],[['../FORBIDDEN.csv']])
   with self.assertRaises(ValueError):self.collect()

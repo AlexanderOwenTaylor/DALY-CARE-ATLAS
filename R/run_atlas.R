@@ -624,7 +624,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   }
   payload_mcl_triangle_counts <- if (exists("mcl_count_read_outputs", mode = "function") &&
                                       nzchar(mcl_triangle_count_source$outputs_dir %||% "")) {
-    mcl_count_read_outputs(mcl_triangle_count_source$outputs_dir)
+    atlas_read_selected_mcl_outputs(mcl_triangle_count_source$outputs_dir, project_root)
   } else {
     list()
   }

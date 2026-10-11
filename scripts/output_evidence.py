@@ -3,6 +3,9 @@ import csv
 import json
 import math
 import os
+import sys
+import threading
+from contextlib import contextmanager
 from pathlib import Path
 from public_privacy import sanitize_public_payload, audit_public_payload
 
@@ -32,12 +35,28 @@ def confined_path(root, relative):
     return path
 
 
+_CSV_FIELD_LOCK = threading.RLock()
+
+
+@contextmanager
+def _csv_field_budget(max_bytes):
+    # CSV limits count characters; a UTF-8 field cannot have more characters
+    # than the bounded input has bytes. Serialize our readers while changing
+    # the parser's process-wide setting, and restore it on every exit path.
+    with _CSV_FIELD_LOCK:
+        previous = csv.field_size_limit(min(int(max_bytes), sys.maxsize))
+        try:
+            yield
+        finally:
+            csv.field_size_limit(previous)
+
+
 def read_registered_csv(path, spec, max_bytes=67108864):
     path = Path(path)
     if not path.is_file() or path.stat().st_size > max_bytes:
         raise ValueError('Required input missing or exceeds pre-read limit')
     try:
-        with path.open(encoding='utf-8-sig', newline='') as handle:
+        with _csv_field_budget(max_bytes), path.open(encoding='utf-8-sig', newline='') as handle:
             reader = csv.reader(handle, delimiter='\t' if path.suffix == '.tsv' else ',', strict=True)
             header = next(reader)
             if header == ['']:
@@ -83,6 +102,18 @@ def _set(obj, path, value):
     obj[path[-1]] = value
 
 
+def _bound_source_file(spec, context):
+    relative = ((context or {}).get('binding_files') or {}).get(spec['id'])
+    if relative is None:
+        return spec['source_file']
+    expected = 'outputs/selected_mcl/' + Path(spec['source_file']).name
+    if (spec['arg_path'][:2] != ['mcl_triangle_feasibility', 'cohort_counts']
+            or len(spec['arg_path']) != 3 or relative != expected
+            or spec['id'] not in context.get('bindings', [])):
+        raise ValueError('Invalid selected aggregate binding')
+    return relative
+
+
 def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
     registry = load_registry(project_root)
     run = Path(run_dir).resolve() if run_dir is not None else None
@@ -93,7 +124,7 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
         if manifest.exists():
             if manifest.stat().st_size > registry['input_max_bytes']:
                 raise ValueError('Output manifest exceeds pre-read limit')
-            with manifest.open(encoding='utf-8-sig', newline='') as handle:
+            with _csv_field_budget(registry['input_max_bytes']), manifest.open(encoding='utf-8-sig', newline='') as handle:
                 reader = csv.DictReader(handle, strict=True)
                 if 'relative_path' not in (reader.fieldnames or []):
                     raise ValueError('Invalid output manifest')
@@ -108,10 +139,14 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
             if context.get('schema_version') != 1:
                 raise ValueError('Unsupported build context')
     required = set(context.get('bindings', [])) if context else set()
+    binding_files = (context or {}).get('binding_files') or {}
+    known_ids = {spec['id'] for spec in registry['artifacts']}
+    if not isinstance(binding_files, dict) or set(binding_files) - known_ids:
+        raise ValueError('Invalid selected aggregate bindings')
     for spec in registry['artifacts']:
         resource = spec.get('resource', False)
         base = project_root if resource else run
-        path = confined_path(base, spec['source_file']) if base is not None else None
+        path = confined_path(base, spec['source_file'] if resource else _bound_source_file(spec, context)) if base is not None else None
         rows, status, reason = [], 'not_produced', 'Output not produced'
         provenance = 'project_reference' if resource else 'csv_run' if run else 'snapshot_only'
         source_count = None

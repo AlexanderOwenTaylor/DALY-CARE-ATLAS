@@ -1,17 +1,66 @@
 root <- normalizePath(getwd(), winslash='/')
 source('tests/helper.R'); source_test_runtime(root)
 expect_true(exists('atlas_payload_from_run_outputs', mode='function'), 'Strict CSV reconstruction entry point is missing')
+expect_error <- function(expr) expect_true(inherits(tryCatch({force(expr);NULL},error=identity),'error'))
 # Removing strict required reads or reverting to stale payloads must fail these assertions.
 r <- run_atlas(root, 'config/source-map.example.tsv', tempfile('evidence-run-'), 'report')
 a <- atlas_payload_from_run_outputs(r$run_dir,root)
 expect_equal(a$payload,atlas_payload_from_run_outputs(r$run_dir,root)$payload)
+# Selected standalone counts must survive missing or conflicting local files.
+selected_dir <- tempfile('selected-mcl-');dir.create(selected_dir)
+registry <- atlas_output_registry(root)
+count_spec <- Filter(function(s)s$id=='mcl_triangle_feasibility_cohort_counts_count_summary',registry$artifacts)[[1]]
+selected <- mcl_count_empty_summary()[1,,drop=FALSE]
+for(key in c('count_mode','source_tables','person_key_used','date_anchor_used','value_rule_used','generated_at','validation_status')) selected[[key]] <- NA_character_
+selected$metric <- 'synthetic_count';selected$label <- 'Selected source';selected$value <- '23'
+selected$status <- 'available'
+selected_file <- file.path(selected_dir,basename(count_spec$source_file));write_csv(selected,selected_file)
+expect_equal(atlas_read_selected_mcl_outputs(selected_dir,root)$count_summary$value,'23')
+writeLines('UNREVIEWED_HEADER\nFORBIDDEN_BODY',selected_file)
+expect_error(atlas_read_selected_mcl_outputs(selected_dir,root))
+write_csv(selected,selected_file)
+Sys.setenv(DALYCARE_ATLAS_INPUT_MAX_BYTES='10')
+expect_error(atlas_read_selected_mcl_outputs(selected_dir,root))
+Sys.unsetenv('DALYCARE_ATLAS_INPUT_MAX_BYTES')
+# Reconstruct the existing production arguments as typed tables, then supply the
+# selected-source module exactly as the runner does before its save handoff.
+save_args <- list(run_id=a$context$run_id,generated_at=a$context$generated_at)
+for(spec in registry$artifacts) if(spec$id %in% unlist(a$context$bindings)) {
+ save_args <- atlas_evidence_set(save_args,unlist(spec$arg_path),atlas_read_registered_csv(file.path(r$run_dir,spec$source_file),spec))
+}
+save_args$patobank_ki67_percent$query_templates <- ''
+save_args$mcl_triangle_feasibility$cohort_counts <- list(count_summary=selected)
+selection <- mcl_count_empty_standalone_output_source()[1,,drop=FALSE]
+selection$source_type <- 'explicit_dir';selection$source_path <- selected_dir
+selection$selected_outputs_dir <- selected_dir;selection$selected <- TRUE
+save_args$mcl_triangle_feasibility$standalone_output_source <- selection
+local_file <- file.path(r$run_dir,count_spec$source_file)
+conflict <- selected;conflict$value <- '91';conflict$label <- 'Current run conflict';write_csv(conflict,local_file)
+atlas_save_build_context(r$run_dir,save_args,list(),list(),root)
+chosen <- atlas_payload_from_run_outputs(r$run_dir,root)
+expect_equal(chosen$payload$mcl_triangle_feasibility$cohort_counts$count_summary[[1]]$value,'23','Selected source must beat the conflicting current-run CSV')
+expect_equal(read.csv(local_file,colClasses='character')$value,'91','Import must preserve unrelated current-run outputs')
+unlink(local_file)
+save_args$mcl_triangle_feasibility$standalone_output_source$source_type <- 'bundled_output5_fixture'
+atlas_save_build_context(r$run_dir,save_args,list(),list(),root)
+# Removing only this synthetic source file makes the external input unavailable.
+unlink(selected_file)
+chosen <- atlas_payload_from_run_outputs(r$run_dir,root)
+expect_equal(chosen$payload$mcl_triangle_feasibility$cohort_counts$count_summary[[1]]$value,'23','Rebuild must use the confined imported CSV after the original disappears')
+expect_equal(chosen$payload$mcl_triangle_feasibility$standalone_output_source[[1]]$source_type,'bundled_output5_fixture')
+expect_equal(chosen$payload$mcl_triangle_feasibility$standalone_output_source[[1]]$selected_outputs_dir,selected_dir)
+context_path <- file.path(r$run_dir,'outputs/atlas_build_context.json')
+context_backup <- readBin(context_path,'raw',n=file.info(context_path)$size)
+forged <- chosen$context;forged$binding_files[[count_spec$id]] <- '../escape.csv'
+jsonlite::write_json(forged,context_path,auto_unbox=TRUE,null='null')
+expect_error(atlas_payload_from_run_outputs(r$run_dir,root))
+writeBin(context_backup,context_path)
 p <- file.path(r$run_dir,'outputs/atlas_sources.csv')
 x <- read.csv(p,colClasses='character',check.names=FALSE,na.strings='',fileEncoding='UTF-8')
 x$domain[1] <- 'Reviewed synthetic domain'; write_csv(x,p)
 b <- atlas_payload_from_run_outputs(r$run_dir,root)
 expect_true(any(vapply(b$payload$sources,function(x) identical(x$domain,'Reviewed synthetic domain'),logical(1))))
 expect_false(identical(a$payload,b$payload))
-expect_error <- function(expr) expect_true(inherits(tryCatch({force(expr);NULL},error=identity),'error'))
 backup <- readBin(p,'raw',n=file.info(p)$size)
 unlink(p); expect_error(atlas_payload_from_run_outputs(r$run_dir,root)); writeBin(backup,p)
 writeLines('FORBIDDEN_HEADER\nFORBIDDEN_BODY',p); expect_error(atlas_payload_from_run_outputs(r$run_dir,root)); writeBin(backup,p)

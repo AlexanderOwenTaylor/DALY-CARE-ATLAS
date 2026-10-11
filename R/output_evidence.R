@@ -105,6 +105,37 @@ atlas_query_template_context <- function(args) {
   c(list(empty=FALSE),config)
 }
 
+atlas_is_mcl_cohort_spec <- function(spec) {
+  path <- unlist(spec$arg_path,use.names=FALSE)
+  length(path)==3L && identical(path[1:2],c('mcl_triangle_feasibility','cohort_counts'))
+}
+
+# Selected-source files become immutable inputs of this run, in a separate
+# directory so same-named current-run outputs are not replaced.
+atlas_imported_mcl_path <- function(spec) {
+  if(!atlas_is_mcl_cohort_spec(spec)) stop('Only reviewed MCL aggregates can have imported bindings',call.=FALSE)
+  paste0('outputs/selected_mcl/',basename(spec$source_file))
+}
+
+atlas_bound_source_file <- function(spec,context=NULL) {
+  relative <- context$binding_files[[spec$id]]
+  if(is.null(relative)) return(spec$source_file)
+  if(!identical(relative,atlas_imported_mcl_path(spec)) || !spec$id %in% unlist(context$bindings,use.names=FALSE)) stop('Invalid selected aggregate binding',call.=FALSE)
+  relative
+}
+
+atlas_read_selected_mcl_outputs <- function(outputs_dir,project_root='.') {
+  registry <- atlas_output_registry(project_root)
+  result <- list()
+  for(spec in registry$artifacts) if(atlas_is_mcl_cohort_spec(spec)) {
+    path <- atlas_confined_path(outputs_dir,basename(spec$source_file))
+    if(file.exists(path)) {
+      result[[spec$arg_path[[3]]]] <- atlas_read_registered_csv(path,spec,registry$input_max_bytes)
+    }
+  }
+  result
+}
+
 atlas_save_build_context <- function(run_dir,payload_args,output_paths,panel_paths,project_root='.') {
   registry <- atlas_output_registry(project_root)
   # Validate all caller bindings, including unused outputs, before accepting a run.
@@ -114,7 +145,18 @@ atlas_save_build_context <- function(run_dir,payload_args,output_paths,panel_pat
     if (!startsWith(tolower(path),paste0(tolower(run),'/'))) stop('Output binding escapes selected run',call.=FALSE)
     atlas_confined_path(run,substring(path,nchar(run)+2))
   }
-  bindings <- list(); schema_metadata <- list(); consumed <- character()
+  bindings <- list(); binding_files <- list(); schema_metadata <- list(); consumed <- character()
+  selection <- payload_args$mcl_triangle_feasibility$standalone_output_source
+  selected_dir <- NULL
+  if(is.data.frame(selection) && 'selected' %in% names(selection)) {
+    chosen <- which(!is.na(selection$selected) & as.logical(selection$selected))
+    if(length(chosen)>1L) stop('Ambiguous selected aggregate source',call.=FALSE)
+    if(length(chosen)) {
+      selected_dir <- selection$selected_outputs_dir[[chosen]]
+      if(!is.character(selected_dir) || is.na(selected_dir) || !nzchar(selected_dir) || !dir.exists(selected_dir)) stop('Selected aggregate directory unavailable',call.=FALSE)
+      selected_dir <- normalizePath(selected_dir,winslash='/',mustWork=TRUE)
+    }
+  }
   for (spec in registry$artifacts) {
     if (!length(spec$arg_path)) next
     path <- unlist(spec$arg_path,use.names=FALSE)
@@ -122,7 +164,29 @@ atlas_save_build_context <- function(run_dir,payload_args,output_paths,panel_pat
     if (is.null(value)) next
     if (!is.data.frame(value)) stop('Unsupported non-tabular build argument: ',paste(path,collapse='/'),call.=FALSE)
     file <- atlas_confined_path(run,spec$source_file)
-    if (!isTRUE(spec$required) && !file.exists(file) && !isTRUE(spec$supplementary)) {consumed <- c(consumed,paste(path,collapse='/'));next}
+    if(atlas_is_mcl_cohort_spec(spec) && !is.null(selected_dir)) {
+      selected_file <- atlas_confined_path(selected_dir,basename(spec$source_file))
+      if(!file.exists(selected_file)) {
+        if(nrow(value)) stop('Nonempty selected aggregate has no CSV binding: ',spec$id,call.=FALSE)
+        consumed <- c(consumed,paste(path,collapse='/'));next
+      }
+      # Validate the actual selected file before reading/copying, even if an
+      # earlier module read returned an empty fallback for malformed input.
+      atlas_read_registered_csv(selected_file,spec,registry$input_max_bytes)
+      if(!identical(tolower(selected_file),tolower(file))) {
+        relative <- atlas_imported_mcl_path(spec)
+        file <- atlas_confined_path(run,relative)
+        dir_create(dirname(file))
+        # Re-resolve after directory creation to enforce confinement through links.
+        file <- atlas_confined_path(run,relative)
+        if(!file.copy(selected_file,file,overwrite=TRUE)) stop('Could not preserve selected aggregate',call.=FALSE)
+        binding_files[[spec$id]] <- relative
+      }
+    }
+    if (!isTRUE(spec$required) && !file.exists(file) && !isTRUE(spec$supplementary)) {
+      if(nrow(value)) stop('Nonempty optional aggregate has no CSV binding: ',spec$id,call.=FALSE)
+      consumed <- c(consumed,paste(path,collapse='/'));next
+    }
     if (isTRUE(spec$supplementary)) {
       if (!any(vapply(spec$schemas,function(s) setequal(names(s),names(value)),logical(1)))) stop('Unsupported aggregate context schema: ',spec$id,call.=FALSE)
       write_csv(value,file)
@@ -141,7 +205,7 @@ atlas_save_build_context <- function(run_dir,payload_args,output_paths,panel_pat
   check(payload_args)
   for (key in c('run_id','generated_at')) if (!is.character(payload_args[[key]]) || length(payload_args[[key]])!=1 || is.na(payload_args[[key]])) stop('Invalid run identity',call.=FALSE)
   context <- list(schema_version=1L,registry_version=1L,provenance='csv_rehydrated',run_id=payload_args$run_id,generated_at=payload_args$generated_at,
-                  bindings=bindings,table_schemas=schema_metadata,query_template=atlas_query_template_context(payload_args),
+                  bindings=bindings,binding_files=binding_files,table_schemas=schema_metadata,query_template=atlas_query_template_context(payload_args),
                   limits=list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes))
   path <- atlas_confined_path(run,'outputs/atlas_build_context.json')
   jsonlite::write_json(context,path,auto_unbox=TRUE,pretty=TRUE,null='null',na='null')
@@ -155,6 +219,11 @@ atlas_read_build_context <- function(run_dir,registry) {
   if (!identical(x$schema_version,1L) || !identical(x$registry_version,1L)) stop('Unsupported build context version',call.=FALSE)
   ids <- vapply(registry$artifacts,function(s)s$id,character(1))
   if (any(!unlist(x$bindings,use.names=FALSE) %in% ids) || anyDuplicated(unlist(x$bindings))) stop('Invalid build context bindings',call.=FALSE)
+  for(id in names(x$binding_files)) {
+    spec <- registry$artifacts[[match(id,ids)]]
+    if(is.null(spec)) stop('Unknown selected aggregate binding',call.=FALSE)
+    atlas_bound_source_file(spec,x)
+  }
   x
 }
 
@@ -164,7 +233,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.') {
   for (spec in registry$artifacts) {
     if (!spec$id %in% unlist(context$bindings,use.names=FALSE)) next
     if (!length(spec$arg_path)) stop('Invalid clinical input binding',call.=FALSE)
-    frame <- atlas_read_registered_csv(atlas_confined_path(run_dir,spec$source_file),spec,registry$input_max_bytes)
+    frame <- atlas_read_registered_csv(atlas_confined_path(run_dir,atlas_bound_source_file(spec,context)),spec,registry$input_max_bytes)
     args <- atlas_evidence_set(args,unlist(spec$arg_path,use.names=FALSE),frame)
   }
   required <- vapply(Filter(function(s)isTRUE(s$required) && length(s$arg_path),registry$artifacts),function(s)s$id,character(1))
@@ -239,7 +308,7 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
   required <- unlist(context$bindings,use.names=FALSE)
   for(spec in registry$artifacts) {
     resource <- isTRUE(spec$resource); base <- if(resource) project_root else run_dir
-    file <- if(!is.null(base)) atlas_confined_path(base,spec$source_file) else NULL
+    file <- if(!is.null(base)) atlas_confined_path(base,if(resource) spec$source_file else atlas_bound_source_file(spec,context)) else NULL
     rows <- list(); status <- 'not_produced'; reason <- 'Output not produced'; count <- NULL; complete <- FALSE
     provenance <- if(resource) 'project_reference' else if(!is.null(run_dir)) 'csv_run' else 'snapshot_only'
     if(!is.null(file) && file.exists(file)) {
