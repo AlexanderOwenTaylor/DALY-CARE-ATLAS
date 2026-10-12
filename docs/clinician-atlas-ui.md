@@ -415,6 +415,24 @@ source-only and unscoped table browsing retain the generic reader. Both HTTP and
 offline file use continue to use the existing bounded table parts; no Clinical
 core or extra dictionary download is needed for a field arrival.
 
+### Medication fields in Treatment
+
+Treatment places the existing SP medication-action and medication-order sources
+first, with selected action/status, time and ATC field links. Additional selected
+dose, unit, route and pending-order fields are available in native disclosures.
+Each name links to its exact source/field profile in Data tables; the two ATC
+fields remain separate. These choices are discovery aids, not a complete or
+validated medication-exposure definition. Action records do not alone establish
+a delivered dose, and orders do not establish administration.
+
+Readable labels require unanimous valid exact dictionary definitions. Missing
+profiles remain explicitly unlinked; protected and differing publication states
+stay visible. Duplicate profiles are neither merged nor reduced to a preferred
+row. The Treatment list does not preview values, statistics, units or dates.
+Source details retain the existing source facts, and all other treatment layers
+and original technical sections remain available. Source years/regions actions
+retain their exact source and delegate coverage interpretation to Data tables.
+
 ### Optional local export checks and benchmarks
 
 Historical export-to-export checks are optional. Set

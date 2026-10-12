@@ -1398,6 +1398,21 @@
       .home-actions,.registry-actions { gap: 5px; }
       .home-actions button,.registry-actions button { font-size: 12px; padding: 6px 9px; }
     }
+    .treatment-medication-discovery { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px; }
+    .treatment-discovery { min-width:0; }
+    .treatment-discovery h3,.treatment-discovery p { margin:0 0 6px; }
+    .treatment-discovery code { overflow-wrap:anywhere; }
+    .treatment-selected-fields { list-style:none;margin:0;padding:0; }
+    .treatment-selected-fields li { padding:2px 0;overflow-wrap:anywhere; }
+    .treatment-field-identity a,.treatment-field-identity > span { display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;line-height:1.3; }
+    .treatment-field-identity a { min-height:44px; }
+    .treatment-field-identity code { font-size:12px;line-height:1.3; }
+    .treatment-field-note { display:block;font-size:12px;color:var(--muted); }
+    .treatment-discovery > details > summary { min-height:44px;align-content:center;cursor:pointer; }
+    .treatment-discovery > .source-evidence-links { display:flex;flex-wrap:wrap;gap:4px 16px; }
+    .treatment-discovery > .source-evidence-links a,.treatment-discovery > .source-evidence-links button { min-height:44px;display:inline-flex;align-items:center; }
+    .treatment-discovery .grid { grid-template-columns:minmax(0,1fr); }
+    @media (max-width:700px) { .treatment-medication-discovery { grid-template-columns:minmax(0,1fr); } }
   </style>
 
 </head>
@@ -1998,7 +2013,7 @@
     </section>
 
     <section class="tab-page" id="tab-treatment">
-      <div class="panel"><div class="panel-head"><h2 class="panel-title">Treatment evidence review</h2><p class="panel-sub">Clinician-facing review of registry treatment fields, treatment plans, administered/ordered medicine, ATC medicines, SKS procedure signals, SMR medicine, and Epikur treatment metadata.</p></div><div class="panel-body"><div id="treatment-dashboard"></div></div></div>
+      <div class="panel"><div class="panel-head"><h2 class="panel-title">Treatment data</h2><p class="panel-sub">Explore medication fields and other treatment sources.</p></div><div class="panel-body"><div id="treatment-dashboard"></div></div></div>
     </section>
 
     <section class="tab-page" id="tab-laboratory">
@@ -6468,7 +6483,7 @@
           return ctx("sp_plan", "SP treatment plans", "violet", "Treatment plan, protocol, cycle, goal, or planned-treatment metadata; not confirmed administration.");
         }
         if (layer === 'sp_administered') {
-          return ctx("sp_administered", "SP administered medication", "blue", "EHR medication-administration evidence, including administered ATC/name/route/time when present.");
+          return ctx("sp_administered", "SP administered medication", "blue", "EHR medication action records do not alone establish a delivered dose.");
         }
         if (layer === 'sp_ordered') {
           return ctx("sp_ordered", "SP ordered medication", "green", "EHR ordered-medication or prescription-like order evidence; not confirmed administration.");
@@ -6593,6 +6608,58 @@
           </article>
         `).join("")}</div>`;
       }
+      function treatmentDiscoverySource(row, contextId) {
+        const source = row.table_name || row.source_name;
+        const contexts = {SP_AdministreretMedicin:'sp_administered',SP_OrdineretMedicin:'sp_ordered'};
+        if (!Object.prototype.hasOwnProperty.call(contexts,source) || contexts[source] !== contextId || treatmentSourceContext(row).id !== contextId) return '';
+        return [row.table_name,row.source_name,row.object_name].every(value => value === undefined || value === null || value === '' || value === source) ? source : '';
+      }
+      function treatmentDiscoveryLabel(source, field) {
+        const definitions = clinicalDictionaryRows.filter(row => row.kind === 'field' && row.system === source && row.code === field);
+        if (!definitions.length || definitions.some(row => typeof row.label !== 'string' || !row.label.trim())) return field;
+        const labels = [...new Set(definitions.map(row => row.label))];
+        return labels.length === 1 ? labels[0] : field;
+      }
+      function treatmentDiscoveryFieldEvidence(source, field) {
+        const profiles = columnRows.filter(row => row.table_name === source && row.column_name === field);
+        const notes = [];
+        let publicationDetails = false;
+        if (!profiles.length) notes.push('No published profile in this export');
+        if (profiles.length > 1) notes.push(`${profiles.length} profiles`);
+        // Compare all supplied publication dimensions; never make one profile canonical.
+        const keys = ['numeric_privacy_status','availability_privacy_status','value_privacy_status','count_privacy_status','date_privacy_status'];
+        const states = profiles.map(row => keys.map(key => row[key] ?? '').concat(String(row.is_sensitive ?? '').toLowerCase() === 'true' || row.profile_kind === 'sensitive' ? 'protected_field' : ''));
+        if (new Set(states.map(state => JSON.stringify(state))).size > 1) notes.push('Publication states differ; inspect each profile');
+        else if (states.some(state => state.includes('protected_field'))) notes.push('Protected field');
+        else if (states.some(state => state.some(value => value !== '' && value !== 'eligible_stored_summary'))) publicationDetails = true;
+        return {profiles,notes,publicationDetails};
+      }
+      function renderTreatmentDiscoveryField(source, field, evidence) {
+        const {profiles,notes} = evidence || treatmentDiscoveryFieldEvidence(source,field);
+        const label = treatmentDiscoveryLabel(source,field);
+        const query = new URLSearchParams({view:'fields',table:'column_profiles',source,field});
+        const name = `${escapeHtml(label)}${label !== field ? `<code>${escapeHtml(field)}</code>` : ''}`;
+        const identity = profiles.length ? `<a href="DALYCARE_outputs.html?${escapeHtml(query.toString())}">${name}</a>` : `<span>${name}</span>`;
+        return `<li data-treatment-field="${escapeHtml(field)}"><div class="treatment-field-identity">${identity}</div>${notes.length ? `<span class="treatment-field-note">${escapeHtml(notes.join(' · '))}</span>` : ''}</li>`;
+      }
+      function renderTreatmentDiscoverySource(source, rows, context) {
+        const fields = source === 'SP_AdministreretMedicin' ? ['mar_action_c','taken_time','atc','sig','zc_med_unit_name','zc_admin_route_name'] : ['order_status_c','order_start_time','atc','is_pending_ord_yn','hv_discrete_dose'];
+        const role = source === 'SP_AdministreretMedicin' ? 'Medication action records do not establish a delivered dose.' : 'Medication orders do not establish administration.';
+        const evidence = new Map(fields.map(field => [field,treatmentDiscoveryFieldEvidence(source,field)]));
+        const list = selected => `<ul class="treatment-selected-fields">${selected.map(field => renderTreatmentDiscoveryField(source,field,evidence.get(field))).join('')}</ul>`;
+        const publication = [...evidence.values()].some(item => item.publicationDetails) ? '<p class="mini treatment-publication-note">Field links show recorded availability and publication limits.</p>' : '';
+        return `<section class="panel-section treatment-discovery" data-treatment-source="${escapeHtml(source)}"><h3>${escapeHtml(context.label)}</h3><p class="term-raw"><code>${escapeHtml(source)}</code></p><p class="mini">${role}</p><p class="mini">Selected fields</p>${list(fields.slice(0,3))}${publication}${sourceEvidenceLinks(source)}<details><summary>Additional selected fields (${fields.length - 3})</summary>${list(fields.slice(3))}</details><details><summary>Source details${rows.length > 1 ? ` · ${rows.length} supplied source entries` : ''}</summary>${renderTreatmentSourceCards(rows,context.label)}</details></section>`;
+      }
+      function renderTreatmentPrimaryGroups(groups) {
+        const priority = ['sp_administered','sp_ordered'];
+        const ordinary = ({context,rows}) => `<section class="panel-section"><h3>${escapeHtml(context.label)}</h3><p class="mini">${escapeHtml(context.description)}</p>${renderTreatmentSourceCards(rows,context.label)}</section>`;
+        const promoted = priority.flatMap(id => groups.filter(group => group.context.id === id)).map(group => {
+          const eligible = group.rows.filter(row => treatmentDiscoverySource(row,group.context.id));
+          const fallback = group.rows.filter(row => !treatmentDiscoverySource(row,group.context.id));
+          return (eligible.length ? renderTreatmentDiscoverySource(treatmentDiscoverySource(eligible[0],group.context.id),eligible,group.context) : '') + (fallback.length ? ordinary({context:group.context,rows:fallback}) : '');
+        }).join('');
+        return (promoted ? `<div class="treatment-medication-discovery">${promoted}</div>` : '') + groups.filter(group => !priority.includes(group.context.id)).map(ordinary).join('');
+      }
       function renderTreatmentCodeSection(title, codeRows, tone, empty) {
         if (!codeRows.length) return `<div class="empty">Semantic code mappings are not included for this section.${observedRowsWithheld(panels.mm_treatment_code_counts) ? ' Observed treatment code frequencies are withheld in this snapshot.' : ''} <button class="concept-link-button" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-codes">Browse reference codes and clinical terms →</button></div>`;
         const rows = treatmentBarRows(codeRows).slice(0, 12);
@@ -6645,8 +6712,7 @@
         sources.forEach(row => { const context = treatmentSourceContext(row); if (!sourceGroups.has(context.id)) sourceGroups.set(context.id,{context,rows:[]}); sourceGroups.get(context.id).rows.push(row); });
         return `
           <div class="dashboard-grid treatment-dashboard">
-            <p class="mini">Inspect ${sources.length} documented sources by evidence layer. Plans, prescriptions, administrations, registry indicators and procedures support different exposure questions; source counts do not establish delivered treatment or treatment effects.</p>
-            ${[...sourceGroups.values()].map(({context,rows}) => `<section class="panel-section"><h3>${escapeHtml(context.label)}</h3><p class="mini">${escapeHtml(context.description)}</p>${renderTreatmentSourceCards(rows,context.label)}</section>`).join('')}
+            ${renderTreatmentPrimaryGroups([...sourceGroups.values()])}
             ${renderSectionCard("Treatment codes in this export", renderObservedTreatmentCodes() + renderTermHelp(["ASCT","HDT","CIT","BTK","ATC","SKS"]), "green")}
             <details class="lineage-block"><summary>Code mappings, other treatment signals and technical lineage</summary>
             ${renderSectionCard("Treatment source availability matrix", `
