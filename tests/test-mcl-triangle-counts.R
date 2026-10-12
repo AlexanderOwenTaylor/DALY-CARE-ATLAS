@@ -6,7 +6,7 @@ source(file.path(root, "R", "mcl_triangle_counts.R"))
 expect_file(file.path(root, "clinical_questions", "mcl_triangle_count_definitions.yml"))
 expect_file(file.path(root, "config", "mcl_triangle_person_date_mapping.tsv"))
 expect_file(file.path(root, "config", "mcl_triangle_count_value_mappings.tsv"))
-expect_file(file.path(root, "RUN_MCL_TRIANGLE_COUNTS.R"))
+expect_file(file.path(root, "scripts", "source_mcl_triangle_counts.R"))
 expect_file(file.path(root, "scripts", "source_mcl_triangle_counts.R"))
 
 full_atlas_zip <- Sys.getenv("MCL_COUNT_FULL_ATLAS_ZIP", "")
@@ -1396,7 +1396,7 @@ expect_equal(prod_no_db$execution_summary$db_connection_attempted[[1]], TRUE, "P
 expect_true(any(prod_no_db$data_point_counts$count_status == "production_aggregate_failed_credentials_unavailable"), "Production mode without credentials should fail as production mode, not silently fall back to plan.")
 expect_false(any(prod_no_db$data_point_counts$count_mode == "plan"), "Production mode should not write plan-mode count rows.")
 
-runner <- file.path(root, "RUN_MCL_TRIANGLE_COUNTS.R")
+runner <- file.path(root, "scripts", "source_mcl_triangle_counts.R")
 sourceable <- file.path(root, "scripts", "source_mcl_triangle_counts.R")
 combined <- paste(readLines(runner, warn = FALSE), readLines(sourceable, warn = FALSE), collapse = "\n")
 expect_false(grepl("run_atlas\\s*\\(|RUN_DALYCARE_ATLAS|scripts/run_atlas[.]R|R/run_atlas[.]R", combined, ignore.case = TRUE, perl = TRUE), "One-click count runner must not call or source the full atlas runner.")
@@ -1407,7 +1407,7 @@ env <- new.env(parent = globalenv())
 env$MCL_COUNT_MODE <- "plan"
 env$MCL_COUNT_PROJECT_ROOT <- root
 env$MCL_COUNT_OUTPUTS_DIR <- runner_dir
-runner_console <- capture.output(sys.source(runner, envir = env))
+runner_console <- capture.output(source_advanced_entry(runner, envir = env))
 expect_file(file.path(runner_dir, "mcl_triangle_count_query_templates.sql"))
 expect_file(file.path(runner_dir, "mcl_triangle_data_point_counts.csv"))
 expect_file(file.path(runner_dir, "mcl_triangle_execution_summary.csv"))
@@ -1426,7 +1426,7 @@ env_prod$MCL_COUNT_PROJECT_ROOT <- root
 invisible(file.copy(file.path(profile_dir, "atlas_columns.csv"), file.path(runner_prod_dir, "atlas_columns.csv"), overwrite = TRUE))
 invisible(file.copy(file.path(profile_dir, "mcl_triangle_variable_inventory.csv"), file.path(runner_prod_dir, "mcl_triangle_variable_inventory.csv"), overwrite = TRUE))
 env_prod$MCL_COUNT_OUTPUTS_DIR <- runner_prod_dir
-runner_prod_console <- capture.output(sys.source(runner, envir = env_prod))
+runner_prod_console <- capture.output(source_advanced_entry(runner, envir = env_prod))
 runner_prod_counts <- read_delimited_file(file.path(runner_prod_dir, "mcl_triangle_data_point_counts.csv"))
 expect_file(file.path(runner_prod_dir, "mcl_triangle_execution_summary.csv"))
 expect_true(all(runner_prod_counts$count_mode == "production_aggregate"), "One-click runner should respect pre-set production_aggregate mode.")

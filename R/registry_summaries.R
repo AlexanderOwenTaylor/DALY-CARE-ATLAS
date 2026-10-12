@@ -39,10 +39,18 @@ registry_summary_row <- function(spec, status, k) {
   out
 }
 
-# Private operator mapping: no source-column heuristics or row-count fallback.
+# Exact defaults from legacy registry definitions and the archived
+# 20260831_211803-p3532373 column metadata (patientid, int4, sensitive).
+# A supplied private mapping is authoritative, including invalid/disabled rows.
+# No source-column heuristics or row-count fallback.
 registry_summary_person_key <- function(table_name, column_names) {
   path <- Sys.getenv("DALYCARE_REGISTRY_PERSON_KEYS_FILE", "")
-  if (!nzchar(path) || !file.exists(path)) return(list(status="needs_person_key", key=NULL))
+  if (!nzchar(path)) {
+    if (!table_name %in% c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL")) return(list(status="needs_person_key", key=NULL))
+    if (!"patientid" %in% column_names) return(list(status="missing_person_key", key=NULL))
+    return(list(status="ok", key="patientid"))
+  }
+  if (!file.exists(path)) return(list(status="needs_person_key", key=NULL))
   mapping <- tryCatch(read.csv(path, colClasses="character", check.names=FALSE, stringsAsFactors=FALSE), error=function(e) NULL)
   if (is.null(mapping) || !all(c("table_name", "person_key", "reviewed") %in% names(mapping))) return(list(status="needs_person_key", key=NULL))
   mapping <- mapping[!is.na(mapping$table_name) & mapping$table_name == table_name, , drop=FALSE]

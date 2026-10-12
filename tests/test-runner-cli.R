@@ -20,7 +20,7 @@ expect_equal(cli_env$find_project_root(), root, "Sourced runner should infer the
 source_message <- capture.output(cli_env$run_atlas_source_message())
 expect_true(any(grepl("runner loaded", source_message, fixed = TRUE)), "Source message should confirm the runner loaded.")
 expect_true(any(grepl("run_atlas_from_source", source_message, fixed = TRUE)), "Source message should show the R-session command.")
-expect_equal(cli_env$default_source_map(root), "config/source-map.dalycare.tsv", "Default source map should prefer the DALY-CARE preset.")
+expect_equal(cli_env$default_source_map(root), "config/source-map.dalycare73.tsv", "Default source map should prefer the DALY-CARE preset.")
 
 help_text <- capture.output(cli_env$run_atlas_cli(c("--help")))
 expect_true(any(grepl("Usage:", help_text, fixed = TRUE)), "CLI help should print usage.")
@@ -47,7 +47,7 @@ cli_env$run_atlas_from_source <- function(project_root, source_map_path, output_
   invisible(list(run_dir = "not-run", html = "not-run"))
 }
 capture.output(cli_env$run_atlas_cli(c(root)))
-expect_equal(one_arg_call$source_map_path, "config/source-map.dalycare.tsv", "One-argument project-root mode should infer the default source map.")
+expect_equal(one_arg_call$source_map_path, "config/source-map.dalycare73.tsv", "One-argument project-root mode should infer the default source map.")
 expect_equal(one_arg_call$output_root, "atlas_runs", "One-argument project-root mode should use the default output root.")
 expect_equal(one_arg_call$mode, "report", "One-argument project-root mode should use report mode.")
 

@@ -150,8 +150,8 @@ copy_project_artifact <- function(relative_path) {
 }
 
 project_artifacts <- c(
-  "RUN_KI67_FINDER.R",
-  "RUN_MCL_TRIANGLE_COUNTS.R",
+  "RUN_DALYCARE_ATLAS_73_SOURCE.R",
+  "config/source-map.dalycare73.tsv",
   "config/mcl_triangle_feasibility_concepts.tsv",
   "config/mcl_triangle_person_date_mapping.tsv",
   "config/mcl_triangle_count_value_mappings.tsv",
@@ -190,7 +190,22 @@ project_artifacts <- c(
   "tests/test-mcl-triangle-feasibility.R",
   "tests/test-mcl-triangle-evidence-filtering.R"
 )
+# Ship every runtime dependency of the single runner, including guarded registry
+# policy, templates, semantic/membership resources and internal CLI/rebuild APIs.
+project_artifacts <- unique(c(project_artifacts, "README.md", "DESCRIPTION", "NAMESPACE", "LICENSE",
+  unlist(lapply(c("R","config","inst","scripts","tests","clinical_questions"), function(dir)
+    list.files(file.path(project_root,dir), recursive=TRUE,full.names=TRUE)))))
+project_artifacts <- sub(paste0(project_root,"/"),"",gsub("\\\\","/",project_artifacts),fixed=TRUE)
 invisible(vapply(project_artifacts, copy_project_artifact, logical(1)))
+# Old input archives must not reintroduce retired executable launchers.
+retired <- c("RUN_DALYCARE_ATLAS.R","RUN_DALYCARE_ATLAS_48_SOURCE.R",
+  "RUN_DALYCARE_ATLAS_64_SOURCE.R","RUN_KI67_FINDER.R","RUN_MCL_TRIANGLE_COUNTS.R",
+  "inst/legacy/wommen_v06/RUN_CARTOGRAPHY_ATLAS.R")
+for (name in retired) {
+  path <- file.path(mock_dir,name)
+  if (file.exists(path)) unlink(path)
+}
+
 
 copy_mcl_triangle_count_outputs <- function(from, to) {
   if (!dir.exists(from) || !dir.exists(to)) return(invisible(FALSE))

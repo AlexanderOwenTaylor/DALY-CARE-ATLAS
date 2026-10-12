@@ -69,3 +69,12 @@ expect_equal <- function(x, y, message = NULL) {
 expect_file <- function(path) {
   expect_true(file.exists(path), paste("Expected file to exist:", path))
 }
+
+source_advanced_entry <- function(path, envir) {
+  key <- if (basename(path)=="source_ki67_finder.R") ".KI67_SOURCE_CONFIG" else ".MCL_COUNT_SOURCE_CONFIG"
+  config <- as.list(envir, all.names=TRUE)
+  old <- if (exists(key,envir=.GlobalEnv,inherits=FALSE)) get(key,envir=.GlobalEnv) else NULL
+  on.exit({if (is.null(old)) rm(list=key,envir=.GlobalEnv) else assign(key,old,envir=.GlobalEnv)},add=TRUE)
+  assign(key,config,envir=.GlobalEnv)
+  sys.source(path,envir=envir)
+}

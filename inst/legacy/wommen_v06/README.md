@@ -1,3 +1,7 @@
+The executable `RUN_CARTOGRAPHY_ATLAS.R` launcher has been retired and removed.
+Use the repository root `RUN_DALYCARE_ATLAS_73_SOURCE.R` for current runs.
+References below describe historical archive behavior and are not current instructions.
+
 # Legacy WoMMen V06 Cartography Reference
 
 This directory preserves selected WoMMen V06 cartography and atlas files as
@@ -9,7 +13,7 @@ aggregate-only output guarantees and test coverage.
 
 Included reference material:
 
-- `RUN_CARTOGRAPHY_ATLAS.R`
+- Historical `RUN_CARTOGRAPHY_ATLAS.R` (removed)
 - `WoMMen_code/code/000_dalycare_cartography_consolidated.R`
 - `WoMMen_code/code/001_dalycare_atlas_updater.R`
 - `site/DALYCARE_atlas_AOT_V35.html`

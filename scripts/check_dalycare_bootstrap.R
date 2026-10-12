@@ -1,7 +1,7 @@
 args <- commandArgs(trailingOnly = TRUE)
 project_root <- if (length(args) >= 1L) args[[1]] else "."
 project_root <- normalizePath(project_root, winslash = "/", mustWork = FALSE)
-source_map_path <- if (length(args) >= 2L) args[[2]] else file.path(project_root, "config", "source-map.dalycare64.production.tsv")
+source_map_path <- if (length(args) >= 2L) args[[2]] else file.path(project_root, "config", "source-map.dalycare73.tsv")
 if (!grepl("^[A-Za-z]:|^/", source_map_path)) source_map_path <- file.path(project_root, source_map_path)
 
 source(file.path(project_root, "R", "utils.R"))
@@ -34,6 +34,9 @@ for (dir in required_dirs) {
 required_files <- c(
   "config/expected_dalycare_resources_64.tsv",
   "config/source-map.dalycare64.production.tsv",
+  "config/source-map.dalycare73.tsv",
+  "RUN_DALYCARE_ATLAS_73_SOURCE.R",
+  "inst/config/registry-summary-policy.json",
   "config/source-map.example.tsv",
   "R/source_reconciliation.R",
   "R/clinical_source_membership.R",
@@ -68,7 +71,15 @@ if (inherits(expected, "error")) {
   add("error", "expected_resources_not_64", paste("Expected-resource row count:", nrow(expected)))
 }
 
-production_map <- tryCatch(read_production_source_recovery_map(project_root, path = source_map_path), error = function(e) e)
+active_map <- tryCatch(read_source_map(source_map_path,project_root),error=function(e)e)
+if (inherits(active_map,"error")) {
+  add("error","active_source_map_invalid",conditionMessage(active_map))
+} else if (basename(source_map_path)=="source-map.dalycare73.tsv" && nrow(active_map)!=73L) {
+  add("error","active_source_map_not_73",paste("Active source entry count:",nrow(active_map)))
+} else {
+  add("ok","active_source_map_entries",paste("Active requested source entries:",nrow(active_map)))
+}
+production_map <- tryCatch(read_production_source_recovery_map(project_root), error = function(e) e)
 if (inherits(production_map, "error")) {
   add("error", "production_source_map_invalid", conditionMessage(production_map))
 } else {

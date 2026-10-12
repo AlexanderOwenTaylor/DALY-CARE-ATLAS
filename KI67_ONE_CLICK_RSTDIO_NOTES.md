@@ -1,3 +1,7 @@
+Current entry point: use `RUN_DALYCARE_ATLAS_73_SOURCE.R` for the automatic atlas.
+Standalone calls below are advanced APIs; explicitly set `KI67_PROJECT_ROOT` or
+`MCL_COUNT_PROJECT_ROOT` when sourcing them from another working directory.
+
 # Ki-67 One-Click RStudio Finder Notes
 
 ## How to run
@@ -5,7 +9,7 @@
 From the repository root in RStudio:
 
 ```r
-source("RUN_KI67_FINDER.R")
+source("scripts/source_ki67_finder.R")
 ```
 
 Default configuration:
@@ -24,13 +28,13 @@ Set any of these before sourcing to override them:
 
 ```r
 KI67_MODE <- "plan"
-source("RUN_KI67_FINDER.R")
+source("scripts/source_ki67_finder.R")
 ```
 
 ```r
 KI67_MODE <- "production_aggregate"
 KI67_FULL_SCAN <- TRUE
-source("RUN_KI67_FINDER.R")
+source("scripts/source_ki67_finder.R")
 ```
 
 ## What it writes

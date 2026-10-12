@@ -2,7 +2,7 @@ root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
 source(file.path(root, "tests", "helper.R"))
 source_ki67_test_runtime(root)
 
-runner <- file.path(root, "RUN_KI67_FINDER.R")
+runner <- file.path(root, "scripts", "source_ki67_finder.R")
 sourceable <- file.path(root, "scripts", "source_ki67_finder.R")
 expect_file(runner)
 expect_file(sourceable)
@@ -23,7 +23,7 @@ env$KI67_OUTPUTS_DIR <- plan_dir
 env$KI67_CANDIDATE_TABLES <- c("RKKP_LYFO")
 env$KI67_UPDATE_MCL <- FALSE
 env$KI67_FULL_SCAN <- FALSE
-sys.source(runner, envir = env)
+source_advanced_entry(runner, envir = env)
 expect_file(file.path(plan_dir, "ki67_db_search_plan.csv"))
 expect_file(file.path(plan_dir, "ki67_db_query_templates.sql"))
 expect_file(file.path(plan_dir, "ki67_found_locations.csv"))
@@ -39,7 +39,7 @@ env2$KI67_OUTPUTS_DIR <- prod_dir
 env2$KI67_CANDIDATE_TABLES <- c("pato")
 env2$KI67_UPDATE_MCL <- FALSE
 env2$KI67_FULL_SCAN <- FALSE
-sys.source(runner, envir = env2)
+source_advanced_entry(runner, envir = env2)
 expect_file(file.path(prod_dir, "ki67_db_aeki_code_counts.csv"))
 prod_counts <- read_delimited_file(file.path(prod_dir, "ki67_db_aeki_code_counts.csv"))
 expect_true(nrow(prod_counts) >= 0, "Production mode should fail safely or write aggregate counts without credentials.")
@@ -63,10 +63,11 @@ env3$KI67_OUTPUTS_DIR <- outside_out
 env3$KI67_CANDIDATE_TABLES <- c("RKKP_LYFO")
 env3$KI67_UPDATE_MCL <- FALSE
 env3$KI67_FULL_SCAN <- FALSE
-source(runner, local = env3)
+env3$KI67_PROJECT_ROOT <- root
+source_advanced_entry(runner, envir = env3)
 expect_equal(
   normalizePath(env3$KI67_PROJECT_ROOT, winslash = "/", mustWork = TRUE),
   root,
-  "Runner sourced from outside the repo should default KI67_PROJECT_ROOT to its own file location."
+  "Runner sourced from outside the repo should respect explicit KI67_PROJECT_ROOT for advanced standalone invocation."
 )
 expect_file(file.path(outside_out, "ki67_db_search_plan.csv"))

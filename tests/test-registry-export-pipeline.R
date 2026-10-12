@@ -6,10 +6,8 @@ dir.create(work,recursive=TRUE,showWarnings=FALSE)
 work <- normalizePath(work,winslash='/')
 policy <- jsonlite::fromJSON('inst/config/registry-summary-policy.json',simplifyVector=FALSE)
 sources <- c('RKKP_DaMyDa','RKKP_LYFO','RKKP_CLL')
-mapping <- data.frame(table_name=sources,person_key='patientid',reviewed=TRUE)
-keys <- file.path(work,'private-synthetic-keys.csv');write.csv(mapping,keys,row.names=FALSE)
-Sys.setenv(DALYCARE_REGISTRY_PERSON_KEYS_FILE=keys)
-source_map <- data.frame(table_name=sources,source_type='file',source='',priority=1:3,profile_mode='full',domain='RKKP',subdomain=c('DaMyDa','LYFO','CLL'),atlas_role='clinical_registry')
+Sys.unsetenv('DALYCARE_REGISTRY_PERSON_KEYS_FILE')
+source_map <- data.frame(table_name=sources,source_type='file',source='',priority=1:3,profile_mode='summary',domain='RKKP',subdomain=c('DaMyDa','LYFO','CLL'),atlas_role='clinical_registry')
 expected <- list()
 preferred <- list(
   c('Stadie','PB_Behandling_Bortezomib','PB_MaksimaleRespons','Reg_Haemoglobin'),
@@ -19,7 +17,9 @@ preferred <- list(
 for(i in seq_along(sources)) {
   fields <- Filter(function(f)f$table_name==sources[i],policy$fields)
   selected <- lapply(preferred[[i]],function(column) Filter(function(f) f$source_column==column,fields)[[1]])
+  withheld <- Filter(function(f) f$kind=='categorical' && !f$source_column %in% preferred[[i]] && length(f$categories)>=2L, fields)[[1]]
   x <- data.frame(patientid=sprintf('SYNTHETIC_PRIVATE_PERSON_%03d',1:90))
+  x[[withheld$source_column]] <- c(unlist(withheld$categories)[1],rep(unlist(withheld$categories)[2],89))
   for(f in selected) {
     values <- if(f$kind=='numeric') as.character(rep(6:11,each=10)) else rep(unlist(f$categories)[1:2],each=30)
     x[[f$source_column]] <- c(values,rep(NA_character_,10),rep(if(f$kind=='numeric') '-999' else 'SYNTHETIC_FORBIDDEN_CATEGORY',10),rep(values[1],10))
@@ -33,7 +33,24 @@ for(i in seq_along(sources)) {
   write.csv(x,source_map$source[i],row.names=FALSE,na='')
 }
 map_path <- file.path(work,'source-map.tsv');write.table(source_map,map_path,sep='\t',row.names=FALSE,quote=FALSE)
-run <- run_atlas(root,map_path,file.path(work,'runs'),'strict')
+Sys.setenv(DALYCARE_ATLAS_SOURCE_MAP=map_path,DALYCARE_ATLAS_OUTPUT_ROOT=file.path(work,'runs'),DALYCARE_ATLAS_MODE='strict')
+outside <- file.path(work,'outside');dir.create(outside,showWarnings=FALSE)
+setwd(outside)
+source(file.path(root,'RUN_DALYCARE_ATLAS_73_SOURCE.R'),local=new.env(parent=.GlobalEnv))
+setwd(root)
+expect_false(dalycare_atlas_failed)
+run <- dalycare_atlas_result
+Sys.unsetenv(c('DALYCARE_ATLAS_SOURCE_MAP','DALYCARE_ATLAS_OUTPUT_ROOT','DALYCARE_ATLAS_MODE'))
+expect_file(file.path(run$run_dir,'outputs/atlas_completion_summary.csv'))
+expect_file(file.path(run$run_dir,'outputs/atlas_registry_completion.csv'))
+completion <- read.csv(file.path(run$run_dir,'outputs/atlas_registry_completion.csv'))
+expect_true(all(completion$published_fields==4L))
+expect_true(all(completion$field_unavailable_fields>0))
+expect_true(all(completion$privacy_withheld_fields==1L))
+expect_true(all(grepl('Privacy gates',completion$action,fixed=TRUE)))
+manifest <- read.csv(file.path(run$run_dir,'outputs/output_manifest.csv'),stringsAsFactors=FALSE)
+# Mutable completion state is intentionally outside the immutable build context.
+expect_false(any(grepl('atlas_(completion_summary|registry_completion)[.]csv',as.character(unlist(manifest)))))
 writeLines(run$run_dir,file.path(work,'latest-run.txt'))
 csv <- file.path(run$run_dir,'outputs/panels/registry_field_summaries.csv')
 expect_file(csv)
@@ -73,4 +90,4 @@ raised <- atlas_payload_from_run_outputs(run$run_dir,root)$payload$panels$regist
 expect_false(any(vapply(raised,function(r)r$summary_status=='published',logical(1))))
 expect_true(all(vapply(raised,function(r)is.null(r$denominator_n) && is.null(r$mean) && r$category_counts_json=='[]',logical(1))))
 Sys.unsetenv(c('DALYCARE_MIN_CELL_COUNT','DALYCARE_REGISTRY_PERSON_KEYS_FILE'))
-cat('Three-registry runner, typed CSV round trip, R/Python bundles, repeated guards, byte absence and raised-threshold acceptance passed\n')
+cat('Automatic one-click three-registry runner, typed CSV round trip, R/Python bundles, repeated guards, byte absence and raised-threshold acceptance passed\n')

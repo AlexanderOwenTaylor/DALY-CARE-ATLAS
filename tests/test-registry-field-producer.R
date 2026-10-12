@@ -19,7 +19,7 @@ field <- function(rows,col) rows[rows$source_column==col,,drop=FALSE]
 status <- function(rows,col) field(rows,col)$summary_status[1]
 base <- data.frame(secret_person=sprintf("private-%03d",1:40),Stadie=rep(c("I","II"),each=20),Reg_Haemoglobin=rep(c(1,2,3,4),each=10),stringsAsFactors=FALSE)
 missing <- registry_field_summaries(base,"RKKP_DaMyDa",root)
-expect_equal(status(missing,"Stadie"),"needs_person_key")
+expect_equal(status(missing,"Stadie"),"missing_person_key")
 expect_true(all(is.na(field(missing,"Stadie")$denominator_n)))
 map <- tempfile(fileext=".csv")
 write.csv(data.frame(table_name=c("RKKP_DaMyDa","RKKP_LYFO","RKKP_CLL"),person_key="secret_person",reviewed="TRUE"),map,row.names=FALSE)
@@ -111,6 +111,14 @@ Sys.setenv(DALYCARE_REGISTRY_PERSON_KEYS_FILE=map,DALYCARE_MIN_CELL_COUNT="5")
 db <- dbi_registry_field_summaries(fixture_conn,'"cohort"',"RKKP_DaMyDa",c("secret_person","Stadie"),root)
 expect_equal(status(db,"Stadie"),"published")
 expect_equal(fixture_query_count,1L)
+# Standard patientid is automatic in the DB producer; only grouped counts return.
+Sys.unsetenv("DALYCARE_REGISTRY_PERSON_KEYS_FILE")
+before_default <- fixture_query_count
+automatic <- dbi_registry_field_summaries(fixture_conn,'"cohort"',"RKKP_DaMyDa",c("patientid","Stadie"),root)
+expect_equal(status(automatic,"Stadie"),"published")
+expect_equal(fixture_query_count,before_default+1L)
+expect_false(any(grepl("private-",as.character(unlist(automatic)),fixed=TRUE)))
+Sys.setenv(DALYCARE_REGISTRY_PERSON_KEYS_FILE=map)
 fixture_mode <- "missing_key"
 expect_equal(status(dbi_registry_field_summaries(fixture_conn,'"cohort"',"RKKP_DaMyDa",c("secret_person","Stadie"),root),"Stadie"),"missing_person_key")
 fixture_mode <- "cap"

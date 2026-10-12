@@ -1,3 +1,7 @@
+Historical archive notes. The `RUN_CARTOGRAPHY_ATLAS.R` executable is retired
+and removed; use the root `RUN_DALYCARE_ATLAS_73_SOURCE.R`. Commands below are
+historical examples, not supported current entry points.
+
 # WoMMen / DALY-CARE single-source package — V06 (2026-04-28)
 
 This package consolidates the WoMMen / DALY-CARE pipeline under a single

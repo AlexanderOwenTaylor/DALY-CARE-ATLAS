@@ -17,6 +17,24 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   log_dir <- file.path(run_dir, "logs")
   dir_create(panel_dir)
   dir_create(log_dir)
+  # This is the actual attempt, even if it fails before source resolution.
+  options(dalycare.atlas.active_run_dir = normalizePath(run_dir, winslash="/", mustWork=FALSE))
+  run_completed <- FALSE
+  source_map <- NULL
+  sources <- NULL
+  panels <- list()
+  completion <- NULL
+  completion_summary_path <- file.path(output_dir, "atlas_completion_summary.csv")
+  registry_completion_path <- file.path(output_dir, "atlas_registry_completion.csv")
+  on.exit({
+    if (!run_completed) {
+      completed_sources <- safe_read_output_csv(file.path(output_dir,"atlas_sources.csv"), sources)
+      completion <- atlas_completion_report(source_map, completed_sources, panels$registry_field_summaries,
+        project_root, run_id, "failed")
+      write_csv(completion$summary, completion_summary_path)
+      write_csv(completion$registries, registry_completion_path)
+    }
+  }, add=TRUE)
 
   log_rows <- list()
   log_event <- function(level, table_name, message) {
@@ -547,6 +565,12 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   panels$registry_field_summaries <- registry_summary_final_guard(
     panels$registry_field_summaries, project_root, atlas_min_cell_count()
   )
+  completion <- atlas_completion_report(source_map, sources, panels$registry_field_summaries,
+    project_root, run_id, "building")
+  # Mutable attempt state is kept outside the immutable build-context manifest.
+  # Final status is written only after the site build succeeds.
+  write_csv(completion$summary, completion_summary_path)
+  write_csv(completion$registries, registry_completion_path)
   panel_paths <- list()
   for (panel_name in names(panels)) {
     panel_paths[[panel_name]] <- write_csv(panels[[panel_name]], file.path(panel_dir, paste0(panel_name, ".csv")))
@@ -713,13 +737,82 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   log_event("info", "", paste("Run summary:", run_summary_log_message(run_summary)))
   write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
 
+  completion <- atlas_completion_report(source_map, sources, panels$registry_field_summaries,
+    project_root, run_id, "complete")
+  write_csv(completion$summary, completion_summary_path)
+  write_csv(completion$registries, registry_completion_path)
+  run_completed <- TRUE
+
   invisible(list(
     run_id = run_id,
     run_dir = run_dir,
     manifest = manifest_path,
     html = site_paths$html,
-    payload = site_paths$payload
+    payload = site_paths$payload,
+    completion = completion,
+    completion_summary = completion_summary_path,
+    registry_completion = registry_completion_path
   ))
+}
+
+# Safe completion metadata: source/field inventory counts and controlled statuses.
+# Never include person keys, clinical values, SQL text, or raw query errors.
+atlas_completion_report <- function(source_map, sources, registry_rows, project_root,
+                                    run_id, build_status) {
+  expected <- if (is.data.frame(source_map)) nrow(source_map) else 0L
+  profiled <- skipped <- 0L
+  if (is.data.frame(sources) && nrow(sources) && "load_status" %in% names(sources)) {
+    profiled <- sum(sources$load_status == "ok", na.rm=TRUE)
+    skipped <- sum(sources$load_status %in% c("skipped", "skipped_risky_full_load", "special_manual", "embedded_fields", "known_unavailable", "embedded_fields_represented", "manual_file_not_available"), na.rm=TRUE)
+  }
+  missing <- max(0L, expected - profiled - skipped)
+  coverage <- if (is.null(source_map)) "unknown" else if (missing || skipped) "partial" else "complete"
+  summary <- data.frame(metric=c("run_id", "build_status", "coverage_status", "expected_sources",
+      "profiled_sources", "missing_sources", "skipped_sources"),
+    value=as.character(c(run_id, build_status, coverage, expected, profiled, missing, skipped)),
+    stringsAsFactors=FALSE)
+  policy <- registry_summary_policy(project_root)
+  policy_status <- if (length(policy)) "available" else "unavailable"
+  registries <- lapply(c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL"), function(table) {
+    specs <- Filter(function(spec) identical(spec$table_name,table), policy)
+    requested <- is.data.frame(source_map) && table %in% source_map$table_name
+    source <- if (is.data.frame(sources) && "table_name" %in% names(sources)) sources[sources$table_name==table,,drop=FALSE] else data.frame()
+    source_status <- if (!requested) "source_not_requested" else if (!nrow(source) || !any(source$load_status=="ok",na.rm=TRUE)) "source_unavailable" else if (all(source$profile_mode=="schema")) "schema_only" else "profiled"
+    rows <- if (is.data.frame(registry_rows) && nrow(registry_rows)) registry_rows[registry_rows$table_name==table,,drop=FALSE] else data.frame()
+    statuses <- if (nrow(rows)) rows$summary_status else character()
+    count <- function(states) as.integer(sum(statuses %in% states))
+    unavailable <- count("field_unavailable")
+    unassessed <- max(0L,length(specs)-length(unique(if(nrow(rows)) rows$source_column else character())))
+    reason <- if (policy_status=="unavailable") "Restore the required reviewed registry policy and JSON dependency." else if (source_status=="source_not_requested") "Select this exact registry in the source map." else if (source_status=="source_unavailable") "Review source resolution, access and memory diagnostics." else if (source_status=="schema_only") "Schema mode omits clinical summaries." else if (any(statuses %in% c("needs_person_key","missing_person_key"))) "Check the exact live patientid column or authoritative private mapping." else if (any(statuses %in% c("query_failed","resource_limit"))) "Review aggregate query and resource-budget diagnostics." else if (any(grepl("^withheld_",statuses))) "Privacy gates withhold ineligible fields." else if (unavailable || unassessed) "Some reviewed fields are absent or unassessed." else "All reviewed fields assessed; see field statuses."
+    data.frame(table_name=table,source_status=source_status,policy_status=policy_status,expected_fields=if(policy_status=="available") length(specs) else NA_integer_,
+      published_fields=count("published"),privacy_withheld_fields=count(c("withheld_small_group","withheld_constant","withheld_near_unique")),
+      field_unavailable_fields=unavailable,key_issue_fields=count(c("needs_person_key","missing_person_key")),
+      config_issue_fields=count("needs_person_key"),missing_key_fields=count("missing_person_key"),
+      query_issue_fields=count("query_failed"),budget_issue_fields=count("resource_limit"),
+      no_values_fields=count("no_values"),invalid_contract_fields=count("invalid_contract"),
+      unassessed_fields=unassessed,action=reason,stringsAsFactors=FALSE)
+  })
+  registries <- do.call(rbind,registries)
+  selected <- registries[registries$source_status!="source_not_requested",,drop=FALSE]
+  registry_coverage <- if (policy_status=="unavailable") "unknown" else if (!nrow(selected)) "not_requested" else if (
+    any(selected$source_status!="profiled" | selected$field_unavailable_fields>0 |
+      selected$key_issue_fields>0 | selected$query_issue_fields>0 | selected$budget_issue_fields>0 |
+      selected$invalid_contract_fields>0 | selected$unassessed_fields>0)) "partial" else "complete"
+  summary <- rbind(summary,data.frame(metric="registry_coverage_status",value=registry_coverage,stringsAsFactors=FALSE))
+  list(summary=summary,registries=registries)
+}
+
+atlas_print_completion_report <- function(completion) {
+  values <- stats::setNames(completion$summary$value,completion$summary$metric)
+  cat("Build status: ", values[["build_status"]], "; source coverage: ", values[["coverage_status"]], "\n", sep="")
+  cat("Reviewed registry-field coverage: ", values[["registry_coverage_status"]], "\n", sep="")
+  cat("Sources expected/profiled/missing/skipped: ", paste(values[c("expected_sources","profiled_sources","missing_sources","skipped_sources")],collapse="/"), "\n", sep="")
+  for (i in seq_len(nrow(completion$registries))) {
+    r <- completion$registries[i,]
+    cat(r$table_name, ": ", r$source_status, "; fields published/privacy withheld/unavailable/key/query/budget/unassessed: ",
+      paste(unlist(r[c("published_fields","privacy_withheld_fields","field_unavailable_fields","key_issue_fields","query_issue_fields","budget_issue_fields","unassessed_fields")]),collapse="/"),
+      ". ", r$action, "\n",sep="")
+  }
 }
 
 atlas_allow_empty_live_run <- function() {

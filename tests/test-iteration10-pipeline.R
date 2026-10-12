@@ -51,7 +51,7 @@ accept_site <- function(run,project_root=root,transport_version=2L) {
 # Execute the real RStudio one-click entry, retaining its public global result.
 Sys.unsetenv('DALYCARE_ATLAS_SOURCE_ONLY')
 Sys.setenv(DALYCARE_ATLAS_SOURCE_MAP='config/source-map.example.tsv',DALYCARE_ATLAS_OUTPUT_ROOT=file.path(work,'one-click'),DALYCARE_ATLAS_MODE='report')
-sys.source(file.path(root,'RUN_DALYCARE_ATLAS.R'),envir=new.env(parent=.GlobalEnv))
+sys.source(file.path(root,'RUN_DALYCARE_ATLAS_73_SOURCE.R'),envir=new.env(parent=.GlobalEnv))
 expect_false(isTRUE(get('dalycare_atlas_failed',envir=.GlobalEnv)))
 one <- get('dalycare_atlas_result',envir=.GlobalEnv);accepted <- accept_site(one$run_dir)
 # Actual standalone CLI, not a mocked helper call.
@@ -148,7 +148,7 @@ resources <- c('DALYCARE_atlas.html','DALYCARE_entry.html','DALYCARE_outputs.htm
 for(name in resources) expect_true(file.exists(system.file('templates',name,package='dalycareatlas')))
 expect_true(file.exists(system.file('config','public-output-registry.json',package='dalycareatlas')))
 expect_true(file.exists(system.file('config','clinical-source-membership.json',package='dalycareatlas')))
-for(name in c('registry-summary-policy.json','public-measurement-policy.csv')) {
+for(name in c('registry-summary-policy.json','public-measurement-policy.csv','source-map.dalycare73.tsv')) {
   expect_true(file.exists(system.file('config',name,package='dalycareatlas')))
 }
 installed <- system.file('templates','DALYCARE_entry.html',package='dalycareatlas')

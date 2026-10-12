@@ -8,57 +8,80 @@ not emit patient-level rows, CPR values, patient identifiers, or raw row samples
 
 ## Quick Start
 
+Update or unpack the complete repository/package, then run this in RStudio Console:
+
+```r
+source("RUN_DALYCARE_ATLAS_73_SOURCE.R")
+```
+
+The runner builds the current run's CSV evidence and HTML/JSON/JavaScript site
+automatically and prints its output directory. In DALY-CARE production it detects
+`/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R` when available;
+set `DALYCARE_BOOTSTRAP_PATH` only for a nonstandard loader.
+
+Its default is `config/source-map.dalycare73.tsv`: **73 source-map entries**, including
+canonical resources, derived/helper rows and special/manual entries. This is distinct
+from the historical 64-resource reconciliation inventory and does not imply 73
+independently accessible physical tables. The console names the selected map and
+actual entry count; `DALYCARE_ATLAS_SOURCE_MAP` remains an authoritative override.
+The former 48/64/default, standalone Ki-67/MCL root launchers and bundled legacy
+cartography launcher are retired. The current runner already invokes the existing
+Ki-67 discovery, pathology and MCL count machinery.
+
+`summary` mode produces detailed guarded registry distributions and numeric summaries,
+code/domain coverage and numeric profiles through existing source-aware producers.
+It does not require generic `full` mode value-frequency exports. The new map preserves
+all reviewed modes and source identities from the restored map: active clinical
+sources use `summary`, while genuine manual/embedded/schema-only entries retain
+those restrictions. `schema` omits clinical summaries; `full` is an advanced explicit
+preset with legacy frequency producers. Memory, full-load and query budgets remain
+in force in every mode. No free-text output is enabled by this consolidation.
+
+Every actual attempt writes `outputs/atlas_completion_summary.csv` and
+`outputs/atlas_registry_completion.csv`, including early runtime failures after a
+run directory exists. These safe reports distinguish site-build status, source
+coverage and reviewed registry-field coverage, and count published, privacy-withheld,
+absent-field, missing-key/configuration, query and budget statuses. A wholly missing
+registry is explicit. Successful HTML generation can coexist with partial coverage;
+privacy withholding does not fabricate a result. These mutable attempt reports remain
+outside the immutable build context/manifest so final state updates cannot invalidate
+export checksums. A failed rerun clears the previous
+`dalycare_atlas_result` and points to the actual attempt rather than an older output.
+
+### Advanced and development entry points
+
 ```sh
 Rscript scripts/run_tests.R
+Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS
+Rscript RUN_DALYCARE_ATLAS_73_SOURCE.R
+# Explicit fixture/custom-map invocation:
 Rscript scripts/run_atlas.R . config/source-map.example.tsv atlas_runs report
 ```
 
-From an interactive R session or RStudio, source the runner first, then call the
-source-friendly helper:
+For a custom-map interactive run, `source("scripts/run_atlas.R")` exposes
+`run_atlas_from_source(source_map_path="config/source-map.example.tsv")`.
+This is the underlying configurable API used by the single runner.
+
+Advanced standalone invocations remain available through the internal sourceable APIs.
+They preserve all prior configuration options, including optional text scanning and
+atlas-output ingestion; defaults stay unchanged. Set configuration in `.GlobalEnv`
+(or provide the complete `.KI67_SOURCE_CONFIG` / `.MCL_COUNT_SOURCE_CONFIG` list), then:
 
 ```r
-source("scripts/run_atlas.R")
-result <- run_atlas_from_source(
-  source_map_path = "config/source-map.example.tsv",
-  output_root = "atlas_runs",
-  mode = "report"
-)
+KI67_PROJECT_ROOT <- "/path/to/DALY-CARE-ATLAS"
+KI67_MODE <- "plan"                 # or production_aggregate
+KI67_OUTPUTS_DIR <- "/secure/ki67-outputs"
+source(file.path(KI67_PROJECT_ROOT, "scripts/source_ki67_finder.R"))
+
+MCL_COUNT_PROJECT_ROOT <- "/path/to/DALY-CARE-ATLAS"
+MCL_COUNT_MODE <- "plan"            # or production_aggregate
+MCL_COUNT_OUTPUTS_DIR <- "/secure/mcl-outputs"
+source(file.path(MCL_COUNT_PROJECT_ROOT, "scripts/source_mcl_triangle_counts.R"))
 ```
 
-In DALY-CARE production, the atlas now auto-detects the standard loader at
-`/ngc/projects2/dalyca_r/clean_r/load_dalycare_package.R` when it exists. You
-only need `DALYCARE_BOOTSTRAP_PATH` when using a non-standard loader.
-
-From RStudio Console:
-
-```r
-source("scripts/run_atlas.R")
-result <- run_atlas_from_source(source_map_path = "config/source-map.dalycare64.production.tsv")
-```
-
-From a terminal:
-
-```sh
-Rscript scripts/check_dalycare_bootstrap.R /path/to/DALY-CARE-ATLAS
-Rscript scripts/run_atlas.R /path/to/DALY-CARE-ATLAS config/source-map.dalycare64.production.tsv atlas_runs report
-```
-
-For one-click RStudio runs, use the explicit runner matching the validation
-goal:
-
-```r
-# 48-source compatibility run
-source("RUN_DALYCARE_ATLAS_48_SOURCE.R")
-
-# 64-resource restored validation run. The restored map may include more than
-# 64 source-map rows because canonical resources, derived views, and helper rows
-# are represented separately.
-source("RUN_DALYCARE_ATLAS_64_SOURCE.R")
-```
-
-`RUN_DALYCARE_ATLAS.R` remains the backwards-compatible default and uses
-`config/source-map.dalycare.tsv` unless `DALYCARE_ATLAS_SOURCE_MAP` is set.
-All one-click runners still respect `DALYCARE_ATLAS_SOURCE_MAP` overrides.
+For advanced calls from another working directory, specify the project root explicitly.
+The removed launcher convenience was automatic root detection/preset forwarding for
+standalone calls; underlying functions, CLI/rebuild scripts, modes and options remain.
 
 ### Registry stage, treatment, response and measurements
 
@@ -67,16 +90,27 @@ DaMyDa, LYFO and CLL fields. The existing archived top-value CSVs cannot establi
 person-level support: **run the updated runner against the secure source data**
 to generate these summaries. An offline rebuild cannot recover missing evidence.
 
-Before that run, a data administrator must confirm the stable person-key column
-for each exact registry source. Copy
+Normal runs automatically use the exact `patientid` column for **RKKP_DaMyDa,
+RKKP_LYFO and RKKP_CLL only**. This is an established mapping from legacy registry
+functions (lines 1387, 1483 and 1505) and existing MCL mappings, corroborated by
+column metadata in archived run `20260831_211803-p3532373` (`patientid`, int4,
+sensitive in all three registries). No identifier values were inspected for that
+confirmation. The exact live schema column must still exist. Missing or differently
+cased fields withhold results; no CPR/name alternatives or record-count substitute
+are tried. Database summaries resolve distinct people inside SQL and return grouped
+counts, never identifier values.
+
+An optional private operator mapping takes precedence over those defaults. Copy
 `config/registry-summary-person-keys.example.csv` to a private configuration file,
-fill in each confirmed `person_key`, and set `reviewed` to `TRUE` only for reviewed
-rows. Leave the other rows disabled. The runner never guesses a key or substitutes
-record counts. Keep this configuration outside the published site.
+set exact source/key names and `reviewed=TRUE` only for reviewed rows. Setting
+`DALYCARE_REGISTRY_PERSON_KEYS_FILE` makes the entire file authoritative: disabled,
+missing-source, duplicate, malformed or missing-file entries fail closed, with no
+fallback to the default. Keep the file outside published output.
 
 ```r
+# Optional authoritative override; ordinary runs need no manual mapping setup.
 Sys.setenv(DALYCARE_REGISTRY_PERSON_KEYS_FILE = "/secure/config/registry-person-keys.csv")
-source("RUN_DALYCARE_ATLAS_64_SOURCE.R")
+source("RUN_DALYCARE_ATLAS_73_SOURCE.R")
 ```
 
 The run writes `outputs/panels/registry_field_summaries.csv`, includes it in the
