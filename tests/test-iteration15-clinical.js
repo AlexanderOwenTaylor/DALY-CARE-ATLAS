@@ -68,8 +68,20 @@ test('registry lists share a common summary limitation while retaining distinct 
 });
 test('vitals distinguishes absent SP event aggregates from the existing patient-information measurement journey',()=>{
  const {ctx,run}=runtime({catalogRows:[{table_name:'SP_VitaleVaerdier',n_rows:100,n_cols:2}],reviewClinical:{vitals:[{table_name:'SP_VitaleVaerdier'}]},columnRows:[{table_name:'SP_VitaleVaerdier',column_name:'displayname'},{table_name:'SP_VitaleVaerdier',column_name:'recorded_time'}],panelRawFieldRows:[],panelDistributionRows:[],clinicalConceptRows:[],renderVitalsStatCard:()=>'',scanScopeNote:()=>'',conceptButtons:()=>''});vm.runInContext(html.split('/* DOMAIN_SOURCE_EVIDENCE_START */')[1].split('/* DOMAIN_SOURCE_EVIDENCE_END */')[0],ctx);fn('firstMatchingRow',ctx);fn('browseFieldsLink',ctx);fn('renderVitalsPanel',ctx);
- const panel=run('renderVitalsPanel()');assert.match(panel,/data-measurement="weight-height"/);assert.match(panel,/SP_PatientInfo/);assert.match(panel,/SP_VitaleVaerdier/);assert.match(panel,/not supplied/);assert.doesNotMatch(panel,/P05|PATIENTS|Open Height concept/);
+ const panel=run('renderVitalsPanel()');assert.doesNotMatch(panel,/data-measurement="weight-height"/);assert.match(panel,/SP_PatientInfo/);assert.match(panel,/SP_VitaleVaerdier/);assert.match(panel,/not supplied/);assert.doesNotMatch(panel,/P05|PATIENTS|Open Height concept/);
+ assert.match(panel,/<details[^>]*><summary>Source coverage and other fields<\/summary>/);
  assert.match(panel,/100 full-source records/);assert.match(panel,/field=recorded_time/);assert.match(panel,/data-source-fields="SP_VitaleVaerdier"/);
+});
+test('clinical measurement directory uses exact current profile metadata and eligible summaries',()=>{
+ const {run}=runtime({columnRows:[{table_name:'SP_PatientInfo',column_name:'bmi',column_type:'double precision',n_rows:'120',n_available:'100',numeric_privacy_status:'eligible_stored_summary',median:'26.7',p25:'23.1',p75:'29.9'}]});
+ const panel=run("renderVitalGuide('BMI')");assert.match(panel,/Median: 26.7/);assert.match(panel,/Stored as: double precision/);assert.match(panel,/field=bmi/);
+});
+test('clinical measurement filter uses the existing share route for Back and reload',()=>{
+ let options,saved;
+ // Capture the rendering boundary while retaining the real route adapter.
+ const {ctx}=runtime();
+ ctx.window.DALYCARE_VITALS={render(query,opts){options=opts;return 'directory';}};ctx.updateShareUrl=(...args)=>saved=args;
+ vm.runInContext("renderVitalGuide('')",ctx);assert.equal(typeof options.onQueryChange,'function');options.onQueryChange('pulse');assert.deepEqual(JSON.parse(JSON.stringify(saved)),['clinical','clinical-vitals',true,{q:'pulse'}]);
 });
 test('withheld laboratory landing has one limit and distinct reference and exact source actions',()=>{
  const {ctx,node,output,run}=runtime({reviewLaboratory:{lab_sources:[{table_name:'SP_AlleProvesvar',n_rows:100,n_cols:2}]}});fn('browseFieldsLink',ctx);fn('resourceCompactStatus',ctx);fn('sourceTiles',ctx);fn('renderLaboratoryNPUPanel',ctx);fn('renderLabExplorer',ctx);

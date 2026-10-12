@@ -2007,7 +2007,7 @@
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Explore procedure codes, registry modalities and SP examination metadata. Image pixels are not supplied.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Explore analysis, culture, susceptibility, microscopy and SP blood-culture workflows.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Explore coded pathology, specimen/material and separate report-field availability. Report text is not published.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">Find blood pressure, oxygen saturation and temperature, then explore their source fields. Height, weight and BMI are also linked below.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
+      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">Find measurement names, exact source columns and the summaries available in this export.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Clinical notes and text availability</h2><p class="panel-sub">Explore note metadata and separate pathology-text availability. Text contents are not published.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">Find smoking, alcohol and smoking-intensity fields. Records with a value do not establish current patient status.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
     </section>
@@ -2970,9 +2970,9 @@
         };
         if (window.DALYCARE_VITALS) window.DALYCARE_VITALS.search(q).forEach(row => {
           grouped["Clinical concepts"].push(makeSearchResult("Clinical concepts", row.title,
-            "Vital signs (SP) · usual unit: " + row.unit + ". Reference guide and source fields; separate measurement summaries are not supplied here.",
+            "Exact source columns, measurement reference names and published summary status.",
             {}, {tab:"clinical", sub:"clinical-vitals"},
-            {query:q, item:row.id, badge:"Measurement guide", status:"Reference terminology", score:1500}));
+            {query:q, item:row.id, badge:"Measurement directory", score:1500}));
         });
         labSearchRows(q).forEach(row => {
           const entry = labDisplayEntry(row.lab_code);
@@ -5122,15 +5122,15 @@
         `).join("");
         const bmiLine = bmi ? `
           <div class="lineage-item">
-            <strong>BMI — derived from height and weight</strong>
+            <strong>BMI derivation from SP_VitaleVaerdier observations</strong>
             <div class="mini">${escapeHtml(bmi.evidence_files || "")}</div>
-            <span class="mini">${escapeHtml(bmi.caveats || "BMI is derived unless direct stored evidence is proven.")}</span>
+            <span class="mini">Pair compatible height and weight observations to derive BMI. Stored BMI is available separately as <code>SP_PatientInfo.bmi</code> when its field profile is supplied.</span>
           </div>
         ` : "";
         return `<div class="lineage-list vitals-priority-lineage">${lineage}${bmiLine}</div>`;
       }
       function renderVitalGuide(query) {
-        return typeof window !== 'undefined' && window.DALYCARE_VITALS ? window.DALYCARE_VITALS.render(query) : '';
+        return typeof window !== 'undefined' && window.DALYCARE_VITALS ? window.DALYCARE_VITALS.render(query, {profiles:columnRows, eventSummariesAvailable:typeof domainPublishedDistributions === 'function' && domainPublishedDistributions('clinical_vitals').length > 0, onQueryChange:q=>updateShareUrl('clinical','clinical-vitals',true,{q})}) : '';
       }
       function renderVitalsPanel() {
         const raw = panelRawFieldRows.filter(row =>
@@ -5144,10 +5144,12 @@
         const priorityKeys = new Set(priorityRows.map(row => row.semantic_id || rawFieldDisplay(row)));
         const otherRaw = raw.filter(row => !priorityKeys.has(row.semantic_id || rawFieldDisplay(row)));
         const allVitalsDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_vitals");
-        const fieldJourneys = `<section class="measurement-shortcuts"><h3>Weight, height and BMI fields</h3><p class="mini">Selected fields in Patient information (SP) <code>SP_PatientInfo</code> and the Myeloma registry <code>RKKP_DaMyDa</code>. These are separate from SP vital-sign events.</p><div class="toolbar"><button class="concept-link-button" type="button" data-measurement="weight-height">Weight and height →</button><button class="concept-link-button" type="button" data-measurement="bmi">BMI →</button></div></section>`;
-        if (!domainPublishedDistributions("clinical_vitals").length) return `<div id="clinical-vital-guide">${renderVitalGuide()}</div>${renderDomainSourceOverview("clinical_vitals")}${fieldJourneys}${priorityRows.length ? `<details class="lineage-block"><summary>Source schema and interpretation</summary>${renderVitalsPriorityLineage(priorityRows)}</details>` : ""}`;
+        const directory = renderVitalGuide();
+        const fieldJourneys = directory ? '' : `<section class="measurement-shortcuts"><h3>Weight, height and BMI fields</h3><div class="toolbar"><button class="concept-link-button" type="button" data-measurement="weight-height">Weight and height →</button><button class="concept-link-button" type="button" data-measurement="bmi">BMI →</button></div></section>`;
+        const sourceDetails = `<details class="lineage-block"><summary>Source coverage and other fields</summary>${renderDomainSourceOverview("clinical_vitals")}</details>`;
+        if (!domainPublishedDistributions("clinical_vitals").length) return `<div id="clinical-vital-guide">${directory}</div>${sourceDetails}${fieldJourneys}${priorityRows.length ? `<details class="lineage-block"><summary>Source schema and interpretation</summary>${renderVitalsPriorityLineage(priorityRows)}</details>` : ""}`;
         return `<div class="focused-panel vitals-panel"><div id="clinical-vital-guide">${renderVitalGuide()}</div>
-          ${clinicalSourceMetadata.present ? renderDomainSourceOverview('clinical_vitals') : ''}
+          ${clinicalSourceMetadata.present ? sourceDetails : ''}
           ${fieldJourneys}
           <div class="source-shape">
             <div class="source-fact"><span class="mini">Source</span><b>SP_VitaleVaerdier</b></div>
@@ -9949,7 +9951,6 @@
         block("semantic-registry-damyda", row => /DaMyDa/i.test(row.source_name || ""), 24);
         block("semantic-registry-lyfo", row => /LYFO/i.test(row.source_name || ""), 24);
         block("semantic-registry-cll", row => /CLL/i.test(row.source_name || ""), 24);
-        block("semantic-clinical-vitals", row => row.clinical_group === "Vitals", 24);
         block("semantic-clinical-social", row => row.clinical_group === "Lifestyle", 24);
         block("semantic-clinical-imaging", row => row.clinical_group === "Imaging" && !imagingIsAdministrativeCode(row), 24);
         block("semantic-treatment", row => row.clinical_group === "Treatment", 24);

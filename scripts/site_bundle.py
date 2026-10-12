@@ -397,6 +397,34 @@ def _field_labels(dictionary):
     return labels
 
 
+def _vital_profiles(profiles):
+    """Project exact measurement metadata from already guarded profile rows."""
+    event_fields = {'displayname', 'numericvalue', 'recorded_time', 'meas_value', 'meas_value_clean',
+                    'val_type_c', 'val_type_name', 'isaccepted_yn', 'template_name',
+                    'date_received', 'datetime_created'}
+    dedicated = {'SP_PatientInfo': {'bmi', 'weight_in_kg', 'height_in_cm'},
+                 'RKKP_DaMyDa': {'Reg_Hoejde', 'Reg_Vaegt'}}
+    identity = ('table_name', 'column_name', 'column_type', 'column_class')
+    summary = ('n_rows', 'n_available', 'pct_available', 'mean', 'median', 'p25', 'p75',
+               'numeric_privacy_status', 'availability_privacy_status', 'summary_scope',
+               'summary_method', 'is_sensitive')
+    selected = []
+    for row in profiles or []:
+        if not isinstance(row, dict):
+            continue
+        table, field = row.get('table_name'), row.get('column_name')
+        if not isinstance(table, str) or not isinstance(field, str):
+            continue
+        if table == 'SP_VitaleVaerdier' and field in event_fields:
+            keys = identity
+        elif field in dedicated.get(table, set()):
+            keys = identity + summary
+        else:
+            continue
+        selected.append({key: row.get(key) for key in keys})
+    return selected
+
+
 def write_site_bundle(output_dir, payload, tables, project_root, provenance, manifest_inputs=None, transport_version=None):
     transport_version = resolve_transport_version(transport_version)
     requested = Path(output_dir).absolute()
@@ -419,6 +447,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
     if audit_public_payload(safe_tables) or audit_public_payload(guarded):
         raise ValueError('Public privacy audit failed')
     field_labels = _field_labels(safe_tables.get('clinical_display_dictionary'))
+    vital_profiles = _vital_profiles(safe_tables.get('column_profile_rows'))
     encoded = encode_transport(guarded, transport_version, maximum)
     # The object-literal wrapper treats own __proto__ specially at any depth.
     _charge_graph(encoded, _Budget(maximum), reject_proto=True)
@@ -503,6 +532,8 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
         catalogue = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance,privacy_policy_version=VERSION,limits=limits,tables=catalogue_tables)
         if field_labels:
             catalogue['field_labels'] = field_labels
+        if vital_profiles:
+            catalogue['vital_profiles'] = vital_profiles
         write('DALYCARE_output_catalogue.js','window.DALYCARE_OUTPUT_CATALOGUE = '+compact(catalogue)+';\n')
         for names in [('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')]:
             if sum((stage/n).stat().st_size for n in names)>ENTRY_BYTES:

@@ -288,6 +288,24 @@ atlas_bundle_field_labels <- function(dictionary) {
   }
   labels
 }
+atlas_bundle_vital_profiles <- function(profiles) {
+  # Only project already guarded rows; retain duplicates for ambiguity detection.
+  event_fields <- c('displayname','numericvalue','recorded_time','meas_value','meas_value_clean','val_type_c','val_type_name','isaccepted_yn','template_name','date_received','datetime_created')
+  dedicated <- list(SP_PatientInfo=c('bmi','weight_in_kg','height_in_cm'),RKKP_DaMyDa=c('Reg_Hoejde','Reg_Vaegt'))
+  identity <- c('table_name','column_name','column_type','column_class')
+  summary <- c('n_rows','n_available','pct_available','mean','median','p25','p75','numeric_privacy_status','availability_privacy_status','summary_scope','summary_method','is_sensitive')
+  selected <- list()
+  for(row in profiles) {
+    if(!is.list(row)) next
+    table <- row[['table_name']];field <- row[['column_name']]
+    if(!is.character(table) || length(table)!=1L || is.na(table) || !is.character(field) || length(field)!=1L || is.na(field)) next
+    if(identical(table,'SP_VitaleVaerdier') && field %in% event_fields) keys <- identity
+    else if(field %in% dedicated[[table]]) keys <- c(identity,summary)
+    else next
+    selected[[length(selected)+1L]] <- setNames(lapply(keys,function(key)row[[key]]),keys)
+  }
+  selected
+}
 atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list(),membership_spec=NULL,transport_version=NULL) {
   transport_version <- atlas_transport_version(transport_version)
   if(is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
@@ -308,6 +326,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   payload <- atlas_public_privacy(payload,project_root,minimum)
   atlas_evidence_audit(safe);atlas_evidence_audit(payload)
   field_labels <- atlas_bundle_field_labels(safe[['clinical_display_dictionary']])
+  vital_profiles <- atlas_bundle_vital_profiles(safe[['column_profile_rows']])
   transport <- atlas_payload_transport(atlas_sanitize_payload_text(payload),transport_version,
     max_bytes=atlas_transport_limit(registry$input_max_bytes))
   transport_assets <- atlas_transport_assets(transport,registry$input_max_bytes)
@@ -389,6 +408,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   limits <- list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes,shard_max_rows=250L,shard_max_bytes=262144L,cache_max_bytes=1048576L,page_rows=50L,minimum_cell_count=minimum,public_table_bytes=total)
   catalogue <- list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance,privacy_policy_version=payload$privacy_metadata$policy_version,limits=limits,tables=catalog_tables)
   if(length(field_labels)) catalogue$field_labels <- field_labels
+  if(length(vital_profiles)) catalogue$vital_profiles <- vital_profiles
   write('DALYCARE_output_catalogue.js',paste0('window.DALYCARE_OUTPUT_CATALOGUE = ',atlas_bundle_json(catalogue),';\n'))
   for(names in list(c('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),c('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css'))) if(sum(file.info(file.path(stage,names))$size)>524288) stop('Initial asset byte budget exceeded',call.=FALSE)
   files <- list.files(stage,recursive=TRUE,full.names=FALSE)

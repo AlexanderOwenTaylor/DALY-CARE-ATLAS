@@ -6,7 +6,7 @@ const templates=path.join(__dirname,'../inst/templates');
 function navigation(search='',suppliedTables,catalogueMetadata={}) {
   const html=fs.readFileSync(path.join(templates,'DALYCARE_outputs.html'),'utf8');
   const elements=new Map(),listeners={},scrolls=[],focuses=[],scripts=[];
-  let window,document;
+  let window,document,directoryOptions;
   function element(id,attrs='') {
     const handlers={};let hidden=/\bhidden\b/.test(attrs),markup='',cards=[];
     return {id,value:'',textContent:'',disabled:false,checked:false,dataset:{},children:[],parentNode:null,open:/\bopen\b/.test(attrs),tagName:'',tabIndex:/tabindex="(-?\d+)"/.test(attrs)?Number(RegExp.$1):undefined,
@@ -37,9 +37,11 @@ function navigation(search='',suppliedTables,catalogueMetadata={}) {
     scrollTo(options){scrolls.push({...options});this.scrollX=options.left;this.scrollY=options.top;},addEventListener(name,fn){listeners[name]=fn;}};
   const vitalModule=path.join(templates,'atlas-vitals.js');
   if(fs.existsSync(vitalModule))vm.runInNewContext(fs.readFileSync(vitalModule,'utf8'),{window,URLSearchParams});
+  const directory=window.DALYCARE_VITALS;
+  window.DALYCARE_VITALS={...directory,render(query,options){directoryOptions=options;return directory.render(query,options);}};
   vm.runInNewContext(fs.readFileSync(path.join(templates,'atlas-outputs.js'),'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
   const card=id=>el('table-list').querySelectorAll('[data-table]').find(button=>button.dataset.table===id);
-  return {window,document,el,card,scrolls,focuses,scripts,tables,
+  return {window,document,el,card,scrolls,focuses,scripts,tables,refineMeasurement:query=>directoryOptions.onQueryChange(query),
     visible(id){let node=el(id);if(!node)return false;for(;node;node=node.parentNode)if(node.hidden||node.tagName==='details'&&!node.open)return false;return true;},
     open(id,x=7,y=6200){window.scrollX=x;window.scrollY=y;card(id).focus({preventScroll:true});card(id).fire('click');},
     answer(rows){const script=scripts.at(-1),t=tables.find(t=>t.shards.some(s=>s.src===script.src)),s=t.shards.find(s=>s.src===script.src);document.currentScript=script;window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'b1',table_id:t.id,shard_id:s.id,rows_json:JSON.stringify(rows)});document.currentScript=null;}
@@ -56,7 +58,7 @@ test('vital-sign searches answer with a reference guide without fabricating matc
  for(const query of ['', 'blood pressure','SpO2 %','temperature']){
   const h=navigation('?view=fields&table=column_profiles&source=SP_VitaleVaerdier&search='+encodeURIComponent(query),[table]);h.answer(rows);await flush();
   assert.ok(h.el('vital-guide'),'Visible measurement guide mount');assert.equal(h.el('vital-guide').hidden,false);
-  assert.match(h.el('vital-guide').innerHTML,/Blood pressure/);assert.match(h.el('vital-guide').innerHTML,/SpO₂/);assert.match(h.el('vital-guide').innerHTML,/Temperature/);
+  for(const title of query ? [query==='SpO2 %'?'SpO₂':query==='blood pressure'?'Blood pressure':'Temperature'] : ['Blood pressure','SpO₂','Temperature','Pulse','Respiratory rate','BMI'])assert.ok(h.el('vital-guide').innerHTML.includes(title));
   assert.doesNotMatch(h.el('vital-guide').innerHTML,/64,124,202|64124202/);
   if(query){assert.equal(h.el('rows').innerHTML,'');assert.match(h.el('read-status').textContent,/measurement guide/i);}
   assert.equal(h.scripts.length,1,'Guide does not load the clinical payload or extra shards');
@@ -69,6 +71,26 @@ test('vital-sign searches answer with a reference guide without fabricating matc
  for(const source of ['SP_VitaleVaerdier_extra','SP_PatientInfo']){
   const h=navigation('?table=column_profiles&source='+source,[table]);h.answer(rows);await flush();assert.equal(h.el('vital-guide').hidden,true);
  }
+});
+
+test('measurement directory receives only the catalogue profile context without another payload request',async()=>{
+ const rows=[{table_name:'SP_VitaleVaerdier',column_name:'displayname',column_type:'text'}];
+ const profile={table_name:'SP_PatientInfo',column_name:'bmi',column_type:'double precision',n_rows:120,n_available:100,numeric_privacy_status:'eligible_stored_summary',median:26.7,p25:23.1,p75:29.9};
+ const h=navigation('?view=fields&table=column_profiles&search=BMI',[readable('column_profiles',rows)],{vital_profiles:[...rows,profile]});
+ h.answer(rows);await flush();
+ assert.match(h.el('vital-guide').innerHTML,/Median: 26.7/);assert.match(h.el('vital-guide').innerHTML,/Middle 50%: 23.1–29.9/);
+ assert.match(h.el('vital-guide').innerHTML,/field=bmi/);assert.equal(h.scripts.length,1);
+});
+
+test('measurement filter survives reload independently of the table row query and resets on a new table search',async()=>{
+ const rows=[{table_name:'SP_VitaleVaerdier',column_name:'displayname',column_type:'text'}],table=readable('column_profiles',rows);
+ const h=navigation('?view=fields&table=column_profiles&source=SP_VitaleVaerdier',[table]);h.answer(rows);await flush();
+ h.refineMeasurement('pulse');assert.equal(params(h).get('measurement'),'pulse');assert.equal(h.scripts.length,1);
+ const restored=navigation(h.window.location.search,[table]);restored.answer(rows);await flush();
+ assert.match(restored.el('vital-guide').innerHTML,/id="vital-pulse"/);assert.doesNotMatch(restored.el('vital-guide').innerHTML,/id="vital-temperature"/);
+ restored.refineMeasurement('');assert.equal(params(restored).get('measurement'),'');
+ const reset=navigation(restored.window.location.search,[table]);reset.answer(rows);await flush();assert.match(reset.el('vital-guide').innerHTML,/id="vital-temperature"/);
+ reset.el('table-query').value='SpO2';reset.el('search-table').fire('submit');await flush();assert.equal(params(reset).has('measurement'),false);assert.match(reset.el('vital-guide').innerHTML,/id="vital-oxygen-saturation"/);assert.doesNotMatch(reset.el('vital-guide').innerHTML,/id="vital-pulse"/);
 });
 
 test('catalogue labels reach nonregistry field readers and both label and raw-name searches',async()=>{

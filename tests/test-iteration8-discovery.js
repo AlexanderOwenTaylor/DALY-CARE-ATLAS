@@ -170,7 +170,7 @@ test('global NPU search uses preserved reference definitions with dictionary rou
   const exact=JSON.parse(run("JSON.stringify(buildGlobalSearchResults('NPU04998').Codes)"));assert.equal(exact[0].query,'NPU04998');
   for(const query of ['blood pressure','SpO2 %','temperature']){
     ctx.query=query;const result=JSON.parse(run("JSON.stringify(buildGlobalSearchResults(query)['Clinical concepts'])"));
-    assert.equal(result.length,1);assert.equal(result[0].sub,'clinical-vitals');assert.equal(result[0].badge,'Measurement guide');assert.equal(result[0].status,'Reference terminology');
-    assert.ok(result[0].description.includes('usual unit:'));assert.equal(result[0].query,query.toLowerCase());
+    assert.equal(result.length,1);assert.equal(result[0].sub,'clinical-vitals');assert.equal(result[0].badge,'Measurement directory');
+    assert.ok(result[0].description.includes('Exact source columns'));assert.equal(result[0].query,query.toLowerCase());
   }
 });

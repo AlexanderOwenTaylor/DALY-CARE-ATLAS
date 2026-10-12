@@ -249,6 +249,7 @@
   const groups=[...new Set(c.tables.map(t=>t.group).filter(Boolean))].sort();
   el('group-filter').innerHTML='<option value="">All groups</option>'+groups.map(g=>'<option>'+escape(g)+'</option>').join('');
   let selected=null,page=0,controller=null,viewEpoch=0,libraryReturn=null,view='fields',listPage=0,exactColumns=false,lastResult=null,lastReadState=null,rowScope={},fieldNameOnly=false,appliedQuery='',coverageSource='',coverageQuery='',coverageExplicit=false,sourceInventory=null,coverageRunning=false;
+  let measurementQuery=null;
   const LIST_ROWS=12;
   if('scrollRestoration' in window.history)window.history.scrollRestoration='manual';
   const count=value=>value===null||value===undefined?'Not supplied':formatValue(value);
@@ -261,6 +262,7 @@
     if(el('availability-filter').value)p.set('status',el('availability-filter').value);
     if(view==='timeplace'){if(coverageSource)p.set(selected?'returnsource':'source',coverageSource);if(coverageQuery)p.set('findsource',coverageQuery);}
     if(selected){p.set('table',selected.id);if(appliedQuery)p.set('search',appliedQuery);if(fieldNameOnly)p.set('searchmode','fields');if(page)p.set('page',page+1);if(exactColumns)p.set('columns','all');if(rowScope.source)p.set('source',rowScope.source);if(rowScope.field)p.set('field',rowScope.field);}
+    if(selected?.id==='column_profiles'&&measurementQuery!==null)p.set('measurement',measurementQuery);
     window.history[replace?'replaceState':'pushState']({outputsLibraryReturn:libraryReturn},'','DALYCARE_outputs.html'+(p.size?'?'+p:''));
   }
   function restoreLibraryPosition(){
@@ -556,7 +558,7 @@
     if(guide){
       const vital=selected?.id==='column_profiles'&&!rowScope.field&&window.DALYCARE_VITALS&&(rowScope.source==='SP_VitaleVaerdier'||(!rowScope.source&&window.DALYCARE_VITALS.search(appliedQuery).length));
       guide.hidden=!vital;
-      guide.innerHTML=vital?window.DALYCARE_VITALS.render(appliedQuery):'';
+      guide.innerHTML=vital?window.DALYCARE_VITALS.render(measurementQuery===null?appliedQuery:measurementQuery,{profiles:c.vital_profiles,onQueryChange:query=>{measurementQuery=query;saveState(true);}}):'';
     }
     document.body.classList.toggle('field-evidence-mode',field);
     for(const [control,ordinary,special] of [['row-scope','row-scope-slot','field-scope-slot'],['search-table','table-search-slot','field-search-slot'],['exact-columns','exact-columns-slot','field-columns-slot']]){
@@ -566,7 +568,7 @@
     if(resetTools)el('field-tools').open=field&&!!(appliedQuery||fieldNameOnly||exactColumns);
     el('field-identity').hidden=!field;el('field-navigation').hidden=!field;el('table-purpose').hidden=field;
     if(selected)el('table-title').textContent=field?fieldLabel({table_name:rowScope.source,column_name:rowScope.field})||rowScope.field:tableTitle(selected);
-    if(guide&&!guide.hidden&&rowScope.source==='SP_VitaleVaerdier')el('table-title').textContent='Vital signs (SP)';
+    if(guide&&!guide.hidden)el('table-title').textContent='Vital signs and anthropometrics';
     el('table-purpose').hidden=field||!!(guide&&!guide.hidden);el('table-cue').hidden=!!(guide&&!guide.hidden);
     if(selected?.id==='column_profiles')el('table-cue').textContent='Counts and summaries describe stored source records, not unique people or clinical reference ranges. Missing values are not zero.'+(!field&&selected.complete!==true&&canRead?' Only the published rows in this export are searchable; original scope is limited or unknown.':'');
     el('table-state').hidden=field;
@@ -626,7 +628,7 @@
     controller?.abort();cancel();viewEpoch++;selected=next;lastResult=null;
     el('table-detail').hidden=!selected;el('library').hidden=!!selected;detailMode(!!selected);if(!selected)return;
     el('back-library').textContent=view==='timeplace'?(coverageSource?'← Back to this source':'← Back to years and regions'):'← Back to tables';
-    if(!restore){page=0;appliedQuery=query;el('table-query').value=query;exactColumns=false;rowScope={};fieldNameOnly=namesOnly;}renderRowScope();renderSearchMode();
+    if(!restore){page=0;appliedQuery=query;measurementQuery=null;el('table-query').value=query;exactColumns=false;rowScope={};fieldNameOnly=namesOnly;}renderRowScope();renderSearchMode();
     const t=selected,[label,purpose]=content(t);
     el('table-title').textContent=tableTitle(t);el('table-purpose').textContent=categoryProfiles.has(t.id)?'Inspect the selected fields and their recorded availability.':descriptions[t.id]?purpose:(t.row_grain||'Row meaning not supplied. Inspect the column meanings before interpreting this output.');
     const cues=[];
@@ -655,10 +657,10 @@
   for(const name of ['group-filter','availability-filter'])el(name).addEventListener('change',()=>{libraryReturn=null;listPage=0;view='all';list();saveState();});
   for(const [name,delta] of [['catalogue-previous',-1],['catalogue-next',1]])el(name).addEventListener('click',()=>{listPage=Math.max(0,listPage+delta);libraryReturn=null;list();saveState();el('task-title').setAttribute('tabindex','-1');el('task-title').focus();});
   for(const [control,tableId] of searchTargets)el(control).addEventListener('click',()=>open(tableId,false,el('metadata-query').value.trim(),control));
-  el('search-table').addEventListener('submit',event=>{event.preventDefault();appliedQuery=el('table-query').value;page=0;renderFieldPresentation();saveState();readPage();});
-  el('table-search-mode').addEventListener('change',()=>{fieldNameOnly=el('table-search-mode').value==='fields';appliedQuery=el('table-query').value;page=0;renderSearchMode();renderFieldPresentation();saveState();readPage();});
+  el('search-table').addEventListener('submit',event=>{event.preventDefault();appliedQuery=el('table-query').value;measurementQuery=null;page=0;renderFieldPresentation();saveState();readPage();});
+  el('table-search-mode').addEventListener('change',()=>{fieldNameOnly=el('table-search-mode').value==='fields';appliedQuery=el('table-query').value;measurementQuery=null;page=0;renderSearchMode();renderFieldPresentation();saveState();readPage();});
   el('clear-row-scope').addEventListener('click',()=>{rowScope={};page=0;renderRowScope();renderFieldPresentation(true);saveState();el('table-title').focus();readPage();});
-  el('clear-field-search').addEventListener('click',()=>{appliedQuery='';el('table-query').value='';page=0;renderFieldPresentation(true);saveState();el('table-title').focus();readPage();});
+  el('clear-field-search').addEventListener('click',()=>{appliedQuery='';measurementQuery=null;el('table-query').value='';page=0;renderFieldPresentation(true);saveState();el('table-title').focus();readPage();});
   el('first-page').addEventListener('click',()=>{page=0;saveState();el('table-title').focus();readPage();});
   el('retry-read').addEventListener('click',readPage);el('cancel-search').addEventListener('click',()=>controller?.abort());
   el('exact-columns').addEventListener('click',()=>{exactColumns=!exactColumns;renderFieldPresentation();renderRows();saveState(true);});
@@ -671,7 +673,7 @@
     coverageSource=(p.get('table')?p.get('returnsource'):'')||p.get('source')||'';coverageExplicit=!!coverageSource;coverageQuery=p.get('findsource')||(view==='timeplace'?p.get('q')||'':'');coverageExample=view==='timeplace'&&!coverageSource&&!coverageQuery;
     coveragePickerEntry();
     el('metadata-query').value=view==='timeplace'?'':p.get('q')||'';el('group-filter').value=groups.includes(p.get('group'))?p.get('group'):'';el('availability-filter').value=own(statusLabels,p.get('status'))?p.get('status'):'';
-    appliedQuery=p.get('search')||'';el('table-query').value=appliedQuery;page=Math.max(0,Math.floor(Number(p.get('page'))||1)-1);exactColumns=p.get('columns')==='all';fieldNameOnly=p.get('searchmode')==='fields';rowScope={source:p.get('source')||'',field:p.get('field')||''};list();
+    appliedQuery=p.get('search')||'';measurementQuery=p.has('measurement')?p.get('measurement'):null;el('table-query').value=appliedQuery;page=Math.max(0,Math.floor(Number(p.get('page'))||1)-1);exactColumns=p.get('columns')==='all';fieldNameOnly=p.get('searchmode')==='fields';rowScope={source:p.get('source')||'',field:p.get('field')||''};list();
     if(p.get('table'))open(p.get('table'),true);else{showLibrary();if(view==='timeplace')startCoverage();else if(!restoreLibraryPosition()&&event)el('metadata-query').focus();}
   }
   window.addEventListener('popstate',restore);restore();if(document.documentElement)document.documentElement.dataset.atlasReady='outputs';
