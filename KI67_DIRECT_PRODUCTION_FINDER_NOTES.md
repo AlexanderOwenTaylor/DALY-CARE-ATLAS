@@ -1,3 +1,7 @@
+Current entry point: use `RUN_DALYCARE_ATLAS_73_SOURCE.R` for the automatic atlas.
+Standalone calls below are advanced APIs; explicitly set `KI67_PROJECT_ROOT` or
+`MCL_COUNT_PROJECT_ROOT` when sourcing them from another working directory.
+
 # Ki-67 Direct Production Finder Notes
 
 ## Purpose
@@ -53,7 +57,7 @@ The MCL/TRIANGLE one-click runner also inventories Ki-67 source space directly:
 ```r
 MCL_TRIANGLE_ATLAS_OUTPUT_DIR <- "path/to/main_atlas_outputs"
 MCL_TRIANGLE_KI67_TEXT_SCAN <- FALSE
-source("RUN_MCL_TRIANGLE_COUNTS.R")
+source("scripts/source_mcl_triangle_counts.R")
 ```
 
 By default it validates the coded `SDS_pato.c_snomedkode` AEKI route and writes text bridge plans without scanning raw pathology text.

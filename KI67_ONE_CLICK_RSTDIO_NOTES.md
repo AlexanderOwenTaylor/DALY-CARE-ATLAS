@@ -2,6 +2,10 @@ Current entry point: use `RUN_DALYCARE_ATLAS_73_SOURCE.R` for the automatic atla
 Standalone calls below are advanced APIs; explicitly set `KI67_PROJECT_ROOT` or
 `MCL_COUNT_PROJECT_ROOT` when sourcing them from another working directory.
 
+Current entry point: use `RUN_DALYCARE_ATLAS_73_SOURCE.R` for the automatic atlas.
+Standalone calls below are advanced APIs; explicitly set `KI67_PROJECT_ROOT` or
+`MCL_COUNT_PROJECT_ROOT` when sourcing them from another working directory.
+
 # Ki-67 One-Click RStudio Finder Notes
 
 ## How to run

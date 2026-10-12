@@ -1,3 +1,7 @@
+Current entry point: use `RUN_DALYCARE_ATLAS_73_SOURCE.R` for the automatic atlas.
+Standalone calls below are advanced APIs; explicitly set `KI67_PROJECT_ROOT` or
+`MCL_COUNT_PROJECT_ROOT` when sourcing them from another working directory.
+
 # MCL/TRIANGLE Counts Production Notes
 
 ## What Changed
@@ -7,7 +11,7 @@ This patch adds a standalone aggregate-count layer for the MCL/TRIANGLE feasibil
 The default runner remains plan-only:
 
 ```r
-source("RUN_MCL_TRIANGLE_COUNTS.R")
+source("scripts/source_mcl_triangle_counts.R")
 ```
 
 Production aggregate execution is explicit:
@@ -15,7 +19,7 @@ Production aggregate execution is explicit:
 ```r
 MCL_COUNT_MODE <- "production_aggregate"
 MCL_COUNT_UPDATE_PAYLOAD <- TRUE
-source("RUN_MCL_TRIANGLE_COUNTS.R")
+source("scripts/source_mcl_triangle_counts.R")
 ```
 
 The runner respects user-defined `MCL_COUNT_*` values that already exist in the R session. It does not call `run_atlas()`, does not profile the full source map, does not use raw-row previews, and does not update the payload by default.

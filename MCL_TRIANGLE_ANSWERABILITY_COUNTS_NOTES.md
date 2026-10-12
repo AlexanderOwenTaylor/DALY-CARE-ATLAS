@@ -1,3 +1,7 @@
+Current entry point: use `RUN_DALYCARE_ATLAS_73_SOURCE.R` for the automatic atlas.
+Standalone calls below are advanced APIs; explicitly set `KI67_PROJECT_ROOT` or
+`MCL_COUNT_PROJECT_ROOT` when sourcing them from another working directory.
+
 # MCL/TRIANGLE Answerability Counts Notes
 
 ## Purpose
@@ -28,7 +32,7 @@ The helper `mcl_count_import_full_atlas_predicates()` can read the relevant atla
 - `outputs/mcl_triangle_answerability_intersections.csv`
 - `outputs/mcl_triangle_answerability_summary.csv`
 
-The outputs are written by `RUN_MCL_TRIANGLE_COUNTS.R` / `scripts/source_mcl_triangle_counts.R`. They do not run the full atlas, do not call `run_atlas()`, and do not run source profiling.
+The outputs are written by `scripts/source_mcl_triangle_counts.R` / `scripts/source_mcl_triangle_counts.R`. They do not run the full atlas, do not call `run_atlas()`, and do not run source profiling.
 
 ## Age <=65 Proxy
 
@@ -133,7 +137,7 @@ All outputs are aggregate. They must not contain CPR, patient IDs, requisition I
 Plan mode:
 
 ```r
-source("RUN_MCL_TRIANGLE_COUNTS.R")
+source("scripts/source_mcl_triangle_counts.R")
 ```
 
 Production aggregate mode:
@@ -141,7 +145,7 @@ Production aggregate mode:
 ```r
 MCL_COUNT_MODE <- "production_aggregate"
 MCL_COUNT_UPDATE_PAYLOAD <- TRUE
-source("RUN_MCL_TRIANGLE_COUNTS.R")
+source("scripts/source_mcl_triangle_counts.R")
 ```
 
 Production mode should not silently fall back to plan mode. If database credentials, person-key mappings, date anchors, or value rules are unavailable, the outputs state the specific unavailable status.
