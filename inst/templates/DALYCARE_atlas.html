@@ -1361,6 +1361,21 @@
     .registry-discovery-panel .registry-source-item > .source-evidence-links { margin: 0; }
     .registry-field-action { margin-right: 12px; }
     .registry-theme-fallback, .registry-field-metadata { font-size: 12px; }
+    .registry-clinical-group { margin: 8px 0; border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; background: white; }
+    .registry-discovery-panel .registry-clinical-group > summary { display: block; cursor: pointer; padding: 10px 0; }
+    .registry-clinical-group > summary::before { content: '▸'; margin-right: 8px; color: var(--green); }
+    .registry-clinical-group[open] > summary::before { content: '▾'; }
+    .registry-group-preview { display: block; margin: 4px 0 0 20px; line-height: 1.5; }
+    .registry-marker-grid { gap: 12px; }
+    .registry-marker-grid > li { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+    .registry-marker-summary { font-size: 14px; line-height: 1.6; }
+    .registry-coverage { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .registry-catalogue input { box-sizing: border-box; display: block; width: min(100%,640px); padding: 10px; margin: 8px 0 12px; }
+    .registry-theme-index > button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--green-soft); }
+    .registry-catalogue-field { list-style: none; padding: 0; }
+    .registry-catalogue-list { gap: 12px; }
+    .registry-catalogue-list > li { padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+    .registry-reference-meanings dd { margin: 4px 0 12px; }
     .registry-theme-index a:focus-visible, .registry-discovery-panel a:focus-visible, .registry-discovery-panel summary:focus-visible, .registry-theme-section h3:focus { outline: 3px solid #b67910; outline-offset: 3px; }
     @media (max-width: 820px) { .registry-source-item { display: block; } .registry-source-heading { margin: 0; } .registry-source-facts { margin: 4px 0; } .registry-discovery-panel .registry-source-item > .source-evidence-links { justify-content: flex-start; margin-top: 4px; } }
     @media print { .registry-theme-section { display: block !important; break-inside: auto; } .registry-theme-index { display: none; } .registry-field-row { break-inside: avoid; } }
@@ -1985,9 +2000,9 @@
           <div class="panel-body"><div id="registry-overview-interpretation"></div><div style="height:14px"></div><div id="registry-cards" class="grid"></div></div>
         </div>
       </div>
-      <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">DaMyDa: myeloma registry fields</h2><p class="panel-sub">Find stage, baseline markers, treatment, response and workup fields.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
-      <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">LYFO: lymphoma registry fields</h2><p class="panel-sub">Find stage, baseline markers, treatment, response and disease-site fields.</p></div><div class="panel-body"><div id="registry-lyfo"></div></div></div></div>
-      <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">CLL: chronic lymphocytic leukemia registry fields</h2><p class="panel-sub">Find stage, baseline markers, treatment, response and workup fields.</p></div><div class="panel-body"><div id="registry-cll"></div></div></div></div>
+      <div class="sub-pane" id="reg-damyda"><div class="panel"><div class="panel-head"><h2 class="panel-title">Myeloma · DaMyDa</h2><p class="panel-sub">Browse disease stage, baseline markers, treatment, response, complications and diagnostic workup.</p></div><div class="panel-body"><div id="registry-damyda"></div></div></div></div>
+      <div class="sub-pane" id="reg-lyfo"><div class="panel"><div class="panel-head"><h2 class="panel-title">Lymphoma · LYFO</h2><p class="panel-sub">Browse lymphoma subtype, stage and risk, baseline markers, treatment, response and disease sites.</p></div><div class="panel-body"><div id="registry-lyfo"></div></div></div></div>
+      <div class="sub-pane" id="reg-cll"><div class="panel"><div class="panel-head"><h2 class="panel-title">Chronic lymphocytic leukaemia · CLL</h2><p class="panel-sub">Browse Binet stage and risk, symptoms, treatment, response and FISH/TP53 workup.</p></div><div class="panel-body"><div id="registry-cll"></div></div></div></div>
       <div class="sub-pane" id="reg-inventory"><div class="panel"><div class="panel-head"><h2 class="panel-title">Registry Inventory</h2><p class="panel-sub">Clinical registry summary rows and related panels.</p></div><div class="panel-body"><div id="registry-summary-table"></div></div></div></div>
     </section>
 
@@ -5350,21 +5365,23 @@
         ldh: ["Reg_LDH", "LDH"],
         albumin: ["Reg_Albumin_gl", "ALB"],
         albuminCorrectedCalcium: ["Reg_CalciumAlbuminkorrigeret"],
-        beta2m: ["Reg_Beta2Microglobulin_gl", "B2M"],
+        beta2m: ["Reg_Beta2Microglobulin_gl", "Reg_Beta2Microglobulin_nMoll", "B2M"],
         plasmaCells: ["Reg_ProcentKlonalePlasmaceller"],
         calcium: ["Reg_Calcium", "Reg_CalciumIoniseret"],
-        mComponent: ["Reg_PlasmaMKomponent", "Reg_SerumMKomponent", "Reg_UrinMKomponent"],
-        lightChains: ["Reg_FriKappa", "Reg_FriLambda", "Reg_KappaLambdaRatio"],
+        mComponent: ["Reg_Mkomponent", "Reg_PlasmaMKomponent", "Reg_SerumMKomponent", "Reg_UrinMKomponent", "Reg_UrinMKomponent_gL", "Reg_UrinMKomponent_gD"],
+        lightChains: ["Reg_FriKappa", "Reg_FriLambda", "Reg_KappaLambdaRatio", "Reg_FrieKappaKaeder", "Reg_FrieLambdaKaeder"],
+        immunoglobulins: ["Reg_IgA_gl", "Reg_IgA_mikmoll", "Reg_IgG_gl", "Reg_IgG_mikmoll", "Reg_IgM_gl", "Reg_IgM_mikmoll", "Reg_IgD", "Reg_IgE"],
+        historyBurden: ["Reg_TidligereMGUS", "Reg_Amyloidose", "Reg_SammenfaldCorpora", "Charlson_Index", "Reg_Dialysekraevende", "Reg_Neuropati", "Reg_ExtramedullaerMyelom"],
         stage: ["Stadie"],
         performanceStatus: ["Reg_PerformanceStatus"],
         boneDisease: ["Reg_Knogleforandringer", "Reg_Knogleforandringer_type"],
         relapse: ["IND_Relaps", "Reg_Relaps"],
         treatment: ["Reg_PlanlagtBeh_Daratumumab", "PB_Behandling_Daratumumab", "SB_Behandling_Daratumumab"],
-        response: ["PB_MaksimaleRespons", "SB_Respons"],
+        response: ["PB_MaksimaleRespons", "PB_MRD", "SB_Respons", "SB_UdvikletProgression", "FU_AktuelSygdomsstatus", "PB_PrimaerbehandlingStart_dt", "PB_PrimaerbehandlingSlut_dt", "SB_Progressionsstart_dt", "SB_SekundaerBehandlingstart_dt", "SB_SenesteBesoegRemission_dt", "FU_Followup_dt", "FU_Doed_dt", "FU_Doed_aarsag"],
         fishAvailability: ["Cyto_FishUdfoert", "Reg_FISH_Udfoert"],
-        interpretedCytogenetics: ["Reg_FISH_Abnormitet", "Reg_CYTOGENRES", "Reg_ISCN_Resultat", "Reg_Ploidi"],
-        fishProbes: ["Cyto_FishProber_FGFR3", "Cyto_FishProber_CCND1", "Cyto_FishProber_MAFB", "Cyto_FishProber_TP53", "Cyto_FishProber_1q21", "Cyto_FishProber_11q22", "Cyto_FishProber_13q"],
-        fishResults: ["Cyto_FishResultat_FGFR3", "Cyto_FishResultat_CCND1", "Cyto_FishResultat_MAFB", "Cyto_FishResultat_TP53", "Cyto_FishResultat_1q21", "Cyto_FishResultat_11q22", "Cyto_FishResultat_13q"]
+        interpretedCytogenetics: ["Reg_FISH_Abnormitet", "Reg_CYTOGENRES", "Reg_ISCN_Resultat", "Reg_Ploidi", "Cyto_Ploidi"],
+        fishProbes: ["Cyto_FishProber_FGFR3", "Cyto_FishProber_CCND1", "Cyto_FishProber_MAFB", "Cyto_FishProber_MBF", "Cyto_FishProber_SplitSignal", "Cyto_FishProber_TP53", "Cyto_FishProber_1q21", "Cyto_FishProber_11q22", "Cyto_FishProber_13q"],
+        fishResults: ["Cyto_FishResultat_FGFR3", "Cyto_FishResultat_CCND1", "Cyto_FishResultat_MAFB", "Cyto_FishResultat_MBF", "Cyto_FishResultat_SplitSignal", "Cyto_FishResultat_TP53", "Cyto_FishResultat_1q21", "Cyto_FishResultat_11q22", "Cyto_FishResultat_13q"]
       };
       function damydaNumericHit(columns) {
         return damydaNumericRows().find(row => damydaColumnEquals(row, columns)) || null;
@@ -5373,6 +5390,16 @@
         return row && hasDisplayValue(row[field]) ? formatNumber(row[field]) : "not available";
       }
       /* REGISTRY_NUMERIC_START */
+      function registryNumericAllowed(row, requireEligible=true) {
+        if(!row || requireEligible && row.numeric_privacy_status!=='eligible_stored_summary') return false;
+        const flag=value=>![undefined,null,false,0,'','false','0'].includes(typeof value==='string' ? value.toLowerCase() : value);
+        if(flag(row.is_sensitive) || row.profile_kind==='sensitive' || row.profile_kind==='date' || flag(row.is_date_like) || ['suppressed','withheld','protected','is_suppressed','is_protected'].some(key=>flag(row[key]))) return false;
+        const safe=['','published','validated','approved','ok'];
+        // The public policy withholds category frequencies and exact date bounds separately
+        // from explicitly eligible numeric summaries (R/public_privacy.R).
+        const statuses={numeric_privacy_status:['','eligible_stored_summary'],value_privacy_status:[...safe,'withheld_unvalidated_distribution'],date_privacy_status:[...safe,'withheld_exact_clinical_bounds'],availability_privacy_status:[''],count_privacy_status:['']};
+        return !Object.keys(row).some(key=>/privacy_status$/.test(key) && !(statuses[key] || safe).includes(String(row[key] ?? ''))) && !['validation_status','publication_status'].some(key=>row[key]!=null && !safe.includes(String(row[key])));
+      }
       function registryNumericReason(row) {
         return /^needs_validation/.test(row.numeric_privacy_status || '') ? 'Stored numeric summaries need validation.' : /withheld|protected/.test(row.numeric_privacy_status || '') ? 'Stored numeric summaries are withheld.' : 'Stored numeric summaries are not supplied.';
       }
@@ -5386,7 +5413,7 @@
         const field = row.source_column || row.column_name || '';
         const available = finiteSummary(row.n_available), pct = finiteSummary(row.pct_available);
         const protectedCount = /withheld/.test(row.availability_privacy_status || '');
-        const eligible = row.numeric_privacy_status === 'eligible_stored_summary';
+        const eligible = registryNumericAllowed(row);
         const reason = registryNumericReason(row);
         const q1 = finiteSummary(row.p25), q3 = finiteSummary(row.p75);
         const interval = q1 !== null && q3 !== null && q3 >= q1 ? `${formatNumber(q1)}–${formatNumber(q3)}` : 'Not supplied';
@@ -5526,7 +5553,7 @@
         subtype: ["subtype", "Reg_WHOHistologikode1", "Reg_WHOHistologikode2", "Rec_WHOHistologikode"],
         stageRisk: ["Reg_Stadium", "IPI", "aaIPI", "FLIPI", "FLIPI2", "IPS"],
         bSymptomsBulk: ["Reg_BSymptomer", "Reg_BulkSygdom"],
-        performanceStatus: ["Reg_PerformanceStatusWHO", "Beh_PerformanceStatus", "Rec_Performancestatus"],
+        performanceStatus: ["Reg_PerformanceStatusWHO", "Beh_PerformanceStatus"],
         baselineMarkers: [
           "Reg_Haemoglobin", "Reg_Albumin_gL", "Reg_Albumin_mikmoll",
           "Reg_CalciumAlbuminkorrigeret", "Reg_CalciumIoniseret",
@@ -5534,7 +5561,7 @@
           "Reg_Lactatdehydrogenase", "Reg_LDHVaerdi",
           "Reg_Beta2Microglobulin_mgL", "Reg_Beta2Microglobulin_nmL",
           "Reg_Leukocytter", "Reg_Lymfocytter_mL", "Reg_Thrombocytter",
-          "Reg_Saenkning", "Reg_MProtein"
+          "Reg_Saenkning", "Reg_MProtein", "Reg_ImmunglobulinA_gL", "Reg_ImmunglobulinA_Mikmoll", "Reg_ImmunglobulinG_gL", "Reg_ImmunglobulinG_Mikmoll", "Reg_ImmunglobulinM_gL", "Reg_ImmunglobulinM_Mikmoll"
         ],
         treatmentFields: [
           "Beh_ErDerForetagetKemo", "Beh_Kemoterapiregime1", "Beh_Kemoterapiregime2",
@@ -5685,7 +5712,7 @@
         `).join("")}</div>`;
       }
       const cllExactFieldGroups = {
-        binetStage: ["Reg_BinetStadium", "Binet"],
+        binetStage: ["Reg_BinetStadium", "Binet", "Reg_Performancestatus"],
         ighvRisk: ["Reg_Umuteret", "IGHV", "Reg_ZAP70", "Reg_CD38Positiv", "Reg_Beta2Microglobulin", "Reg_Hypogammaglobulinami"],
         fishTp53: [
           "Reg_FISH", "Reg_Del17p", "Beh_Del17p", "Reg_Del11q", "Reg_Del13q14",
@@ -5695,7 +5722,7 @@
         baselineMarkers: ["Reg_Leukocyttal", "Beh_Leukocyttal", "Reg_LYMFOCYTFORDOBLIN", "Beh_LymfocytFordoblingstid"],
         symptomsIndication: [
           "Beh_Anaemi", "Beh_Thrombocytopeni", "Beh_Lymfadenopati", "Beh_Splenomegali",
-          "Beh_StigendeLymfocytose", "Beh_LymfocytFordoblingstid", "Beh_Vaegttab",
+          "Beh_StigendeLymfocytose", "Beh_Vaegttab",
           "Beh_Feber", "Beh_UdtaltTraethed", "Beh_Nattesved", "Beh_AndreFundSymptomer",
           "Beh_IndikationKemoterapi"
         ],
@@ -5707,7 +5734,7 @@
           "Beh_TargeteretBeh_Ibrutinib", "Beh_TargeteretBeh_idelalisib",
           "Beh_TargeteretBeh_venetoclax", "Beh_TargeteretBeh_acalabrutinib",
           "Beh_TargeteretBeh_Other", "Beh_TargeteretBeh_None", "Beh_TRANSPLANT",
-          "Beh_TRANSPDATO", "Beh_Behandling_Start_dt", "Beh_Behandling_slut_dt"
+          "Beh_TRANSPDATO", "Beh_Behandling_Start_dt", "Beh_Behandling_slut_dt", "Reg_Behandling"
         ],
         responseFollowup: [
           "Beh_Responsevaluering", "Beh_Responsevaluering_dt", "Beh_MRD",
@@ -5722,28 +5749,44 @@
       /* REGISTRY_DISCOVERY_START */
       const registryDiscoverySpecs = {
         reg_damyda: {source:'RKKP_DaMyDa',subId:'reg-damyda',profileTable:'damyda_clinical_profile',themes:[
-          {id:'stage',title:'Stage and risk fields',purpose:'Find recorded stage and performance-status fields. Myeloma stage coding has not been verified as ISS or R-ISS.',facets:['stage','performance_status','charlson'],groups:[{fields:[...damydaExactFieldGroups.stage,...damydaExactFieldGroups.performanceStatus]}]},
-          {id:'baseline',title:'Baseline markers',purpose:'Inspect documented baseline marker fields, recordedness and units.',facets:[],groups:[{fields:['haemoglobin','creatinine','crp','ldh','albumin','albuminCorrectedCalcium','beta2m','plasmaCells','calcium','mComponent','lightChains'].flatMap(key=>damydaExactFieldGroups[key])}]},
+          {id:'stage',title:'Stage and risk',purpose:'Browse recorded stage, performance status, history and disease burden. Myeloma stage coding has not been verified as ISS or R-ISS.',facets:['stage','performance_status','charlson'],groups:[{fields:[...damydaExactFieldGroups.stage,...damydaExactFieldGroups.performanceStatus]}]},
+          {id:'baseline',title:'Baseline markers',purpose:'Browse baseline blood markers, light chains and immunoglobulins.',facets:[],groups:[{fields:['haemoglobin','creatinine','crp','ldh','albumin','albuminCorrectedCalcium','beta2m','plasmaCells','calcium','mComponent','lightChains'].flatMap(key=>damydaExactFieldGroups[key])}]},
           {id:'treatment',title:'Treatment',purpose:'Find selected planned, primary and secondary treatment fields. These finite examples do not define exposure or complete treatment coverage.',facets:['treatment_flag','primary_treatment','secondary_treatment','followup_treatment'],groups:[{fields:damydaExactFieldGroups.treatment}]},
-          {id:'response',title:'Response and follow-up',purpose:'Find recorded response fields and separate relapse indicators; form context remains part of the field identity.',facets:['response','relapse_flag'],groups:[{title:'Response fields',fields:damydaExactFieldGroups.response},{title:'Relapse indicators',fields:damydaExactFieldGroups.relapse}]},
+          {id:'response',title:'Response and follow-up',purpose:'Browse response, relapse and complications across primary treatment, secondary treatment and follow-up.',facets:['response','relapse_flag'],groups:[{title:'Response fields',fields:damydaExactFieldGroups.response},{title:'Relapse indicators',fields:damydaExactFieldGroups.relapse}]},
           {id:'workup',title:'Workup and genetics',purpose:'Inspect performed-test, probe and result roles separately. Field presence does not establish an assay result or interpreted risk.',facets:['cytogenetics_fish_done','bone_disease','bone_disease_type','imaging'],groups:[{title:'FISH performed fields',fields:damydaExactFieldGroups.fishAvailability},{title:'FISH probe fields',fields:damydaExactFieldGroups.fishProbes},{title:'FISH result fields',fields:damydaExactFieldGroups.fishResults},{title:'Cytogenetic result fields',fields:damydaExactFieldGroups.interpretedCytogenetics,note:'Result interpretation is unverified.'},{title:'Bone disease and imaging fields',fields:[...damydaExactFieldGroups.boneDisease,'Reg_Knogleundersoegelser_ct','Reg_Knogleundersoegelser_mri','Reg_Knogleundersoegelser_pet']}]}
         ]},
         reg_lyfo: {source:'RKKP_LYFO',subId:'reg-lyfo',profileTable:'lyfo_clinical_profile',themes:[
-          {id:'stage',title:'Stage and risk fields',purpose:'Find recorded lymphoma stage, risk-index, subtype and clinical presentation fields. Stage encoding has not been verified as Ann Arbor.',facets:['subtype','ann_arbor_stage','ipi','b_symptoms','bulk_disease','performance_status'],groups:[{fields:[...lyfoExactFieldGroups.subtype,...lyfoExactFieldGroups.stageRisk,...lyfoExactFieldGroups.bSymptomsBulk,...lyfoExactFieldGroups.performanceStatus]}]},
-          {id:'baseline',title:'Baseline markers',purpose:'Inspect documented marker fields. A source-profile unit and a validated numeric summary must be supplied separately.',facets:[],groups:[{fields:lyfoExactFieldGroups.baselineMarkers}]},
-          {id:'treatment',title:'Treatment',purpose:'Find reviewed treatment and relapse-treatment fields. Registry therapy is distinct from medication administration.',facets:[],groups:[{fields:lyfoExactFieldGroups.treatmentFields}]},
-          {id:'response',title:'Response and follow-up',purpose:'Find reviewed response, disease-status, follow-up and relapse fields; registration, treatment and recurrence contexts remain separate.',facets:[],groups:[{fields:lyfoExactFieldGroups.followupRelapse}]},
+          {id:'stage',title:'Stage and risk',purpose:'Browse lymphoma subtype, stage, risk indices and clinical presentation. Stage encoding has not been verified as Ann Arbor.',facets:['subtype','ann_arbor_stage','ipi','b_symptoms','bulk_disease','performance_status'],groups:[{fields:[...lyfoExactFieldGroups.subtype,...lyfoExactFieldGroups.stageRisk,...lyfoExactFieldGroups.bSymptomsBulk,...lyfoExactFieldGroups.performanceStatus]}]},
+          {id:'baseline',title:'Baseline markers',purpose:'Browse blood, biochemical and immunoglobulin markers. Units are shown only when recorded in the profile.',facets:[],groups:[{fields:lyfoExactFieldGroups.baselineMarkers}]},
+          {id:'treatment',title:'Treatment',purpose:'Browse chemotherapy, immunotherapy, radiation, surgery, high-dose treatment and recurrence therapy. Registry therapy is distinct from medication administration.',facets:[],groups:[{fields:lyfoExactFieldGroups.treatmentFields}]},
+          {id:'response',title:'Response and follow-up',purpose:'Browse response, disease status, follow-up and relapse within their registration, treatment and recurrence forms.',facets:[],groups:[{fields:lyfoExactFieldGroups.followupRelapse}]},
           {id:'workup',title:'Workup and genetics',purpose:'Fields for workup and genetics have not been classified for this source. Disease-site fields describe involvement, not an assay or examination.',facets:[],groups:[]},
-          {id:'sites',title:'Disease sites',purpose:'Find reviewed fields for involved sites and extranodal disease.',facets:[],groups:[{fields:lyfoExactFieldGroups.localizationPriority}]}
+          {id:'sites',title:'Disease sites',purpose:'Browse nodal, extranodal and organ-site involvement.',facets:[],groups:[{fields:lyfoExactFieldGroups.localizationPriority}]}
         ]},
         reg_cll: {source:'RKKP_CLL',subId:'reg-cll',profileTable:'cll_clinical_profile',themes:[
-          {id:'stage',title:'Stage and risk fields',purpose:'Find Binet stage and recorded marker fields. Do not infer mutated or unmutated IGHV from Yes/No without the registry codebook.',facets:['binet','ighv','zap70','cd38','beta2m'],groups:[{fields:[...cllExactFieldGroups.binetStage,...cllExactFieldGroups.ighvRisk]}]},
+          {id:'stage',title:'Stage and risk',purpose:'Browse Binet stage, performance status, family history and recorded risk markers. Do not infer mutated or unmutated IGHV from Yes/No without the registry codebook.',facets:['binet','ighv','zap70','cd38','beta2m'],groups:[{fields:[...cllExactFieldGroups.binetStage,...cllExactFieldGroups.ighvRisk]}]},
           {id:'baseline',title:'Baseline markers',purpose:'Inspect blood markers, symptoms and treatment indications. These describe field availability, not treatment exposure.',facets:[],groups:[{title:'Blood and immune markers',fields:cllExactFieldGroups.baselineMarkers},{title:'Symptoms and indications',fields:cllExactFieldGroups.symptomsIndication}]},
-          {id:'treatment',title:'Treatment',purpose:'Find chemotherapy, immunotherapy, targeted therapy and transplant fields with treatment or recurrence form context.',facets:['treatment_flag'],groups:[{fields:cllExactFieldGroups.treatmentTherapy}]},
-          {id:'response',title:'Response and follow-up',purpose:'Find response, MRD and follow-up fields. Dates remain field discovery; no outcome distribution or date bounds are inferred.',facets:[],groups:[{fields:cllExactFieldGroups.responseFollowup}]},
+          {id:'treatment',title:'Treatment',purpose:'Browse chemotherapy, immunotherapy, targeted treatment and transplant by treatment or recurrence form.',facets:['treatment_flag'],groups:[{fields:cllExactFieldGroups.treatmentTherapy}]},
+          {id:'response',title:'Response and follow-up',purpose:'Browse response, MRD and follow-up. Date fields show availability; outcome distributions and date bounds are not inferred.',facets:[],groups:[{fields:cllExactFieldGroups.responseFollowup}]},
           {id:'workup',title:'Workup and genetics',purpose:'Inspect workup and FISH/TP53 fields in their registration, treatment and relapse contexts. Performed-test and result roles require source definitions.',facets:['fish_overall','del13q','del11q','del17p','trisomy12','tp53'],groups:[{title:'FISH registration field',fields:['Reg_FISH']},{title:'Cytogenetic and TP53 fields',fields:cllExactFieldGroups.fishTp53.filter(field=>field!=='Reg_FISH')},{title:'Diagnostic workup',fields:cllExactFieldGroups.diagnosticWorkup}]}
         ]}
       };
+      // Finite source-reviewed lists; no substring mapping is used at runtime.
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='treatment').groups=[{"title":"Planned treatment","preview":"Chemotherapy, antibodies, IMiDs, proteasome inhibitors, radiotherapy, transplant and supportive bone therapy","fields":["Reg_PlanlagtBeh_none","Reg_PlanlagtBeh_Cyklophosphamid","Reg_PlanlagtBeh_Melfalan","Reg_PlanlagtBeh_Bendamustin","Reg_PlanlagtBeh_Adriamycin","Reg_PlanlagtBeh_Straalebeh","Reg_PlanlagtBeh_Zolendronat","Reg_PlanlagtBeh_Pamidronat","Reg_PlanlagtBeh_Denosumab","Reg_PlanlagtBeh_MelfalanStamcell","Reg_PlanlagtBeh_Allogen","Reg_PlanlagtBeh_Daratumumab","Reg_PlanlagtBeh_Isatuximab","Reg_PlanlagtBeh_Panobinostat","Reg_PlanlagtBeh_Thalidomid","Reg_PlanlagtBeh_Pomalidomid","Reg_PlanlagtBeh_Lenalidomid","Reg_PlanlagtBeh_Bortezomib","Reg_PlanlagtBeh_Carfilzomib","Reg_PlanlagtBeh_Ixazomib","Reg_PlanlagtBeh_Steroid","Reg_PlanlagtBeh_other","Reg_PlanlagtBeh_Cytosstatika","Reg_PlanlagtBeh_bisfosfonater","Reg_PlanlagtBeh_AutoStam","Reg_PlanlagtBeh_Antal","Reg_Planlagtbeh_Elotuzumab"]},{"title":"Primary treatment","preview":"Chemotherapy, antibodies, IMiDs, proteasome inhibitors, radiotherapy, transplant and supportive bone therapy","fields":["PB_Behandling_Cyklophosphamid","PB_Behandling_Bendamustin","PB_Behandling_Adriamycin","PB_Behandling_Melfalan","PB_Behandling_Straalebeh","PB_Behandling_Zolendronat","PB_Behandling_Pamidronat","PB_Behandling_MelfalanStamcelle","PB_Behandling_Allogen","PB_Behandling_Denosumab","PB_Behandling_Elotuzumab","PB_Behandling_Daratumumab","PB_Behandling_Isatuximab","PB_Behandling_Panobinostat","PB_Behandling_Thalidomid","PB_Behandling_Lenalidomid","PB_Behandling_Pomalidomid","PB_Behandling_Bortezomib","PB_Behandling_Carfilzomib","PB_Behandling_Ixazomib","PB_Behandling_Steroid","PB_Behandling_Cytosstatika","PB_Behandling_bisfosfonater","PB_Behandling_AutoStam","PB_Behandling_other","PB_Behandling_Antal"]},{"title":"Secondary treatment","preview":"Chemotherapy, antibodies, IMiDs, proteasome inhibitors, radiotherapy, transplant and supportive bone therapy","fields":["SB_Behandling_Cyklophosphamid","SB_Behandling_Melfalan","SB_Behandling_Bendamustin","SB_Behandling_Adriamycin","SB_Behandling_Straalebeh","SB_Behandling_Zolendronat","SB_Behandling_Pamidronat","SB_Behandling_Denosumab","SB_Behandling_MelfalanStamcelle","SB_Behandling_Allogen","SB_Behandling_Elotuzumab","SB_Behandling_Daratumumab","SB_Behandling_Isatuximab","SB_Behandling_Panobinostat","SB_Behandling_Thalidomid","SB_Behandling_Lenalidomid","SB_Behandling_Pomalidomid","SB_Behandling_Bortezomib","SB_Behandling_Carfilzomib","SB_Behandling_Ixazomib","SB_Behandling_Steroid","SB_Behandling_Cytosstatika","SB_Behandling_bisfosfonater","SB_Behandling_AutoStam","SB_Behandling_other"]},{"title":"Maintenance treatment","preview":"Lenalidomide, pomalidomide, thalidomide, proteasome inhibitors, steroid","fields":["PB_VedligeholdBeh_Lenalidomid","PB_VedligeholdBeh_Pomalidomid","PB_VedligeholdBeh_Thalidomid","PB_VedligeholdBeh_Bortezomib","PB_VedligeholdBeh_Carfilzomib","PB_VedligeholdBeh_Steroid","PB_VedligeholdBeh_other"]},{"title":"Follow-up treatment","preview":"Chemotherapy, antibodies, IMiDs, proteasome inhibitors, radiotherapy, transplant and supportive bone therapy","fields":["FU_Behandling_none","FU_Behandling_Cyklophosphamid","FU_Behandling_Melfalan","FU_Behandling_Bendamustin","FU_Behandling_Adriamycin","FU_Behandling_Straalebeh","FU_Behandling_Zolendronat","FU_Behandling_Pamidronat","FU_Behandling_Denosumab","FU_Behandling_MelfalanStamcelle","FU_Behandling_Allogen","FU_Behandling_Elotuzumab","FU_Behandling_Daratumumab","FU_Behandling_Isatuximab","FU_Behandling_Panobinostat","FU_Behandling_Thalidomid","FU_Behandling_Lenalidomid","FU_Behandling_Pomalidomid","FU_Behandling_Bortezomib","FU_Behandling_Carfilzomib","FU_Behandling_Ixazomib","FU_Behandling_Steroid","FU_Behandling_other"]}];
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='treatment').purpose='Browse planned, primary, secondary, maintenance and follow-up forms. A recorded therapy field does not establish administered treatment or a complete exposure history.';
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='baseline').groups.push({title:'Immunoglobulins',fields:damydaExactFieldGroups.immunoglobulins});
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='stage').groups.push({title:'History and disease burden',fields:damydaExactFieldGroups.historyBurden});
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='stage').facets.push('amyloidosis','prior_mgus','m_component_type');
+      registryDiscoverySpecs.reg_lyfo.themes.find(t=>t.id==='sites').groups=[{"title":"Head and neck","preview":"Waldeyer ring, tonsils, nodes, eye, nasal/oral and thyroid sites","fields":["Reg_Lokal_Rhinopharynx","Reg_Lokal_Waldeyers","Reg_Lokal_TonsillaPalatina","Reg_Lokal_TonsillaPalatina_side","Reg_Lokal_Hals","Reg_Lokal_Hals_side","Reg_Lokal_Supraclaviculaert","Reg_Lokal_Supraclaviculaert_side","Reg_Lokal_Infraclaviculaert","Reg_Lokal_Infraclaviculaert_side","Reg_Lokal_Orbita","Reg_Lokal_Oje","Reg_Lokal_Taarekirtel","Reg_Lokal_Bihuler","Reg_Lokal_CavumNasi","Reg_Lokal_Mundhule","Reg_Lokal_Spytkirtler","Reg_Lokal_glThyroidea"]},{"title":"Thoracic sites","preview":"Axillary nodes, mediastinum, lung/hilar, heart, breast and pleural sites","fields":["Reg_Lokal_Axiller","Reg_Lokal_Axiller_side","Reg_Lokal_Mediastinum","Reg_Lokal_Lungehili","Reg_Lokal_Lungehili_side","Reg_Lokal_Cor","Reg_Lokal_Mamma","Reg_Lokal_Lunge","Reg_Lokal_Pleura_Lymfom"]},{"title":"Abdominal sites","preview":"Retroperitoneal/mesenteric nodes, spleen, liver and digestive organs","fields":["Reg_Lokal_Retroperitoneum","Reg_Lokal_Tarmkroes","Reg_Lokal_Milt","Reg_Lokal_Ventrikel","Reg_Lokal_Tyndtarm","Reg_Lokal_Tyktarm","Reg_Lokal_Pancreas","Reg_Lokal_Lever"]},{"title":"Urogenital and pelvic sites","preview":"Pelvic/inguinal nodes, kidneys, bladder and reproductive organs","fields":["Reg_Lokal_Pelvis","Reg_Lokal_Pelvis_side","Reg_Lokal_Ingvinale","Reg_Lokal_Ingvinale_side","Reg_Lokal_Nyrer","Reg_Lokal_Urinblare","Reg_Lokal_Testis","Reg_Lokal_Ovarier","Reg_Lokal_Vagina","Reg_Lokal_Uterus"]},{"title":"Marrow, skin and musculoskeletal sites","preview":"Bone marrow, skin, muscle and bone involvement","fields":["Reg_Lokal_Knoglemarv","Reg_Lokal_Hud","Reg_Lokal_Muskulatur","Reg_Lokal_Knogler"]},{"title":"Nervous system","preview":"CNS and leptomeningeal involvement","fields":["Reg_Lokal_CNS","Reg_Lokal_Leptomeninges"]}];
+      registryDiscoverySpecs.reg_lyfo.themes.find(t=>t.id==='sites').groups.push({title:'Nodal and extranodal involvement',preview:'Recorded nodal and extranodal disease indicators',fields:['Reg_Sygdomslokalisation_nodal','Reg_Sygdomslokal_extranodel']},{title:'Other involvement fields',preview:'Exact localization field with no reviewed anatomical meaning',fields:['Reg_Lokal_peri_Lymfom']});
+      registryDiscoverySpecs.reg_lyfo.themes.find(t=>t.id==='treatment').groups=[{"title":"Treatment form","preview":"Chemotherapy regimens, immunotherapy, maintenance, radiotherapy, surgery and high-dose/stem-cell treatment","fields":["Beh_ErDerForetagetKemo","Beh_Kemoterapiregime1","Beh_CycluslaengdeReg1","Beh_CyclusAntalReg1","Beh_Kemoterapiregime2","Beh_CycluslaengdeReg2","Beh_CyclusAntalReg2","Beh_Kemoterapiregime3","Beh_CycluslaengdeReg3","Beh_CyclusAntalReg3","Beh_KemoterapiStart_dt","Beh_KemoterapiSlut_dt","Beh_Immunoterapi","Beh_GivetSynkrontMedKemoterapi","Beh_ImmunoterapiStart_dt","Beh_ImmunoterapiSlut_dt","Beh_ImmunoterapiCyclusantal","Beh_Vedligeholdelsesbehandling","Beh_Radioimmunoterapi","Beh_RadioimmunoterapiBeh_dt","Beh_DosismCiKg","Beh_Straaleterapi","Beh_StraaleterapiBehandlings_dt","Beh_DosisIGray","Beh_AntalFraktioner","Beh_Operationstype","Beh_Operationsdato","Beh_Hoejdosisbehandling","Beh_TypeAutologStamcellestoette","Beh_Stamcelleinfusion_dt","Beh_AndenLymfomspecifikBeh","Beh_StereoidSomMonoterapi"]},{"title":"Recurrence treatment form","preview":"Chemotherapy regimens, immunotherapy, maintenance, radiotherapy, surgery and high-dose/stem-cell treatment","fields":["Rec_ErDerForetagetKemoterapi","Rec_Kemoterapiregime1","Rec_Cycluslaengde1","Rec_Cyclusantal1","Rec_Kemoterapiregime2","Rec_Cycluslaengde2","Rec_Cyclusantal2","Rec_Kemoterapiregime3","Rec_Cycluslaengde3","Rec_Cyclusantal3","Rec_KemoterapiStart_dt","Rec_KemoterapiSlut_dt","Rec_Immunoterapi","Rec_GivetSynkrontMedKemoterapi","Rec_ImmunoterapiStart_dt","Rec_ImmunoterapiSlut_dt","Rec_ImmunoterapiCyclusantal","Rec_PaabegyndtVedligehold","Rec_Radioimmunoterapi","Rec_RadioimmunoterapiBeh_dt","Rec_DosisImCikg","Rec_Straaleterapi","Rec_StraaleterapiBeh_dt","Rec_DosisIGray","Rec_AntalFraktioner","Rec_Operationstype","Rec_Operationsdato","Rec_AndenLymfomspecifik","Rec_Hoejdosisbehandling","Rec_Stamcelleinfusion_dt","Rec_StereoidSomMonoterapi"]}];
+      registryDiscoverySpecs.reg_lyfo.themes.find(t=>t.id==='response').groups[0].fields.push('Beh_Responsevaluering_dt','Rec_Responsevaluering_dt','Rec_RelapsProgressions_dt','FU_Doedsdato','FU_Doedsaarsag');
+      registryDiscoverySpecs.reg_lyfo.themes.find(t=>t.id==='workup').navTitle='Unclassified workup';
+      registryDiscoverySpecs.reg_cll.themes.find(t=>t.id==='stage').facets.push('performance_status');
+      registryDiscoverySpecs.reg_cll.themes.find(t=>t.id==='stage').groups.push({title:'Family history',fields:['Reg_FAMCLL']});
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='response').groups.push(...[{"title":"Primary treatment complications","preview":"Hypercalcaemia, marrow relapse, compression, extramedullary disease, renal complications, amyloidosis and neuropathy","fields":["PB_Manifestekomp_Hypercal","PB_Manifestekomp_Marvrelaps","PB_Manifestekomp_MedulTvaer","PB_Manifestekomp_EkstraMedul","PB_Manifestekomp_PlasmaLeu","PB_Manifestekomp_KliniskUraemi","PB_Manifestekomp_KroniskUraemi","PB_Manifestekomp_Amyloidose","PB_Manifestekomp_Neuropati","PB_Manifestekomp_HyperViskosi"]},{"title":"Secondary treatment complications","preview":"Hypercalcaemia, marrow relapse, compression, extramedullary disease, renal complications, amyloidosis and neuropathy","fields":["SB_Manifestekomp_Marvrelaps","SB_Manifestekomp_Hypercal","SB_Manifestekomp_MedulTvaer","SB_Manifestekomp_EkstraMedul","SB_Manifestekomp_PlasmaLeu","SB_Manifestekomp_KliniskUraemi","SB_Manifestekomp_KroniskUraemi","SB_Manifestekomp_Amyloidose","SB_Manifestekomp_Neuropati","SB_Manifestekomp_HyperViskosi"]},{"title":"Follow-up complications","preview":"Hypercalcaemia, marrow relapse, compression, extramedullary disease, renal complications, amyloidosis and neuropathy","fields":["FU_Manifestekomp_Marvrelaps","FU_Manifestekomp_Hypercal","FU_Manifestekomp_MedulTvaer","FU_Manifestekomp_EkstraMedul","FU_Manifestekomp_PlasmaLeu","FU_Manifestekomp_KliniskUraemi","FU_Manifestekomp_KroniskUraemi","FU_Manifestekomp_Amyloidose","FU_Manifestekomp_Neuropati","FU_Manifestekomp_HyperViskosi"]}]);
+      registryDiscoverySpecs.reg_damyda.themes.find(t=>t.id==='workup').groups.find(g=>g.title==='Bone disease and imaging fields').fields.push('Reg_Knogleundersoegelser_dexa','Reg_Knogleundersoegelser_scinti','Reg_Knogleundersoegelser_other','Reg_AndreKnogleundersoegelse','Reg_AndenKnogleundersoegelse');
+      registryDiscoverySpecs.reg_lyfo.themes.find(t=>t.id==='baseline').groups=[{title:'Blood and biochemical markers',fields:lyfoExactFieldGroups.baselineMarkers.filter(field=>!['Reg_ImmunglobulinA_gL','Reg_ImmunglobulinA_Mikmoll','Reg_ImmunglobulinG_gL','Reg_ImmunglobulinG_Mikmoll','Reg_ImmunglobulinM_gL','Reg_ImmunglobulinM_Mikmoll'].includes(field))},{title:'Immunoglobulins · IgA, IgG and IgM',fields:['Reg_ImmunglobulinA_gL','Reg_ImmunglobulinA_Mikmoll','Reg_ImmunglobulinG_gL','Reg_ImmunglobulinG_Mikmoll','Reg_ImmunglobulinM_gL','Reg_ImmunglobulinM_Mikmoll']}];
       function registryExactSource(row) {
         const identities = [...new Set(['table_name','source_name','source_key','source_table'].filter(key=>row && row[key] != null && row[key] !== '').map(key=>row[key]))];
         return identities.length === 1 && typeof identities[0] === 'string' ? identities[0] : '';
@@ -5751,6 +5794,60 @@
       function registrySourceFallback(source) {
         const query = new URLSearchParams({view:'fields',table:'column_profiles',source});
         return `<a class="registry-field-action" href="DALYCARE_outputs.html?${escapeHtml(query.toString())}">Browse source fields · ${escapeHtml(source)} →</a>`;
+      }
+      function registryUniqueProfile(item,field) {
+        const rows=(item?.profiles || []).filter(row=>registryExactSource(row)===item.source && row.column_name===field);
+        return rows.length===1 ? rows[0] : null;
+      }
+      function renderRegistryReferenceMeanings(system) {
+        const entries=(payload.clinical_display_dictionary || []).filter(entry=>entry.kind==='registry_value' && entry.system===system && entry.code && entry.label);
+        if(!entries.length) return '<p class="mini">Reviewed subtype code meanings are not supplied in this publication.</p>';
+        return `<details class="registry-clinical-group"><summary><strong>Reference meanings · lymphoma subtypes</strong><span class="mini registry-group-preview">${entries.length} supplied definitions; not observed cases</span></summary><p class="mini">Reference meanings from the supplied dictionary, not observed cases or frequencies. These do not establish complete valid-value coverage or map every histology field.</p><dl class="registry-reference-meanings">${entries.map(entry=>`<dt><code>${escapeHtml(entry.code)}</code> — ${escapeHtml(entry.label)}</dt><dd>${escapeHtml(entry.definition || '')}${entry.source_label ? `<p class="mini">${escapeHtml(entry.source_label)}</p>` : ''}${/^https:\/\//.test(entry.source_url || '') ? `<a href="${escapeHtml(entry.source_url)}" target="_blank" rel="noopener noreferrer">Reference source ↗</a>` : ''}</dd>`).join('')}</dl></details>`;
+      }
+      function registryCataloguePage(panelId,sources,query='',requestedPage=0) {
+        const spec=registryDiscoverySpecs[panelId], q=String(query).trim().toLowerCase(), rows=[];
+        sources.forEach(item=>{
+          const fields=[...new Set(item.profiles.filter(row=>registryExactSource(row)===item.source).map(row=>row.column_name))];
+          fields.forEach(field=>{
+            const matches=item.profiles.filter(row=>registryExactSource(row)===item.source && row.column_name===field);
+            const row=matches.length===1 ? matches[0] : {table_name:item.source,column_name:field,profile_kind:'Ambiguous profile',availability_privacy_status:'duplicate_profile_identity'};
+            const entry=clinicalDisplayEntry('field',item.source,field);
+            const theme=item.source===spec.source ? spec.themes.find(theme=>theme.groups.some(group=>group.fields.includes(field))) : null;
+            const title=theme?.title || 'Unclassified';
+            const terms=[item.source,field,row.profile_kind,entry?.label,entry?.definition,title,...(Array.isArray(entry?.aliases)?entry.aliases:[])].filter(Boolean).join(' ').toLowerCase();
+            if(!q || terms.includes(q)) rows.push({row,theme:title,label:entry?.label || field,ambiguous:matches.length>1});
+          });
+        });
+        const pages=Math.max(1,Math.ceil(rows.length/30)), page=Math.max(0,Math.min(pages-1,Math.floor(Number(requestedPage)||0)));
+        return {rows:rows.slice(page*30,(page+1)*30),total:rows.length,page,pages,start:page*30};
+      }
+      function renderRegistryCatalogueResults(panelId,sources,query='',requestedPage=0) {
+        const page=registryCataloguePage(panelId,sources,query,requestedPage);
+        const paging=page.pages>1 ? `<div class="toolbar"><button type="button" data-registry-catalogue-page="${page.page-1}"${page.page===0?' disabled':''}>Previous fields</button><span class="mini">Page ${page.page+1} of ${page.pages}</span><button type="button" data-registry-catalogue-page="${page.page+1}"${page.page===page.pages-1?' disabled':''}>Next fields</button></div>` : '';
+        return `<p class="mini" role="status" tabindex="-1" data-registry-catalogue-status>${page.total ? `${page.start+1}–${page.start+page.rows.length} of ${page.total} matching distinct published field identities` : 'No matching fields. Try a shorter clinical term or exact column name, or clear the search'}.</p>${paging}<ul class="registry-field-list registry-catalogue-list">${page.rows.map(item=>`<li><span class="badge">${escapeHtml(item.theme)}</span>${item.ambiguous ? '<p class="mini">Ambiguous profile identity; counts and summaries withheld.</p>' : ''}<ul class="registry-catalogue-field">${renderRegistryFieldProfile(item.row,panelId)}</ul></li>`).join('')}</ul>${paging}`;
+      }
+      function renderRegistryCatalogue(panelId,sources) {
+        return `<details id="registry-catalogue-section-${panelId}" class="lineage-block registry-catalogue" data-registry-catalogue="${panelId}"><summary>Published field catalogue · ${registryCataloguePage(panelId,sources).total} distinct published field identities</summary><p class="mini">Search clinical labels, meanings and original column names. Unclassified fields remain discoverable without a clinical assignment. Redacted profiles may share one label; ambiguous counts and summaries are withheld. This catalogue covers published profiles and does not establish that every source column has been profiled.</p><label for="registry-catalogue-${panelId}">Find a field in this registry</label><div class="toolbar"><input id="registry-catalogue-${panelId}" type="search" data-registry-catalogue-search placeholder="e.g. response, immunoglobulin, Reg_…"><button type="button" data-registry-catalogue-clear>Clear search</button></div><div data-registry-catalogue-results>${renderRegistryCatalogueResults(panelId,sources)}</div></details>`;
+      }
+      function renderRegistryCoverage(sources) {
+        return `<section class="registry-coverage"><h3>Source years and regions</h3><p class="mini">Supplied source-record coverage from selected date and region fields; it is separate from patient counts and completeness for each clinical field. Geographic meaning is not established here.</p>${sources.map(item=>{
+          const evidence=sourceCoverage(item.source);
+          const bases=['event_date_counts','streamed_event_date_counts'];
+          const years=evidence.years.filter(row=>registryExactSource(row)===item.source && bases.includes(row.coverage_basis) && registryCoverageRowSafe(row));
+          const grouped=sourceYearGroups(years);
+          const annual=grouped.map(group=>{
+            const supplied=[...new Set(group.rows.map(suppliedSourceYear).filter(year=>year!==null))].sort((a,b)=>a-b);
+            const span=supplied.length ? `${supplied[0]}${supplied.length>1 ? `–${supplied.at(-1)}` : ''}` : '';
+            return `<details class="registry-clinical-group"><summary>${escapeHtml(group.date)} · ${span} · ${supplied.length} supplied years</summary><p class="mini">${escapeHtml(sourceYearBasis(group.basis))}. Missing years mean no count was supplied.</p><div class="table-wrap"><table><thead><tr><th scope="col">Year</th><th scope="col">Source records</th></tr></thead><tbody>${supplied.map(year=>`<tr><td>${year}</td><td>${sourceYearCell(group.rows,year)}</td></tr>`).join('')}</tbody></table></div></details>`;
+          }).join('');
+          const regions=evidence.regions.filter(row=>registryExactSource(row)===item.source && registryCoverageRowSafe(row));
+          const regional=regions.length ? `<details class="registry-clinical-group"><summary>Recorded regions · ${regions.length} supplied rows</summary><div class="table-wrap"><table><thead><tr><th scope="col">Recorded region</th><th scope="col">Source records</th></tr></thead><tbody>${regions.map(row=>`<tr><td>${escapeHtml(row.region_name || row.region_code || 'Not supplied')}<br><small>Field: <code>${escapeHtml(row.region_column || 'Not supplied')}</code></small></td><td>${sourceCountLabel(row)}</td></tr>`).join('')}</tbody></table></div></details>` : '<p class="mini">No direct region counts are supplied for this source.</p>';
+          return `<article data-registry-coverage-source="${escapeHtml(item.source)}"><h4>${escapeHtml(sourceDisplayName(item.source))} · <code>${escapeHtml(item.source)}</code></h4>${annual || '<p class="mini">Year summaries are not available in this export.</p>'}${regional}${evidence.years.length>years.length || evidence.regions.length>regions.length ? '<p class="mini">Restricted or unreviewed coverage evidence is withheld; date bounds are not inferred.</p>' : ''}<a class="registry-field-action" href="DALYCARE_outputs.html?${escapeHtml(new URLSearchParams({view:'timeplace',source:item.source}).toString())}">Inspect this source’s coverage →</a></article>`;
+        }).join('') || '<p class="mini">Coverage cannot be attributed until an exact source identity is established.</p>'}</section>`;
+      }
+      function registryCoverageRowSafe(row) {
+        const permitted=['','published','validated','approved','ok','eligible_stored_distribution','eligible_distribution'];
+        return String(row.is_sensitive ?? '').toLowerCase()!=='true' && row.profile_kind!=='sensitive' && !Object.keys(row).some(key=>/privacy_status$/.test(key) && !permitted.includes(String(row[key] ?? ''))) && !row.count_privacy_status && !['suppressed','withheld','protected','is_suppressed','is_protected'].some(key=>Boolean(row[key])) && !['validation_status','publication_status'].some(key=>row[key]!=null && !permitted.includes(String(row[key])));
       }
       function registrySummaryEvidence(panelId, sources) {
         const names = new Set(sources.map(item=>item.source));
@@ -5773,14 +5870,20 @@
           return `<article class="registry-source-item" data-registry-source="${escapeHtml(item.source)}"><p class="registry-source-heading"><strong>${escapeHtml(sourceDisplayName(item.source))}</strong><code>${escapeHtml(item.source)}</code></p><p class="registry-source-facts">${countCopy} · ${item.duplicate || blocked || fields===null ? 'Catalog field count not supplied' : `${formatNumber(fields)} catalog fields`} · ${formatNumber(item.profiles.length)} published field profiles</p>${item.membership && item.loadState!=='loaded' ? `<p class="mini registry-source-limitation">Supplied load status: ${escapeHtml(item.loadState==='not_loaded'?'not loaded or not tested':item.loadState)}</p>` : ''}${limitation || lineage ? `<p class="mini registry-source-limitation">${escapeHtml([limitation,lineage].filter(Boolean).join(' '))}</p>` : ''}${sourceEvidenceLinks(item.source,'',{inventoryLabel:'Browse source fields'})}${item.aliases?.length ? `<details class="lineage-block"><summary>Related exact identities</summary><p class="mini">${item.aliases.map(alias=>`<code>${escapeHtml(alias)}</code>`).join(', ')}. Each identity retains its own profiles, counts and coverage; validate their relationship.</p></details>` : ''}${item.duplicate || lineage ? renderOriginalDomainSourceEvidence(item) : ''}</article>`;
         }).join('')}</div>${registrySummaryEvidence(panelId,sources)}`;
       }
-      function renderRegistryFieldProfile(row, panelId) {
+      function renderRegistryFieldProfile(row, panelId, options={}) {
         const source=row.table_name, field=row.column_name, entry=clinicalDisplayEntry('field',source,field);
-        const blocked=String(row.is_sensitive ?? '').toLowerCase()==='true' || row.profile_kind==='sensitive' || row.value_privacy_status==='protected_field' || row.numeric_privacy_status==='protected_field' || /withheld|protected|suppressed/.test(row.availability_privacy_status || '') || Boolean(row.count_privacy_status);
+        const blocked=String(row.is_sensitive ?? '').toLowerCase()==='true' || row.profile_kind==='sensitive' || row.value_privacy_status==='protected_field' || row.numeric_privacy_status==='protected_field' || Boolean(row.availability_privacy_status) || Boolean(row.count_privacy_status);
         const available=finiteSummary(row.n_available), missing=finiteSummary(row.n_missing);
-        const numeric=panelId==='reg_damyda' ? panelRows('damyda_numeric_fields').find(item=>registryExactSource(item)===source && item.source_column===field) : null;
-        const summary=cllIsDateLikeColumn(field) ? null : row.profile_kind==='numeric' && row.numeric_privacy_status==='eligible_stored_summary' ? row : numeric?.numeric_privacy_status==='eligible_stored_summary' ? numeric : null;
-        const unitDisclosure=row.profile_kind==='numeric' || numeric ? `<details class="registry-field-metadata"><summary>Units and numeric publication</summary><p class="mini">${escapeHtml(fieldUnitCopy(row))}<br>${numeric?.unit ? `Configured registry-panel unit: ${escapeHtml(numeric.unit)}` : 'Configured registry-panel unit not supplied'}<br>Source-profile publication status: <code>${escapeHtml(row.numeric_privacy_status || 'Not supplied')}</code>${numeric ? `<br>Panel publication status: <code>${escapeHtml(numeric.numeric_privacy_status || 'Not supplied')}</code>` : ''}</p>${!summary ? `<p class="mini">${escapeHtml(registryNumericReason(numeric || row))}</p>` : ''}${[row.numeric_privacy_reason,row.validation_exception,numeric?.numeric_privacy_reason,numeric?.validation_exception].filter(Boolean).map(reason=>`<p class="mini">${escapeHtml(reason)}</p>`).join('')}</details>` : '';
-        return `<li class="registry-field-row"><div><strong>${escapeHtml(entry?.label || field)}</strong><p class="mini registry-field-identity"><code>${escapeHtml(source)} / ${escapeHtml(field)}</code></p><p class="mini">${blocked ? 'Availability counts withheld' : available!==null ? `${formatNumber(available)} source records with a value${missing!==null ? ` · ${formatNumber(missing)} missing source records` : ''}` : 'Records with a value: counts are not supplied.'}</p>${!blocked && summary ? `<p class="mini"><strong>Median: ${finiteSummary(summary.median)===null ? 'Not supplied' : formatNumber(summary.median)}</strong>${finiteSummary(summary.p25)!==null && finiteSummary(summary.p75)!==null && Number(summary.p75)>=Number(summary.p25) ? ` · Middle 50%: ${formatNumber(summary.p25)}–${formatNumber(summary.p75)}` : ''}<br>Recorded values; not a clinical reference range.</p>` : ''}${unitDisclosure}</div>${sourceEvidenceLinks(source,field,{coverage:false})}</li>`;
+        const numericRows=panelId==='reg_damyda' ? panelRows('damyda_numeric_fields').filter(item=>registryExactSource(item)===source && item.source_column===field) : [];
+        const numeric=numericRows.length===1 ? numericRows[0] : null;
+        const dateLike=row.profile_kind==='date' || String(row.is_date_like ?? '').toLowerCase()==='true' || cllIsDateLikeColumn(field);
+        const summary=blocked || dateLike || !registryNumericAllowed(row,false) ? null : row.profile_kind==='numeric' && registryNumericAllowed(row) ? row : registryNumericAllowed(numeric) ? numeric : null;
+        const q1=finiteSummary(summary?.p25),q3=finiteSummary(summary?.p75),mean=finiteSummary(summary?.mean),median=finiteSummary(summary?.median);
+        const stats=summary ? `<p class="registry-marker-summary">${mean!==null ? `Mean: ${formatNumber(mean)} · ` : ''}<strong>Median: ${median===null ? 'Not supplied' : formatNumber(median)}</strong>${q1!==null && q3!==null && q3>=q1 ? `<br>IQR: ${formatNumber(q1)}–${formatNumber(q3)} <span class="mini">(middle 50%; width ${formatNumber(q3-q1)})</span>` : ''}<br><span class="mini">${escapeHtml(fieldUnitCopy(row))}</span></p>${options.sharedNumericContext ? '' : `<p class="mini">Recorded values; not a clinical reference range. ${summary.summary_scope==='stored_source_row_profile' ? 'Summary of stored source rows.' : 'Summary scope not verified.'} ${String(summary.summary_method || '').includes('bounded_stream_sample') ? 'Quartiles may use a bounded stream sample.' : 'Quantile method not supplied or not reviewed.'}</p>`}` : '';
+        const unitDisclosure=row.profile_kind==='numeric' || numeric ? `<details class="registry-field-metadata"><summary>Units and numeric publication</summary>${!summary ? `<p class="mini">${escapeHtml(fieldUnitCopy(row))}<br>${escapeHtml(registryNumericReason(numeric || row))}</p>` : ''}${numeric?.unit ? `<p class="mini">Configured registry-panel unit: ${escapeHtml(numeric.unit)}. This is separate from source-profile units.</p>` : ''}<p class="mini">Scope: <code>${escapeHtml(summary?.summary_scope || row.summary_scope || 'Not supplied')}</code><br>Method: <code>${escapeHtml(summary?.summary_method || row.summary_method || 'Not supplied')}</code></p>${[row.numeric_privacy_reason,row.validation_exception,numeric?.numeric_privacy_reason,numeric?.validation_exception].filter(Boolean).map(reason=>`<p class="mini">${escapeHtml(reason)}</p>`).join('')}</details>` : '';
+        const definitions=(payload.clinical_display_dictionary || []).filter(item=>item.kind==='registry_value' && item.system===`${source}:${field}`);
+        const meanings=entry?.definition && !/^Readable source-field|^Source-specific|^Display name/.test(entry.definition) || definitions.length ? `<details class="registry-field-metadata"><summary>Field meaning</summary>${entry?.definition ? `<p>${escapeHtml(entry.definition)}</p>` : ''}${definitions.map(item=>`<p><code>${escapeHtml(item.code)}</code> — ${escapeHtml(item.label)}<br>${escapeHtml(item.definition || '')}</p>`).join('')}${definitions.length ? '<p class="mini">Reference definitions; not observed frequencies.</p>' : ''}</details>` : '';
+        return `<li class="registry-field-row"><div><strong>${escapeHtml(entry?.label || field)}</strong><p class="mini registry-field-identity"><code>${escapeHtml(source)} / ${escapeHtml(field)}</code></p>${stats}<p class="mini">${blocked ? 'Availability counts withheld' : available!==null ? `${formatNumber(available)} source records with a value${missing!==null ? ` · ${formatNumber(missing)} missing source records` : ''}` : 'Records with a value: counts are not supplied.'}</p>${unitDisclosure}${meanings}</div><a class="registry-field-action" href="DALYCARE_outputs.html?${escapeHtml(new URLSearchParams({view:'fields',table:'column_profiles',source,field}).toString())}">Field evidence →</a></li>`;
       }
       function registryThemeRows(panelId, theme, sources) {
         const spec=registryDiscoverySpecs[panelId], canonical=sources.find(item=>item.source===spec.source);
@@ -5794,15 +5897,25 @@
       }
       function renderRegistryTheme(panelId, theme, sources) {
         const spec=registryDiscoverySpecs[panelId], canonical=sources.find(item=>item.source===spec.source);
-        const groups=theme.groups.map(group=>({...group,rows:(group.fields || []).map(field=>canonical?.profiles.find(row=>row.table_name===spec.source && row.column_name===field)).filter(Boolean)})).filter(group=>group.rows.length);
+        const groups=theme.groups.map(group=>({...group,rows:(group.fields || []).map(field=>registryUniqueProfile(canonical,field)).filter(Boolean)})).filter(group=>group.rows.length);
         const unreviewed=sources.filter(item=>item.source!==spec.source);
         const rows=registryThemeRows(panelId,theme,sources);
         if (!theme.groups.length && !rows.length) return `<section class="registry-theme-section" id="registry-${panelId.slice(4)}-theme-${theme.id}"><h3>${escapeHtml(theme.title)}</h3><p class="mini">${escapeHtml(theme.purpose)}</p>${sources.map(item=>registrySourceFallback(item.source)).join('')}</section>`;
-        return `<section class="registry-theme-section" id="registry-${panelId.slice(4)}-theme-${theme.id}"><h3>${escapeHtml(theme.title)}</h3><p class="mini">${escapeHtml(theme.purpose)}</p>${rows.length ? renderRegistryCategories(rows,{tone:theme.id==='treatment'?'green':theme.id==='response'?'amber':'violet'}) : '<p class="mini registry-summary-status">No supported category summary is supplied.</p>'}${groups.length ? groups.map(group=>`${group.title ? `<h4>${escapeHtml(group.title)}</h4>` : ''}${group.note ? `<p class="mini">${escapeHtml(group.note)}</p>` : ''}<ul class="registry-field-list">${group.rows.map(row=>renderRegistryFieldProfile(row,panelId)).join('')}</ul>`).join('') : '<p class="mini">No reviewed field mapping with a current exact profile is supplied for this theme.</p>'}${!groups.length || unreviewed.length ? `<details class="registry-theme-fallback"><summary>Explore source fields for this theme</summary>${(groups.length ? unreviewed : sources).map(item=>registrySourceFallback(item.source)).join('')}${!sources.length ? '<p class="mini">Inspect the source catalog above for available identities.</p>' : ''}</details>` : ''}</section>`;
+        const categories=registryCategoryPartition(rows).safe.length ? renderRegistryCategories(rows,{tone:theme.id==='treatment'?'green':theme.id==='response'?'amber':'violet'}) : '';
+        const fields=groups.map(group=>{
+          const list=`<ul class="registry-field-list">${group.rows.map(row=>renderRegistryFieldProfile(row,panelId)).join('')}</ul>`;
+          const numeric=theme.id==='baseline' ? group.rows.filter(row=>row.profile_kind==='numeric' && registryNumericAllowed(row)) : [];
+          if(numeric.length){const rest=group.rows.filter(row=>!numeric.includes(row));return `${group.title ? `<h4>${escapeHtml(group.title)}</h4>` : ''}<p class="mini">These summaries describe ${numeric.every(row=>row.summary_scope==='stored_source_row_profile') ? 'stored source rows' : 'recorded values; the summary scope has not been verified'}; not a clinical reference range. ${numeric.some(row=>String(row.summary_method || '').includes('bounded_stream_sample')) ? 'Quartiles may use a bounded stream sample.' : 'The quantile method is not supplied or reviewed.'}</p><ul class="registry-field-list registry-marker-grid">${numeric.map(row=>renderRegistryFieldProfile(row,panelId,{sharedNumericContext:true})).join('')}</ul>${rest.length ? `<details class="registry-clinical-group"><summary>Additional marker fields and unit variants · ${rest.length} ${rest.length===1?'field':'fields'}</summary><ul class="registry-field-list">${rest.map(row=>renderRegistryFieldProfile(row,panelId)).join('')}</ul></details>` : ''}`;}
+          const examples=group.preview || [...new Set(group.rows.map(row=>clinicalDisplayEntry('field',row.table_name,row.column_name)?.label || row.column_name))].slice(0,3).join(', ');
+          return `<details class="registry-clinical-group"><summary><strong>${escapeHtml(group.title || theme.title)}</strong> · ${group.rows.length} ${group.rows.length===1?'field':'fields'}<span class="mini registry-group-preview">${escapeHtml(examples)}</span></summary>${group.note ? `<p class="mini">${escapeHtml(group.note)}</p>` : ''}${list}</details>`;
+        }).join('');
+        return `<section class="registry-theme-section" id="registry-${panelId.slice(4)}-theme-${theme.id}"><h3>${escapeHtml(theme.title)}</h3><p class="mini">${escapeHtml(theme.purpose)}</p>${categories}${fields || '<p class="mini">No reviewed field mapping with a current exact profile is supplied for this theme.</p>'}${panelId==='reg_lyfo' && theme.id==='stage' ? renderRegistryReferenceMeanings('RKKP_LYFO:subtype') : ''}${!groups.length || unreviewed.length ? `<details class="registry-theme-fallback"><summary>Explore source fields for this theme</summary>${(groups.length ? unreviewed : sources).map(item=>registrySourceFallback(item.source)).join('')}${!sources.length ? '<p class="mini">Inspect the source catalog above for available identities.</p>' : ''}</details>` : ''}</section>`;
       }
       function renderRegistryDiscoveryPanel(panelId) {
         const spec=registryDiscoverySpecs[panelId], sources=domainSourceInventory(domainSourceSpecs(panelId));
-        return `<div class="focused-panel registry-discovery-panel ${panelId.slice(4)}-panel"><nav class="registry-theme-index" aria-label="${escapeHtml(panelId.slice(4))} field themes">${spec.themes.map(theme=>`<a href="${escapeHtml(atlasRouteHash('registries',spec.subId,{theme:theme.id}))}" data-registry-theme="${theme.id}" data-registry-sub="${spec.subId}">${escapeHtml(theme.title)}</a>`).join('')}</nav>${renderRegistrySourceStrip(panelId,sources)}${spec.themes.map(theme=>renderRegistryTheme(panelId,theme,sources)).join('')}${panelRawFieldRows.some(row=>row.panel_id===panelId) ? `<details class="lineage-block"><summary>Additional raw field lineage</summary>${renderRawFieldList(panelRawFieldRows.filter(row=>row.panel_id===panelId),24)}</details>` : ''}</div>`;
+        const rows=spec.themes.flatMap(theme=>registryThemeRows(panelId,theme,sources));
+        const unpublished=registryCategoryPartition(rows).withheld.length && !registryCategoryPartition(rows).safe.length;
+        return `<div class="focused-panel registry-discovery-panel ${panelId.slice(4)}-panel"><nav class="registry-theme-index" aria-label="${escapeHtml(panelId.slice(4))} field themes">${spec.themes.map(theme=>`<a href="${escapeHtml(atlasRouteHash('registries',spec.subId,{theme:theme.id}))}" data-registry-theme="${theme.id}" data-registry-sub="${spec.subId}">${escapeHtml(theme.navTitle || theme.title)}</a>`).join('')}<button type="button" class="concept-link-button" data-registry-catalogue-open="${panelId}">Find any registry field →</button></nav><p class="mini registry-opening-scope">Counts refer to records, not unique people. One person may have several registration, treatment or follow-up records.</p>${renderRegistrySourceStrip(panelId,sources)}<p class="mini registry-publication-note">${unpublished ? 'Category frequencies withheld in this publication.' : 'Category frequencies appear only where a supported published summary is supplied.'} Field names, reference meanings and permitted numeric summaries remain useful for clinical discovery; a field listing does not establish a positive finding.</p>${spec.themes.map(theme=>renderRegistryTheme(panelId,theme,sources)).join('')}${renderRegistryCoverage(sources)}${renderRegistryCatalogue(panelId,sources)}${panelRawFieldRows.some(row=>row.panel_id===panelId) ? `<details class="lineage-block"><summary>Additional raw field lineage</summary>${renderRawFieldList(panelRawFieldRows.filter(row=>row.panel_id===panelId),24)}</details>` : ''}</div>`;
       }
       /* REGISTRY_DISCOVERY_END */
       function cllRawRowsFor(columns) {
@@ -6195,6 +6308,48 @@
       }
       document.addEventListener('click',handleRegistryThemeClick);
       /* REGISTRY_THEME_ACTION_END */
+      function handleRegistryCatalogueSearch(event) {
+        const input=event.target.closest('[data-registry-catalogue-search]');
+        const catalogue=input?.closest('[data-registry-catalogue]');
+        if(!catalogue || !registryDiscoverySpecs[catalogue.dataset.registryCatalogue]) return;
+        const panelId=catalogue.dataset.registryCatalogue;
+        catalogue.querySelector('[data-registry-catalogue-results]').innerHTML=renderRegistryCatalogueResults(panelId,domainSourceInventory(domainSourceSpecs(panelId)),input.value,0);
+      }
+      function handleRegistryCataloguePage(event) {
+        const button=event.target.closest('[data-registry-catalogue-page]');
+        const catalogue=button?.closest('[data-registry-catalogue]');
+        if(!catalogue || button.disabled || !registryDiscoverySpecs[catalogue.dataset.registryCatalogue]) return;
+        const panelId=catalogue.dataset.registryCatalogue;
+        catalogue.querySelector('[data-registry-catalogue-results]').innerHTML=renderRegistryCatalogueResults(panelId,domainSourceInventory(domainSourceSpecs(panelId)),catalogue.querySelector('[data-registry-catalogue-search]').value,button.dataset.registryCataloguePage);
+        scrollToAtlasTarget(catalogue.querySelector('[data-registry-catalogue-status]'));
+      }
+      function handleRegistryCatalogueAction(event) {
+        const open=event.target.closest('[data-registry-catalogue-open]');
+        if(open){
+          const panelId=open.dataset.registryCatalogueOpen;
+          if(!registryDiscoverySpecs[panelId]) return;
+          const catalogue=document.getElementById(`registry-catalogue-section-${panelId}`),input=catalogue?.querySelector('[data-registry-catalogue-search]');
+          if(!input) return;
+          catalogue.open=true;
+          input.scrollIntoView({block:'center'});
+          input.focus({preventScroll:true});
+          return;
+        }
+        const clear=event.target.closest('[data-registry-catalogue-clear]'),catalogue=clear?.closest('[data-registry-catalogue]');
+        if(!catalogue || !registryDiscoverySpecs[catalogue.dataset.registryCatalogue]) return;
+        const panelId=catalogue.dataset.registryCatalogue,input=catalogue.querySelector('[data-registry-catalogue-search]');
+        input.value='';
+        catalogue.querySelector('[data-registry-catalogue-results]').innerHTML=renderRegistryCatalogueResults(panelId,domainSourceInventory(domainSourceSpecs(panelId)),'',0);
+        input.focus({preventScroll:true});
+      }
+      /* REGISTRY_CATALOGUE_ACTION_START */
+      function installRegistryCatalogueActions() {
+        document.addEventListener('input',handleRegistryCatalogueSearch);
+        document.addEventListener('click',handleRegistryCataloguePage);
+        document.addEventListener('click',handleRegistryCatalogueAction);
+      }
+      installRegistryCatalogueActions();
+      /* REGISTRY_CATALOGUE_ACTION_END */
       const atlasNav = document.querySelector('.nav');
       const syncNavHeight = () => document.documentElement.style.setProperty('--atlas-nav-height', `${atlasNav.getBoundingClientRect().height}px`);
       syncNavHeight();
