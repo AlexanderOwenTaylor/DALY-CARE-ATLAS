@@ -1635,6 +1635,123 @@
       }
     },
     {
+      "id": "registry_field_summaries",
+      "title": "Registry stage, treatment, response and measurements",
+      "source_file": "outputs/panels/registry_field_summaries.csv",
+      "arg_path": [
+        "panels",
+        "registry_field_summaries"
+      ],
+      "payload_path": [
+        "panels",
+        "registry_field_summaries"
+      ],
+      "required": false,
+      "schemas": [
+        {
+          "contract_version": "string",
+          "table_name": "string",
+          "source_column": "string",
+          "kind": "string",
+          "topic": "string",
+          "phase": "string",
+          "label": "string",
+          "unit_status": "string",
+          "count_basis": "string",
+          "summary_method": "string",
+          "summary_status": "string",
+          "minimum_cell_count": "number",
+          "denominator_n": "number",
+          "n_valid": "number",
+          "n_missing": "number",
+          "n_invalid": "number",
+          "n_conflicting": "number",
+          "n_distinct": "number",
+          "minimum_value_support": "number",
+          "category_counts_json": "string",
+          "mean": "number",
+          "median": "number",
+          "p25": "number",
+          "p75": "number"
+        }
+      ],
+      "projection": [
+        "contract_version",
+        "table_name",
+        "source_column",
+        "kind",
+        "topic",
+        "phase",
+        "label",
+        "unit_status",
+        "count_basis",
+        "summary_method",
+        "summary_status",
+        "minimum_cell_count",
+        "denominator_n",
+        "n_valid",
+        "n_missing",
+        "n_invalid",
+        "n_conflicting",
+        "n_distinct",
+        "minimum_value_support",
+        "category_counts_json",
+        "mean",
+        "median",
+        "p25",
+        "p75"
+      ],
+      "group": "Disease registries",
+      "kind": "aggregate",
+      "row_grain": "One complete summary for one exact registry field and form phase. Repeated identical values for a person collapse; conflicting, missing and invalid values are separate partitions. All cells pass whole-field disclosure checks before publication.",
+      "count_basis": "Distinct people with one unambiguous value per field; each treatment field is independent.",
+      "column_meanings": {
+        "source_column": {
+          "label": "Column name",
+          "definition": "Exact source column; fields and phases are never pooled."
+        },
+        "summary_status": {
+          "label": "Summary availability",
+          "definition": "Published only after a complete source scan, reviewed person key and disclosure checks. Other states expose no counts or categories."
+        },
+        "denominator_n": {
+          "label": "People in source",
+          "definition": "Distinct people in this source, including missing, invalid and conflicting values for this field."
+        },
+        "n_valid": {
+          "label": "People with a usable value",
+          "definition": "One unambiguous approved category or finite nonnegative numeric value."
+        },
+        "category_counts_json": {
+          "label": "Recorded categories and people",
+          "definition": "Complete approved category counts; no top-N truncation. Numeric stage/response codes retain their recorded meaning until a verified codebook is provided."
+        },
+        "unit_status": {
+          "label": "Unit verification",
+          "definition": "Unverified: numeric summaries retain stored values without conversion or an inferred clinical unit."
+        },
+        "p25": {
+          "label": "Lower quartile",
+          "definition": "25th percentile among valid people, rounded to three significant digits."
+        },
+        "p75": {
+          "label": "Upper quartile",
+          "definition": "75th percentile among valid people, rounded to three significant digits."
+        }
+      },
+      "navigation_terms": [
+        "DaMyDa",
+        "LYFO",
+        "CLL",
+        "stage",
+        "treatment",
+        "response",
+        "median",
+        "mean",
+        "quartiles"
+      ]
+    },
+    {
       "id": "damyda_clinical_profile",
       "title": "Myeloma registry category summaries",
       "source_file": "outputs/panels/damyda_clinical_profile.csv",

@@ -4,7 +4,8 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
                            npu_dictionary = NULL,
                            npu_surfaces = NULL,
                            isotype_vectors = NULL,
-                           treatment_families = NULL) {
+                           treatment_families = NULL,
+                           project_root = getOption("dalycare.registry.project_root", ".")) {
   if (!is.data.frame(data)) {
     stop("profile_source() requires a data frame.", call. = FALSE)
   }
@@ -56,7 +57,8 @@ profile_source <- function(data, table_name, source_type = NA_character_, source
     npu_dictionary = npu_dictionary,
     npu_surfaces = npu_surfaces,
     isotype_vectors = isotype_vectors,
-    treatment_families = treatment_families
+    treatment_families = treatment_families,
+    project_root = project_root
   )
 
   list(
@@ -329,7 +331,8 @@ profile_panels <- function(data, table_name, profile_mode = "full", min_cell_cou
                            npu_dictionary = NULL,
                            npu_surfaces = NULL,
                            isotype_vectors = NULL,
-                           treatment_families = NULL) {
+                           treatment_families = NULL,
+                           project_root = getOption("dalycare.registry.project_root", ".")) {
   profile_mode <- normalize_profile_mode(profile_mode)
   if (identical(profile_mode, "schema")) {
     return(list())
@@ -350,6 +353,7 @@ profile_panels <- function(data, table_name, profile_mode = "full", min_cell_cou
     medication_atc_groups = panel_atc_groups(data, table_name),
     damyda_feature_coverage = panel_damyda_features(data, table_name),
     registry_clinical_summary = panel_registry_summary(data, table_name),
+    registry_field_summaries = registry_field_summaries(data, table_name, project_root, min_cell_count),
     sp_operational_sources = panel_sp_sources(data, table_name),
     atlas_temporal_coverage_years = panel_temporal_coverage_years(
       data,
@@ -501,13 +505,14 @@ registry_column <- function(data, candidates) {
   NA_character_
 }
 
-registry_patient_count <- function(data) {
-  id_col <- guess_id_column(data)
-  if (!is.na(id_col) && id_col %in% names(data)) {
-    return(count_distinct_capped(data[[id_col]]))
-  }
-  nrow(data)
+registry_patient_count <- function(data, table_name = "") {
+  reviewed <- registry_summary_person_key(table_name, names(data))
+  if (!identical(reviewed$status, "ok")) return(NA_real_)
+  keys <- registry_summary_input_text(data[[reviewed$key]])
+  if (any(is.na(keys) | trimws(keys) == "")) return(NA_real_)
+  length(unique(keys))
 }
+
 
 panel_registry_summary <- function(data, table_name) {
   registry <- registry_name(table_name)
@@ -518,7 +523,7 @@ panel_registry_summary <- function(data, table_name) {
     registry = registry,
     n_rows = nrow(data),
     n_cols = ncol(data),
-    n_patients = registry_patient_count(data),
+    n_patients = registry_patient_count(data, table_name),
     min_date = as.character(range$min_date),
     max_date = as.character(range$max_date),
     stringsAsFactors = FALSE

@@ -264,6 +264,15 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
     path <- unlist(spec$arg_path,use.names=FALSE)
     frame <- atlas_evidence_get(args,path)
     full <- atlas_evidence_get(guarded,unlist(spec$payload_path,use.names=FALSE))
+    if (identical(spec$id,'registry_field_summaries') && is.list(full)) {
+      schema <- spec$schemas[[1]]
+      frame <- as.data.frame(setNames(lapply(names(schema),function(key) {
+        if (schema[[key]]=='number') vapply(full,function(row) if(is.null(row[[key]])) NA_real_ else as.numeric(row[[key]]),numeric(1))
+        else vapply(full,function(row) row[[key]] %||% NA_character_,character(1))
+      }),names(schema)),stringsAsFactors=FALSE)
+      args <- atlas_evidence_set(args,path,frame)
+      next
+    }
     if(is.data.frame(frame) && nrow(frame) && is.list(full)) {
       if(nrow(frame) != length(full)) {
         # Range-derived rows were collapsed by the whole-table guard. Preserve
@@ -289,9 +298,14 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
   list(payload=payload,tables=atlas_output_evidence(run_dir,project_root,discard_membership_input=TRUE),context=context,membership_spec=membership_spec)
 }
 
-atlas_evidence_audit <- function(x) {
+atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5) {
   visit <- function(row,path=character()) {
     if(!is.list(row)) return(invisible(NULL))
+    if(length(path) && tail(path,1)=='registry_field_summaries') {
+      result <- atlas_registry_summary_audit(row,project_root,min_cell_count)
+      if(!isTRUE(result$ok)) stop('Registry summary privacy audit failed',call.=FALSE)
+      return(invisible(NULL))
+    }
     if(is.null(names(row))) {for(v in row) visit(v,path);return(invisible(NULL))}
     if(any(tail(path,1) %in% c('npu_display_dictionary','clinical_display_dictionary'))) return(invisible(NULL))
     forbidden <- intersect(c('min','max','min_date','max_date','raw_min_date','raw_max_date','display_min_date','display_max_date'),names(row))
@@ -359,7 +373,7 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
   }
   if(!exists('atlas_public_privacy',mode='function')) source(file.path(project_root,'R/public_privacy.R'),encoding='UTF-8')
   safe <- atlas_public_privacy(logical,project_root,minimum)
-  atlas_evidence_audit(safe)
+  atlas_evidence_audit(safe,project_root,minimum)
   privacy <- c('value_privacy_status','count_privacy_status','date_privacy_status','availability_privacy_status','numeric_privacy_status','summary_scope','summary_method','is_sensitive')
   for(i in seq_along(descriptors)) {
     spec <- registry$artifacts[[i]]

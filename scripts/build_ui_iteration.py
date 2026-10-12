@@ -47,7 +47,7 @@ def build(input_dir, output_dir, project_root, run_dir=None, transport_version=N
     payload['clinical_source_inventory'] = clinical_source_inventory(
         catalog, membership_spec, evidence_origin='imported_snapshot',
         inventory_limited=isinstance(catalog, list) and len(catalog) >= 1000)
-    errors = audit_public_payload(payload)
+    errors = audit_public_payload(payload, project_root=project_root, min_cell_count=minimum)
     if errors:
         raise ValueError(f'Public privacy audit failed at {len(errors)} paths')
     tables = collect_output_evidence(run_dir, project_root, payload)

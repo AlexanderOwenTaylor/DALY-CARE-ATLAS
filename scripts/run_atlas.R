@@ -68,6 +68,8 @@ load_atlas_runtime <- function(project_root = find_project_root()) {
   source(file.path(project_root, "R", "npu_dictionary.R"))
   source(file.path(project_root, "R", "code_panels.R"))
   source(file.path(project_root, "R", "coverage.R"))
+  source(file.path(project_root, "R", "registry_summary_privacy.R"))
+  source(file.path(project_root, "R", "registry_summaries.R"))
   source(file.path(project_root, "R", "profiler.R"))
   source(file.path(project_root, "R", "db_profile.R"))
   source(file.path(project_root, "R", "source_reconciliation.R"))

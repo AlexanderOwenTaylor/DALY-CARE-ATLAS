@@ -1252,6 +1252,13 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
       min_cell_count = min_cell_count
     )
   }
+  if (!identical(profile_mode, "schema")) {
+    panels$registry_field_summaries <- dbi_registry_field_summaries(
+      conn, table_ref, table_name, schema_info$column_name,
+      project_root = getOption("dalycare.registry.project_root", "."),
+      min_cell_count = min_cell_count, budget_context = budget_context
+    )
+  }
   list(
     source = source_row,
     columns = columns,

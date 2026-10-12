@@ -88,7 +88,7 @@ class SyntheticBuilderTest(unittest.TestCase):
         project = Path(self.temp.name) / 'cli-project'
         for directory in ('scripts', 'config', 'inst/templates', 'inst/config'):
             (project / directory).mkdir(parents=True, exist_ok=True)
-        for relative in ('scripts/build_ui_iteration.py', 'scripts/clinical_source_membership.py', 'scripts/public_privacy.py', 'scripts/site_bundle.py', 'scripts/output_evidence.py', 'inst/config/public-output-registry.json', 'inst/config/clinical-source-membership.json',
+        for relative in ('scripts/build_ui_iteration.py', 'scripts/clinical_source_membership.py', 'scripts/public_privacy.py', 'scripts/registry_summary_privacy.py', 'scripts/site_bundle.py', 'scripts/output_evidence.py', 'inst/config/public-output-registry.json', 'inst/config/clinical-source-membership.json', 'inst/config/registry-summary-policy.json',
                          'config/npu-display-dictionary.csv', 'config/clinical-display-dictionary.csv',
                          'config/public-measurement-policy.csv', 'inst/templates/DALYCARE_atlas.html'):
             shutil.copyfile(ROOT / relative, project / relative)

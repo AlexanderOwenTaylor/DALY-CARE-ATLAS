@@ -4,6 +4,8 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
                       db_adapter = NULL) {
   mode <- match.arg(mode, c("report", "strict"))
   project_root <- normalizePath(project_root, winslash = "/", mustWork = FALSE)
+  registry_options <- options(dalycare.registry.project_root = project_root)
+  on.exit(options(registry_options), add = TRUE)
   bootstrap_path <- dalycare_resolve_bootstrap_path(bootstrap_path)
   source_map_path <- if (file.exists(source_map_path)) source_map_path else file.path(project_root, source_map_path)
   output_root <- if (grepl("^[A-Za-z]:|^/", output_root)) output_root else file.path(project_root, output_root)
@@ -117,6 +119,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     medication_atc_groups = data.frame(stringsAsFactors = FALSE),
     damyda_feature_coverage = data.frame(stringsAsFactors = FALSE),
     registry_clinical_summary = empty_registry_summary(),
+    registry_field_summaries = empty_registry_field_summaries(),
     damyda_clinical_profile = empty_registry_categorical(),
     damyda_numeric_fields = empty_registry_numeric(),
     lyfo_clinical_profile = empty_registry_categorical(),
@@ -539,6 +542,11 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   ))
   output_paths$run_summary <- write_csv(run_summary, file.path(output_dir, "atlas_run_summary.csv"))
 
+  # Validate the merged artifact before CSV export: duplicate source rows cannot
+  # publish individually valid copies of the same exact field.
+  panels$registry_field_summaries <- registry_summary_final_guard(
+    panels$registry_field_summaries, project_root, atlas_min_cell_count()
+  )
   panel_paths <- list()
   for (panel_name in names(panels)) {
     panel_paths[[panel_name]] <- write_csv(panels[[panel_name]], file.path(panel_dir, paste0(panel_name, ".csv")))

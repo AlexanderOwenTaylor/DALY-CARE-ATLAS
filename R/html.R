@@ -318,6 +318,11 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     checks = public_rows(public_checks, max_rows = 500),
     panels = lapply(public_panels, public_rows, max_rows = 250)
   )
+  # This contract is validated as a complete set, with numeric types retained.
+  # The legacy 250-row presentation cap cannot truncate its disclosure evidence.
+  if (is.data.frame(panels$registry_field_summaries)) {
+    payload$panels$registry_field_summaries <- atlas_evidence_rows(panels$registry_field_summaries)
+  }
   if (!is.null(membership_spec)) {
     payload$clinical_source_inventory <- clinical_source_inventory(
       payload$catalog_rows, membership_spec, evidence_origin = membership_origin,

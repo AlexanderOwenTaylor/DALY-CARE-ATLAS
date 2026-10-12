@@ -1,0 +1,3680 @@
+{
+  "version": "registry-summary-v1",
+  "fields": [
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Immunterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Immunotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Kemo_Bendamustin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Chemotherapy assessment: Bendamustine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Kemo_Chlorambucil",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Chemotherapy assessment: Chlorambucil",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Kemo_Fludarabin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Chemotherapy assessment: Fludarabine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Kemo_none",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Chemotherapy assessment: No chemotherapy recorded",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Kemo_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Chemotherapy assessment: Other chemotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Leukocyttal",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "treatment",
+      "label": "Leukocyte count at treatment assessment",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_MRD",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "treatment",
+      "label": "Measurable residual disease (MRD) field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Responsevaluering",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "treatment",
+      "label": "Treatment response assessment",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_Responsevaluering_dt",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "treatment",
+      "label": "Treatment response assessment date",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TRANSPLANT",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Transplantation field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TargeteretBeh_Ibrutinib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Targeted treatment assessment: Ibrutinib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TargeteretBeh_None",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Targeted treatment assessment: No targeted treatment recorded",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TargeteretBeh_Other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Targeted treatment assessment: Other targeted treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TargeteretBeh_acalabrutinib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Targeted treatment assessment: Acalabrutinib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TargeteretBeh_idelalisib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Targeted treatment assessment: Idelalisib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Beh_TargeteretBeh_venetoclax",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Targeted treatment assessment: Venetoclax",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Binet",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Recorded Binet field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Rec_Immunterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Immunotherapy field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Rec_Kemo_Bendamustin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Relapse chemotherapy assessment: Bendamustine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Rec_Kemo_Chlorambucil",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Relapse chemotherapy assessment: Chlorambucil",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Rec_Kemo_Fludarabin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Relapse chemotherapy assessment: Fludarabine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Rec_Kemo_none",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Relapse chemotherapy assessment: No chemotherapy recorded",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Rec_Kemo_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Relapse chemotherapy assessment: Other chemotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Reg_Behandlet",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "registration",
+      "label": "Recorded Reg_Behandlet field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Reg_Behandling",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Treatment recorded at registration",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Reg_Binet",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Recorded Reg_Binet field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Reg_BinetStadium",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Binet stage",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_CLL",
+      "source_column": "Reg_Leukocyttal",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Leukocyte count",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_AktuelSygdomsstatus",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "follow-up",
+      "label": "Current disease status at follow-up",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Adriamycin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Adriamycin",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Allogen",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Recorded FU_Behandling_Allogen field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Bendamustin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Bendamustine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Bortezomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Bortezomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Carfilzomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Carfilzomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Cyklophosphamid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Cyclophosphamide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Daratumumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Daratumumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Denosumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Denosumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Elotuzumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Elotuzumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Isatuximab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Isatuximab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Ixazomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Ixazomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Lenalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Lenalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Melfalan",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Melphalan",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_MelfalanStamcelle",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Recorded FU_Behandling_MelfalanStamcelle field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Pamidronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Pamidronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Panobinostat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Panobinostat",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Pomalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Pomalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Steroid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Steroid treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Straalebeh",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Radiotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Thalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Thalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_Zolendronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Zoledronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_none",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: No treatment recorded",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "FU_Behandling_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "follow-up treatment",
+      "label": "Follow-up treatment: Other treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Albumin_gl",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "primary treatment",
+      "label": "Albumin at primary treatment (mass concentration)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Albumin_mMoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "primary treatment",
+      "label": "Albumin at primary treatment (substance concentration)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Adriamycin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Adriamycin",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Allogen",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Recorded PB_Behandling_Allogen field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_AutoStam",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Autologous stem cell support",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Bendamustin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Bendamustine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Bortezomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Bortezomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Carfilzomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Carfilzomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Cyklophosphamid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Cyclophosphamide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Cytosstatika",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Cytostatic treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Daratumumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Daratumumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Denosumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Denosumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Elotuzumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Elotuzumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Isatuximab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Isatuximab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Ixazomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Ixazomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Lenalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Lenalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Melfalan",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Melphalan",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_MelfalanStamcelle",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Recorded PB_Behandling_MelfalanStamcelle field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Pamidronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Pamidronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Panobinostat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Panobinostat",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Pomalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Pomalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Steroid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Steroid treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Straalebeh",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Radiotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Thalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Thalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_Zolendronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Zoledronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_bisfosfonater",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Bisphosphonates",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Behandling_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "primary treatment",
+      "label": "Primary treatment: Other treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Creatinin_MikMoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "primary treatment",
+      "label": "Creatinine at primary treatment",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Creatinin_mMoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "primary treatment",
+      "label": "Creatinine at primary treatment",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_Haemoglobin",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "primary treatment",
+      "label": "Haemoglobin at primary treatment",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_MRD",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "primary treatment",
+      "label": "Measurable residual disease (MRD) field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_MaksimaleRespons",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "primary treatment",
+      "label": "Best treatment response field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_Bortezomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Bortezomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_Carfilzomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Carfilzomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_Lenalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Lenalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_Pomalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Pomalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_Steroid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Steroid treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_Thalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Thalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "PB_VedligeholdBeh_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "maintenance treatment",
+      "label": "Maintenance treatment: Other treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Albumin_gl",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Albumin",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Albumin_mMoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Albumin (substance concentration field)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Behandlet",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "registration",
+      "label": "Recorded Reg_Behandlet field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_CReaktivtProtein_gl",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "C-reactive protein (CRP)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_CReaktivtProtein_nMoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "C-reactive protein (substance concentration field)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_CalciumAlbuminkorrigeret",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Albumin-corrected calcium",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_CalciumIoniseret",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Ionised calcium",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Creatinin_mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Creatinine",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Creatinin_mmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Creatinine (substance concentration field)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Haemoglobin",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Haemoglobin",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Hoejde",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Height",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_ISS_Stadie",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Recorded Reg_ISS_Stadie field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_IgA_gl",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin A (IgA)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_IgA_mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin A (IgA)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_IgG_gl",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin G (IgG)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_IgG_mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin G (IgG)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_IgM_gl",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin M (IgM)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_LDH",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Lactate dehydrogenase (LDH)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Adriamycin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Adriamycin",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Allogen",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Recorded Reg_PlanlagtBeh_Allogen field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_AutoStam",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Autologous stem cell support",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Bendamustin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Bendamustine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Bortezomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Bortezomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Carfilzomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Carfilzomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Cyklophosphamid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Cyclophosphamide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Cytosstatika",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Cytostatic treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Daratumumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Daratumumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Denosumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Denosumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Isatuximab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Isatuximab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Ixazomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Ixazomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Lenalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Lenalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Melfalan",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Melphalan",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_MelfalanStamcell",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Recorded Reg_PlanlagtBeh_MelfalanStamcell field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Pamidronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Pamidronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Panobinostat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Panobinostat",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Pomalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Pomalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Steroid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Steroid treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Straalebeh",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Radiotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Thalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Thalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_Zolendronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Zoledronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_bisfosfonater",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Bisphosphonates",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_none",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: No treatment recorded",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_PlanlagtBeh_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Other treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Planlagtbeh_Elotuzumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "planned treatment",
+      "label": "Planned treatment: Elotuzumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Respons1",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "primary treatment",
+      "label": "Recorded Reg_Respons1 field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Respons2",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "secondary treatment",
+      "label": "Recorded Reg_Respons2 field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Reg_Vaegt",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Weight",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Adriamycin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Adriamycin",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Allogen",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Recorded SB_Behandling_Allogen field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_AutoStam",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Autologous stem cell support",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Bendamustin",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Bendamustine",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Bortezomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Bortezomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Carfilzomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Carfilzomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Cyklophosphamid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Cyclophosphamide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Cytosstatika",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Cytostatic treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Daratumumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Daratumumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Denosumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Denosumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Elotuzumab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Elotuzumab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Isatuximab",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Isatuximab",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Ixazomib",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Ixazomib",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Lenalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Lenalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Melfalan",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Melphalan",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_MelfalanStamcelle",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Recorded SB_Behandling_MelfalanStamcelle field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Pamidronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Pamidronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Panobinostat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Panobinostat",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Pomalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Pomalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Steroid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Steroid treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Straalebeh",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Radiotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Thalidomid",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Thalidomide",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_Zolendronat",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Zoledronate",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_bisfosfonater",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Bisphosphonates",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Behandling_other",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "secondary treatment",
+      "label": "Secondary treatment: Other treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_Respons",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "secondary treatment",
+      "label": "Response to secondary treatment field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "SB_UdvikletProgression",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "secondary treatment",
+      "label": "Progression recorded field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_DaMyDa",
+      "source_column": "Stadie",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Recorded myeloma stage",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_AndenLymfomspecifikBeh",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Other lymphoma-specific treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_ErDerForetagetKemo",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Chemotherapy recorded",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_GivetSynkrontMedKemoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Recorded Beh_GivetSynkrontMedKemoterapi field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Hoejdosisbehandling",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "High-dose treatment",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Immunoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Immunotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Kemoterapiregime1",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "First chemotherapy regimen",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Kemoterapiregime2",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Second chemotherapy regimen",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Kemoterapiregime3",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Third chemotherapy regimen",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Operationstype",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Operation type",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Radioimmunoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Radioimmunotherapy field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Responsevaluering",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "treatment",
+      "label": "Treatment response assessment",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_StereoidSomMonoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Steroid monotherapy field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Straaleterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Radiotherapy",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_TypeAutologStamcellestoette",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Type of autologous stem cell support",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Beh_Vedligeholdelsesbehandling",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "treatment form",
+      "label": "Maintenance treatment field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "FU_Sygdomsstatus",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "follow-up",
+      "label": "Disease status at follow-up",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_AndenLymfomspecifik",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Other lymphoma-specific treatment at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_ErDerForetagetKemoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Chemotherapy field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_GivetSynkrontMedKemoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Recorded Rec_GivetSynkrontMedKemoterapi field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Hoejdosisbehandling",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "High-dose treatment field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Immunoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Immunotherapy field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Kemoterapiregime1",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Relapse chemotherapy regimen 1",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Kemoterapiregime2",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Relapse chemotherapy regimen 2",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Kemoterapiregime3",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Relapse chemotherapy regimen 3",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Operationstype",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Operation type at relapse",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_PaabegyndtVedligehold",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Maintenance treatment initiation field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Radioimmunoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Radioimmunotherapy field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Responsevaluering",
+      "kind": "categorical",
+      "topic": "response",
+      "phase": "recurrence",
+      "label": "Response assessment at relapse",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "CR",
+        "PR",
+        "SD",
+        "PD",
+        "VGPR",
+        "sCR",
+        "CRi"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_StereoidSomMonoterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Steroid monotherapy field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Rec_Straaleterapi",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "recurrence treatment form",
+      "label": "Radiotherapy field at relapse",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Albumin_gL",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Albumin (mass concentration field)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Albumin_mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Albumin (substance concentration field)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_AnnArbor",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Recorded Reg_AnnArbor field",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Behandlet",
+      "kind": "categorical",
+      "topic": "treatment",
+      "phase": "registration",
+      "label": "Recorded Reg_Behandlet field",
+      "categories": [
+        "0",
+        "1",
+        "Yes",
+        "No",
+        "Ja",
+        "Nej",
+        "TRUE",
+        "FALSE"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_CalciumAlbuminkorrigeret",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Albumin-adjusted calcium",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_CalciumIoniseret",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Ionized calcium",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Creatinin_mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Creatinine",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Creatinin_millimoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Creatinine",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Haemoglobin",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Haemoglobin",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_ImmunglobulinA_Mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin A (IgA)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_ImmunglobulinA_gL",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin A (IgA)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_ImmunglobulinG_Mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin G (IgG)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_ImmunglobulinG_gL",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin G (IgG)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_ImmunglobulinM_Mikmoll",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin M (IgM)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_ImmunglobulinM_gL",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Immunoglobulin M (IgM)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_LDHVaerdi",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Lactate dehydrogenase (LDH) value",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Lactatdehydrogenase",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Lactate dehydrogenase (LDH)",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Leukocytter",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Leukocyte count",
+      "categories": []
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Stadium",
+      "kind": "categorical",
+      "topic": "stage",
+      "phase": "registration",
+      "label": "Recorded lymphoma stage",
+      "categories": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "I",
+        "II",
+        "III",
+        "IV",
+        "A",
+        "B",
+        "C"
+      ]
+    },
+    {
+      "table_name": "RKKP_LYFO",
+      "source_column": "Reg_Thrombocytter",
+      "kind": "numeric",
+      "topic": "laboratory",
+      "phase": "registration",
+      "label": "Platelet count",
+      "categories": []
+    }
+  ]
+}

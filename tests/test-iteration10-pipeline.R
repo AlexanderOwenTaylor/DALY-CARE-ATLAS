@@ -148,6 +148,9 @@ resources <- c('DALYCARE_atlas.html','DALYCARE_entry.html','DALYCARE_outputs.htm
 for(name in resources) expect_true(file.exists(system.file('templates',name,package='dalycareatlas')))
 expect_true(file.exists(system.file('config','public-output-registry.json',package='dalycareatlas')))
 expect_true(file.exists(system.file('config','clinical-source-membership.json',package='dalycareatlas')))
+for(name in c('registry-summary-policy.json','public-measurement-policy.csv')) {
+  expect_true(file.exists(system.file('config',name,package='dalycareatlas')))
+}
 installed <- system.file('templates','DALYCARE_entry.html',package='dalycareatlas')
 installed_entry_text <- readLines(installed,encoding='UTF-8',warn=FALSE)
 writeLines('STALE INSTALLED TEMPLATE',installed)

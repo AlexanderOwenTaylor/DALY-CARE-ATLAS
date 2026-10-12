@@ -324,7 +324,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   }
   safe <- atlas_public_privacy(logical,project_root,minimum)
   payload <- atlas_public_privacy(payload,project_root,minimum)
-  atlas_evidence_audit(safe);atlas_evidence_audit(payload)
+  atlas_evidence_audit(safe,project_root,minimum);atlas_evidence_audit(payload,project_root,minimum)
   field_labels <- atlas_bundle_field_labels(safe[['clinical_display_dictionary']])
   vital_profiles <- atlas_bundle_vital_profiles(safe[['column_profile_rows']])
   transport <- atlas_payload_transport(atlas_sanitize_payload_text(payload),transport_version,

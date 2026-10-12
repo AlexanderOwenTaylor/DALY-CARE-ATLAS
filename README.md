@@ -60,6 +60,70 @@ source("RUN_DALYCARE_ATLAS_64_SOURCE.R")
 `config/source-map.dalycare.tsv` unless `DALYCARE_ATLAS_SOURCE_MAP` is set.
 All one-click runners still respect `DALYCARE_ATLAS_SOURCE_MAP` overrides.
 
+### Registry stage, treatment, response and measurements
+
+The runner can now produce complete, person-counted summaries for reviewed
+DaMyDa, LYFO and CLL fields. The existing archived top-value CSVs cannot establish
+person-level support: **run the updated runner against the secure source data**
+to generate these summaries. An offline rebuild cannot recover missing evidence.
+
+Before that run, a data administrator must confirm the stable person-key column
+for each exact registry source. Copy
+`config/registry-summary-person-keys.example.csv` to a private configuration file,
+fill in each confirmed `person_key`, and set `reviewed` to `TRUE` only for reviewed
+rows. Leave the other rows disabled. The runner never guesses a key or substitutes
+record counts. Keep this configuration outside the published site.
+
+```r
+Sys.setenv(DALYCARE_REGISTRY_PERSON_KEYS_FILE = "/secure/config/registry-person-keys.csv")
+source("RUN_DALYCARE_ATLAS_64_SOURCE.R")
+```
+
+The run writes `outputs/panels/registry_field_summaries.csv`, includes it in the
+build context, and generates the HTML, JSON and offline JavaScript assets. In
+Clinical explorer, open a registry, then **Stage**, **Treatment**, **Response** or
+the baseline measurements topic. Each summary names its exact source column and
+form phase. The data-table library also exposes the aggregate evidence. No person
+key or individual record is exported by this summary producer.
+
+Each field counts a person once when their nonblank recorded values agree.
+Different values for the same person are classified as conflicting; blank-only
+values are missing. Treatment fields remain separate and may overlap. Stage and
+response codes retain their stored names until their meanings are verified.
+
+Numeric summaries include finite, nonnegative stored values, with negatives and
+unparseable values classified as invalid. This is a stated cleaning rule, not a
+verified clinical range or missing-code interpretation. Units remain unverified;
+fields are not converted or pooled. Mean, median and quartiles are rounded to
+three significant digits; minimum and maximum are never published.
+
+Publication requires all positive partition, category and complementary counts
+to meet the run's threshold (at least five distinct people). Numeric summaries
+also require at least 20 valid people, more than one distinct value, and at least
+the threshold number of people for every distinct numeric value. A rare tail
+withholds the entire field's counts and statistics. Missing keys, unsupported
+queries, incomplete results and failed validation also withhold summaries.
+
+The database path aggregates inside PostgreSQL or SQLite and retrieves grouped
+counts only. Existing row budgets apply. `DALYCARE_REGISTRY_MAX_GROUPS` defaults
+to 5,000 grouped values; exceeding it withholds the field. PostgreSQL queries
+respect the stricter existing statement timeout or
+`DALYCARE_REGISTRY_QUERY_SECONDS` (default 600 seconds, maximum 1,200). SQLite's
+native execution cancellation has not been independently verified; its row and
+result-cardinality limits still apply. The person-key review and database run
+must happen in the secure DALY-CARE environment.
+
+Rebuild a completed run without a database:
+
+```sh
+Rscript scripts/rebuild_atlas_from_outputs.R /path/to/completed/run /path/to/DALY-CARE-ATLAS
+```
+
+Both export implementations revalidate complete summaries before publishing
+the core payload or table shards. Raising the disclosure threshold on rebuild
+rechecks the saved evidence. Browser loading stays bounded: table shards load
+on demand and registry results show at most 12 summaries per topic page.
+
 The preflight script checks required project files, the 64-resource expected
 list, the production source-map candidate, and the source-recovery dry-run
 without requiring production DB credentials. Database credentials remain

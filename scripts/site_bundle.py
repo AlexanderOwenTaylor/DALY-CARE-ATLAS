@@ -444,7 +444,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             _set(logical,spec['payload_path'],table['rows'])
     safe_tables = sanitize_public_payload(logical, minimum, root)
     guarded = sanitize_public_payload(payload, minimum, root)
-    if audit_public_payload(safe_tables) or audit_public_payload(guarded):
+    if audit_public_payload(safe_tables, project_root=root, min_cell_count=minimum) or audit_public_payload(guarded, project_root=root, min_cell_count=minimum):
         raise ValueError('Public privacy audit failed')
     field_labels = _field_labels(safe_tables.get('clinical_display_dictionary'))
     vital_profiles = _vital_profiles(safe_tables.get('column_profile_rows'))

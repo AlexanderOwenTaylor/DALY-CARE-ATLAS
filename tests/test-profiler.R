@@ -136,7 +136,7 @@ registry_damyda <- data.frame(
 registry_profile <- profile_source(registry_damyda, "RKKP_DaMyDa", "file", "damyda.csv", min_cell_count = 1L)
 summary_panel <- registry_profile$panels$registry_clinical_summary
 expect_equal(summary_panel$registry[[1]], "DaMyDa", "Registry summary should identify DaMyDa.")
-expect_equal(summary_panel$n_patients[[1]], 4L, "Registry summary should count distinct patients only as an aggregate.")
+expect_true(is.na(summary_panel$n_patients[[1]]), "Registry person counts require an operator-reviewed exact person key.")
 
 clinical_panel <- registry_profile$panels$damyda_clinical_profile
 expect_true(nrow(clinical_panel) > 0, "DaMyDa clinical profile should be generated.")

@@ -5,6 +5,7 @@ import math
 import os
 import re
 from pathlib import Path
+from registry_summary_privacy import sanitize_registry_summaries, audit_registry_summaries
 
 VERSION = '2026-10-11-public-privacy-1'
 STATS = {'min', 'max', 'mean', 'median', 'p25', 'p75', 'sd', 'q25', 'q75', 'iqr'}
@@ -31,6 +32,7 @@ def measurement_policy(root=None):
 
 def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
     k=threshold(min_cell_count)
+    registry_k=max(k,threshold(payload.get('privacy_metadata',{}).get('minimum_cell_count')))
     approved=measurement_policy(project_root)
     # Canonical profile provenance is required for panel copies missing min/distinct.
     profiles={(str(r.get('table_name','')),str(r.get('column_name',''))):r for r in payload.get('column_profile_rows',[]) if isinstance(r,dict)}
@@ -38,6 +40,8 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
     has_ranges = any(isinstance(r,dict) and r.get('coverage_basis') == 'source_date_range'
                      for rows in (payload.get('panels',{}).get('atlas_temporal_coverage_years',[]), payload.get('review_temporal_coverage',{}).get('years',[])) for r in rows)
     def walk(obj, path=()):
+        if path and path[-1]=='registry_field_summaries':
+            return sanitize_registry_summaries(obj,project_root,registry_k)
         if isinstance(obj,list):
             if path in year_paths:
                 normalized=[]; seen=set()
@@ -142,14 +146,17 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
             r['count_privacy_status']='withheld_small_cells'
         return r
     result=walk(payload)
-    result['privacy_metadata']={'policy_version':VERSION,'minimum_cell_count':k,'count_basis':'source_rows; distinct-person anonymity not established','categorical_policy':'observed distributions withheld pending exact field and complete-distribution validation','summary_scope':'stored_source_row_profile'}
+    result['privacy_metadata']={'policy_version':VERSION,'minimum_cell_count':k,'count_basis':'legacy summaries: source_rows; published registry_field_summaries: distinct people per exact field','categorical_policy':'legacy distributions withheld; registry_field_summaries require complete-field distinct-person validation','summary_scope':'stored_source_row_profile'}
     return result
 
-def audit_public_payload(payload):
+def audit_public_payload(payload,project_root=None,min_cell_count=5):
     """Independent structural audit; returns only paths, never patient-derived values."""
     errors=[]
     suppressed={(str(r.get('table_name','')),str(r.get('column_name',''))) for r in payload.get('column_profile_rows',[]) if r.get('availability_privacy_status')=='withheld_small_complementary_cells'}
     def visit(obj,path):
+        if path and path[-1]=='registry_field_summaries':
+            errors.extend('.'.join(path[:-1]+(reason,)) for reason in audit_registry_summaries(obj,project_root,max(threshold(min_cell_count),threshold(payload.get('privacy_metadata',{}).get('minimum_cell_count')))))
+            return
         if isinstance(obj,list):
             for i,x in enumerate(obj): visit(x,path+(str(i),))
         elif isinstance(obj,dict):

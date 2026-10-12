@@ -166,7 +166,12 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
                 if 'relative_path' not in (reader.fieldnames or []):
                     raise ValueError('Invalid output manifest')
                 for row in reader:
-                    confined_path(run, row['relative_path'])
+                    if row.get('artifact_id') == 'clinical_source_membership':
+                        expected = (Path(project_root) / 'inst/config/clinical-source-membership.json').resolve().as_posix()
+                        if row['relative_path'] != expected:
+                            raise ValueError('Invalid membership resource manifest input')
+                    else:
+                        confined_path(run, row['relative_path'])
     if run is not None:
         context = read_build_context(run, registry)
     minimum = effective_threshold(payload_snapshot, context)
@@ -213,7 +218,7 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
         descriptors.append(descriptor)
         retained.append(spec)
     safe = sanitize_public_payload(logical, min_cell_count=minimum, project_root=project_root)
-    if audit_public_payload(safe):
+    if audit_public_payload(safe, project_root=project_root, min_cell_count=minimum):
         raise ValueError('Public evidence privacy audit failed')
     privacy_columns = {'value_privacy_status', 'count_privacy_status', 'date_privacy_status', 'availability_privacy_status', 'numeric_privacy_status', 'summary_scope', 'summary_method', 'is_sensitive'}
     for descriptor, spec in zip(descriptors, retained):

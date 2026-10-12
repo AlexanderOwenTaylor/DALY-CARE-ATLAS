@@ -6,6 +6,8 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   }
   k <- num(min_cell_count); if (is.na(k)) k <- 5
   k <- max(5, floor(k))
+  previous_registry_k <- num(payload$privacy_metadata$minimum_cell_count)
+  registry_k <- max(k,if(is.na(previous_registry_k)) 5 else max(5,floor(previous_registry_k)))
   policy_path <- file.path(project_root, "config", "public-measurement-policy.csv")
   if (!file.exists(policy_path)) policy_path <- system.file("config", "public-measurement-policy.csv", package = "dalycareatlas")
   policy <- if (nzchar(policy_path) && file.exists(policy_path)) utils::read.csv(policy_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8") else data.frame(table_name = character(), column_name = character())
@@ -25,6 +27,14 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   range_rows <- c(payload$panels$atlas_temporal_coverage_years,payload$review_temporal_coverage$years)
   has_ranges <- any(vapply(range_rows,function(r) is.list(r) && scalar(r,'coverage_basis') == 'source_date_range',logical(1)))
   walk <- function(obj, path = character()) {
+    if(length(path) && tail(path,1)=='registry_field_summaries') {
+      if(!exists('atlas_registry_summary_guard',mode='function')) {
+        helper <- file.path(project_root,'R','registry_summary_privacy.R')
+        if(file.exists(helper)) source(helper,local=environment(),encoding='UTF-8')
+      }
+      if(!exists('atlas_registry_summary_guard',mode='function')) return(list())
+      return(atlas_registry_summary_guard(obj,project_root,registry_k))
+    }
     if (is.data.frame(obj)) obj <- lapply(seq_len(nrow(obj)), function(i) as.list(obj[i,,drop=FALSE]))
     if (!is.list(obj)) {
       if (is.character(obj) && length(path) && tail(path,1) %in% c("message","note","story","date_qc","description")) return(gsub("\\b[0-9]{4}-[0-9]{2}-[0-9]{2}\\b","[clinical date withheld]",obj,perl=TRUE))
@@ -130,6 +140,6 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
     r
   }
   result <- walk(payload)
-  result$privacy_metadata <- list(policy_version="2026-10-11-public-privacy-1", minimum_cell_count=k, count_basis="source_rows; distinct-person anonymity not established", categorical_policy="observed distributions withheld pending exact field and complete-distribution validation", summary_scope="stored_source_row_profile")
+  result$privacy_metadata <- list(policy_version="2026-10-11-public-privacy-1", minimum_cell_count=k, count_basis="legacy summaries: source_rows; published registry_field_summaries: distinct people per exact field", categorical_policy="legacy distributions withheld; registry_field_summaries require complete-field distinct-person validation", summary_scope="stored_source_row_profile")
   result
 }

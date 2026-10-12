@@ -103,6 +103,12 @@ class EvidenceTests(unittest.TestCase):
   rows=collect_output_evidence(None,ROOT,{'panels':{'registry_clinical_summary':[{'table_name':'S','registry':'LYFO','n_rows':20,'n_cols':7,'n_patients':20}]}})
   t=next(t for t in rows if t['id']=='registry_clinical_summary')
   self.assertEqual(t['status'],'snapshot_preview');self.assertIsNone(t['source_row_count']);self.assertFalse(t['complete']);self.assertEqual(len(t['rows']),1)
+ def test_r_manifest_allows_only_exact_membership_resource(self):
+  resource=(ROOT/'inst/config/clinical-source-membership.json').resolve().as_posix()
+  self.write('output_manifest.csv',['artifact_id','relative_path'],[['clinical_source_membership',resource]])
+  self.collect()
+  self.write('output_manifest.csv',['artifact_id','relative_path'],[['clinical_source_membership','../FORBIDDEN.json']])
+  with self.assertRaises(ValueError):self.collect()
  def test_profile_context_beyond_clinical_cap(self):
   header='domain subdomain atlas_role table_name column_name column_type column_class profile_kind n_rows n_available pct_available n_missing pct_missing n_distinct_capped is_sensitive is_date_like is_numeric_like min mean median p25 p75 max min_date max_date'.split()
   rows=[['Laboratory','','','S'+str(i),'test','numeric','numeric','numeric',1000,998,99.8,2 if i==3000 else 0,0.2,10,False,False,True,1,5,5,3,7,20,'',''] for i in range(3001)]
@@ -136,7 +142,7 @@ class EvidenceTests(unittest.TestCase):
   for context in (base,dict(base,binding_files={}),dict(base,binding_files=[])):
    context_path.write_text(json.dumps(context),encoding='utf-8')
    self.assertEqual(matching_run_context(self.run,{'run_id':'synthetic-context'},registry),context)
-   self.assertEqual(len(self.collect()),147)
+   self.assertEqual(len(self.collect()),148)
   # A real selected binding validates and remains required at its selected path.
   spec=next(s for s in registry['artifacts'] if s['id']==selected)
   headers=list(spec['schemas'][0]);row={k:'' for k in headers};row.update(metric='synthetic_count',label='Selected source',value='23',status='available')
@@ -145,9 +151,9 @@ class EvidenceTests(unittest.TestCase):
   context=dict(base,bindings=[selected],binding_files={selected:'outputs/selected_mcl/mcl_triangle_count_summary.csv'})
   context_path.write_text(json.dumps(context),encoding='utf-8')
   self.assertEqual(matching_run_context(self.run,{'run_id':'synthetic-context'},registry),context)
-  self.assertEqual(len(self.collect()),147)
+  self.assertEqual(len(self.collect()),148)
   context_path.unlink();self.write('atlas_run_summary.csv',['metric','value'],[['run_id','synthetic-context']])
   self.assertIsNone(matching_run_context(self.run,{'run_id':'synthetic-context'},registry))
-  self.assertEqual(len(self.collect()),147)
+  self.assertEqual(len(self.collect()),148)
 
 if __name__=='__main__':unittest.main()
