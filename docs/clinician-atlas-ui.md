@@ -393,6 +393,28 @@ notice; zero remains zero, and absent or restricted values do not become empty
 bars. Separate exact source/field/scope summaries are not combined. Theme links
 preserve copied routes, refresh and Back, and all sections remain printable.
 
+### Exact field evidence
+
+Data tables links with `table=column_profiles` and an exact `source` and `field`
+open with the readable field name, original identifiers, recorded availability
+and stored summary. Supplied missingness is shown directly; the reader does not
+calculate complements or combine profiles. Multiple published profiles remain
+separate, ordered and paginated, with their supplied scope and method metadata.
+An absent profile, an unmatched search, a page beyond the results and an incomplete
+read have different messages and recovery actions. None means zero availability.
+
+Search and exact-column tools follow the evidence. Loading, cancellation, retry
+and pagination remain visible outside their disclosure. Draft input does not
+change the applied search or saved URL until submitted or a search-mode change
+applies it. Submitting an empty search preserves the open tools and keyboard
+focus. Exact-column view keeps the same scoped rows and original column keys.
+
+Source-field and source years/regions links retain the exact source. The latter
+describes source-wide evidence, not coverage of the selected field. Ordinary
+source-only and unscoped table browsing retain the generic reader. Both HTTP and
+offline file use continue to use the existing bounded table parts; no Clinical
+core or extra dictionary download is needed for a field arrival.
+
 ### Optional local export checks and benchmarks
 
 Historical export-to-export checks are optional. Set

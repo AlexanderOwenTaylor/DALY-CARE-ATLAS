@@ -109,7 +109,7 @@ test('null reasons apply only to reviewed affected columns and preserve zero',()
 
 test('selected laboratory rows expose cell withholding and reference meaning before raw metadata',async()=>{
  const elements=new Map(),scripts=[],listeners={};
- function el(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,focus(){},setAttribute(){},addEventListener(){},querySelectorAll(){return [];}});return elements.get(id);}
+ function el(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,focus(){},setAttribute(){},addEventListener(){},appendChild(node){node.parentNode=this;},querySelectorAll(){return [];}});return elements.get(id);}
  const row={table_name:'S',lab_code:null,n:null,value_privacy_status:'withheld_unvalidated_distribution'},json=JSON.stringify([row]);
  const table={id:'lab_npu_code_coverage',title:'Laboratory code occurrence metadata by source',kind:'aggregate_summary',row_grain:JSON.parse(fs.readFileSync(path.join(__dirname,'../inst/config/public-output-registry.json'),'utf8')).artifacts.find(t=>t.id==='lab_npu_code_coverage').row_grain,status:'available',source_file:'outputs/panels/lab_npu_code_coverage.csv',provenance:'csv_run',complete:true,columns:Object.keys(row).map(key=>({key,type:key==='n'?'number':'string'})),shards:[{id:'s0',src:'output-shards/lab-s0.js',rows:1,bytes:Buffer.byteLength(json)}]};
  const document={getElementById:el,body:{classList:{toggle(){}}},documentElement:{dataset:{}},createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);}}};

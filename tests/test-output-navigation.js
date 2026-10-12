@@ -9,15 +9,21 @@ function navigation(search='',suppliedTables,catalogueMetadata={}) {
   let window,document;
   function element(id,attrs='') {
     const handlers={};let hidden=/\bhidden\b/.test(attrs),markup='',cards=[];
-    return {id,value:'',textContent:'',disabled:false,checked:false,dataset:{},tabIndex:/tabindex="(-?\d+)"/.test(attrs)?Number(RegExp.$1):undefined,
+    return {id,value:'',textContent:'',disabled:false,checked:false,dataset:{},children:[],parentNode:null,open:/\bopen\b/.test(attrs),tagName:'',tabIndex:/tabindex="(-?\d+)"/.test(attrs)?Number(RegExp.$1):undefined,
       get hidden(){return hidden;},set hidden(value){hidden=value;if(id==='library'&&value)window.scrollY=Math.min(window.scrollY,160);},
       get innerHTML(){return markup;},set innerHTML(value){markup=value;cards=[...value.matchAll(/<button[^>]*data-table="([^"]+)"/g)].map(match=>Object.assign(element('card-'+match[1]),{dataset:{table:match[1]}}));},
       addEventListener(name,fn){handlers[name]=fn;},fire(name){handlers[name]?.({preventDefault(){}});},
+      appendChild(node){if(node.parentNode)node.parentNode.children.splice(node.parentNode.children.indexOf(node),1);this.children.push(node);node.parentNode=this;return node;},
       querySelectorAll(){return cards;},setAttribute(name,value){this[name]=value;},
       focus(options){document.activeElement=this;focuses.push({element:this,options});if(!options?.preventScroll)window.scrollY=80;}
     };
   }
-  for(const match of html.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g))elements.set(match[1],element(match[1],match[0]));
+  const stack=[];
+  for(const match of html.matchAll(/<\/?([a-z][\w-]*)\b[^>]*>/gi)){
+    const tag=match[1].toLowerCase();if(match[0].startsWith('</')){if(stack.at(-1)?.tagName===tag)stack.pop();continue;}
+    const name=match[0].match(/\bid="([^"]+)"/)?.[1],node=element(name||'',match[0]);node.tagName=tag;if(name)elements.set(name,node);stack.at(-1)?.appendChild(node);
+    if(!['meta','link','input','br','hr','img'].includes(tag))stack.push(node);
+  }
   const el=id=>elements.get(id);
   document={getElementById:el,activeElement:null,body:{classList:{toggle(){}}},documentElement:{dataset:{}},createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);}}};
   const tables=suppliedTables||Array.from({length:147},(_,i)=>({id:'t'+i,title:'Table '+i,group:'Evidence',status:'metadata_only',columns:[],shards:[]}));
@@ -32,6 +38,7 @@ function navigation(search='',suppliedTables,catalogueMetadata={}) {
   vm.runInNewContext(fs.readFileSync(path.join(templates,'atlas-outputs.js'),'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
   const card=id=>el('table-list').querySelectorAll('[data-table]').find(button=>button.dataset.table===id);
   return {window,document,el,card,scrolls,focuses,scripts,tables,
+    visible(id){let node=el(id);if(!node)return false;for(;node;node=node.parentNode)if(node.hidden||node.tagName==='details'&&!node.open)return false;return true;},
     open(id,x=7,y=6200){window.scrollX=x;window.scrollY=y;card(id).focus({preventScroll:true});card(id).fire('click');},
     answer(rows){const script=scripts.at(-1),t=tables.find(t=>t.shards.some(s=>s.src===script.src)),s=t.shards.find(s=>s.src===script.src);document.currentScript=script;window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'b1',table_id:t.id,shard_id:s.id,rows_json:JSON.stringify(rows)});document.currentScript=null;}
   };
@@ -47,10 +54,10 @@ test('catalogue labels reach nonregistry field readers and both label and raw-na
   const rows=[{table_name:source,column_name:field,n_rows:120}],metadata={field_labels:{[source]:{[field]:label}}},table=readable('column_profiles',rows);
   for(const query of ['',label,field]){
    const route=new URLSearchParams({table:table.id,source,field,search:query,searchmode:'fields'}),h=navigation('?'+route,[table],metadata);h.answer(rows);await flush();
-   assert.match(h.el('rows').innerHTML,new RegExp('<strong>'+label+'</strong>'));
-   assert.ok(h.el('rows').innerHTML.includes('<code class="cell-line">'+field+'</code>'));
-   assert.ok(h.el('rows').innerHTML.includes('Source: </span>'+source));
-   assert.match(h.el('read-status').textContent,/of 1 (matching|published) rows/);
+    assert.equal(h.el('table-title').textContent,label);
+    assert.ok(visibleText(h.el('field-identity').innerHTML).includes(field));
+    assert.ok(visibleText(h.el('field-identity').innerHTML).includes(source));
+    assert.match(h.el('read-status').textContent,/of 1 (matching|published) profile row/);
    assert.equal(h.scripts.length,1,'labels require only the selected output shard');
   }
  }
@@ -64,7 +71,7 @@ test('optional catalogue labels override registry fallback and missing exact pai
 
 test('catalogue label searches keep exact source and field scope without aliases or key normalization',async()=>{
  const rows=[{table_name:'S',column_name:'f'},{table_name:'SS',column_name:'f'},{table_name:'S',column_name:'ff'},{table_name:' s ',column_name:'f'},{table_name:'S',column_name:' F '}],table=readable('column_profiles',rows),metadata={field_labels:{S:{f:'Reviewed meaning',ff:'Reviewed meaning'},SS:{f:'Reviewed meaning'},' s ':{f:'Spaced source meaning'},'S ':{f:'Different exact source'}}};
- const scoped=navigation('?table=column_profiles&source=S&field=f&search=Reviewed%20meaning&searchmode=fields',[table],metadata);scoped.answer(rows);await flush();assert.match(scoped.el('read-status').textContent,/1 matching rows/);assert.match(scoped.el('rows').innerHTML,/<strong>Reviewed meaning<\/strong>/);
+  const scoped=navigation('?table=column_profiles&source=S&field=f&search=Reviewed%20meaning&searchmode=fields',[table],metadata);scoped.answer(rows);await flush();assert.match(scoped.el('read-status').textContent,/1 matching profile row/);assert.equal(scoped.el('table-title').textContent,'Reviewed meaning');
  const raw=navigation('?table=column_profiles',[table],metadata);raw.answer(rows);await flush();assert.match(raw.el('rows').innerHTML,/<strong>Spaced source meaning<\/strong>/);assert.match(raw.el('rows').innerHTML,/<strong> F <\/strong>/);assert.doesNotMatch(raw.el('rows').innerHTML,/Different exact source/);
 });
 
@@ -380,4 +387,129 @@ test('category status hides only for an unqueried complete reading page and retu
  h.el('exact-columns').fire('click');h.el('table-query').value='stage';h.el('search-table').fire('submit');await flush();assert.equal(h.el('read-status').hidden,false);assert.equal(h.el('table-state').hidden,false);
  const limited=readable('damyda_clinical_profile',rows,{complete:false}),l=navigation('?table=damyda_clinical_profile',[limited]);l.answer(rows);await flush();assert.equal(l.el('read-status').hidden,false);assert.equal(l.el('table-state').hidden,false);
  const failed=navigation('?table=damyda_clinical_profile',[t]);failed.scripts[0].onerror();await flush();assert.equal(failed.el('read-status').hidden,false);assert.match(failed.el('read-status').textContent,/incomplete/i);
+});
+
+const fieldProfile=(extra={})=>({table_name:'S',column_name:'f',domain:null,subdomain:null,atlas_role:null,profile_kind:'numeric',n_rows:100,n_available:61,pct_available:60.5,n_missing:37,pct_missing:38.25,availability_privacy_status:null,mean:null,median:null,p25:null,p75:null,numeric_privacy_status:'needs_validation_unreviewed_field',summary_scope:null,summary_method:null,...extra});
+const fieldRoute='?table=column_profiles&source=S&field=f';
+const profileTable=(rows,extra={})=>{const t=readable('column_profiles',rows,extra);for(const c of t.columns)if(['n_rows','n_available','pct_available','n_missing','pct_missing','mean','median','p25','p75'].includes(c.key))c.type='number';return t;};
+const fieldText=h=>visibleText(h.el('rows').innerHTML).replace(/\s+/g,' ').trim();
+const params=h=>new URLSearchParams(h.window.location.search);
+
+test('field arrival identifies the requested pair before reading and preserves independent supplied missingness',async()=>{
+ const rows=[fieldProfile(),fieldProfile({table_name:'SS',n_available:999}),fieldProfile({column_name:'ff',n_available:888})],h=navigation(fieldRoute,[profileTable(rows)],{field_labels:{S:{f:'Reviewed field'}}});
+ assert.equal(h.el('table-title').textContent,'Reviewed field');assert.match(visibleText(h.el('field-identity').innerHTML),/S.*f/);assert.equal(h.document.activeElement,h.el('table-title'));
+ h.answer(rows);await flush();const text=fieldText(h);
+ for(const value of ['61','100','60.5%','37','38.3%','Recorded availability','Stored summary','field needs review'])assert.ok(text.includes(value),value);
+ assert.doesNotMatch(text,/999|888|39\.5%/);assert.match(h.el('read-status').textContent,/1 published profile row/);assert.equal(h.scripts.length,1);
+ const scanned=await h.window.DALYCARE_OUTPUTS.scanTable('column_profiles','',0,null,null,{source:'S',field:'f'});assert.deepEqual(JSON.parse(JSON.stringify(scanned.rows)),[rows[0]]);
+});
+
+test('field arrival moves only optional controls and restores ordinary readers on scope clear and history',async()=>{
+ const rows=[fieldProfile()],h=navigation(fieldRoute,[profileTable(rows)]);
+ assert.equal(h.visible('cancel-search'),true);assert.equal(h.visible('read-status'),true);assert.equal(h.visible('table-query'),false);assert.equal(h.el('field-tools').open,false);
+ h.answer(rows);await flush();assert.equal(h.el('table-purpose').hidden,true);assert.equal(h.el('table-state').hidden,true);
+ h.el('field-tools').open=true;h.el('clear-row-scope').fire('click');await flush();assert.equal(h.el('table-title').textContent,'Field availability and summaries');assert.equal(h.el('table-purpose').hidden,false);assert.equal(h.visible('table-query'),true);assert.equal(h.el('field-tools').hidden,true);
+ h.window.history.go(-1);await flush();assert.equal(h.el('table-title').textContent,'f');assert.equal(h.visible('table-query'),false);
+ for(const [route,id] of [['?table=column_profiles&source=S','column_profiles'],['?table=column_profiles&field=f','column_profiles'],['?table=column_profiles','column_profiles'],['?table=columns&source=S&field=f','columns']]){
+  const t=profileTable(rows);t.id=id;const ordinary=navigation(route,[t]);assert.equal(ordinary.el('field-tools').hidden,true);assert.equal(ordinary.visible('table-query'),true);assert.equal(ordinary.el('table-purpose').hidden,false);
+ }
+});
+
+test('field arrival distinguishes zero, absent, protected and partially published availability without suppressing supplied complements',async()=>{
+ const cases=[
+  {row:fieldProfile({n_available:0,pct_available:0,n_missing:0,pct_missing:0}),yes:['With a value: 0','0.0%','Without a value: 0'],no:/Withheld/},
+  {row:fieldProfile({n_available:null,pct_available:null,n_missing:null,pct_missing:null}),yes:['Recorded availability not supplied','100'],no:/Withheld|0\.0%/},
+  {row:fieldProfile({n_available:null,pct_available:null,n_missing:null,pct_missing:null,availability_privacy_status:'withheld_small_complementary_cells'}),yes:['small groups and related counts','100'],no:/With a value: 0/},
+  {row:fieldProfile({n_available:null,pct_available:null,availability_privacy_status:'withheld_unknown_support'}),yes:['supporting count unknown','Without a value: 37','38.3%'],no:/Without a value: 39/},
+  {row:fieldProfile({n_available:null,pct_available:null,n_missing:null,pct_missing:null,availability_privacy_status:'future_guard'}),yes:['future_guard','not supplied'],no:/With a value: 0/}
+ ];
+ for(const {row,yes,no} of cases){const h=navigation(fieldRoute,[profileTable([row])]);h.answer([row]);await flush();for(const value of yes)assert.ok(fieldText(h).includes(value),value);assert.doesNotMatch(fieldText(h),no);}
+});
+
+test('field arrival retains partial zero summaries and metadata on categorical or all-null profiles',async()=>{
+ const rows=[fieldProfile({median:0,p25:null,p75:7,numeric_privacy_status:'eligible_stored_summary',summary_scope:'future_scope',summary_method:'future_method'}),fieldProfile({profile_kind:'categorical',summary_scope:'stored_source_row_profile',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample'}),fieldProfile({numeric_privacy_status:'future_reason'})],h=navigation(fieldRoute,[profileTable(rows)]);h.answer(rows);await flush();const text=fieldText(h);
+ for(const value of ['Median: 0','75th percentile: 7','future_scope','future_method','Stored source rows','sample of source records','future_reason','Summary scope not supplied'])assert.ok(text.includes(value),value);
+ assert.equal((text.match(/Recorded availability/g)||[]).length,3);assert.match(h.el('read-status').textContent,/3 published profile rows/);
+});
+
+test('field arrival retains duplicate profiles in source order across 50 and 2 row pages',async()=>{
+ const rows=Array.from({length:52},(_,i)=>fieldProfile({atlas_role:i<2?'identical':'role_'+i,n_available:i<2?22:1000+i,summary_scope:i===2?'special_scope':null}));rows.push(fieldProfile({table_name:'SS',n_available:9999}));
+ const h=navigation(fieldRoute,[profileTable(rows)]);h.answer(rows);await flush();let text=fieldText(h);assert.equal((text.match(/With a value: 22 /g)||[]).length,2);assert.match(text,/Profile row 1/);assert.match(text,/Profile row 50/);assert.match(text,/special_scope/);assert.doesNotMatch(text,/9999|role_50/);assert.match(h.el('read-status').textContent,/52 published profile rows/);
+ h.el('next-page').fire('click');await flush();text=fieldText(h);assert.match(text,/Profile row 51/);assert.match(text,/Profile row 52/);assert.match(text,/role_50/);assert.doesNotMatch(text,/role_49/);assert.equal((text.match(/Recorded availability/g)||[]).length,2);assert.equal(params(h).get('page'),'2');
+});
+
+test('field arrival distinguishes query no-match from absent pair and clears search without losing exact context',async()=>{
+ const rows=[fieldProfile()],table=profileTable(rows),route=fieldRoute+'&view=timeplace&returnsource=Other&search=not-found&searchmode=fields&columns=all&page=3',h=navigation(route,[table]);h.answer(rows);await flush();
+ assert.match(h.el('read-status').textContent,/No published profiles match.*not-found/);assert.equal(h.el('field-tools').open,true);h.el('field-tools').open=false;assert.equal(h.visible('clear-field-search'),true);assert.match(h.el('field-filter-status').textContent,/not-found.*field names/i);
+ h.el('clear-field-search').fire('click');await flush();for(const [key,value] of [['source','S'],['field','f'],['searchmode','fields'],['columns','all'],['returnsource','Other']])assert.equal(params(h).get(key),value);assert.equal(params(h).has('search'),false);assert.equal(params(h).has('page'),false);assert.match(h.el('read-status').textContent,/1 published profile row/);
+ h.window.history.go(-1);await flush();assert.equal(h.el('table-query').value,'not-found');assert.match(h.el('read-status').textContent,/No published profiles match/);
+ const absent=navigation(fieldRoute,[profileTable([fieldProfile({table_name:'SS'})])],{field_labels:{S:{f:'Label without evidence'}}});absent.answer([fieldProfile({table_name:'SS'})]);await flush();assert.equal(absent.el('table-title').textContent,'Label without evidence');assert.match(absent.el('read-status').textContent,/No published profile rows.*exact source and field/);assert.equal(absent.el('rows').innerHTML,'');assert.equal(absent.visible('clear-field-search'),false);
+});
+
+test('field arrival recovers page999 explicitly while preserving query mode columns and source',async()=>{
+ const rows=[fieldProfile()],h=navigation(fieldRoute+'&search=f&searchmode=fields&columns=all&page=999',[profileTable(rows)]);h.answer(rows);await flush();assert.match(h.el('read-status').textContent,/No profile rows on this page.*1/);assert.equal(params(h).get('page'),'999');h.el('field-tools').open=false;assert.equal(h.visible('first-page'),true);
+ h.el('first-page').fire('click');await flush();assert.equal(params(h).has('page'),false);for(const [key,value] of [['source','S'],['field','f'],['search','f'],['searchmode','fields'],['columns','all']])assert.equal(params(h).get(key),value);assert.ok(h.el('rows').innerHTML);assert.equal(h.visible('first-page'),false);
+});
+
+test('field arrival renders raw keys immediately for exact columns with distinct reviewed headings and no second read',async()=>{
+ const rows=[fieldProfile()],t=profileTable(rows);t.columns.find(c=>c.key==='n_missing').label='Records without a value';const h=navigation(fieldRoute+'&columns=all',[t]);h.answer(rows);await flush();const text=fieldText(h);assert.match(text,/Records without a value/);assert.match(text,/n_missing/);assert.match(h.el('field-filter-status').textContent,/exact columns/i);const count=h.scripts.length;h.el('exact-columns').fire('click');assert.match(fieldText(h),/Recorded availability/);assert.equal(h.scripts.length,count);assert.equal(params(h).has('columns'),false);
+});
+
+test('applied query survives an unsent draft through presentation paging retry and refresh',async()=>{
+ const rows=Array.from({length:52},(_,i)=>fieldProfile({atlas_role:'role_'+i})),t=profileTable(rows),h=navigation(fieldRoute+'&search=role',[t]);h.answer(rows);await flush();h.el('table-query').value='UNSENT';h.el('exact-columns').fire('click');assert.equal(params(h).get('search'),'role');assert.match(h.el('field-filter-status').textContent,/role/);assert.doesNotMatch(h.el('read-status').textContent,/UNSENT/);
+ h.el('next-page').fire('click');await flush();assert.match(h.el('read-status').textContent,/52 matching/);assert.match(fieldText(h),/role_51/);assert.equal(h.el('table-query').value,'UNSENT');h.el('retry-read').fire('click');await flush();assert.match(fieldText(h),/role_51/);
+ const refreshed=navigation(h.window.location.search,[t]);refreshed.answer(rows);await flush();assert.equal(refreshed.el('table-query').value,'role');assert.match(fieldText(refreshed),/role_51/);
+ h.el('table-search-mode').value='fields';h.el('table-search-mode').fire('change');await flush();assert.equal(params(h).get('search'),'UNSENT');assert.match(h.el('read-status').textContent,/No published profiles match.*UNSENT/);
+});
+
+test('draft edits do not relabel an in-flight field read or generic category results',async()=>{
+ const rows=[fieldProfile()],h=navigation(fieldRoute+'&search=f',[profileTable(rows)]);h.el('table-query').value='UNSENT';h.el('exact-columns').fire('click');assert.equal(h.scripts.length,1);assert.equal(params(h).get('search'),'f');assert.match(h.el('read-status').textContent,/Loading|Reading/);h.answer(rows);await flush();assert.match(h.el('field-filter-status').textContent,/f/);assert.doesNotMatch(h.el('field-filter-status').textContent,/UNSENT/);assert.ok(h.el('rows').innerHTML);
+ const category=[profileRow()],g=navigation('?table=damyda_clinical_profile',[readable('damyda_clinical_profile',category)]);g.answer(category);await flush();g.el('table-query').value='UNSENT';g.el('exact-columns').fire('click');assert.equal(params(g).has('search'),false);assert.match(g.el('read-status').textContent,/published rows/);g.el('exact-columns').fire('click');assert.equal(g.el('read-status').hidden,true);
+});
+
+test('field arrival retains source links and limited snapshot context even without readable rows',async()=>{
+ for(const extra of [{complete:false,provenance:'snapshot_only'},{status:'withheld',reason:'Publication withheld',complete:false,provenance:'snapshot_only',shards:[]}]){
+  const rows=[fieldProfile()],h=navigation(fieldRoute+'&search=x&page=2&columns=all',[profileTable(rows,extra)]);assert.match(h.el('field-publication').textContent,/limited or unknown/i);assert.match(h.el('field-publication').textContent,/earlier atlas snapshot/i);
+  const links=h.el('field-navigation').innerHTML;assert.match(links,/view=fields&amp;table=column_profiles&amp;source=S/);assert.match(links,/view=timeplace&amp;source=S/);assert.doesNotMatch(links,/field=f|search=x|page=2|columns=all/);
+  if(extra.status){assert.equal(h.scripts.length,0);assert.match(h.el('unreadable-status').textContent,/Publication withheld/);assert.equal(h.el('rows').innerHTML,'');}
+ }
+});
+
+test('field arrival cancelled or failed partial scans expose retry and ignore stale registrations',async()=>{
+ for(const action of ['cancel','fail']){
+  const first=[fieldProfile({atlas_role:'first'})],second=[fieldProfile({atlas_role:'second'})],t=profileTable(first);t.shards.push({id:'s2',src:'output-shards/column_profiles-s2.js',rows:1,bytes:Buffer.byteLength(JSON.stringify(second))});const h=navigation(fieldRoute,[t]);h.answer(first);await flush();const stale=h.scripts.at(-1);assert.equal(h.visible('cancel-search'),true);
+  if(action==='cancel')h.el('cancel-search').fire('click');else stale.onerror();await flush();assert.equal(h.visible('retry-read'),true);assert.match(h.el('read-status').textContent,/incomplete/i);assert.equal(h.el('rows').innerHTML,'');assert.doesNotMatch(h.el('read-status').textContent,/No published profile|2 published/);
+  h.el('retry-read').fire('click');await flush();h.document.currentScript=stale;h.window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'b1',table_id:t.id,shard_id:'s2',rows_json:JSON.stringify(second)});h.document.currentScript=null;assert.equal(h.el('rows').innerHTML,'');h.answer(second);await flush();assert.match(h.el('read-status').textContent,/2 published profile rows/);assert.match(fieldText(h),/first/);assert.match(fieldText(h),/second/);assert.equal(h.document.activeElement,h.el('table-title'));
+ }
+});
+
+test('field recovery actions move focus to the heading before their controls disappear',async()=>{
+ const rows=[fieldProfile()],t=profileTable(rows);
+ for(const [route,control] of [[fieldRoute+'&search=absent','clear-field-search'],[fieldRoute+'&page=999','first-page'],[fieldRoute,'clear-row-scope']]){
+  const h=navigation(route,[t]);h.answer(rows);await flush();if(control==='clear-row-scope')h.el('field-tools').open=true;
+  h.el(control).focus();h.el(control).fire('click');assert.equal(h.document.activeElement,h.el('table-title'));await flush();assert.equal(h.document.activeElement,h.el('table-title'));
+ }
+});
+
+test('empty field search submission preserves the user-open tools and focused input',async()=>{
+ const rows=[fieldProfile()];
+ for(const initialQuery of ['', '&search=f']){
+  const h=navigation(fieldRoute+initialQuery,[profileTable(rows)]);h.answer(rows);await flush();
+  h.el('field-tools').open=true;h.el('table-query').value='';h.el('table-query').focus();h.el('search-table').fire('submit');
+  assert.equal(h.el('field-tools').open,true);assert.equal(h.visible('table-query'),true);assert.equal(h.document.activeElement,h.el('table-query'));
+  await flush();assert.equal(h.visible('table-query'),true);assert.equal(h.document.activeElement,h.el('table-query'));assert.equal(params(h).has('search'),false);assert.equal(params(h).get('source'),'S');assert.equal(params(h).get('field'),'f');assert.match(h.el('read-status').textContent,/1 published profile row/);
+ }
+});
+
+test('empty field search switching to all row values preserves open tools and focused selector',async()=>{
+ const rows=[fieldProfile()],h=navigation(fieldRoute+'&searchmode=fields',[profileTable(rows)]);h.answer(rows);await flush();
+ h.el('table-search-mode').focus();h.el('table-search-mode').value='rows';h.el('table-search-mode').fire('change');
+ assert.equal(h.el('field-tools').open,true);assert.equal(h.visible('table-search-mode'),true);assert.equal(h.document.activeElement,h.el('table-search-mode'));
+ await flush();assert.equal(h.visible('table-search-mode'),true);assert.equal(h.document.activeElement,h.el('table-search-mode'));assert.equal(params(h).has('searchmode'),false);assert.equal(params(h).has('search'),false);assert.match(h.el('read-status').textContent,/1 published profile row/);
+});
+
+test('field summary reasons stay readable under their heading and unknown supplied status remains labelled',async()=>{
+ const rows=[fieldProfile({numeric_privacy_status:'needs_validation_unreviewed_field',summary_scope:'scope_review'}),fieldProfile({numeric_privacy_status:'withheld_unknown_support',summary_method:'method_support'}),fieldProfile({numeric_privacy_status:'future_summary_guard',summary_scope:'scope_future'})],h=navigation(fieldRoute,[profileTable(rows)]);h.answer(rows);await flush();const text=fieldText(h);
+ for(const value of ['Not shown: field needs review','Withheld: supporting count unknown','Supplied summary status: future_summary_guard','scope_review','method_support','scope_future'])assert.ok(text.includes(value),value);
+ assert.doesNotMatch(text,/Stored summary status:/);assert.equal((text.match(/Recorded availability/g)||[]).length,3);
 });
