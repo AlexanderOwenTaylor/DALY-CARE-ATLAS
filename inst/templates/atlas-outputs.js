@@ -552,6 +552,12 @@
   function renderRowScope(){el('row-scope').hidden=!(rowScope.source||rowScope.field);el('row-scope-label').textContent=[rowScope.source&&'Source: '+rowScope.source,rowScope.field&&'Field: '+rowScope.field].filter(Boolean).join(' · ');el('row-scope-navigation').innerHTML=rowScope.source?sourceCoverageLink(rowScope.source):'';}
   function renderFieldPresentation(resetTools=false){
     const field=isFieldEvidence(),canRead=selected&&readable(selected);
+    const guide=el('vital-guide');
+    if(guide){
+      const vital=selected?.id==='column_profiles'&&!rowScope.field&&window.DALYCARE_VITALS&&(rowScope.source==='SP_VitaleVaerdier'||(!rowScope.source&&window.DALYCARE_VITALS.search(appliedQuery).length));
+      guide.hidden=!vital;
+      guide.innerHTML=vital?window.DALYCARE_VITALS.render(appliedQuery):'';
+    }
     document.body.classList.toggle('field-evidence-mode',field);
     for(const [control,ordinary,special] of [['row-scope','row-scope-slot','field-scope-slot'],['search-table','table-search-slot','field-search-slot'],['exact-columns','exact-columns-slot','field-columns-slot']]){
       const target=el(field?special:ordinary),node=el(control);if(node.parentNode!==target)target.appendChild(node);
@@ -560,6 +566,8 @@
     if(resetTools)el('field-tools').open=field&&!!(appliedQuery||fieldNameOnly||exactColumns);
     el('field-identity').hidden=!field;el('field-navigation').hidden=!field;el('table-purpose').hidden=field;
     if(selected)el('table-title').textContent=field?fieldLabel({table_name:rowScope.source,column_name:rowScope.field})||rowScope.field:tableTitle(selected);
+    if(guide&&!guide.hidden&&rowScope.source==='SP_VitaleVaerdier')el('table-title').textContent='Vital signs (SP)';
+    el('table-purpose').hidden=field||!!(guide&&!guide.hidden);el('table-cue').hidden=!!(guide&&!guide.hidden);
     if(selected?.id==='column_profiles')el('table-cue').textContent='Counts and summaries describe stored source records, not unique people or clinical reference ranges. Missing values are not zero.'+(!field&&selected.complete!==true&&canRead?' Only the published rows in this export are searchable; original scope is limited or unknown.':'');
     el('table-state').hidden=field;
     const active=[];if(appliedQuery)active.push('Applied search: “'+appliedQuery+'”');if(appliedQuery||fieldNameOnly)active.push('Search scope: '+(fieldNameOnly?'field names and reviewed labels':'all row fields and values'));if(exactColumns)active.push('Showing all exact columns');
@@ -583,6 +591,7 @@
     if(!selected||!lastResult)return;
     const t=selected,rows=lastResult.rows,compact=primary[t.id]&&!exactColumns;
     el('read-status').textContent=rowStatus(lastResult);el('read-status').hidden=false;el('table-state').hidden=isFieldEvidence();el('table-result').hidden=true;
+    if(!el('vital-guide')?.hidden&&window.DALYCARE_VITALS?.search(appliedQuery).length&&!lastResult.total_matches)el('read-status').textContent='See the measurement guide above for names, usual units and source fields. No column profile matches this measurement name; the profiles describe shared columns.';
     el('first-page').hidden=!isFieldEvidence()||!!rows.length||!lastResult.total_matches;
     el('exact-columns').hidden=!hasReadingView(t);el('exact-columns').textContent=exactColumns?'Show reading view':categoryProfiles.has(t.id)?'Show exact published rows':'Show all exact columns';el('exact-columns').setAttribute('aria-pressed',String(exactColumns));
     if(!rows.length){el('rows').innerHTML='';return;}

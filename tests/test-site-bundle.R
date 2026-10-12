@@ -6,6 +6,10 @@ snapshot <- list(privacy_metadata=list(minimum_cell_count=10),panels=list(regist
 tables <- atlas_output_evidence(NULL,root,snapshot)
 stopifnot(exists('atlas_write_site_bundle',mode='function'))
 paths <- atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload')
+for(name in c('atlas-vitals.js','atlas-vitals.css')) {
+  stopifnot(unname(tools::md5sum(file.path(tmp,'site',name)))==unname(tools::md5sum(file.path(root,'inst/templates',name))))
+  for(page in c('DALYCARE_outputs.html','DALYCARE_clinical.html')) stopifnot(any(grepl(name,readLines(file.path(tmp,'site',page),encoding='UTF-8'),fixed=TRUE)))
+}
 read_core <- function(path) jsonlite::fromJSON(path,simplifyVector=FALSE)
 stopifnot(read_core(paths$payload_json)$transport_version==2L)
 cattext <- paste(readLines(paths$catalogue,encoding='UTF-8'),collapse='\n')

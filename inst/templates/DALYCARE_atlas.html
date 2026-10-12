@@ -1415,7 +1415,7 @@
     @media (max-width:700px) { .treatment-medication-discovery { grid-template-columns:minmax(0,1fr); } }
   </style>
 
-</head>
+<link rel="stylesheet" href="atlas-vitals.css"></head>
 <body>
   <header class="hero">
     <div class="hero-inner">
@@ -1998,7 +1998,7 @@
         <button class="sub-tab" data-sub="clinical-imaging">Imaging</button>
         <button class="sub-tab" data-sub="clinical-microbiology">Microbiology</button>
         <button class="sub-tab" data-sub="clinical-pathology">Pathology</button>
-        <button class="sub-tab" data-sub="clinical-vitals">Vitals</button>
+        <button class="sub-tab" data-sub="clinical-vitals">Vital signs</button>
         <button class="sub-tab" data-sub="clinical-notes">Notes</button>
         <button class="sub-tab" data-sub="clinical-social">Social History</button>
       </div>
@@ -2007,7 +2007,7 @@
       <div class="sub-pane" id="clinical-imaging"><div class="panel"><div class="panel-head"><h2 class="panel-title">Medical imaging atlas</h2><p class="panel-sub">Explore procedure codes, registry modalities and SP examination metadata. Image pixels are not supplied.</p></div><div class="panel-body"><div id="clinical-imaging-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-imaging"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-microbiology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Microbiology / infection atlas</h2><p class="panel-sub">Explore analysis, culture, susceptibility, microscopy and SP blood-culture workflows.</p></div><div class="panel-body"><div id="clinical-microbiology-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-pathology"><div class="panel"><div class="panel-head"><h2 class="panel-title">Pathology / PATOBANK atlas</h2><p class="panel-sub">Explore coded pathology, specimen/material and separate report-field availability. Report text is not published.</p></div><div class="panel-body"><div id="clinical-pathology-cards"></div></div></div></div>
-      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">Explore repeated vital-sign event fields and separate weight, height and BMI source fields.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
+      <div class="sub-pane" id="clinical-vitals"><div class="panel"><div class="panel-head"><h2 class="panel-title">Vital signs and anthropometrics</h2><p class="panel-sub">Find blood pressure, oxygen saturation and temperature, then explore their source fields. Height, weight and BMI are also linked below.</p></div><div class="panel-body"><div id="clinical-vitals-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-vitals"></div></details></div></div></div>
       <div class="sub-pane" id="clinical-notes"><div class="panel"><div class="panel-head"><h2 class="panel-title">Clinical notes and text availability</h2><p class="panel-sub">Explore note metadata and separate pathology-text availability. Text contents are not published.</p></div><div class="panel-body"><div id="clinical-notes-cards"></div></div></div></div>
       <div class="sub-pane" id="clinical-social"><div class="panel"><div class="panel-head"><h2 class="panel-title">Social history: smoking and alcohol</h2><p class="panel-sub">Find smoking, alcohol and smoking-intensity fields. Records with a value do not establish current patient status.</p></div><div class="panel-body"><div id="clinical-social-cards"></div><details class="lineage-block"><summary>Additional semantic hits</summary><div id="semantic-clinical-social"></div></details></div></div></div>
     </section>
@@ -2180,6 +2180,7 @@
 
   <script src="DALYCARE_atlas_payload.js"></script>
   <script src="atlas-transport.js"></script>
+  <script src="atlas-vitals.js"></script>
   <script>
     (function () {
       /* ATLAS_PAYLOAD_INIT_START */
@@ -2317,7 +2318,7 @@
       ];
       const overviewEntryCards = [
         { title: "Find clinical variables", status: "Concept index", tone: "blue", bestFor: "Checking whether a clinical concept exists before reading raw lineage.", evidence: "Semantic concepts, raw fields, value rows, code signals", examples: ["height", "LDH", "treatment exposure"], tab: "variables", sub: "variables-concepts", search: "" },
-        { title: "Vitals and anthropometrics", status: "EHR evidence", tone: "blue", bestFor: "Finding height, weight, BMI, and vital-sign source fields.", evidence: "EHR vital-sign descriptors and numeric summaries", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
+        { title: "Vitals and anthropometrics", status: "EHR evidence", tone: "blue", bestFor: "Finding blood pressure, oxygen saturation, temperature, height, weight and BMI.", evidence: "EHR vital-sign descriptors and numeric summaries", examples: ["Vaegt", "Hoejde", "numericvalue"], tab: "clinical", sub: "clinical-vitals" },
         { title: "Smoking and alcohol", status: "EHR evidence", tone: "blue", bestFor: "Reviewing social-history smoking and alcohol evidence.", evidence: "EHR social-history categories", examples: ["ryger", "drikker", "Smoking status"], tab: "clinical", sub: "clinical-social" },
         { title: "Disease registries", status: "Registry evidence", tone: "plum", bestFor: "Reviewing disease-specific registry variables and caveats.", evidence: "DaMyDa, LYFO, and CLL registry fields", examples: ["DaMyDa", "LYFO", "Binet"], tab: "registries", sub: "reg-overview" },
         { title: "MCL / TRIANGLE feasibility", status: "Study-planning panel", tone: "violet", bestFor: "Walking from a trial-inspired lymphoma question to aggregate feasibility counts, design warnings, and a validation plan.", evidence: "Production aggregate cohort, exposure, outcome, age-proxy, Ibrutinib, and Ki-67 feasibility evidence", examples: ["MCL", "ASCT", "ibrutinib", "Ki-67"], tab: "clinical-feasibility", sub: "mcl-triangle-feasibility" },
@@ -2967,6 +2968,12 @@
           "Sources": [],
           "QA / caveats": []
         };
+        if (window.DALYCARE_VITALS) window.DALYCARE_VITALS.search(q).forEach(row => {
+          grouped["Clinical concepts"].push(makeSearchResult("Clinical concepts", row.title,
+            "Vital signs (SP) · usual unit: " + row.unit + ". Reference guide and source fields; separate measurement summaries are not supplied here.",
+            {}, {tab:"clinical", sub:"clinical-vitals"},
+            {query:q, item:row.id, badge:"Measurement guide", status:"Reference terminology", score:1500}));
+        });
         labSearchRows(q).forEach(row => {
           const entry = labDisplayEntry(row.lab_code);
           grouped["Codes"].push(makeSearchResult("Codes", entry.label,
@@ -5122,6 +5129,9 @@
         ` : "";
         return `<div class="lineage-list vitals-priority-lineage">${lineage}${bmiLine}</div>`;
       }
+      function renderVitalGuide(query) {
+        return typeof window !== 'undefined' && window.DALYCARE_VITALS ? window.DALYCARE_VITALS.render(query) : '';
+      }
       function renderVitalsPanel() {
         const raw = panelRawFieldRows.filter(row =>
           row.panel_id === "clinical_vitals" ||
@@ -5135,8 +5145,8 @@
         const otherRaw = raw.filter(row => !priorityKeys.has(row.semantic_id || rawFieldDisplay(row)));
         const allVitalsDistributions = panelDistributionRows.filter(row => row.panel_id === "clinical_vitals");
         const fieldJourneys = `<section class="measurement-shortcuts"><h3>Weight, height and BMI fields</h3><p class="mini">Selected fields in Patient information (SP) <code>SP_PatientInfo</code> and the Myeloma registry <code>RKKP_DaMyDa</code>. These are separate from SP vital-sign events.</p><div class="toolbar"><button class="concept-link-button" type="button" data-measurement="weight-height">Weight and height →</button><button class="concept-link-button" type="button" data-measurement="bmi">BMI →</button></div></section>`;
-        if (!domainPublishedDistributions("clinical_vitals").length) return `${renderDomainSourceOverview("clinical_vitals")}${fieldJourneys}${priorityRows.length ? `<details class="lineage-block"><summary>Source schema and interpretation</summary>${renderVitalsPriorityLineage(priorityRows)}</details>` : ""}`;
-        return `<div class="focused-panel vitals-panel">
+        if (!domainPublishedDistributions("clinical_vitals").length) return `<div id="clinical-vital-guide">${renderVitalGuide()}</div>${renderDomainSourceOverview("clinical_vitals")}${fieldJourneys}${priorityRows.length ? `<details class="lineage-block"><summary>Source schema and interpretation</summary>${renderVitalsPriorityLineage(priorityRows)}</details>` : ""}`;
+        return `<div class="focused-panel vitals-panel"><div id="clinical-vital-guide">${renderVitalGuide()}</div>
           ${clinicalSourceMetadata.present ? renderDomainSourceOverview('clinical_vitals') : ''}
           ${fieldJourneys}
           <div class="source-shape">
@@ -6041,6 +6051,10 @@
       }
       function applyLocalSearch(tabId, subId, query, item) {
         const q = text(query || "");
+        if (tabId === 'clinical' && subId === 'clinical-vitals') {
+          const guide = document.getElementById('clinical-vital-guide');
+          if (guide) guide.innerHTML = renderVitalGuide(q);
+        }
         if (tabId === "laboratory" && subId === "lab-npu") {
           const search = document.getElementById("lab-name-search");
           if (search) {

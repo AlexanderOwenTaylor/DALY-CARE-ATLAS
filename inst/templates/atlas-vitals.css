@@ -1,0 +1,7 @@
+.vital-guide{margin:0 0 24px;padding:20px;border:1px solid #ccd8d2;border-radius:12px;background:#f7faf8;color:#233e33;font:15px/1.5 system-ui,sans-serif}
+.vital-guide h3{margin:0 0 8px;font-size:22px}.vital-guide p{margin:8px 0 12px}.vital-guide code{overflow-wrap:anywhere;font-size:.88em}
+.vital-guide-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start}.vital-guide-grid details{margin:0;background:#fff;border:1px solid #bdcdc3;border-radius:8px;overflow:hidden}
+.vital-guide summary{cursor:pointer;padding:14px;line-height:1.4}.vital-guide summary:focus-visible,.vital-guide a:focus-visible{outline:3px solid #a96806;outline-offset:3px}.vital-guide summary:hover{background:#edf5ef}
+.vital-guide-title{font-size:18px;font-weight:700}.vital-guide-unit,.vital-guide-prompt{display:block;margin:6px 0 0 18px}.vital-guide-prompt{font-size:12px;color:#455c50}.vital-guide-explanation{padding:0 14px 6px}.vital-guide-small{font-size:13px;color:#455c50}
+.vital-guide a{color:#185d45;text-decoration:underline;text-underline-offset:2px}.vital-guide-summary{border-left:3px solid #bd8b3d;padding:10px 14px;background:#fff9ef;margin:14px 0}.vital-guide-summary p{margin:4px 0 0}.vital-guide-fields{background:#fff;border:1px solid #d1ddd5;border-radius:8px;margin:12px 0 0}.vital-guide-fields>p,.vital-guide-links{margin:8px 14px 14px}.vital-guide-links{display:flex;flex-wrap:wrap;gap:12px 22px}
+@media(max-width:760px){.vital-guide{padding:14px}.vital-guide-grid{grid-template-columns:1fr}.vital-guide-links{flex-direction:column}}

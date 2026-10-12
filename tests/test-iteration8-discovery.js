@@ -10,7 +10,8 @@ function runtime(extra={}){
   const output={},nodes={};
   const node=id=>nodes[id]||=( {value:'',textContent:'',innerHTML:'',options:[],listeners:{},addEventListener(event,handler){this.listeners[event]=handler;},classList:{contains:()=>true},querySelectorAll:()=>[],closest:()=>null,setAttribute(){}} );
   const ctx=vm.createContext({payload,sourceMapCrosswalkRows:payload.source_map_crosswalk_rows,columnRows:payload.column_profile_rows,catalogRows:payload.catalog_rows,catalogDisplayRows:payload.canonical_resource_reconciliation_rows,columnPageIndex:0,columnExactField:'',columnMeasurement:'',reviewTemporal:payload.review_temporal_coverage,reviewSpatial:payload.review_spatial_coverage,clinicalDisplayEntry:(kind,system,code)=>payload.clinical_display_dictionary.find(row=>row.kind===kind&&row.system===system&&row.code===code),sourceDisplayName:name=>({RKKP_CLL:'Chronic Lymphocytic Leukaemia Registry',RKKP_LYFO:'Danish Lymphoma Registry',RKKP_DaMyDa:'Danish Myeloma Database'}[name] || name),clinicalFieldMatches:(row,q)=>row.column_name.toLowerCase().includes(q),setHtml:(id,value)=>output[id]=value,document:{getElementById:node,querySelectorAll:()=>[]},...extra});
-  Object.assign(ctx,{URLSearchParams,panels:payload.panels,reviewLaboratory:{lab_sources:[]},collapseGlobalSearch(){}});
+  Object.assign(ctx,{URLSearchParams,window:{},panels:payload.panels,reviewLaboratory:{lab_sources:[]},collapseGlobalSearch(){}});
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../inst/templates/atlas-vitals.js'),'utf8'),ctx);
   vm.runInContext(html.split('/* CLINICIAN_DISPLAY_START */')[1].split('/* CLINICIAN_DISPLAY_END */')[0],ctx);
   load('      function text(', '      function metric(',ctx);
   load('      function observedRowsWithheld(', '      function sourceTiles(',ctx);
@@ -167,4 +168,9 @@ test('global NPU search uses preserved reference definitions with dictionary rou
     assert.ok(results.some(row=>row.query==='NPU04998'&&row.status==='Reference meaning'&&row.tab==='dictionary'&&row.sub==='dictionary-codes'));
   }
   const exact=JSON.parse(run("JSON.stringify(buildGlobalSearchResults('NPU04998').Codes)"));assert.equal(exact[0].query,'NPU04998');
+  for(const query of ['blood pressure','SpO2 %','temperature']){
+    ctx.query=query;const result=JSON.parse(run("JSON.stringify(buildGlobalSearchResults(query)['Clinical concepts'])"));
+    assert.equal(result.length,1);assert.equal(result[0].sub,'clinical-vitals');assert.equal(result[0].badge,'Measurement guide');assert.equal(result[0].status,'Reference terminology');
+    assert.ok(result[0].description.includes('usual unit:'));assert.equal(result[0].query,query.toLowerCase());
+  }
 });

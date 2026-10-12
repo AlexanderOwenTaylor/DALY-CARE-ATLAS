@@ -331,7 +331,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
     path <- atlas_confined_path(stage,name)
     con <- file(path,'wb');on.exit(close(con));writeBin(charToRaw(enc2utf8(text)),con)
   }
-  resources <- c(DALYCARE_atlas.html='DALYCARE_entry.html',DALYCARE_clinical.html='DALYCARE_atlas.html',DALYCARE_outputs.html='DALYCARE_outputs.html',`atlas-entry.js`='atlas-entry.js',`atlas-outputs.js`='atlas-outputs.js',`atlas-transport.js`='atlas-transport.js',`atlas-pages.css`='atlas-pages.css')
+  resources <- c(DALYCARE_atlas.html='DALYCARE_entry.html',DALYCARE_clinical.html='DALYCARE_atlas.html',DALYCARE_outputs.html='DALYCARE_outputs.html',`atlas-entry.js`='atlas-entry.js',`atlas-outputs.js`='atlas-outputs.js',`atlas-transport.js`='atlas-transport.js',`atlas-pages.css`='atlas-pages.css',`atlas-vitals.js`='atlas-vitals.js',`atlas-vitals.css`='atlas-vitals.css')
   for(name in names(resources)) if(!file.copy(atlas_bundle_resource(resources[[name]],project_root),file.path(stage,name))) stop('Resource copy failed',call.=FALSE)
   write('DALYCARE_atlas_payload.js',transport_assets$script)
   write('DALYCARE_atlas_payload.json',transport_assets$json)
@@ -390,7 +390,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   catalogue <- list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance,privacy_policy_version=payload$privacy_metadata$policy_version,limits=limits,tables=catalog_tables)
   if(length(field_labels)) catalogue$field_labels <- field_labels
   write('DALYCARE_output_catalogue.js',paste0('window.DALYCARE_OUTPUT_CATALOGUE = ',atlas_bundle_json(catalogue),';\n'))
-  for(names in list(c('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),c('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css'))) if(sum(file.info(file.path(stage,names))$size)>524288) stop('Initial asset byte budget exceeded',call.=FALSE)
+  for(names in list(c('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),c('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css'))) if(sum(file.info(file.path(stage,names))$size)>524288) stop('Initial asset byte budget exceeded',call.=FALSE)
   files <- list.files(stage,recursive=TRUE,full.names=FALSE)
   if(any(file.info(file.path(stage,files))$size==0)) stop('Empty site asset',call.=FALSE)
   stage_assets <- as.list(setNames(file.path(stage,files),paste0('site_',seq_along(files))))

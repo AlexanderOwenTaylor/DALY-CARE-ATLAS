@@ -438,7 +438,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
         raise ValueError('Unsafe manifest destination')
     stage.mkdir()
     try:
-        resources = {'DALYCARE_atlas.html':'DALYCARE_entry.html','DALYCARE_clinical.html':'DALYCARE_atlas.html', **{name:name for name in ('DALYCARE_outputs.html','atlas-entry.js','atlas-outputs.js','atlas-transport.js','atlas-pages.css')}}
+        resources = {'DALYCARE_atlas.html':'DALYCARE_entry.html','DALYCARE_clinical.html':'DALYCARE_atlas.html', **{name:name for name in ('DALYCARE_outputs.html','atlas-entry.js','atlas-outputs.js','atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')}}
         for name, source in resources.items():
             shutil.copyfile(root/'inst/templates'/source,stage/name)
         def write(name, text):
@@ -504,7 +504,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
         if field_labels:
             catalogue['field_labels'] = field_labels
         write('DALYCARE_output_catalogue.js','window.DALYCARE_OUTPUT_CATALOGUE = '+compact(catalogue)+';\n')
-        for names in [('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css')]:
+        for names in [('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')]:
             if sum((stage/n).stat().st_size for n in names)>ENTRY_BYTES:
                 raise ValueError('Initial asset byte budget exceeded')
         files = sorted(p.relative_to(stage) for p in stage.rglob('*') if p.is_file())

@@ -35,6 +35,8 @@ function navigation(search='',suppliedTables,catalogueMetadata={}) {
   };
   window={DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'b1',tables,...catalogueMetadata},location:{search},history,scrollX:0,scrollY:0,
     scrollTo(options){scrolls.push({...options});this.scrollX=options.left;this.scrollY=options.top;},addEventListener(name,fn){listeners[name]=fn;}};
+  const vitalModule=path.join(templates,'atlas-vitals.js');
+  if(fs.existsSync(vitalModule))vm.runInNewContext(fs.readFileSync(vitalModule,'utf8'),{window,URLSearchParams});
   vm.runInNewContext(fs.readFileSync(path.join(templates,'atlas-outputs.js'),'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
   const card=id=>el('table-list').querySelectorAll('[data-table]').find(button=>button.dataset.table===id);
   return {window,document,el,card,scrolls,focuses,scripts,tables,
@@ -48,6 +50,26 @@ function readable(id,rows,metadata={}) {
  const json=JSON.stringify(rows);return {id,title:id,group:'Evidence',status:'available',kind:'aggregate_summary',complete:true,...metadata,columns:Object.keys(rows[0]).map(key=>({key,label:key,type:typeof rows.find(r=>r[key]!==null)?.[key]==='number'?'number':'string',definition:'Supplied meaning for '+key})),shards:[{id:'s1',src:'output-shards/'+id+'-s1.js',rows:rows.length,bytes:Buffer.byteLength(json)}]};
 }
 const flush=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
+
+test('vital-sign searches answer with a reference guide without fabricating matching profile rows',async()=>{
+ const rows=[{table_name:'SP_VitaleVaerdier',column_name:'displayname',n_rows:64124202,top_values:null,value_privacy_status:'protected_field'}],table=readable('column_profiles',rows);
+ for(const query of ['', 'blood pressure','SpO2 %','temperature']){
+  const h=navigation('?view=fields&table=column_profiles&source=SP_VitaleVaerdier&search='+encodeURIComponent(query),[table]);h.answer(rows);await flush();
+  assert.ok(h.el('vital-guide'),'Visible measurement guide mount');assert.equal(h.el('vital-guide').hidden,false);
+  assert.match(h.el('vital-guide').innerHTML,/Blood pressure/);assert.match(h.el('vital-guide').innerHTML,/SpO₂/);assert.match(h.el('vital-guide').innerHTML,/Temperature/);
+  assert.doesNotMatch(h.el('vital-guide').innerHTML,/64,124,202|64124202/);
+  if(query){assert.equal(h.el('rows').innerHTML,'');assert.match(h.el('read-status').textContent,/measurement guide/i);}
+  assert.equal(h.scripts.length,1,'Guide does not load the clinical payload or extra shards');
+ }
+ for(const query of ['blood pressure','SpO2','temperature']){
+  const h=navigation('?view=fields&table=column_profiles&searchmode=fields&search='+encodeURIComponent(query),[table]);h.answer(rows);await flush();
+  assert.equal(h.el('vital-guide').hidden,false,'Unscoped field search must also discover the reference guide');
+  assert.match(h.el('read-status').textContent,/measurement guide/i);
+ }
+ for(const source of ['SP_VitaleVaerdier_extra','SP_PatientInfo']){
+  const h=navigation('?table=column_profiles&source='+source,[table]);h.answer(rows);await flush();assert.equal(h.el('vital-guide').hidden,true);
+ }
+});
 
 test('catalogue labels reach nonregistry field readers and both label and raw-name searches',async()=>{
  for(const [source,field,label] of [['BIOBANK_SAMPLES','sampletype','Sample type'],['microbiology_culture_resistance','interpretation','Susceptibility interpretation'],['SDS_diagnoser','diagnosekode','Diagnosis code']]){

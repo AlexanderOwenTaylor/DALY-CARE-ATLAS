@@ -16,7 +16,8 @@ function runtime(extra={}){
  load('      function makeSearchResult(', '      function buildGlobalSearchResults(',ctx);
  for(const marker of ['CLINICAL_TERMS','CLINICAL_GUIDE'])vm.runInContext(html.split(`/* ${marker}_START */`)[1].split(`/* ${marker}_END */`)[0],ctx);
  load('      function finiteSummary(', '      ["column-search"',ctx);
- fn('normalizeClinicalKey',ctx);
+ ctx.window ||= {};vm.runInContext(fs.readFileSync(path.join(__dirname,'../inst/templates/atlas-vitals.js'),'utf8'),ctx);
+ fn('renderVitalGuide',ctx);fn('normalizeClinicalKey',ctx);
  return {ctx,node,output,run:code=>vm.runInContext(code,ctx)};
 }
 test('treatment source identities classify known layers and leave near-matches or conflicts as candidates',()=>{

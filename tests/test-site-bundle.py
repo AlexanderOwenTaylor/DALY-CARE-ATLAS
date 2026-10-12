@@ -76,6 +76,10 @@ class BundleTests(unittest.TestCase):
    payload={'run_id':'synthetic','action_items':[{'status':'safe'}], 'review_infrastructure_sections':{'action_items':[{'status':'safe'}]},'privacy_metadata':{'minimum_cell_count':10}}
    tables=collect_output_evidence(None,ROOT,{'privacy_metadata':{'minimum_cell_count':10},'panels':{'registry_clinical_summary':[{'table_name':'S'+str(i),'registry':'LYFO','n_rows':7 if i==250 else 20,'n_cols':7,'n_patients':20} for i in range(251)]}})
    paths=b.write_site_bundle(out,payload,tables,ROOT,'legacy_payload')
+   for name in ('atlas-vitals.js','atlas-vitals.css'):
+    self.assertEqual((out/name).read_bytes(),(ROOT/'inst/templates'/name).read_bytes())
+    for page in ('DALYCARE_outputs.html','DALYCARE_clinical.html'):
+     self.assertIn(name,(out/page).read_text(encoding='utf-8'))
    cat=json.loads(paths['catalogue'].read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';'))
    table=next(t for t in cat['tables'] if t['id']=='registry_clinical_summary')
    self.assertEqual([s['rows'] for s in table['shards']],[250,1])
