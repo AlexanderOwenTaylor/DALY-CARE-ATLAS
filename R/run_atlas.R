@@ -772,9 +772,16 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
     value=as.character(c(run_id, build_status, coverage, expected, profiled, missing, skipped)),
     stringsAsFactors=FALSE)
   policy <- registry_summary_policy(project_root)
-  policy_status <- if (length(policy)) "available" else "unavailable"
   registries <- lapply(c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL"), function(table) {
-    specs <- Filter(function(spec) identical(spec$table_name,table), policy)
+    specs <- Filter(function(spec) is.list(spec) && identical(spec$table_name,table), policy)
+    # A nonempty policy for another registry cannot establish this inventory.
+    valid_spec <- function(spec) {
+      keys <- c("table_name","source_column","kind","topic","phase","label")
+      all(vapply(keys,function(key) is.character(spec[[key]]) && length(spec[[key]])==1L &&
+        !is.na(spec[[key]]) && nzchar(spec[[key]]),logical(1))) &&
+        spec$kind %in% c("categorical","numeric")
+    }
+    policy_status <- if (length(specs) && all(vapply(specs,valid_spec,logical(1)))) "available" else "unavailable"
     requested <- is.data.frame(source_map) && table %in% source_map$table_name
     source <- if (is.data.frame(sources) && "table_name" %in% names(sources)) sources[sources$table_name==table,,drop=FALSE] else data.frame()
     source_status <- if (!requested) "source_not_requested" else if (!nrow(source) || !any(source$load_status=="ok",na.rm=TRUE)) "source_unavailable" else if (all(source$profile_mode=="schema")) "schema_only" else "profiled"
@@ -784,7 +791,8 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
     unavailable <- count("field_unavailable")
     unassessed <- max(0L,length(specs)-length(unique(if(nrow(rows)) rows$source_column else character())))
     reason <- if (policy_status=="unavailable") "Restore the required reviewed registry policy and JSON dependency." else if (source_status=="source_not_requested") "Select this exact registry in the source map." else if (source_status=="source_unavailable") "Review source resolution, access and memory diagnostics." else if (source_status=="schema_only") "Schema mode omits clinical summaries." else if (any(statuses %in% c("needs_person_key","missing_person_key"))) "Check the exact live patientid column or authoritative private mapping." else if (any(statuses %in% c("query_failed","resource_limit"))) "Review aggregate query and resource-budget diagnostics." else if (any(grepl("^withheld_",statuses))) "Privacy gates withhold ineligible fields." else if (unavailable || unassessed) "Some reviewed fields are absent or unassessed." else "All reviewed fields assessed; see field statuses."
-    data.frame(table_name=table,source_status=source_status,policy_status=policy_status,expected_fields=if(policy_status=="available") length(specs) else NA_integer_,
+    data.frame(table_name=table,source_status=source_status,policy_status=policy_status,
+      policy_issue_count=as.integer(policy_status=="unavailable"),expected_fields=if(policy_status=="available") length(specs) else NA_integer_,
       published_fields=count("published"),privacy_withheld_fields=count(c("withheld_small_group","withheld_constant","withheld_near_unique")),
       field_unavailable_fields=unavailable,key_issue_fields=count(c("needs_person_key","missing_person_key")),
       config_issue_fields=count("needs_person_key"),missing_key_fields=count("missing_person_key"),
@@ -794,7 +802,7 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
   })
   registries <- do.call(rbind,registries)
   selected <- registries[registries$source_status!="source_not_requested",,drop=FALSE]
-  registry_coverage <- if (policy_status=="unavailable") "unknown" else if (!nrow(selected)) "not_requested" else if (
+  registry_coverage <- if (!nrow(selected)) "not_requested" else if (any(selected$policy_status=="unavailable")) "unknown" else if (
     any(selected$source_status!="profiled" | selected$field_unavailable_fields>0 |
       selected$key_issue_fields>0 | selected$query_issue_fields>0 | selected$budget_issue_fields>0 |
       selected$invalid_contract_fields>0 | selected$unassessed_fields>0)) "partial" else "complete"

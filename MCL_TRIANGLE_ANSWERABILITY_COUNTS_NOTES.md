@@ -32,7 +32,7 @@ The helper `mcl_count_import_full_atlas_predicates()` can read the relevant atla
 - `outputs/mcl_triangle_answerability_intersections.csv`
 - `outputs/mcl_triangle_answerability_summary.csv`
 
-The outputs are written by `scripts/source_mcl_triangle_counts.R` / `scripts/source_mcl_triangle_counts.R`. They do not run the full atlas, do not call `run_atlas()`, and do not run source profiling.
+The outputs are written by `scripts/source_mcl_triangle_counts.R`. They do not run the full atlas, do not call `run_atlas()`, and do not run source profiling.
 
 ## Age <=65 Proxy
 
