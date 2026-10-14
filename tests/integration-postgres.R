@@ -136,7 +136,16 @@ tryCatch({
   }
   evidence<-compare_coverage(data)
   stopifnot(evidence$outside_person_count[evidence$dimension=='year'&evidence$group_value=='2024']==6)
-  rare<-data[c(1:5,11),];stopifnot(all(compare_coverage(rare)$release_status=='withheld_privacy'))
+  rare<-data[c(1:5,11),];rare_evidence<-compare_coverage(rare)
+  # Gates apply to each partition: rare year/region cells are unsafe, while
+  # homogeneous date quality/format have five people and no outside group.
+  expected<-c(year='withheld_privacy',region='withheld_privacy',date_quality='published',date_format='published')
+  for(dimension in names(expected)) {
+    rows<-rare_evidence[rare_evidence$dimension==dimension,]
+    stopifnot(nrow(rows)>0,all(rows$release_status==expected[[dimension]]))
+    if(dimension%in%c('date_quality','date_format'))stopifnot(nrow(rows)==1,rows$record_count==6,rows$person_count==5,
+      rows$outside_record_count==0,rows$outside_person_count==0)
+  }
   one<-data;one$patientid<-1;stopifnot(all(compare_coverage(one)$release_status=='withheld_privacy'))
   missing<-data;missing$patientid[1]<-NA;stopifnot(all(compare_coverage(missing)$release_status=='missing_person_key'))
   quality<-data.frame(patientid=1:20,event_date=rep(c('2024-01-01',NA,'2024-02-30','9999-12-31'),each=5),Region=rep(c('Capital','Zealand','confidential',''),each=5))
