@@ -405,7 +405,8 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
     rows <- lapply(rows,function(r)setNames(lapply(keys,function(k)r[[k]]),keys))
     table$rows <- NULL;table$shards <- list()
     if(identical(table$status,'snapshot_preview')) table$status <- 'limited'
-    parts <- list();pending <- list()
+    parts <- list();pending <- list();pending_bytes <- 2
+    pending_script_bytes <- nchar(enc2utf8(registration(id,'s0001',list())$script),type='bytes')
     for(row in rows) {
       for(column in table$columns) {
         v <- row[[column$key]]
@@ -413,22 +414,31 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
         if(!valid) stop('Typed evidence mismatch: ',id,call.=FALSE)
       }
       serialized <- atlas_bundle_json(row)
-      trial <- c(pending,list(serialized)); shard_id <- sprintf('s%04d',length(parts)+1L)
-      item <- registration(id,shard_id,trial)
-      if(length(trial)>250 || !fits(item)) {
+      # String escaping is additive across serialized row fragments. Count each
+      # fragment once, plus the array's brackets and separators, rather than
+      # serializing every growing pending shard again for its byte limits.
+      row_bytes <- nchar(enc2utf8(serialized),type='bytes')
+      escaped_bytes <- nchar(enc2utf8(atlas_bundle_json(serialized)),type='bytes')-2
+      separator <- as.integer(length(pending)>0L)
+      if(length(pending)>=250L || pending_bytes+separator+row_bytes>262144 ||
+         pending_script_bytes+separator+escaped_bytes>262144) {
         if(length(pending)) parts[[length(parts)+1L]] <- pending
-        pending <- list()
-        if(!fits(registration(id,sprintf('s%04d',length(parts)+1L),list(serialized)))) {
+        pending <- list();pending_bytes <- 2;separator <- 0L
+        pending_script_bytes <- nchar(enc2utf8(registration(id,sprintf('s%04d',length(parts)+1L),list())$script),type='bytes')
+        if(pending_bytes+row_bytes>262144 || pending_script_bytes+escaped_bytes>262144) {
           if(isTRUE(spec$required)) stop('Required table row exceeds shard limit',call.=FALSE)
           parts <- list();rows <- list();table$status <- 'unavailable';table$reason <- 'Row exceeds public shard byte limit';table$complete <- FALSE;break
         }
       }
       pending[[length(pending)+1L]] <- serialized
+      pending_bytes <- pending_bytes+separator+row_bytes
+      pending_script_bytes <- pending_script_bytes+separator+escaped_bytes
     }
     if(length(pending)) parts[[length(parts)+1L]] <- pending
     table$represented_row_count <- length(rows)
     for(i in seq_along(parts)) {
       shard_id <- sprintf('s%04d',i);item <- registration(id,shard_id,parts[[i]])
+      if(!fits(item)) stop('Table shard exceeds byte limit',call.=FALSE)
       relative <- paste0('output-shards/',id,'-',shard_id,'.js');write(relative,item$script)
       total <- total+item$bytes
       table$shards[[i]] <- list(id=shard_id,src=relative,rows=length(parts[[i]]),bytes=item$bytes)

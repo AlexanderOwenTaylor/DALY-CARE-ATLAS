@@ -374,8 +374,7 @@ def decode_transport(value, max_bytes=None):
     return logical
 
 
-def _registration(build_id, table_id, shard_id, rows):
-    rows_json = compact(rows)
+def _registration(build_id, table_id, shard_id, rows_json):
     script = 'window.DALYCARE_OUTPUTS.register(' + compact(dict(schema_version=1,build_id=build_id,table_id=table_id,shard_id=shard_id,rows_json=rows_json)) + ');\n'
     return rows_json, script
 
@@ -498,30 +497,44 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             table.pop('rows',None); table['shards'] = []
             if table['status'] == 'snapshot_preview': table['status'] = 'limited'
             pending, parts = [], []
+            pending_bytes = 2  # JSON array brackets, including for an empty shard.
+            _, empty_script = _registration(build_id,table_id,'s0001','[]')
+            pending_script_bytes = len(empty_script.encode('utf-8'))
             for row in rows:
                 for col in table['columns']:
                     v = row[col['key']]; kind = col['type']
                     if v is not None and not ((kind=='string' and isinstance(v,str)) or (kind=='boolean' and isinstance(v,bool)) or (kind=='number' and isinstance(v,(float,int)) and not isinstance(v,bool))):
                         raise ValueError('Typed evidence mismatch: '+table_id)
-                trial = pending+[row]
-                data, script = _registration(build_id,table_id,'s'+str(len(parts)+1).zfill(4),trial)
-                if len(trial)>250 or len(data.encode())>SHARD_BYTES or len(script.encode())>SHARD_BYTES:
+                # Serialize each row once. JSON string escaping is additive across
+                # row fragments; only brackets and commas belong to the array.
+                serialized = compact(row)
+                row_bytes = len(serialized.encode('utf-8'))
+                escaped_bytes = len(compact(serialized).encode('utf-8')) - 2
+                separator = int(bool(pending))
+                if len(pending)>=250 or pending_bytes+separator+row_bytes>SHARD_BYTES or pending_script_bytes+separator+escaped_bytes>SHARD_BYTES:
                     if pending:
                         parts.append(pending); pending=[]
-                    data, script = _registration(build_id,table_id,'s'+str(len(parts)+1).zfill(4),[row])
-                    if len(data.encode())>SHARD_BYTES or len(script.encode())>SHARD_BYTES:
+                    pending_bytes = 2
+                    _, empty_script = _registration(build_id,table_id,'s'+str(len(parts)+1).zfill(4),'[]')
+                    pending_script_bytes = len(empty_script.encode('utf-8'))
+                    separator = 0
+                    if pending_bytes+row_bytes>SHARD_BYTES or pending_script_bytes+escaped_bytes>SHARD_BYTES:
                         if spec and spec.get('required'):
                             raise ValueError('Required table row exceeds shard limit')
                         parts=[];pending=[];rows=[]
                         table.update(status='unavailable',reason='Row exceeds public shard byte limit',complete=False)
                         break
-                pending.append(row)
+                pending.append(serialized)
+                pending_bytes += separator+row_bytes
+                pending_script_bytes += separator+escaped_bytes
             if pending:
                 parts.append(pending)
             table['represented_row_count'] = len(rows)
             for i, part in enumerate(parts,1):
                 shard_id = 's'+str(i).zfill(4)
-                data, script = _registration(build_id,table_id,shard_id,part)
+                data, script = _registration(build_id,table_id,shard_id,'['+','.join(part)+']')
+                if max(len(data.encode('utf-8')),len(script.encode('utf-8')))>SHARD_BYTES:
+                    raise ValueError('Table shard exceeds byte limit')
                 relative = 'output-shards/'+table_id+'-'+shard_id+'.js'
                 write(relative,script); size=len(data.encode());total+=size
                 table['shards'].append(dict(id=shard_id,src=relative,rows=len(part),bytes=size))
