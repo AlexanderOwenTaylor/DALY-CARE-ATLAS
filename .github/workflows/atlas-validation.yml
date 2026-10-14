@@ -1,0 +1,74 @@
+name: Atlas validation
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        shell: Rscript {0}
+        run: install.packages(c('dplyr','jsonlite','purrr','readr','stringr','tibble','tidyr','DBI','RSQLite','RPostgres','yaml','digest','zip'))
+      - name: R, Python and JavaScript regression suites
+        run: python scripts/run_validation.py
+      - name: Preserve synthetic test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-validation-${{ matrix.os }}
+          path: .artifact-temp/validation/
+          retention-days: 7
+
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: atlas_test
+          POSTGRES_PASSWORD: synthetic_test_only
+          POSTGRES_DB: atlas_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U atlas_test -d atlas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DALYCARE_TEST_POSTGRES: '1'
+      PGHOST: localhost
+      PGPORT: '5432'
+      PGUSER: atlas_test
+      PGPASSWORD: synthetic_test_only
+      PGDATABASE: atlas_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - name: Install database test dependencies
+        shell: Rscript {0}
+        run: install.packages(c('dplyr','jsonlite','purrr','readr','stringr','tibble','tidyr','DBI','RPostgres','yaml','digest','zip'))
+      - name: Execute production SQL against synthetic PostgreSQL schemas
+        run: Rscript tests/integration-postgres.R
