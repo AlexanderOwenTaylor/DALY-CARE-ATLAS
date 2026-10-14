@@ -12,6 +12,7 @@ METADATA = ('table_name','source_column','kind','topic','phase','label')
 CONSTANTS = dict(contract_version=VERSION,unit_status='unverified',count_basis='distinct_people_one_unambiguous_value_per_field',summary_method='exact_complete_field_3sf')
 SCHEMA = ('contract_version',)+METADATA+('unit_status','count_basis','summary_method','summary_status','minimum_cell_count')+COUNTS+('category_counts_json',)+STATS
 STATUSES = {'published','needs_person_key','missing_person_key','field_unavailable','query_failed','resource_limit','withheld_small_group','withheld_constant','withheld_near_unique','no_values','invalid_contract'}
+STATUSES.add('needs_unit_evidence')
 
 def _number(x):
     if x is None or isinstance(x,bool) or not isinstance(x,(str,int,float)): return None
@@ -27,6 +28,12 @@ def _integer(x):
 def _floor(value):
     n=_integer(value)
     return max(5,n) if n is not None else 5
+
+def _requested_threshold(value):
+    n=_number(value)
+    if n is None or n < 1 or n > 9007199254740991:
+        raise ValueError('Invalid explicit privacy threshold')
+    return max(5,math.ceil(n))
 
 def registry_summary_policy(project_root=None):
     root=Path(project_root) if project_root is not None else Path(__file__).resolve().parents[1]
@@ -56,7 +63,7 @@ def _identity(row):
     return (a,b) if isinstance(a,str) and isinstance(b,str) else None
 
 def _k(row, requested):
-    return max(_floor(requested),_floor(os.environ.get('DALYCARE_MIN_CELL_COUNT','5')),_floor(row.get('minimum_cell_count')))
+    return max(_requested_threshold(requested),_requested_threshold(os.environ.get('DALYCARE_MIN_CELL_COUNT','5')),_floor(row.get('minimum_cell_count')))
 
 def _canonical(field,k,status):
     row={key:None for key in SCHEMA}
@@ -91,6 +98,7 @@ def _category_cells(raw,field):
 
 def _published(row,field,k):
     """Validate original data; used by guard and independently by audit."""
+    if field['kind']=='numeric': return None  # v1 never proves stored unit or grouped release.
     counts={key:_integer(row.get(key)) for key in COUNTS[:5]}
     if any(n is None for n in counts.values()): return None
     total=counts['denominator_n']; valid=counts['n_valid']
@@ -129,6 +137,7 @@ def sanitize_registry_summaries(rows,project_root=None,min_cell_count=5):
         k=max(_k(r,min_cell_count) for r in rows if _identity(r)==identity)
         status=row.get('summary_status') if _schema_ok(row,field) else 'invalid_contract'
         if counts[identity]>1: status='invalid_contract'
+        if status=='published' and field['kind']=='numeric': status='needs_unit_evidence'
         result=_canonical(field,k,status)
         if status=='published':
             publication=_published(row,field,k)

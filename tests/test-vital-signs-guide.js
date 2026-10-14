@@ -32,15 +32,15 @@ test('exact unique profiles alone supply storage metadata and availability',()=>
  assert.doesNotMatch(render([profile('SP_PatientInfo_wrong','weight_in_kg',{median:661661})]),/661661/);
  for(const html of [render([]),duplicate])assert.doesNotMatch(html,/href="[^"]*field=weight_in_kg/);
 });
-test('allowlisted dedicated measurements publish median and middle 50% with source row context',()=>{
+test('dedicated measurements withhold legacy summaries while preserving source row context',()=>{
  for(const [source,field] of [['SP_PatientInfo','weight_in_kg'],['SP_PatientInfo','height_in_cm'],['SP_PatientInfo','bmi'],['RKKP_DaMyDa','Reg_Vaegt'],['RKKP_DaMyDa','Reg_Hoejde']]){
-  const text=visible(render([profile(source,field)]));assert.match(text,/Median: 72/);assert.match(text,/Middle 50%: 63.*85/);assert.match(text,/80 of 100 source records/);assert.match(text,/quartiles.*sample/i);assert.match(text,/not unique people/i);
+  const text=visible(render([profile(source,field)]));assert.doesNotMatch(text,/Median: 72/);assert.doesNotMatch(text,/Middle 50%: 63.*85/);assert.match(text,/80 of 100 source records/);assert.match(text,/quartiles.*sample/i);assert.match(text,/not unique people/i);
  }
- const text=visible(render([profile('SP_PatientInfo','weight_in_kg',{median:'0',p25:0,p75:'0',n_available:'0'})]));assert.match(text,/Median: 0/);assert.match(text,/Middle 50%: 0.*0/);assert.match(text,/0 of 100 source records/);
+ const text=visible(render([profile('SP_PatientInfo','weight_in_kg',{median:'0',p25:0,p75:'0',n_available:'0'})]));assert.doesNotMatch(text,/Median: 0/);assert.doesNotMatch(text,/Middle 50%: 0.*0/);assert.match(text,/0 of 100 source records/);
 });
-test('mean is shown only when finite and eligible, with null kept distinct from zero',()=>{
- assert.match(visible(render([profile('SP_PatientInfo','weight_in_kg',{mean:'0'})])),/Mean: 0/);
- assert.match(visible(render([profile('SP_PatientInfo','weight_in_kg',{mean:'71.5'})])),/Mean: 71\.5/);
+test('legacy exact means remain withheld even with an eligibility marker',()=>{
+ assert.doesNotMatch(visible(render([profile('SP_PatientInfo','weight_in_kg',{mean:'0'})])),/Mean: 0/);
+ assert.doesNotMatch(visible(render([profile('SP_PatientInfo','weight_in_kg',{mean:'71.5'})])),/Mean: 71\.5/);
  for(const mean of [null,'',true,{},'Infinity'])assert.doesNotMatch(visible(render([profile('SP_PatientInfo','weight_in_kg',{mean})])),/Mean:/);
  assert.doesNotMatch(render([profile('SP_PatientInfo','weight_in_kg',{mean:787878,numeric_privacy_status:'future_status'})]),/787878/);
 });
@@ -61,8 +61,8 @@ test('arbitrary private profile content and query markup are never rendered unsa
  assert.doesNotMatch(html,/<img|<script|PRIVATE_PAYLOAD|RAW_PRIVATE|UNREVIEWED_PRIVATE|123456|234567/);assert.match(html,/&lt;img/);
  const storage=render([profile('SP_PatientInfo','bmi',{column_type:'<script>bad()</script>',top_values:'PRIVATE_PAYLOAD',min:123456,max:234567})]);assert.doesNotMatch(storage,/<script|PRIVATE_PAYLOAD|123456|234567/);assert.match(storage,/&lt;script&gt;/);
 });
-test('tiny nonzero summaries retain their value rather than becoming a zero observation',()=>{
- assert.match(visible(render([profile('SP_PatientInfo','bmi',{median:'0.00003123',p25:'0.000001',p75:'0.00009'})])),/Median: (?:0\.00003123|3\.123e-5)/);
+test('tiny nonzero summaries remain withheld without grouped evidence',()=>{
+ assert.doesNotMatch(visible(render([profile('SP_PatientInfo','bmi',{median:'0.00003123',p25:'0.000001',p75:'0.00009'})])),/Median: (?:0\.00003123|3\.123e-5)/);
 });
 test('verified reference units are attached to their respective measurement rather than asserted as storage units',()=>{
  const g=guide();
@@ -83,7 +83,7 @@ test('local find control precedes the visible source schema and units are qualif
 });
 test('BMI-only and empty-result searches do not precede the answer with unrelated SP event schema',()=>{
  const g=guide(),html=g.render('BMI',{profiles:[profile('SP_PatientInfo','bmi')]});
- assert.match(html,/SP_PatientInfo\.bmi/);assert.match(html,/Median: 72/);assert.match(html,/Patient information \(SP\)/);
+ assert.match(html,/SP_PatientInfo\.bmi/);assert.doesNotMatch(html,/Median: 72/);assert.match(html,/Patient information \(SP\)/);
  assert.doesNotMatch(html,/SP_VitaleVaerdier|No measurement-specific counts|numericvalue pools/);
  assert.doesNotMatch(g.render('unfindable'),/SP_VitaleVaerdier|stored source records|baseline window/);
  const all=g.render('');for(const field of ['displayname','numericvalue','recorded_time'])assert.ok(all.includes('SP_VitaleVaerdier.'+field));
@@ -97,9 +97,9 @@ test('local submission and reset refine the same directory while retaining suppl
  assert.deepEqual(changes,[]);
  const form={closest(){return root;},querySelector(){return input;}};
  listeners.submit({target:{closest(){return form;}},preventDefault(){}});
- assert.match(root.innerHTML,/Median: 72/);assert.match(root.innerHTML,/Vægt/);assert.doesNotMatch(root.innerHTML,/Resp.frekvens/);
+ assert.doesNotMatch(root.innerHTML,/Median: 72/);assert.match(root.innerHTML,/Vægt/);assert.doesNotMatch(root.innerHTML,/Resp.frekvens/);
  listeners.click({target:{closest(){return {closest(){return root;}};}},preventDefault(){}});
- assert.match(root.innerHTML,/Resp.frekvens/);assert.match(root.innerHTML,/Median: 72/);
+ assert.match(root.innerHTML,/Resp.frekvens/);assert.doesNotMatch(root.innerHTML,/Median: 72/);
  assert.deepEqual(changes,['weight','']);
 });
 test('separately published event summaries are acknowledged without reusing the pooled reading statistics',()=>{

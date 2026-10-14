@@ -78,7 +78,7 @@ test('measurement directory receives only the catalogue profile context without 
  const profile={table_name:'SP_PatientInfo',column_name:'bmi',column_type:'double precision',n_rows:120,n_available:100,numeric_privacy_status:'eligible_stored_summary',median:26.7,p25:23.1,p75:29.9};
  const h=navigation('?view=fields&table=column_profiles&search=BMI',[readable('column_profiles',rows)],{vital_profiles:[...rows,profile]});
  h.answer(rows);await flush();
- assert.match(h.el('vital-guide').innerHTML,/Median: 26.7/);assert.match(h.el('vital-guide').innerHTML,/Middle 50%: 23.1–29.9/);
+ assert.doesNotMatch(h.el('vital-guide').innerHTML,/Median: 26.7|Middle 50%: 23.1–29.9/);
  assert.match(h.el('vital-guide').innerHTML,/field=bmi/);assert.equal(h.scripts.length,1);
 });
 
@@ -325,11 +325,11 @@ test('catalogue search can deliberately carry a term into field rows without an 
  h.answer(rows);await flush();h.el('back-library').fire('click');assert.equal(h.el('metadata-query').value,'height');assert.equal(h.document.activeElement,h.el('search-field-rows'));assert.equal(h.window.scrollY,550);
 });
 
-test('compact field rows preserve identities, denominator, supplied summaries, zero and withholding reasons',async()=>{
+test('compact field rows preserve identities and denominator while withholding legacy statistics',async()=>{
  const rows=[{table_name:'SP_PatientInfo',column_name:'height_in_cm',profile_kind:'numeric',n_rows:58216,n_available:41390,pct_available:71.1,mean:171.785,median:172,p25:165,p75:179,numeric_privacy_status:'eligible_stored_summary',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample',summary_scope:'stored_source_row_profile'},
  {table_name:'RKKP',column_name:'Reg_Hoejde',profile_kind:'numeric',n_rows:14805,n_available:0,pct_available:0,mean:null,median:null,p25:null,p75:null,numeric_privacy_status:'needs_validation_negative_sentinel',summary_method:'supplied_mean_and_quantiles',summary_scope:'stored_source_row_profile'}];
  const t=readable('column_profiles',rows),h=navigation('?table=column_profiles',[t]);h.answer(rows);await flush();const output=h.el('rows').innerHTML;
- for(const text of ['SP_PatientInfo','height_in_cm','41390','58216','172','165','179','Reg_Hoejde','invalid stored values','sample of source records'])assert.ok(output.includes(text),text);
+ for(const text of ['SP_PatientInfo','height_in_cm','41390','58216','verified grouped evidence required','Reg_Hoejde','invalid stored values','sample of source records'])assert.ok(output.includes(text),text);
  assert.match(output,/0/);assert.match(output,/data-label=/);assert.doesNotMatch(output,/>Missing</);
  h.el('exact-columns').fire('click');assert.match(h.el('rows').innerHTML,/summary_method/);assert.equal(h.scripts.length,1,'changing presentation never starts another scan');
 });
@@ -340,12 +340,13 @@ test('unknown code search explains absence of supplied meaning without judging c
 });
 
 const visibleText=html=>html.replace(/<[^>]*>/g,' ');
-test('reading numbers use useful precision while exact values and numeric zero remain accessible',async()=>{
+test('reading and exact-column views withhold legacy numeric statistics including zero',async()=>{
  const rows=[{table_name:'SP',column_name:'height_in_cm',profile_kind:'numeric',n_rows:58216,n_available:41390,pct_available:71.0972928404562,mean:171.78538294274,median:0,p25:0.00003123,p75:179,numeric_privacy_status:'eligible_stored_summary',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample',summary_scope:'stored_source_row_profile'}];
  const t=readable('column_profiles',rows),h=navigation('?table=column_profiles',[t]);h.answer(rows);await flush();const html=h.el('rows').innerHTML,text=visibleText(html);
- for(const expected of ['41,390','58,216','71.1%','171.79','0.0000312'])assert.ok(text.includes(expected),expected);
- assert.match(text,/Median:.*0/);assert.doesNotMatch(text,/Stored summary available|Supplied mean and quantiles/);assert.match(text,/sample of source records/);assert.match(html,/171\.78538294274/);
- h.el('exact-columns').fire('click');assert.match(visibleText(h.el('rows').innerHTML),/171\.78538294274/);
+ for(const expected of ['41,390','58,216','71.1%'])assert.ok(text.includes(expected),expected);
+ assert.doesNotMatch(html,/171[.]78538294274|171[.]79|0[.]0000312|Median:.*>0</);
+ assert.match(text,/verified grouped evidence required/);
+ h.el('exact-columns').fire('click');assert.doesNotMatch(visibleText(h.el('rows').innerHTML),/171[.]78538294274/);
 });
 
 test('eligible but absent summaries stay absent and categorical rows do not inherit numeric method prose',async()=>{
@@ -353,7 +354,7 @@ test('eligible but absent summaries stay absent and categorical rows do not inhe
  {table_name:'SP',column_name:'absent',profile_kind:'numeric',mean:null,median:null,p25:null,p75:null,numeric_privacy_status:'eligible_stored_summary',summary_method:'supplied_mean_and_quantiles',summary_scope:'stored_source_row_profile'},
  {table_name:'CLL',column_name:'Weightloss',profile_kind:'categorical',mean:null,median:null,p25:null,p75:null,numeric_privacy_status:'needs_validation_unreviewed_field',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample',summary_scope:'stored_source_row_profile'}];
  const t=readable('column_profiles',rows),h=navigation('?table=column_profiles',[t]);h.answer(rows);await flush();const text=visibleText(h.el('rows').innerHTML);
- assert.match(text,/No stored numeric summary supplied/);assert.doesNotMatch(text,/Stored summary available|Supplied mean and quantiles|sample of source records/);assert.match(text,/field needs review/);assert.match(text,/Median:.*0/);
+ assert.match(text,/No stored numeric summary supplied/);assert.doesNotMatch(text,/Stored summary available|Supplied mean and quantiles|sample of source records/);assert.match(text,/field needs review/);assert.doesNotMatch(text,/Median:.*>0</);
 });
 
 test('regional coverage attaches the repeated domain total qualification to every count',async()=>{
@@ -448,7 +449,7 @@ test('numeric coverage keeps different summary reasons separate and never hides 
  const rows=[{table_name:'RKKP_DaMyDa',source_column:'Reg_Haemoglobin',unit:'mmol/L',n_available:10,pct_available:50,median:null,numeric_privacy_status:'needs_validation_negative_sentinel'},{table_name:'RKKP_DaMyDa',source_column:'Reg_LDH',unit:'U/L',n_available:0,pct_available:0,median:null,numeric_privacy_status:'needs_validation_unreviewed_field'}];
  const t=readable('damyda_numeric_fields',rows);t.columns.find(c=>c.key==='median').type='number';const h=navigation('?table=damyda_numeric_fields',[t]);h.answer(rows);await flush();
  let text=visibleText(h.el('rows').innerHTML);assert.equal((text.match(/invalid stored values need review/g)||[]).length,1);assert.equal((text.match(/field needs review/g)||[]).length,1);
- rows[0].median=0;const fresh=readable('damyda_numeric_fields',rows),withZero=navigation('?table=damyda_numeric_fields',[fresh]);withZero.answer(rows);await flush();text=visibleText(withZero.el('rows').innerHTML);assert.match(text,/Median:.*0/);assert.match(text,/invalid stored values/);assert.equal(withZero.el('table-result').hidden,true);
+ rows[0].median=0;const fresh=readable('damyda_numeric_fields',rows),withZero=navigation('?table=damyda_numeric_fields',[fresh]);withZero.answer(rows);await flush();text=visibleText(withZero.el('rows').innerHTML);assert.doesNotMatch(text,/Median:.*>0</);assert.match(text,/invalid stored values/);assert.equal(withZero.el('table-result').hidden,true);
 });
 
 test('shared availability suppression is one reason with an independent source total, while zero and missing remain distinct',async()=>{
@@ -518,9 +519,9 @@ test('field arrival distinguishes zero, absent, protected and partially publishe
  for(const {row,yes,no} of cases){const h=navigation(fieldRoute,[profileTable([row])]);h.answer([row]);await flush();for(const value of yes)assert.ok(fieldText(h).includes(value),value);assert.doesNotMatch(fieldText(h),no);}
 });
 
-test('field arrival retains partial zero summaries and metadata on categorical or all-null profiles',async()=>{
+test('field arrival withholds partial zero summaries and preserves profile metadata',async()=>{
  const rows=[fieldProfile({median:0,p25:null,p75:7,numeric_privacy_status:'eligible_stored_summary',summary_scope:'future_scope',summary_method:'future_method'}),fieldProfile({profile_kind:'categorical',summary_scope:'stored_source_row_profile',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample'}),fieldProfile({numeric_privacy_status:'future_reason'})],h=navigation(fieldRoute,[profileTable(rows)]);h.answer(rows);await flush();const text=fieldText(h);
- for(const value of ['Median: 0','75th percentile: 7','future_scope','future_method','Stored source rows','sample of source records','future_reason','Summary scope not supplied'])assert.ok(text.includes(value),value);
+ for(const value of ['verified grouped evidence required','future_scope','future_method','Stored source rows','sample of source records','future_reason','Summary scope not supplied'])assert.ok(text.includes(value),value);
  assert.equal((text.match(/Recorded availability/g)||[]).length,3);assert.match(h.el('read-status').textContent,/3 published profile rows/);
 });
 

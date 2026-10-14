@@ -5,9 +5,14 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
     z <- suppressWarnings(as.numeric(x)); if (!is.finite(z)) NA_real_ else z
   }
   k <- num(min_cell_count); if (is.na(k)) k <- 5
-  k <- max(5, floor(k))
+  k <- max(5, ceiling(k))
   previous_registry_k <- num(payload$privacy_metadata$minimum_cell_count)
-  registry_k <- max(k,if(is.na(previous_registry_k)) 5 else max(5,floor(previous_registry_k)))
+  environment_k <- num(Sys.getenv('DALYCARE_MIN_CELL_COUNT','5'))
+  archived_rows <- payload$run_summary
+  if(is.data.frame(archived_rows)) archived_rows <- lapply(seq_len(nrow(archived_rows)),function(i) as.list(archived_rows[i,,drop=FALSE]))
+  archived_k <- vapply(archived_rows,function(row) if(is.list(row)&&identical(row$metric,'min_cell_count')) num(row$value) else NA_real_,numeric(1))
+  k <- max(k,if(is.na(previous_registry_k)) 5 else ceiling(previous_registry_k),if(is.na(environment_k)) 5 else ceiling(environment_k),ceiling(archived_k[is.finite(archived_k)]))
+  registry_k <- k
   policy_path <- file.path(project_root, "config", "public-measurement-policy.csv")
   if (!file.exists(policy_path)) policy_path <- system.file("config", "public-measurement-policy.csv", package = "dalycareatlas")
   policy <- if (nzchar(policy_path) && file.exists(policy_path)) utils::read.csv(policy_path, stringsAsFactors = FALSE, fileEncoding = "UTF-8") else data.frame(table_name = character(), column_name = character())
@@ -110,8 +115,9 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
       previous <- scalar(r,"numeric_privacy_status")
       if (!reason %in% c("protected_field","needs_validation_unreviewed_field") && scalar(r,"availability_privacy_status") == "withheld_small_complementary_cells") reason <- "withheld_small_complementary_cells"
       if (nzchar(previous) && previous != "eligible_stored_summary") reason <- previous
-      r <- blank(r,if (reason == "eligible_stored_summary") c("min","max") else stats)
-      if (reason == "eligible_stored_summary") for (key in intersect(setdiff(stats,c("min","max")),names(r))) if (is.na(num(r[[key]]))) r[key] <- list(NULL)
+      # Legacy source-row support and markers cannot prove person support, units or safe bands.
+      if (reason == 'eligible_stored_summary') reason <- 'needs_verified_grouped_evidence'
+      r <- blank(r,stats)
       r$numeric_privacy_status <- reason
       r$summary_scope <- "stored_source_row_profile"
       r$summary_method <- "supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample"

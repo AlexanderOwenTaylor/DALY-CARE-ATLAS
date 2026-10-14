@@ -7,7 +7,7 @@ fixtures <- jsonlite::fromJSON(file.path(privacy_test_root,"tests/fixtures/publi
 out <- lapply(fixtures, atlas_public_privacy, project_root = privacy_test_root)
 stopifnot(identical(out, lapply(out, atlas_public_privacy, project_root = privacy_test_root)))
 stopifnot(normalize_min_cell_count(1) == 5, normalize_min_cell_count(10) == 10)
-stopifnot(out[[1]]$column_profile_rows[[1]]$mean == "7")
+stopifnot(is.null(out[[1]]$column_profile_rows[[1]]$mean))
 for (i in c(2,3,5,6,7,8,9,10,11,12,13,14,15,16,17,18)) {
   stopifnot(is.null(out[[i]]$column_profile_rows[[1]]$mean))
 }

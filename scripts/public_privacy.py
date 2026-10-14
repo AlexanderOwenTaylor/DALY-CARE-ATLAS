@@ -23,7 +23,7 @@ def number(value):
 
 def threshold(value):
     n=number(value)
-    return max(5, int(n)) if n is not None else 5
+    return max(5, math.ceil(n)) if n is not None else 5
 
 def measurement_policy(root=None):
     root=Path(root) if root else Path(__file__).resolve().parents[1]
@@ -31,8 +31,9 @@ def measurement_policy(root=None):
         return {(r['table_name'],r['column_name']) for r in csv.DictReader(f)}
 
 def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
-    k=threshold(min_cell_count)
-    registry_k=max(k,threshold(payload.get('privacy_metadata',{}).get('minimum_cell_count')))
+    archived=[threshold(r.get('value')) for r in payload.get('run_summary',[]) if isinstance(r,dict) and r.get('metric')=='min_cell_count']
+    k=max(threshold(min_cell_count),threshold(payload.get('privacy_metadata',{}).get('minimum_cell_count')),threshold(os.environ.get('DALYCARE_MIN_CELL_COUNT','5')),*archived)
+    registry_k=k
     approved=measurement_policy(project_root)
     # Canonical profile provenance is required for panel copies missing min/distinct.
     profiles={(str(r.get('table_name','')),str(r.get('column_name',''))):r for r in payload.get('column_profile_rows',[]) if isinstance(r,dict)}
@@ -109,13 +110,9 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
             elif number(original.get('min')) is None and original.get('numeric_privacy_status')!='eligible_stored_summary': reason='needs_validation_missing_range_evidence'
             elif number(original.get('min')) is not None and number(original.get('min'))<0: reason='needs_validation_negative_sentinel'
             if r.get('numeric_privacy_status') and r['numeric_privacy_status']!='eligible_stored_summary': reason=r['numeric_privacy_status']
-            if reason:
-                for key in STATS & r.keys(): r[key]=None
-            else:
-                for key in {'min','max'} & r.keys(): r[key]=None
-                for key in (STATS-{'min','max'}) & r.keys():
-                    if number(r[key]) is None: r[key]=None
-            r['numeric_privacy_status']=reason or 'eligible_stored_summary'
+            # Exact legacy summaries have no verified unit/group/person evidence.
+            for key in STATS & r.keys(): r[key]=None
+            r['numeric_privacy_status']=reason or 'needs_verified_grouped_evidence'
             r['summary_scope']='stored_source_row_profile'
             r['summary_method']='supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample'
             if protected:
@@ -152,10 +149,11 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
 def audit_public_payload(payload,project_root=None,min_cell_count=5):
     """Independent structural audit; returns only paths, never patient-derived values."""
     errors=[]
+    k=effective_threshold(payload,min_cell_count=min_cell_count)
     suppressed={(str(r.get('table_name','')),str(r.get('column_name',''))) for r in payload.get('column_profile_rows',[]) if r.get('availability_privacy_status')=='withheld_small_complementary_cells'}
     def visit(obj,path):
         if path and path[-1]=='registry_field_summaries':
-            errors.extend('.'.join(path[:-1]+(reason,)) for reason in audit_registry_summaries(obj,project_root,max(threshold(min_cell_count),threshold(payload.get('privacy_metadata',{}).get('minimum_cell_count')))))
+            errors.extend('.'.join(path[:-1]+(reason,)) for reason in audit_registry_summaries(obj,project_root,k))
             return
         if isinstance(obj,list):
             for i,x in enumerate(obj): visit(x,path+(str(i),))
@@ -174,24 +172,27 @@ def audit_public_payload(payload,project_root=None,min_cell_count=5):
             for key,v in obj.items():
                 if key in REFERENCE: continue
                 if key in DATES and v not in (None,''): errors.append('.'.join(path+(key,)))
-                if key in STATS and v not in (None,'') and obj.get('numeric_privacy_status')!='eligible_stored_summary': errors.append('.'.join(path+(key,)))
+                if key in STATS and v not in (None,''): errors.append('.'.join(path+(key,)))
                 if key in {'min','max'} and v not in (None,''): errors.append('.'.join(path+(key,)))
                 visit(v,path+(key,))
     visit(payload,())
     return sorted(set(errors))
 
 
-def effective_threshold(payload=None, context=None):
-    values = [os.environ.get('DALYCARE_MIN_CELL_COUNT', '5')]
+def effective_threshold(payload=None, context=None, min_cell_count=5):
+    requested = [min_cell_count, os.environ.get('DALYCARE_MIN_CELL_COUNT', '5')]
+    values = []
+    if payload is not None:
+        values.extend(row.get('value') for row in payload.get('run_summary',[]) if isinstance(row,dict) and row.get('metric')=='min_cell_count')
     for obj in (payload, context):
         if obj is not None:
             metadata = obj.get('privacy_metadata', {}) if obj is payload else obj
             if 'minimum_cell_count' in metadata:
                 values.append(metadata['minimum_cell_count'])
     thresholds = [5]
-    for value in values:
+    for value,integer in [(v,False) for v in requested]+[(v,True) for v in values]:
         n = number(value)
-        if n is None or n < 1 or n != int(n):
+        if n is None or n < 1 or n > 9007199254740991 or (integer and n != int(n)):
             raise ValueError('Invalid explicit privacy threshold')
-        thresholds.append(int(n))
+        thresholds.append(math.ceil(n))
     return max(thresholds)

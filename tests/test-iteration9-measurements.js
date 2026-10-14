@@ -30,7 +30,7 @@ test('weight and height shortcut is exact, comparable and ordered by usable summ
  assert.doesNotMatch(output['column-list'],/Beh_Vaegttab|Weightloss/);
  assert.ok(output['column-list'].indexOf('weight_in_kg')<output['column-list'].indexOf('Reg_Vaegt'));
  const card=run("fieldCard(columnRows.find(r=>r.table_name==='SP_PatientInfo'&&r.column_name==='weight_in_kg'))");
- assert.ok(card.indexOf('Median: 52')<card.indexOf('<details'));assert.match(card,/Middle 50%: 41–63/);assert.match(card,/kg in the field name; source unit metadata not supplied/);
+ assert.doesNotMatch(card,/Median: 52|Middle 50%: 41–63/);assert.match(card,/Verified grouped evidence required/);assert.match(card,/kg in the field name; source unit metadata not supplied/);
  assert.doesNotMatch(card,/positive finding|completed procedure|normal clinical/);
 });
 test('equivalent groups have exact source membership and arbitrary readable search remains',()=>{
@@ -40,8 +40,8 @@ test('equivalent groups have exact source membership and arbitrary readable sear
  assert.equal(run("clinicalFieldMatches({table_name:'CLLPANEL_WIDE',column_name:'Weightloss'},'weightloss')"),true);
 });
 test('numeric preview preserves zero, missing quartiles and suppression without unit guesses',()=>{
- const {run}=runtime();assert.match(run("fieldTypicalPreview({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10})"),/Median: 0/);
- assert.match(run("fieldTypicalPreview({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:null,p25:null,p75:10})"),/Median: Not supplied.*Middle 50%: Not supplied/);
+ const {run}=runtime();assert.doesNotMatch(run("fieldTypicalPreview({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10})"),/Median: 0/);
+ assert.match(run("fieldTypicalPreview({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:null,p25:null,p75:10})"),/Verified grouped evidence required/);
  const withheld=run("fieldTypicalPreview({profile_kind:'numeric',numeric_privacy_status:'needs_validation_negative_sentinel',median:123456})");assert.doesNotMatch(withheld,/123456/);assert.match(withheld,/Numeric coding needs review/);
  for(const name of ['Reg_Vaegt','Reg_Hoejde','Reg_Haemoglobin'])assert.equal(run(`fieldUnitCopy({table_name:'RKKP_DaMyDa',column_name:'${name}'})`),'Unit not supplied in this source profile');
  assert.equal(run("fieldUnitCopy({table_name:'SP_PatientInfo',column_name:'bmi'})"),'Unit not supplied in this source profile');
@@ -90,5 +90,5 @@ test('source count status preserves suppression, absent counts and zero independ
 test('compact numeric cards use one unavailable reason and readable percentages',()=>{
  const {run}=runtime();const unavailable=run("fieldCard(columnRows.find(r=>r.table_name==='RKKP_DaMyDa'&&r.column_name==='Reg_Vaegt'))");
  assert.equal((unavailable.match(/Numeric coding needs review/g)||[]).length,1);assert.match(unavailable,/58\.3% recorded/);assert.doesNotMatch(unavailable.replace(/title="[^"]*"/g,''),/58\.324%/);assert.match(unavailable,/title="Supplied percentage: 58\.324%"/);
- const recorded=run("fieldCard(columnRows.find(r=>r.table_name==='SP_PatientInfo'&&r.column_name==='weight_in_kg'))");assert.match(recorded,/63\.8% recorded/);assert.match(recorded,/Recorded values; not a clinical reference range/);assert.match(recorded,/view=timeplace&amp;source=SP_PatientInfo/);assert.doesNotMatch(recorded,/source-year-counts/);
+ const recorded=run("fieldCard(columnRows.find(r=>r.table_name==='SP_PatientInfo'&&r.column_name==='weight_in_kg'))");assert.match(recorded,/63\.8% recorded/);assert.match(recorded,/Verified grouped evidence required/);assert.match(recorded,/view=timeplace&amp;source=SP_PatientInfo/);assert.doesNotMatch(recorded,/source-year-counts/);
 });

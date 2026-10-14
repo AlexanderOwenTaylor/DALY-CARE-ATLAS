@@ -69,12 +69,7 @@
     const count=scalar(row.n_available),total=scalar(row.n_rows);
     if(availabilityAllowed(row)&&count!==null&&total!==null&&Number.isSafeInteger(count)&&Number.isSafeInteger(total)&&count>=0&&total>=count)parts.push(number(count)+' of '+number(total)+' source records with a value');
     else parts.push('Availability not published');
-    if(publicRow(row)&&availabilityAllowed(row)&&row.numeric_privacy_status==='eligible_stored_summary'){
-      const median=scalar(row.median),p25=scalar(row.p25),p75=scalar(row.p75);
-      parts.push('Median: '+(median===null?'Not supplied':number(median)));
-      parts.push('Middle 50%: '+(p25===null||p75===null||p25>p75?'Not supplied':number(p25)+'–'+number(p75)));
-      const mean=scalar(row.mean);if(mean!==null)parts.push('Mean: '+number(mean));
-    }else parts.push(row.numeric_privacy_status==='needs_validation_negative_sentinel'?'Numeric summary withheld: invalid stored values need review':'Numeric summary not published');
+    parts.push(row.numeric_privacy_status==='needs_validation_negative_sentinel'?'Numeric summary withheld: invalid stored values need review':'Numeric summary not published');
     return '<div class="vital-guide-statistics">'+parts.map(part=>'<span>'+escape(part)+'</span>').join('')+'</div>';
   }
   function measurement(row,profiles){

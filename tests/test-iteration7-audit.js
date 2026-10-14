@@ -17,11 +17,11 @@ for(const mobile of [false,true]) test(`balanced search preview exposes specimen
   assert.equal((container.innerHTML.match(/data-search-open=/g)||[]).length,mobile?4:6);
   context.appState.globalResultsExpanded=true;vm.runInContext("renderGlobalSearch('creatinine')",context);assert.equal((container.innerHTML.match(/data-search-open=/g)||[]).length,10);
 });
-test('approved numeric zero has labelled quartiles and an unknown source unit',()=>{
+test('legacy numeric zero cannot bypass verified grouped evidence',()=>{
   const context=vm.createContext({});load('      function text(', '      function metric(',context);load('      function finiteSummary(', '      function renderColumnExplorer(',context);
   const rendered=vm.runInContext("columnStat({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10})",context);
-  assert.match(rendered,/Median.*0/);assert.match(rendered,/Q1–Q3 interval.*0.*10/);assert.match(rendered,/Unit not supplied in this source profile/);
-  const missing=vm.runInContext("columnStat({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:null})",context);assert.match(missing,/Median<\/dt><dd>Not supplied/);assert.doesNotMatch(missing,/Median<\/dt><dd>0/);
+  assert.doesNotMatch(rendered,/Median|Q1–Q3/);assert.match(rendered,/Verified grouped evidence required/);
+  const missing=vm.runInContext("columnStat({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:null})",context);assert.match(missing,/Verified grouped evidence required/);assert.doesNotMatch(missing,/Median<\/dt><dd>0/);
 });
 test('exact code match precedes lower scoring groups in the bounded preview',()=>{
   const {context,container}=search();context.buildGlobalSearchResults=()=>({'Source fields':[{title:'Registry',query:'field',score:760}],Codes:[{title:'Exact plasma code',query:'NPU04998',score:1200}]});

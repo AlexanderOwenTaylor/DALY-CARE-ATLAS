@@ -63,7 +63,7 @@ if libs.exists(): env.setdefault('R_LIBS_USER',str(libs))
 temp=root/'.artifact-temp/registry-temp';temp.mkdir(parents=True,exist_ok=True)
 for key in ('TEMP','TMP','TMPDIR'): env[key]=str(temp)
 env['LC_ALL']='English_United States.utf8' if os.name=='nt' else 'C.UTF-8'
-code="""source('R/registry_summaries.R'); source('R/registry_summary_privacy.R'); spec <- Filter(function(s) s$table_name=='RKKP_DaMyDa' && s$source_column=='Reg_Haemoglobin',registry_summary_policy('.'))[[1]]; groups <- read.csv('.artifact-temp/registry-sql-fixtures/rare-double-groups.csv',colClasses=c('character','character','numeric')); out <- registry_summary_from_groups(spec,groups,5); stopifnot(out$summary_status=='withheld_small_group',is.na(out$n_valid),is.na(out$mean)); cat('Adjacent-double SQL results withheld by R producer.\n')"""
+code="""source('R/registry_summaries.R'); source('R/registry_summary_privacy.R'); spec <- Filter(function(s) s$table_name=='RKKP_DaMyDa' && s$source_column=='Reg_Haemoglobin',registry_summary_policy('.'))[[1]]; groups <- read.csv('.artifact-temp/registry-sql-fixtures/rare-double-groups.csv',colClasses=c('character','character','numeric')); out <- registry_summary_from_groups(spec,groups,5); stopifnot(out$summary_status=='needs_unit_evidence',is.na(out$n_valid),is.na(out$mean)); cat('Adjacent-double SQL results withheld by R producer.\n')"""
 r_gate=p/'verify-rare-double.R'; r_gate.write_text(code,encoding='utf-8')
 subprocess.run([runtime,str(r_gate)],cwd=root,env=env,check=True)
 # Real-typed SQLite values need round-trip formatting before CAST-to-text.

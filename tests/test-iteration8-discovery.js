@@ -68,16 +68,16 @@ test('source filtering resets stale filters and routes preserve page and exact f
   assert.match(html,/routeParams.page = columnPageIndex/);assert.match(html,/columnPageIndex = Math.max\(0, Number\(route.page \|\| 1\) - 1\)/);
   assert.match(html,/columnPageIndex=0; columnExactField=''; if \(id === 'column-search'\) columnMeasurement=''; renderColumnExplorer/);
 });
-test('approved numeric summaries preserve zero and reject missing or reversed quartiles',()=>{
-  const {run}=runtime();const zero=run("columnStat({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',mean:0,median:0,p25:0,p75:10})");
-  assert.match(zero,/<dt>Mean<\/dt><dd>0/);assert.match(zero,/<dt>Median<\/dt><dd>0/);assert.match(zero,/IQR width \(Q3 − Q1\)<\/dt><dd>10/);assert.match(zero,/Unit not supplied/);assert.match(zero,/Quartiles may use a sample of source records/);assert.match(zero,/<dt>Mode<\/dt><dd>Not supplied/);
-  for(const bounds of ['p25:null,p75:10','p25:10,p75:0','p25:NaN,p75:10','p25:0,p75:Infinity']) {
-    const card=run(`columnStat({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',${bounds}})`);assert.match(card,/IQR width \(Q3 − Q1\)<\/dt><dd>Not supplied/);
+test('legacy numeric summaries remain withheld for zero, missing and reversed quartiles',()=>{
+  const {run}=runtime();
+  for(const bounds of ['mean:0,median:0,p25:0,p75:10','p25:null,p75:10','p25:10,p75:0','p25:NaN,p75:10','p25:0,p75:Infinity']) {
+    const card=run(`columnStat({profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',${bounds}})`);
+    assert.match(card,/Verified grouped evidence required/);assert.doesNotMatch(card,/<dt>Mean|<dt>Median|IQR width/);
   }
   const withheld=run("columnStat({profile_kind:'numeric',numeric_privacy_status:'needs_validation_negative_sentinel',mean:123456,median:123456})");assert.match(withheld,/Numeric coding needs review/);assert.doesNotMatch(withheld,/123456/);
-  assert.equal(run('formatNumber(null)'),'Not supplied');assert.equal(run('formatNumber(0)'),'0');
-  assert.equal(run("finiteSummary(' ')"),null);
+  assert.equal(run('formatNumber(null)'),'Not supplied');assert.equal(run('formatNumber(0)'),'0');assert.equal(run("finiteSummary(' ')"),null);
 });
+
 test('reloading a source-field route restores page and an exact definition route',()=>{
   const {ctx,node,output,run}=runtime();Object.assign(ctx,{applyLocalSearch(_tab,_sub,q,item){node('column-search').value=q;ctx.columnPageIndex=0;ctx.columnExactField=item;},activeSubForTab:()=>'',renderGlobalSearch(){}});
   node('column-dataset-filter').options=[{value:''},{value:'RKKP_DaMyDa'},{value:'RKKP_LYFO'}];

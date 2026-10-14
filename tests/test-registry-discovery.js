@@ -90,7 +90,7 @@ test('dedicated summary metrics require one unambiguous exact supplied identity'
 test('field units and permitted numeric summaries remain separate from configured panel units',()=>{
  const {run}=runtime({catalogRows:[{table_name:'RKKP_DaMyDa'}],columnRows:[profile('RKKP_DaMyDa','Reg_CReaktivtProtein_gl',{profile_kind:'numeric',numeric_privacy_status:'needs_validation_unreviewed_field',median:87654321})],panels:{damyda_numeric_fields:[{table_name:'RKKP_DaMyDa',source_column:'Reg_CReaktivtProtein_gl',unit:'mg/L',numeric_privacy_status:'needs_validation_unreviewed_field',numeric_privacy_reason:'Codebook not verified',median:87654321}]}});
  const baseline=theme(run('renderDaMyDaPanel()'),'damyda-theme-baseline');assert.match(baseline,/Configured registry-panel unit: mg\/L/);assert.match(baseline,/Unit not supplied in this source profile/);assert.match(baseline,/Codebook not verified/);assert.doesNotMatch(baseline,/87,654,321/);
- const eligible=runtime({catalogRows:[{table_name:'RKKP_DaMyDa'}],columnRows:[profile('RKKP_DaMyDa','Reg_CReaktivtProtein_gl',{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10,unit:'mg/L'})]}).run('renderDaMyDaPanel()');assert.match(eligible,/Median: 0/);assert.match(eligible,/Source unit metadata: mg\/L/);
+ const eligible=runtime({catalogRows:[{table_name:'RKKP_DaMyDa'}],columnRows:[profile('RKKP_DaMyDa','Reg_CReaktivtProtein_gl',{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10,unit:'mg/L'})]}).run('renderDaMyDaPanel()');assert.doesNotMatch(eligible,/Median: 0/);assert.match(eligible,/Source unit metadata: mg\/L/);
 });
 function routes(ctx){vm.runInContext(html.split('/* ATLAS_ROUTE_START */')[1].split('/* ATLAS_ROUTE_END */')[0],ctx);}
 test('theme routes round-trip only valid themes for the active registry and preserve global search',()=>{
@@ -167,7 +167,7 @@ test('is_sensitive protects retained field availability counts and numeric value
 test('false and unset sensitivity markers preserve published categories and field zeroes',()=>{
  for(const marker of [{},{is_sensitive:false},{is_sensitive:'false'},{is_sensitive:null}]){
   const {ctx,run}=runtime();ctx.rows=[row('Safe zero',0,marker)];const categories=run('renderRegistryCategories(rows)');assert.match(categories,/<div class="val">0<\/div>/);assert.match(categories,/width:0%/);assert.doesNotMatch(categories,/withheld/i);
-  ctx.row=profile('RKKP_CLL','Reg_Beta2Microglobulin',{profile_kind:'numeric',n_available:0,n_missing:50,numeric_privacy_status:'eligible_stored_summary',median:0,...marker});const field=run("renderRegistryFieldProfile(row,'reg_cll')");assert.match(field,/0 source records with a value/);assert.match(field,/50 missing source records/);assert.match(field,/Median: 0/);assert.doesNotMatch(field,/Availability counts withheld/);
+  ctx.row=profile('RKKP_CLL','Reg_Beta2Microglobulin',{profile_kind:'numeric',n_available:0,n_missing:50,numeric_privacy_status:'eligible_stored_summary',median:0,...marker});const field=run("renderRegistryFieldProfile(row,'reg_cll')");assert.match(field,/0 source records with a value/);assert.match(field,/50 missing source records/);assert.doesNotMatch(field,/Median: 0/);assert.doesNotMatch(field,/Availability counts withheld/);
  }
 });
 test('opening registry choices precede source context while normal provenance and loaded status are disclosed',()=>{
@@ -189,8 +189,8 @@ test('reviewed treatment forms and disease-site groups expose their complete exa
  const cases=[['RKKP_DaMyDa','renderDaMyDaPanel','damyda-theme-treatment',['Reg_PlanlagtBeh_Lenalidomid','PB_Behandling_MelfalanStamcelle','SB_Behandling_Elotuzumab'],/Planned treatment[\s\S]*Primary treatment[\s\S]*Secondary treatment/],['RKKP_LYFO','renderLYFOPanel','lyfo-theme-sites',['Reg_Lokal_Waldeyers','Reg_Lokal_Testis','Reg_Lokal_Leptomeninges'],/Head and neck[\s\S]*Urogenital[\s\S]*Nervous system/]];
  for(const [source,renderer,id,fields,groups] of cases){const {run}=runtime({catalogRows:[{table_name:source}],columnRows:fields.map(f=>profile(source,f))});const result=theme(run(`${renderer}()`),id);for(const field of fields)assert.match(result,new RegExp(`field=${field}`));assert.match(result,groups);assert.match(result,/<details class="registry-clinical-group"/);}
 });
-test('LYFO immunoglobulins show finite stored mean median and IQR beside unguessed source units',()=>{
- const {run}=runtime({catalogRows:[{table_name:'RKKP_LYFO'}],columnRows:['Reg_ImmunglobulinA_gL','Reg_ImmunglobulinG_gL','Reg_ImmunglobulinM_gL'].map(f=>profile('RKKP_LYFO',f,{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',mean:2,median:1,p25:0,p75:3,summary_scope:'stored_source_row_profile',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample'}))});const result=theme(run('renderLYFOPanel()'),'lyfo-theme-baseline');assert.equal((result.match(/Mean: 2/g)||[]).length,3);assert.equal((result.match(/Median: 1/g)||[]).length,3);assert.equal((result.match(/IQR: 0–3/g)||[]).length,3);assert.equal((result.match(/Unit not supplied in this source profile/g)||[]).length,3);assert.match(result,/stored source rows/i);assert.match(result,/bounded stream sample/i);assert.doesNotMatch(result,/registry-summary-status|Source unit metadata: g\/L/);
+test('LYFO immunoglobulins withhold legacy exact statistics beside unguessed source units',()=>{
+ const {run}=runtime({catalogRows:[{table_name:'RKKP_LYFO'}],columnRows:['Reg_ImmunglobulinA_gL','Reg_ImmunglobulinG_gL','Reg_ImmunglobulinM_gL'].map(f=>profile('RKKP_LYFO',f,{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',mean:2,median:1,p25:0,p75:3,summary_scope:'stored_source_row_profile',summary_method:'supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample'}))});const result=theme(run('renderLYFOPanel()'),'lyfo-theme-baseline');assert.equal((result.match(/Mean: 2/g)||[]).length,0);assert.equal((result.match(/Median: 1/g)||[]).length,0);assert.equal((result.match(/IQR: 0–3/g)||[]).length,0);assert.equal((result.match(/Unit not supplied in this source profile/g)||[]).length,3);assert.doesNotMatch(result,/Mean:|Median:|IQR:/);assert.doesNotMatch(result,/registry-summary-status|Source unit metadata: g\/L/);
 });
 test('complete catalogue finds unmapped exact source fields by label or column without assigning a clinical theme',()=>{
  const {ctx,run}=runtime({catalogRows:[{table_name:'RKKP_CLL'}],columnRows:[profile('RKKP_CLL','Unknown_ClinicalField'),profile('RKKP_CLL','Reg_Performancestatus'),profile('Other','Unknown_ClinicalField')],payload:{clinical_display_dictionary:[{kind:'field',system:'RKKP_CLL',code:'Unknown_ClinicalField',label:'A reviewed readable label'}]}});
@@ -227,8 +227,8 @@ test('catalogue and DaMyDa fallback summaries reject every unknown privacy or su
   const fallback=runtime({catalogRows:[{table_name:'RKKP_DaMyDa'}],columnRows:[profile('RKKP_DaMyDa','Reg_Haemoglobin')],panels:{damyda_numeric_fields:[{table_name:'RKKP_DaMyDa',source_column:'Reg_Haemoglobin',...stored}]}}).run('renderDaMyDaPanel()');assert.doesNotMatch(fallback,/87,654,321|Median:|Mean:/);
  }
 });
-test('category-only withholding preserves explicitly permitted numeric summaries but date-like rows never publish',()=>{
- const {ctx,run}=runtime();ctx.row=profile('RKKP_LYFO','Reg_Haemoglobin',{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',value_privacy_status:'withheld_unvalidated_distribution',date_privacy_status:'withheld_exact_clinical_bounds',median:0,suppressed:'FALSE'});assert.match(run("renderRegistryFieldProfile(row,'reg_lyfo')"),/Median: 0/);
+test('legacy numeric markers and date-like rows never publish exact statistics',()=>{
+ const {ctx,run}=runtime();ctx.row=profile('RKKP_LYFO','Reg_Haemoglobin',{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',value_privacy_status:'withheld_unvalidated_distribution',date_privacy_status:'withheld_exact_clinical_bounds',median:0,suppressed:'FALSE'});assert.doesNotMatch(run("renderRegistryFieldProfile(row,'reg_lyfo')"),/Median: 0/);
  ctx.row.is_date_like='TRUE';assert.doesNotMatch(run("renderRegistryFieldProfile(row,'reg_lyfo')"),/Median:/);
 });
 test('catalogue controls expose clear search, both paging positions and useful empty-result guidance',()=>{
@@ -236,7 +236,7 @@ test('catalogue controls expose clear search, both paging positions and useful e
 });
 test('LYFO baseline separates immunoglobulins and shares numeric interpretation once per group',()=>{
  const fields=['Reg_Haemoglobin','Reg_Albumin_gL','Reg_ImmunglobulinA_gL','Reg_ImmunglobulinG_gL','Reg_ImmunglobulinM_gL'];
- const {run}=runtime({catalogRows:[{table_name:'RKKP_LYFO'}],columnRows:[...fields.map(f=>profile('RKKP_LYFO',f,{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:2,summary_scope:'stored_source_row_profile',summary_method:'quantiles_may_use_bounded_stream_sample'})),profile('RKKP_LYFO','Reg_ImmunglobulinA_Mikmoll',{profile_kind:'numeric'})]});const result=theme(run('renderLYFOPanel()'),'lyfo-theme-baseline');assert.match(result,/<h4>Blood and biochemical markers<\/h4>/);assert.match(result,/<h4>Immunoglobulins · IgA, IgG and IgM<\/h4>/);assert.match(result,/Additional marker fields and unit variants/);assert.equal((result.match(/not a clinical reference range/g)||[]).length,2);assert.equal((result.match(/Unit not supplied in this source profile/g)||[]).length,6);
+ const {run}=runtime({catalogRows:[{table_name:'RKKP_LYFO'}],columnRows:[...fields.map(f=>profile('RKKP_LYFO',f,{profile_kind:'numeric',numeric_privacy_status:'eligible_stored_summary',median:2,summary_scope:'stored_source_row_profile',summary_method:'quantiles_may_use_bounded_stream_sample'})),profile('RKKP_LYFO','Reg_ImmunglobulinA_Mikmoll',{profile_kind:'numeric'})]});const result=theme(run('renderLYFOPanel()'),'lyfo-theme-baseline');assert.match(result,/<strong>Blood and biochemical markers<\/strong>/);assert.match(result,/<strong>Immunoglobulins · IgA, IgG and IgM<\/strong>/);assert.match(result,/Reg_ImmunglobulinA_Mikmoll/);assert.equal((result.match(/not a clinical reference range/g)||[]).length,0);assert.equal((result.match(/Unit not supplied in this source profile/g)||[]).length,6);
 });
 test('reviewed myeloma form complications and bone examinations are discoverable without interpreting unreviewed fields',()=>{
  const fields=['PB_Manifestekomp_Hypercal','SB_Manifestekomp_Amyloidose','FU_Manifestekomp_Neuropati','Reg_Knogleundersoegelser_dexa','Reg_Knogleundersoegelser_scinti','Reg_Knogleundersoegelser_other','Reg_AndreKnogleundersoegelse','Reg_AndenKnogleundersoegelse','PB_Manifestekomp_Unreviewed'];const {run}=runtime({catalogRows:[{table_name:'RKKP_DaMyDa'}],columnRows:fields.map(f=>profile('RKKP_DaMyDa',f))});const result=run('renderDaMyDaPanel()');const response=theme(result,'damyda-theme-response'),workup=theme(result,'damyda-theme-workup');for(const field of fields.slice(0,3))assert.match(response,new RegExp(`field=${field}`));for(const field of fields.slice(3,8))assert.match(workup,new RegExp(`field=${field}`));assert.doesNotMatch(response,/field=PB_Manifestekomp_Unreviewed/);
@@ -269,7 +269,7 @@ test('complete field summaries render all three canonical registries with people
   const {run}=runtime({panels:{registry_field_summaries:[summary,numeric]}});
   const result=theme(run(`${renderer}()`),`${panel.slice(4)}-theme-stage`);
   assert.match(result,/40 people in this source/);assert.match(result,/30 with a usable value/);assert.match(result,/5 missing.*5 invalid.*0 conflicting/);assert.match(result,new RegExp(`${source} / ${field}`));assert.match(result,/Recorded code 1 — definition not supplied/);assert.match(result,/Registration/);assert.match(result,/<td>0<\/td>/);assert.doesNotMatch(result,/response rate|% recorded/);
-  const baseline=theme(run(`${renderer}()`),`${panel.slice(4)}-theme-baseline`);assert.match(baseline,/Unit not verified/);assert.match(baseline,/Mean<\/dt><dd>2/);assert.match(baseline,/Median<\/dt><dd>2/);assert.match(baseline,/middle 50%/);assert.match(baseline,/0–4/);assert.doesNotMatch(baseline,/minimum|maximum|mg\/L|IQR width/i);
+  const baseline=theme(run(`${renderer}()`),`${panel.slice(4)}-theme-baseline`);assert.match(baseline,/contract checks failed/);assert.doesNotMatch(baseline,/Mean<\/dt>|Median<\/dt>|0–4/);assert.doesNotMatch(baseline,/minimum|maximum|mg\/L|IQR width/i);
  }
 });
 test('independent treatment selection fields retain phases and response abbreviations keep literal meanings',()=>{
@@ -289,7 +289,7 @@ test('numeric field summaries fail closed for negative, infinite, constant and n
  const mutations=[{mean:-1},{median:Infinity},{p25:-999},{p75:1},{n_valid:10,n_missing:25},{minimum_value_support:1},{n_distinct:1},{n_distinct:28},{n_distinct:4,minimum_value_support:10},{unit_status:'verified'},{category_counts_json:'[{"code":"SECRET","n":30}]'}];
  for(const mutation of mutations){const {run}=runtime({panels:{registry_field_summaries:[numericRegistrySummaryFixture('RKKP_CLL','Reg_Leukocyttal',{label:'PRIVATE_NUMERIC',...mutation})]}});const result=run("renderRegistryFieldSummaries('reg_cll','baseline')");assert.doesNotMatch(result,/PRIVATE_NUMERIC|SECRET|<dl>|people in this source/);}
  // Twenty people have 0 and ten have 6: mean 2, median 0, Q1 0, Q3 6.
- const {run}=runtime({panels:{registry_field_summaries:[numericRegistrySummaryFixture('RKKP_CLL','Reg_Leukocyttal',{n_distinct:2,mean:2,median:0,p25:0,p75:6})]}});assert.match(run("renderRegistryFieldSummaries('reg_cll','baseline')"),/Median<\/dt><dd>0/);
+ const {run}=runtime({panels:{registry_field_summaries:[numericRegistrySummaryFixture('RKKP_CLL','Reg_Leukocyttal',{n_distinct:2,mean:2,median:0,p25:0,p75:6})]}});assert.doesNotMatch(run("renderRegistryFieldSummaries('reg_cll','baseline')"),/Median<\/dt><dd>0/);
 });
 test('summary states disclose absence, person-key requirement and withholding once without retained counts',()=>{
  const absent=runtime().run("renderRegistryFieldSummaries('reg_cll','stage')");assert.match(absent,/not generated/i);assert.doesNotMatch(absent,/No people|0 people/);
@@ -333,9 +333,9 @@ test('summary evidence links open the actual exact-field summary table outside t
  const link=result.match(/href="([^"]+)">Summary evidence/)[1].replace(/&amp;/g,'&'),params=new URLSearchParams(link.split('?')[1]);
  assert.equal(params.get('view'),'all');assert.equal(params.get('table'),'registry_field_summaries');assert.equal(params.get('source'),'RKKP_CLL');assert.equal(params.get('field'),'Reg_BinetStadium');
 });
-test('tiny finite raw measurements retain significant digits instead of becoming zero',()=>{
+test('tiny finite raw measurements cannot bypass verified grouped evidence',()=>{
  const {run}=runtime({panels:{registry_field_summaries:[numericRegistrySummaryFixture('RKKP_CLL','Reg_Leukocyttal',{mean:.0000123,median:.0000123,p25:.00000123,p75:.000123})]}});const result=run("renderRegistryFieldSummaries('reg_cll','baseline')");
- assert.match(result,/Mean<\/dt><dd>0\.0000123/);assert.match(result,/Median<\/dt><dd>0\.0000123/);assert.match(result,/0\.00000123–0\.000123/);
+ assert.doesNotMatch(result,/Mean<\/dt>|Median<\/dt>|0\.0000123|0\.00000123–0\.000123/);
 });
 test('a forged complete distribution cannot publish arbitrary categorical text as a recorded code',()=>{
  const {run}=runtime({panels:{registry_field_summaries:[registrySummaryFixture('RKKP_CLL','Reg_BinetStadium',{category_counts_json:'[{"code":"PRIVATE_ARBITRARY_TEXT","n":20},{"code":"2","n":10}]'})]}});

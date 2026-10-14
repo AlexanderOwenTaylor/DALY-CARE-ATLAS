@@ -32,7 +32,7 @@ class RegistryPrivacyTests(unittest.TestCase):
         self.assertEqual(MODULE.audit_registry_summaries(out,ROOT,k),[])
         return out
     def test_contract_publishes_and_is_idempotent(self):
-        for kind in ('numeric','categorical'):
+        for kind in ('categorical',):
             row=self.row(kind); out=self.guard([row])
             self.assertEqual(out[0]['summary_status'],'published')
             self.assertEqual(out,self.guard(out))
@@ -51,9 +51,9 @@ class RegistryPrivacyTests(unittest.TestCase):
     def test_numeric_safety(self):
         for change in (dict(n_valid=19,denominator_n=29),dict(n_distinct=1),dict(n_distinct=27),dict(minimum_value_support=4),dict(minimum_value_support=20),dict(mean=-1),dict(mean=float('nan')),dict(mean=float('inf')),dict(p25=3,median=2),dict(median=4,p75=3),dict(category_counts_json='[{"code":"FORBIDDEN","n":30}]')):
             with self.subTest(change=change): self.assertWithheld([dict(self.row('numeric'),**change)])
-    def test_numeric_public_precision_is_three_significant_digits(self):
+    def test_legacy_numeric_precision_cannot_authorise_publication(self):
         row=dict(self.row('numeric'),mean=987654.125)
-        out=self.guard([row]); self.assertEqual(out[0]['mean'],988000)
+        out=self.guard([row]); self.assertIsNone(out[0]['mean'])
         self.assertTrue(MODULE.audit_registry_summaries([row],ROOT))
         self.assertEqual(MODULE.audit_registry_summaries(out,ROOT),[])
     def test_unknown_identity_duplicate_and_status_data(self):
@@ -76,7 +76,7 @@ class RegistryPrivacyTests(unittest.TestCase):
         row=self.row('numeric')
         payload={'panels':{'registry_field_summaries':[row]},'review_registry':{'registry_field_summaries':[row]},'evidence':{'restored':{'registry_field_summaries':[row]}}}
         out=sanitize_public_payload(payload,project_root=ROOT)
-        self.assertEqual(out['panels']['registry_field_summaries'][0]['mean'],2)
+        self.assertIsNone(out['panels']['registry_field_summaries'][0]['mean'])
         self.assertEqual(out,sanitize_public_payload(out,project_root=ROOT)); self.assertEqual(audit_public_payload(out,project_root=ROOT),[])
         out['panels']['registry_field_summaries'][0]['n_missing']=1
         self.assertTrue(audit_public_payload(out,project_root=ROOT))

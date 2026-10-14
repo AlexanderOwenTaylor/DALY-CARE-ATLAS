@@ -5,6 +5,7 @@ atlas_registry_privacy_metadata <- c('table_name','source_column','kind','topic'
 atlas_registry_privacy_constants <- list(contract_version='registry-summary-v1',unit_status='unverified',count_basis='distinct_people_one_unambiguous_value_per_field',summary_method='exact_complete_field_3sf')
 atlas_registry_privacy_schema <- c('contract_version',atlas_registry_privacy_metadata,'unit_status','count_basis','summary_method','summary_status','minimum_cell_count',atlas_registry_privacy_counts,'category_counts_json',atlas_registry_privacy_stats)
 atlas_registry_privacy_statuses <- c('published','needs_person_key','missing_person_key','field_unavailable','query_failed','resource_limit','withheld_small_group','withheld_constant','withheld_near_unique','no_values','invalid_contract')
+atlas_registry_privacy_statuses <- c(atlas_registry_privacy_statuses,'needs_unit_evidence')
 
 atlas_registry_privacy_number <- function(x) {
   if(is.null(x)||length(x)!=1L||is.logical(x)||!is.atomic(x)) return(NA_real_)
@@ -17,6 +18,11 @@ atlas_registry_privacy_integer <- function(x) {
 }
 atlas_registry_privacy_floor <- function(x) {
   value <- atlas_registry_privacy_integer(x); if(is.na(value)) 5 else max(5,value)
+}
+atlas_registry_privacy_requested_threshold <- function(x) {
+  value <- atlas_registry_privacy_number(x)
+  if(is.na(value)||value<1||value>9007199254740991) stop('Invalid explicit privacy threshold',call.=FALSE)
+  max(5,ceiling(value))
 }
 atlas_registry_privacy_identity <- function(row) {
   if(!is.list(row)||is.null(names(row))) return('')
@@ -53,7 +59,7 @@ atlas_registry_privacy_rows <- function(rows) {
   if(!is.list(rows)||!is.null(names(rows))) return(NULL)
   rows
 }
-atlas_registry_privacy_k <- function(row,min_cell_count) max(atlas_registry_privacy_floor(min_cell_count),atlas_registry_privacy_floor(Sys.getenv('DALYCARE_MIN_CELL_COUNT','5')),atlas_registry_privacy_floor(row$minimum_cell_count))
+atlas_registry_privacy_k <- function(row,min_cell_count) max(atlas_registry_privacy_requested_threshold(min_cell_count),atlas_registry_privacy_requested_threshold(Sys.getenv('DALYCARE_MIN_CELL_COUNT','5')),atlas_registry_privacy_floor(row$minimum_cell_count))
 atlas_registry_privacy_canonical <- function(field,k,status) {
   row <- setNames(rep(list(NULL),length(atlas_registry_privacy_schema)),atlas_registry_privacy_schema)
   row[names(atlas_registry_privacy_constants)] <- atlas_registry_privacy_constants
@@ -78,6 +84,8 @@ atlas_registry_privacy_category_cells <- function(raw,field) {
   cells[order(match(codes,allowed))]
 }
 atlas_registry_privacy_published <- function(row,field,k) {
+  # No v1 exact numeric record carries verified stored units or a complete band release.
+  if(field$kind=='numeric') return(NULL)
   counts <- setNames(lapply(atlas_registry_privacy_counts[1:5],function(key) atlas_registry_privacy_integer(row[[key]])),atlas_registry_privacy_counts[1:5])
   numbers <- unlist(counts,use.names=FALSE)
   if(anyNA(numbers)) return(NULL)
@@ -114,6 +122,7 @@ atlas_registry_summary_guard <- function(rows,project_root='.',min_cell_count=5)
     k <- max(vapply(rows[group],atlas_registry_privacy_k,numeric(1),min_cell_count=min_cell_count))
     status <- if(atlas_registry_privacy_schema_ok(row,field)) row$summary_status else 'invalid_contract'
     if(length(group)>1L) status <- 'invalid_contract'
+    if(status=='published' && field$kind=='numeric') status <- 'needs_unit_evidence'
     result <- atlas_registry_privacy_canonical(field,k,status)
     if(status=='published') {
       publication <- atlas_registry_privacy_published(row,field,k)

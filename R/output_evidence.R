@@ -305,7 +305,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
     current <- atlas_evidence_get(payload,unlist(spec$payload_path,use.names=FALSE))
     if(is.list(current)) {
       keys <- vapply(tables[[i]]$columns,function(c)c$key,character(1))
-      reconciled <- lapply(current,function(row)setNames(lapply(keys,function(k)row[[k]]),keys))
+      reconciled <- atlas_reconcile_evidence_rows(current,keys,spec)
       if(identical(reconciled,tables[[i]]$rows)) next
       tables[[i]]$rows <- reconciled
       tables[[i]]$represented_row_count <- length(current)
@@ -319,6 +319,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
 }
 
 atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5) {
+  min_cell_count <- atlas_effective_threshold(x,min_cell_count=min_cell_count)
   visit <- function(row,path=character()) {
     if(!is.list(row)) return(invisible(NULL))
     if(length(path) && tail(path,1)=='registry_field_summaries') {
@@ -329,7 +330,7 @@ atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5) {
     if(is.null(names(row))) {for(v in row) visit(v,path);return(invisible(NULL))}
     if(any(tail(path,1) %in% c('npu_display_dictionary','clinical_display_dictionary'))) return(invisible(NULL))
     forbidden <- intersect(c('min','max','min_date','max_date','raw_min_date','raw_max_date','display_min_date','display_max_date'),names(row))
-    if(!identical(row$numeric_privacy_status,'eligible_stored_summary')) forbidden <- c(forbidden,intersect(c('mean','median','p25','p75','sd'),names(row)))
+    forbidden <- c(forbidden,intersect(c('mean','median','p25','p75','sd','q25','q75','iqr'),names(row)))
     if(row$value_privacy_status %||% '' %in% c('protected_field','withheld_unvalidated_distribution')) forbidden <- c(forbidden,intersect(c('value','label','raw_value','raw_code','raw_descriptor','display_value','statistic_value'),names(row)))
     if(any(vapply(forbidden,function(k) !is.null(row[[k]]) && length(row[[k]]) && !is.na(row[[k]]) && as.character(row[[k]])!='',logical(1)))) stop('Public evidence privacy audit failed',call.=FALSE)
     for(key in names(row)) visit(row[[key]],c(path,key))
@@ -428,17 +429,21 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
 }
 
 
-atlas_effective_threshold <- function(payload=NULL,context=NULL) {
-  values <- list(Sys.getenv('DALYCARE_MIN_CELL_COUNT',unset='5'))
+atlas_effective_threshold <- function(payload=NULL,context=NULL,min_cell_count=5) {
+  requested <- list(min_cell_count,Sys.getenv('DALYCARE_MIN_CELL_COUNT',unset='5'))
+  values <- list()
+  archived_rows <- payload$run_summary
+  if(is.data.frame(archived_rows)) archived_rows <- lapply(seq_len(nrow(archived_rows)),function(i) as.list(archived_rows[i,,drop=FALSE]))
+  for(row in archived_rows) if(is.list(row)&&identical(row$metric,'min_cell_count')) values <- c(values,list(row$value))
   if(!is.null(payload$privacy_metadata) && 'minimum_cell_count' %in% names(payload$privacy_metadata)) values <- c(values,list(payload$privacy_metadata$minimum_cell_count))
   if('minimum_cell_count' %in% names(context)) values <- c(values,list(context$minimum_cell_count))
-  parsed <- vapply(values,function(value) {
+  parse <- function(value,integer=TRUE) {
     if(length(value)!=1 || !(is.numeric(value) || is.character(value))) stop('Invalid explicit privacy threshold',call.=FALSE)
     n <- suppressWarnings(as.numeric(value))
-    if(!is.finite(n) || n<1 || n!=floor(n)) stop('Invalid explicit privacy threshold',call.=FALSE)
-    n
-  },numeric(1))
-  max(5,parsed)
+    if(!is.finite(n) || n<1 || n>9007199254740991 || (integer&&n!=floor(n))) stop('Invalid explicit privacy threshold',call.=FALSE)
+    ceiling(n)
+  }
+  max(5,vapply(requested,parse,numeric(1),integer=FALSE),vapply(values,parse,numeric(1)))
 }
 
 atlas_normalize_snapshot_rows <- function(rows,spec) {
@@ -462,6 +467,13 @@ atlas_normalize_snapshot_rows <- function(rows,spec) {
     }
     row
   })
+}
+
+atlas_reconcile_evidence_rows <- function(rows,keys,spec) {
+  projected <- lapply(rows,function(row)setNames(lapply(keys,function(key)row[[key]]),keys))
+  # public_rows carries display strings; restore the registered types before
+  # replacing typed CSV evidence. The writer's independent type check stays strict.
+  atlas_normalize_snapshot_rows(projected,spec)
 }
 
 

@@ -44,7 +44,7 @@ test('an authoritative unknown treatment table cannot inherit a known secondary 
 });
 test('field answers retain explicit totals, small percentages and exact scoped evidence without source tables repeated',()=>{
  const {ctx,run}=runtime();ctx.row={table_name:'SP_PatientInfo',column_name:'weight_in_kg',profile_kind:'numeric',n_rows:10000,n_available:9999,n_missing:1,pct_available:99.99,numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10};
- const card=run('fieldCard(row)');assert.match(card,/9,999 of 10,000 source records/);assert.match(card,/&lt;100%/);assert.match(card,/Median: 0/);assert.match(card,/kg in the field name/);assert.doesNotMatch(card,/source-year-counts|Recorded region<\/th>/);
+ const card=run('fieldCard(row)');assert.match(card,/9,999 of 10,000 source records/);assert.match(card,/&lt;100%/);assert.doesNotMatch(card,/Median: 0/);assert.match(card,/kg in the field name/);assert.doesNotMatch(card,/source-year-counts|Recorded region<\/th>/);
  assert.match(card,/view=timeplace&amp;source=SP_PatientInfo/);assert.match(card,/table=column_profiles&amp;source=SP_PatientInfo&amp;field=weight_in_kg/);
  assert.equal(run('fieldPercent(0.004)'),'<0.1');assert.equal(run('fieldPercent(99.95)'),'<100');assert.equal(run('fieldPercent(100)'),'100');assert.equal(run('fieldPercent(0)'),'0');
  ctx.row={...ctx.row,n_rows:null,n_missing:1};assert.doesNotMatch(run('fieldCard(row)'),/of 10,000/);
@@ -55,7 +55,7 @@ test('registry numeric evidence explains withholding once and keeps configured u
  ctx.row={table_name:'RKKP_DaMyDa',source_column:'Reg_Creatinin_mikmoll',unit:'umol/L',n_available:50,pct_available:99.99,numeric_privacy_status:'needs_validation_unreviewed_field',median:123456};
  const card=run("renderRegistryNumericCard(row,'Creatinine','RKKP_DaMyDa')");assert.match(card,/Configured registry-panel unit: umol\/L/);assert.match(card,/Stored numeric summaries need validation/);assert.doesNotMatch(card,/123,456|<dt>Median|<dt>25th/);assert.match(card,/field=Reg_Creatinin_mikmoll/);
  assert.equal(run("fieldUnitCopy({table_name:'RKKP_DaMyDa',column_name:'Reg_Creatinin_mikmoll'})"),'Unit not supplied in this source profile');
- ctx.row={...ctx.row,numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10};assert.match(run("renderRegistryNumericCard(row,'Creatinine','RKKP_DaMyDa')"),/Median: 0/);
+ ctx.row={...ctx.row,numeric_privacy_status:'eligible_stored_summary',median:0,p25:0,p75:10};assert.doesNotMatch(run("renderRegistryNumericCard(row,'Creatinine','RKKP_DaMyDa')"),/Median: 0/);
 });
 test('source cards use exact useful destinations and consistent source labels',()=>{
  const {ctx,run}=runtime();fn('browseFieldsLink',ctx);fn('resourceCompactStatus',ctx);fn('sourceEvidenceLinks',ctx);fn('sourceTiles',ctx);
@@ -74,7 +74,7 @@ test('vitals distinguishes absent SP event aggregates from the existing patient-
 });
 test('clinical measurement directory uses exact current profile metadata and eligible summaries',()=>{
  const {run}=runtime({columnRows:[{table_name:'SP_PatientInfo',column_name:'bmi',column_type:'double precision',n_rows:'120',n_available:'100',numeric_privacy_status:'eligible_stored_summary',median:'26.7',p25:'23.1',p75:'29.9'}]});
- const panel=run("renderVitalGuide('BMI')");assert.match(panel,/Median: 26.7/);assert.match(panel,/Stored as: double precision/);assert.match(panel,/field=bmi/);
+ const panel=run("renderVitalGuide('BMI')");assert.doesNotMatch(panel,/Median: 26.7/);assert.match(panel,/Stored as: double precision/);assert.match(panel,/field=bmi/);
 });
 test('clinical measurement filter uses the existing share route for Back and reload',()=>{
  let options,saved;

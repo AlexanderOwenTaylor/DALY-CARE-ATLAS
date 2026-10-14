@@ -2,6 +2,10 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'), vm=require('node:vm'), path=require('node:path');
 const runtime=path.join(__dirname,'../inst/templates/atlas-outputs.js');
+test('exact numeric cells cannot bypass privacy with a legacy eligibility marker',()=>{
+ const f=harness().api.formatValue;
+ for(const key of ['mean','median','p25','p75','sd','q25','q75','iqr','min','max']) assert.doesNotMatch(f(87654321,key,{numeric_privacy_status:'eligible_stored_summary'}),/87654321/);
+});
 function harness(tableCount=1, shardCount=3, large=false) {
   const scripts=[],timers=new Map(); let clock=0;
   const tables=Array.from({length:tableCount},(_,i)=>({id:'t'+i,title:'Table '+i,status:'available',columns:[{key:'value',label:'Value',type:'string'}],shards:Array.from({length:shardCount},(_,j)=>{

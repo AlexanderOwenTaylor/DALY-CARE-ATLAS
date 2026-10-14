@@ -33,7 +33,7 @@ class PrivacyTests(unittest.TestCase):
     for k in ["n_available","n_missing","pct_available","pct_missing"]: self.assertIsNone(r[k])
   r=self.clean(self.profile(n_available="4")); self.assertIsNone(r["mean"])
  def test_measurements(self):
-  self.assertEqual(self.clean(self.profile(n_available="5",n_distinct_capped="2"))["mean"],"7")
+  self.assertIsNone(self.clean(self.profile(n_available="5",n_distinct_capped="2"))["mean"])
   for kw in [dict(column_name="culturefindingsid"),dict(column_name="DrugCode"),dict(n_available=None),dict(n_distinct_capped="1"),dict(n_distinct_capped="79"),dict(min="-999")]:
    self.assertIsNone(self.clean(self.profile(**kw))["mean"])
   self.assertIsNone(self.clean(self.profile())["max"])

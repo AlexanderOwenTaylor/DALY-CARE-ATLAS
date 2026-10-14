@@ -1,6 +1,7 @@
 # Distinct-person registry summaries. Values remain private until the full-field gates pass.
 registry_summary_policy <- function(project_root = ".") {
-  paths <- c(file.path(project_root, "inst", "config", "registry-summary-policy.json"),
+  paths <- c(file.path(project_root, "config", "registry-summary-policy.json"),
+             file.path(project_root, "inst", "config", "registry-summary-policy.json"),
              system.file("config", "registry-summary-policy.json", package = "dalycareatlas"))
   paths <- paths[nzchar(paths) & file.exists(paths)]
   if (!length(paths) || !requireNamespace("jsonlite", quietly = TRUE)) return(list())
@@ -9,10 +10,82 @@ registry_summary_policy <- function(project_root = ".") {
   policy$fields
 }
 
+# C2 foundation: these reviewed recognitions do not authorise v1 numeric publication.
+# A normalisation permission belongs to an exact source field and never to a registry.
+registry_summary_reviewed_mappings <- function(project_root='.') {
+  paths <- c(file.path(project_root,'config','registry-source-mappings.json'),file.path(project_root,'inst','config','registry-source-mappings.json'),system.file('config','registry-source-mappings.json',package='dalycareatlas'))
+  paths <- paths[nzchar(paths)&file.exists(paths)]
+  if(!length(paths)||file.info(paths[1])$size>262144) return(list())
+  value <- tryCatch(jsonlite::fromJSON(paths[1],simplifyVector=FALSE),error=function(e) NULL)
+  keys <- c('table_name','source_column','raw_token','canonical_token','display_label','normalisation','evidence_tier','evidence_file','evidence_row','evidence_key','evidence_checksum','review_status','caveat')
+  if(!is.list(value)||length(names(value))!=2L||!setequal(names(value),c('version','records'))||!identical(value$version,'registry-source-mappings-v1')||!is.list(value$records)||length(value$records)>1000) return(list())
+  seen <- character();canonical <- list()
+  for(row in value$records) {
+    if(!is.list(row)||length(names(row))!=length(keys)||!setequal(names(row),keys)) return(list())
+    if(!all(vapply(setdiff(keys,'evidence_row'),function(k) is.character(row[[k]])&&length(row[[k]])==1L&&!is.na(row[[k]])&&nzchar(row[[k]])&&nchar(row[[k]])<=1024,logical(1)))) return(list())
+    if(!row$table_name %in% c('RKKP_CLL','RKKP_LYFO','RKKP_DaMyDa')||!row$normalisation %in% c('upper_trim_space','exact')||row$evidence_tier!='local_reviewed_mapping'||!row$review_status %in% c('validated_full_atlas_value_evidence','validated_value_mapping','auxiliary_cross_registry')||!grepl('^[A-F0-9]{64}$',row$evidence_checksum)||!is.numeric(row$evidence_row)||length(row$evidence_row)!=1||row$evidence_row<1||row$evidence_row!=floor(row$evidence_row)) return(list())
+    identity <- as.character(jsonlite::toJSON(row[c('table_name','source_column','raw_token')],auto_unbox=TRUE))
+    if(identity %in% seen) return(list())
+    seen <- c(seen,identity)
+    normal <- as.character(jsonlite::toJSON(list(row$table_name,row$source_column,if(row$normalisation=='exact') row$raw_token else toupper(trimws(row$raw_token,whitespace='[ ]'))),auto_unbox=TRUE))
+    if(!is.null(canonical[[normal]])&&!identical(canonical[[normal]],row$canonical_token)) return(list())
+    canonical[[normal]] <- row$canonical_token
+  }
+  value$records
+}
+
+registry_summary_recognise <- function(values,table_name,source_column,mappings) {
+  out <- rep(NA_character_,length(values))
+  exact <- Filter(function(m) identical(m$table_name,table_name)&&identical(m$source_column,source_column),mappings)
+  for(m in exact) {
+    matched <- !is.na(values)&(if(m$normalisation=='exact') values==m$raw_token else toupper(trimws(values,whitespace='[ ]'))==toupper(trimws(m$raw_token,whitespace='[ ]')))
+    out[matched] <- m$canonical_token
+  }
+  out
+}
+
+registry_summary_completed_status <- function(parts) {
+  required <- c('valid','missing','invalid','conflicting')
+  if(!is.numeric(parts)||length(parts)!=4L||anyDuplicated(names(parts))||!setequal(names(parts),required)||anyNA(parts)||any(!is.finite(parts)|parts<0|parts!=floor(parts))) return(NA_character_)
+  if(sum(parts)==0) return('empty_source')
+  if(parts[['valid']]>0) return('usable_values')
+  if(parts[['missing']]==sum(parts)) return('all_missing')
+  if(parts[['invalid']]==sum(parts)) return('all_unrecognised')
+  if(parts[['conflicting']]==sum(parts)) return('all_conflicting')
+  'no_usable_values'
+}
+
+# Local, versioned exact-field evidence only; no production bindings ship with C1.
+# C2 must additionally validate the referenced numeric policy and release contract.
+registry_summary_unit_evidence <- function(project_root='.') {
+  path <- Sys.getenv('DALYCARE_REGISTRY_UNIT_EVIDENCE_FILE','')
+  if(!nzchar(path)||!file.exists(path)||file.info(path)$size>262144) return(list())
+  value <- tryCatch(jsonlite::fromJSON(path,simplifyVector=FALSE),error=function(e) NULL)
+  if(!is.list(value)||length(names(value))!=2L||!setequal(names(value),c('version','bindings'))||!identical(value$version,'registry-unit-evidence-v1')||!is.list(value$bindings)||length(value$bindings)>217) return(list())
+  keys <- c('table_name','source_column','unit_code','stored_to_display_multiplier','stored_to_display_offset','evidence_id','evidence_source','evidence_revision','evidence_checksum','review_status','numeric_policy_id','evidence_tier')
+  policy <- Filter(function(f) f$kind=='numeric',registry_summary_policy(project_root))
+  identity <- function(x) as.character(jsonlite::toJSON(x[c('table_name','source_column')],auto_unbox=TRUE))
+  allowed <- vapply(policy,identity,character(1));seen <- character()
+  for(row in value$bindings) {
+    if(!is.list(row)||length(names(row))!=length(keys)||!setequal(names(row),keys)) return(list())
+    scalars <- setdiff(keys,c('stored_to_display_multiplier','stored_to_display_offset'))
+    if(!all(vapply(scalars,function(k) is.character(row[[k]])&&length(row[[k]])==1L&&!is.na(row[[k]])&&nzchar(row[[k]])&&nchar(row[[k]])<=1024,logical(1)))) return(list())
+    if(!all(vapply(c('stored_to_display_multiplier','stored_to_display_offset'),function(k) is.numeric(row[[k]])&&length(row[[k]])==1L&&is.finite(row[[k]]),logical(1)))||row$stored_to_display_multiplier<=0) return(list())
+    id <- identity(row)
+    if(!id %in% allowed||id %in% seen||row$review_status!='verified'||row$evidence_tier!='authoritative_source_metadata'||!grepl('^[A-Fa-f0-9]{64}$',row$evidence_checksum)) return(list())
+    seen <- c(seen,id)
+  }
+  value$bindings
+}
+
 registry_summary_k <- function(k) {
-  k <- suppressWarnings(as.numeric(c(k, Sys.getenv("DALYCARE_MIN_CELL_COUNT", "5"))))
-  k <- k[is.finite(k) & k >= 5 & k == floor(k)]
-  if (length(k)) max(k) else 5
+  values <- lapply(list(k,Sys.getenv('DALYCARE_MIN_CELL_COUNT','5')),function(value) {
+    if(length(value)!=1L||!(is.numeric(value)||is.character(value))) stop('Invalid explicit privacy threshold',call.=FALSE)
+    n <- suppressWarnings(as.numeric(value))
+    if(!is.finite(n)||n<1||n>9007199254740991) stop('Invalid explicit privacy threshold',call.=FALSE)
+    ceiling(n)
+  })
+  max(5,unlist(values))
 }
 
 empty_registry_field_summaries <- function() {
@@ -92,6 +165,7 @@ registry_summary_from_groups <- function(spec, groups, k) {
   if (any(!is.finite(counts) | counts < 0 | counts != floor(counts)) ||
       any(!groups$status %in% c("valid", "missing", "invalid", "conflicting", "key_missing"))) return(out)
   if (any(groups$status == "key_missing" & counts > 0)) {out$summary_status <- "missing_person_key"; return(out)}
+  if (identical(spec$kind,'numeric')) {out$summary_status <- 'needs_unit_evidence'; return(out)}
   counts_for <- function(status) sum(counts[groups$status == status])
   parts <- c(n_valid=counts_for("valid"), n_missing=counts_for("missing"),
              n_invalid=counts_for("invalid"), n_conflicting=counts_for("conflicting"))
@@ -200,7 +274,10 @@ registry_summary_sql <- function(conn, table_ref, key, spec, dialect, cap) {
     valid_test <- paste0("v IN (",paste(vapply(unlist(spec$categories),lit,character(1)),collapse=","),")")
     safe_value <- "v"
   } else if (dialect == "postgres") {
-    parsed <- "CASE WHEN v ~ '^-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]+)?$' THEN CAST(v AS DOUBLE PRECISION) ELSE NULL END"
+    # Bound numeric parsing before casting. PostgreSQL double casts throw for
+    # overflow; arbitrary-precision numeric within these lexical bounds cannot.
+    # The precision bounds also reject pathological exponent/long-token input.
+    parsed <- "CASE WHEN length(v)<=1024 AND v ~ '^-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][+-]?[0-9]{1,4})?$' THEN CAST(v AS NUMERIC) ELSE NULL END"
     valid_test <- paste0("(",parsed,") >= 0 AND (",parsed,") <= 1.7976931348623157e308")
     safe_value <- "v"
   } else {

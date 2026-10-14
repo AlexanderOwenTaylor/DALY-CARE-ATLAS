@@ -5402,14 +5402,8 @@
       }
       /* REGISTRY_NUMERIC_START */
       function registryNumericAllowed(row, requireEligible=true) {
-        if(!row || requireEligible && row.numeric_privacy_status!=='eligible_stored_summary') return false;
-        const flag=value=>![undefined,null,false,0,'','false','0'].includes(typeof value==='string' ? value.toLowerCase() : value);
-        if(flag(row.is_sensitive) || row.profile_kind==='sensitive' || row.profile_kind==='date' || flag(row.is_date_like) || ['suppressed','withheld','protected','is_suppressed','is_protected'].some(key=>flag(row[key]))) return false;
-        const safe=['','published','validated','approved','ok'];
-        // The public policy withholds category frequencies and exact date bounds separately
-        // from explicitly eligible numeric summaries (R/public_privacy.R).
-        const statuses={numeric_privacy_status:['','eligible_stored_summary'],value_privacy_status:[...safe,'withheld_unvalidated_distribution'],date_privacy_status:[...safe,'withheld_exact_clinical_bounds'],availability_privacy_status:[''],count_privacy_status:['']};
-        return !Object.keys(row).some(key=>/privacy_status$/.test(key) && !(statuses[key] || safe).includes(String(row[key] ?? ''))) && !['validation_status','publication_status'].some(key=>row[key]!=null && !safe.includes(String(row[key])));
+        // Generic profiles and v1 rows cannot prove verified grouped numeric evidence.
+        return false;
       }
       function registryNumericReason(row) {
         return /^needs_validation/.test(row.numeric_privacy_status || '') ? 'Stored numeric summaries need validation.' : /withheld|protected/.test(row.numeric_privacy_status || '') ? 'Stored numeric summaries are withheld.' : 'Stored numeric summaries are not supplied.';
@@ -5810,7 +5804,7 @@
         needs_person_key:'Reviewed person-key mapping required',missing_person_key:'Person key missing from the source',
         field_unavailable:'Field unavailable in this run',query_failed:'Summary query did not complete',resource_limit:'Summary resource limit reached',
         withheld_small_group:'Summary withheld for small groups',withheld_constant:'Summary withheld for a constant numeric field',
-        withheld_near_unique:'Summary withheld for near-unique numeric values',no_values:'No valid values available for publication',invalid_contract:'Summary withheld: contract checks failed'
+        withheld_near_unique:'Summary withheld for near-unique numeric values',no_values:'No valid values reported; reason unavailable in this legacy export',needs_unit_evidence:'Verified stored-unit and grouped numeric evidence required',invalid_contract:'Summary withheld: contract checks failed'
       };
       function registryFieldSummaryNumber(value, integer=false) {
         if(typeof value!=='number' && !(typeof value==='string' && /^(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(value))) return null;
@@ -5832,6 +5826,7 @@
         if(row.summary_status!=='published') {
           return Object.prototype.hasOwnProperty.call(registryFieldSummaryStatuses,row.summary_status) && categories.length===0 && quantities.every(key=>row[key]===null) ? {...row,categories:[]} : null;
         }
+        if(row.kind==='numeric') return null;
         const numbers={};
         for(const key of ['denominator_n','n_valid','n_missing','n_invalid','n_conflicting']) { numbers[key]=registryFieldSummaryNumber(row[key],true); if(numbers[key]===null) return null; }
         const total=numbers.denominator_n, valid=numbers.n_valid;
@@ -9810,10 +9805,7 @@
       }
       function fieldTypicalPreview(row) {
         if (row.profile_kind !== 'numeric') return '';
-        if (row.numeric_privacy_status !== 'eligible_stored_summary') return `<p class="mini">Typical values: ${escapeHtml(fieldPrivacyLabel(row) || 'Summary not supplied')}</p><p class="mini">${escapeHtml(fieldUnitCopy(row))}</p>`;
-        const q1 = finiteSummary(row.p25), q3 = finiteSummary(row.p75);
-        const interval = q1 !== null && q3 !== null && q3 >= q1 ? `${formatNumber(q1)}–${formatNumber(q3)}` : 'Not supplied';
-        return `<p><strong>Median: ${finiteSummary(row.median) === null ? 'Not supplied' : formatNumber(row.median)}</strong><br>Middle 50%: ${interval}</p><p class="mini">${escapeHtml(fieldUnitCopy(row))}</p><p class="mini">Recorded values; not a clinical reference range.</p>`;
+        return `<p class="mini">Typical values: ${escapeHtml(fieldPrivacyLabel(row) || 'Verified grouped evidence required')}</p><p class="mini">${escapeHtml(fieldUnitCopy(row))}</p>`;
       }
       let sourceCoverageCache;
       function sourceCoverageIndex() {
@@ -9903,11 +9895,7 @@
         return '';
       }
       function columnStat(row) {
-        if (row.profile_kind !== 'numeric' || row.numeric_privacy_status !== 'eligible_stored_summary') return `<p>${escapeHtml(fieldPrivacyLabel(row) || 'Summary not supplied')}</p>`;
-        const q1 = finiteSummary(row.p25), q3 = finiteSummary(row.p75);
-        const ordered = q1 !== null && q3 !== null && q3 >= q1;
-        const value = key => finiteSummary(row[key]) === null ? 'Not supplied' : formatNumber(row[key]);
-        return `<dl><dt>Mean</dt><dd>${value('mean')}</dd><dt>Median</dt><dd>${value('median')}</dd><dt>Q1–Q3 interval (middle 50%)</dt><dd>${ordered ? `${formatNumber(q1)}–${formatNumber(q3)}` : 'Not supplied'}</dd><dt>IQR width (Q3 − Q1)</dt><dd>${ordered ? formatNumber(q3 - q1) : 'Not supplied'}</dd><dt>Mode</dt><dd>Not supplied</dd></dl><p class="mini">${escapeHtml(fieldUnitCopy(row))}</p><p class="mini">Supplied summary of source records. Quartiles may use a sample of source records. These are stored values, not clinical reference ranges. Data cleaning is unverified.</p>`;
+        return `<p>${escapeHtml(fieldPrivacyLabel(row) || 'Verified grouped evidence required')}</p>`;
       }
       function fieldValueDefinitions(row) {
         const definitions = (payload.clinical_display_dictionary || []).filter(entry => entry.kind === 'registry_value' && entry.system === `${row.table_name}:${row.column_name}`);
@@ -9937,7 +9925,7 @@
           <details class="lineage-block"${columnExactField === row.column_name ? ' open' : ''}><summary>Summary and meanings</summary>
             ${displayDefinition ? `<p>${escapeHtml(displayDefinition)}</p>` : ''}
             <p class="mini">Field: <code>${escapeHtml(row.column_name)}</code> · storage type: ${escapeHtml(row.column_class || row.column_type || 'Not supplied')}</p>
-            ${row.profile_kind === 'numeric' && row.numeric_privacy_status === 'eligible_stored_summary' ? `<p class="mini">Mean: ${finiteSummary(row.mean) !== null ? formatNumber(row.mean) : 'Not supplied'}. Quartiles may use a sample of source records; data cleaning is unverified.</p>` : ''}
+
             ${row.profile_kind === 'categorical' || row.profile_kind === 'text' ? '<h4>Common observed values</h4><p>Categorical values and frequencies are not published for this field.</p><p>Mode: Not supplied</p>' : ''}
             ${needsMeanings ? `<h4>Value definitions</h4>${fieldValueDefinitions(row)}<button class="concept-link-button" type="button" data-jump-tab="dictionary" data-jump-sub="dictionary-codes" data-jump-search="${escapeHtml(row.column_name)}">Browse codes and clinical terms →</button>` : ''}
           </details>

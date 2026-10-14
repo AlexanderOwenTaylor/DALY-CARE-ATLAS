@@ -23,7 +23,7 @@ for(i in seq_along(sources)) {
   for(f in selected) {
     values <- if(f$kind=='numeric') as.character(rep(6:11,each=10)) else rep(unlist(f$categories)[1:2],each=30)
     x[[f$source_column]] <- c(values,rep(NA_character_,10),rep(if(f$kind=='numeric') '-999' else 'SYNTHETIC_FORBIDDEN_CATEGORY',10),rep(values[1],10))
-    expected[[length(expected)+1L]] <- paste(sources[i],f$source_column,sep='::')
+    if(f$kind=='categorical') expected[[length(expected)+1L]] <- paste(sources[i],f$source_column,sep='::')
   }
   repeated <- x[1:10,,drop=FALSE]
   conflict <- x[81:90,,drop=FALSE]
@@ -44,7 +44,7 @@ Sys.unsetenv(c('DALYCARE_ATLAS_SOURCE_MAP','DALYCARE_ATLAS_OUTPUT_ROOT','DALYCAR
 expect_file(file.path(run$run_dir,'outputs/atlas_completion_summary.csv'))
 expect_file(file.path(run$run_dir,'outputs/atlas_registry_completion.csv'))
 completion <- read.csv(file.path(run$run_dir,'outputs/atlas_registry_completion.csv'))
-expect_true(all(completion$published_fields==4L))
+expect_true(all(completion$published_fields==3L))
 expect_true(all(completion$field_unavailable_fields>0))
 expect_true(all(completion$privacy_withheld_fields==1L))
 expect_true(all(grepl('Privacy gates',completion$action,fixed=TRUE)))
@@ -61,7 +61,7 @@ expect_true(all(published$denominator_n==90 & published$n_valid==60 & published$
 expect_true(all(published$unit_status=='unverified'))
 rebuilt <- atlas_payload_from_run_outputs(run$run_dir,root)
 rows <- rebuilt$payload$panels$registry_field_summaries
-expect_equal(sum(vapply(rows,function(r)r$summary_status=='published',logical(1))),12L)
+expect_equal(sum(vapply(rows,function(r)r$summary_status=='published',logical(1))),9L)
 expect_true(all(vapply(Filter(function(r)r$summary_status=='published',rows),function(r)is.numeric(r$denominator_n),logical(1))))
 atlas_evidence_audit(rebuilt$payload,root,5)
 evidence <- Filter(function(t)t$id=='registry_field_summaries',rebuilt$tables)[[1]]
@@ -69,7 +69,7 @@ expect_equal(length(evidence$rows),length(rows))
 expect_equal(evidence$rows,rows)
 # Complete fields must survive repeat guarding and the production CSV rebuild entry point.
 script <- file.path(root,'scripts/rebuild_atlas_from_outputs.R')
-status <- system2(file.path(R.home('bin'),'Rscript.exe'),shQuote(c(script,run$run_dir,root)),stdout=file.path(work,'rebuild.log'),stderr=file.path(work,'rebuild.log'))
+status <- system2(file.path(R.home('bin'),if(.Platform$OS.type=='windows') 'Rscript.exe' else 'Rscript'),shQuote(c(script,run$run_dir,root)),stdout=file.path(work,'rebuild.log'),stderr=file.path(work,'rebuild.log'))
 expect_equal(status,0L,paste(readLines(file.path(work,'rebuild.log'),warn=FALSE),collapse='\n'))
 after <- atlas_payload_from_run_outputs(run$run_dir,root)
 expect_equal(after$payload$panels$registry_field_summaries,rows)

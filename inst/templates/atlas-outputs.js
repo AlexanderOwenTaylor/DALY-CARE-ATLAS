@@ -161,6 +161,7 @@
   Object.assign(reviewedLabels.numeric_privacy_status,privacyLabels);
   reviewedLabels.summary_method['supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample']='Supplied mean and quantiles; quartiles may use a sample of source records';
   function formatValue(value,key,row={}) {
+    if(value!==null && value!==undefined && ['mean','median','p25','p75','sd','q25','q75','iqr','min','max'].includes(key)) return 'Withheld: verified grouped evidence required';
     if(value!==null && value!==undefined) return reviewedLabels[key] && own(reviewedLabels[key],value)?reviewedLabels[key][value]:String(value);
     let status;
     if(['mean','median','p25','p75','sd','q25','q75','iqr','min','max'].includes(key)) {
@@ -301,6 +302,7 @@
   const statisticKeys=new Set(['mean','median','p25','p75']);
   const countKeys=new Set(['n_rows','n_cols','n_available','n_missing','n_distinct_capped','n_observed','n_patients','n']);
   function readingCell(row,key){
+    if(statisticKeys.has(key))return cell(row,key);
     const value=row[key];
     if(typeof value!=='number'||!Number.isFinite(value)||(!percentKeys.has(key)&&!statisticKeys.has(key)&&!countKeys.has(key)))return cell(row,key);
     const tiny=value!==0&&Math.abs(value)<(percentKeys.has(key)?0.1:0.01);
