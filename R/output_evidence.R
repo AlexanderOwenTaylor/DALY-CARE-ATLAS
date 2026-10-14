@@ -240,6 +240,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
   }
   required <- vapply(Filter(function(s)isTRUE(s$required) && length(s$arg_path),registry$artifacts),function(s)s$id,character(1))
   if (!all(required %in% unlist(context$bindings,use.names=FALSE))) stop('Required clinical bindings missing from build context',call.=FALSE)
+  args <- semantic_rehydrate_args(args,project_root)
   q <- context$query_template
   if (!is.logical(q$empty) || length(q$empty)!=1) stop('Invalid template configuration',call.=FALSE)
   if (isTRUE(q$empty)) sql <- '' else {
@@ -295,7 +296,26 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
   args$mcl_triangle_feasibility$ki67_discovery <- args$ki67_discovery
   args$membership_spec <- membership_spec
   payload <- atlas_public_privacy(do.call(atlas_payload,args),project_root,minimum)
-  list(payload=payload,tables=atlas_output_evidence(run_dir,project_root,discard_membership_input=TRUE),context=context,membership_spec=membership_spec)
+  tables <- atlas_output_evidence(run_dir,project_root,discard_membership_input=TRUE)
+  # Empty old semantic exports are interpreted from the selected run's current
+  # metadata. Keep this derived evidence distinct from the original CSV rows.
+  derived_ids <- c('semantic_dictionary','semantic_value_map','semantic_code_map','semantic_panel_links','clinical_concepts','domain_panels','panel_kpis_product','panel_distributions','panel_raw_fields','panel_parity')
+  for(i in seq_along(tables)) if(tables[[i]]$id %in% derived_ids) {
+    spec <- Filter(function(s)identical(s$id,tables[[i]]$id),registry$artifacts)[[1]]
+    current <- atlas_evidence_get(payload,unlist(spec$payload_path,use.names=FALSE))
+    if(is.list(current)) {
+      keys <- vapply(tables[[i]]$columns,function(c)c$key,character(1))
+      reconciled <- lapply(current,function(row)setNames(lapply(keys,function(k)row[[k]]),keys))
+      if(identical(reconciled,tables[[i]]$rows)) next
+      tables[[i]]$rows <- reconciled
+      tables[[i]]$represented_row_count <- length(current)
+      tables[[i]]$source_row_count <- NULL
+      tables[[i]]$status <- 'available'
+      tables[[i]]$reason <- 'Reconciled with current source/column metadata and valid current semantics'
+      tables[[i]]$provenance <- 'current_metadata_rebuild'
+    }
+  }
+  list(payload=payload,tables=tables,context=context,membership_spec=membership_spec)
 }
 
 atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5) {

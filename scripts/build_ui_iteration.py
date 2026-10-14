@@ -8,11 +8,13 @@ from public_privacy import sanitize_public_payload, audit_public_payload, effect
 from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, read_build_context, _bound_source_file
 from site_bundle import write_site_bundle, decode_transport, resolve_transport_version, _byte_limit
 from clinical_source_membership import load_membership_resource, clinical_source_inventory
+from semantic_catalogue import rebuild_semantics, validate_terminology
 
 
 def build(input_dir, output_dir, project_root, run_dir=None, transport_version=None):
     transport_version = resolve_transport_version(transport_version)
     input_dir, output_dir, project_root = map(Path, (input_dir, output_dir, project_root))
+    validate_terminology(project_root)
     membership_spec, membership_input = load_membership_resource(project_root)
     registry = load_registry(project_root)
     source = input_dir / 'DALYCARE_atlas_payload.js'
@@ -26,6 +28,7 @@ def build(input_dir, output_dir, project_root, run_dir=None, transport_version=N
     payload = decode_transport(json.loads(raw.strip()[len(prefix):].strip().removesuffix(';')), max_bytes=maximum)
     context = matching_run_context(run_dir, payload, registry) if run_dir is not None else None
     minimum = effective_threshold(payload, context)
+    rebuild_semantics(payload,project_root)
     for key in ('npu_display_dictionary','clinical_display_dictionary'):
         spec = next(s for s in registry['artifacts'] if s['id']==key)
         try:

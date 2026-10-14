@@ -26,7 +26,7 @@ semantic_code_map_columns <- function() {
     "semantic_id", "clinical_concept_id", "clinical_variable", "clinical_group",
     "source_name", "object_name", "code_system", "code", "code_name",
     "panel", "n_rows", "n_patients", "evidence_file", "mapping_confidence",
-    "notes", "prior_display_label", "curator_label_provenance"
+    "notes", "prior_display_label", "curator_label_provenance", "raw_column"
   )
 }
 
@@ -66,7 +66,7 @@ empty_semantic_code_map <- function() {
     clinical_group = character(), source_name = character(), object_name = character(),
     code_system = character(), code = character(), code_name = character(), panel = character(),
     n_rows = numeric(), n_patients = numeric(), evidence_file = character(), mapping_confidence = character(),
-    notes = character(), prior_display_label = character(), curator_label_provenance = character()
+    notes = character(), prior_display_label = character(), curator_label_provenance = character(), raw_column = character()
   )
 }
 
@@ -431,7 +431,248 @@ validate_cartography_reference <- function(project_root = ".") {
   invisible(TRUE)
 }
 
-build_semantic_outputs <- function(project_root = ".", sources = NULL, column_profiles = NULL,
+validate_local_terminology <- function(project_root = ".") {
+  config <- file.path(project_root, 'config')
+  manifest_path <- file.path(config, 'terminology', 'manifest.json')
+  if (!file.exists(manifest_path)) stop('Pinned local terminology manifest unavailable', call. = FALSE)
+  if (!requireNamespace('digest', quietly = TRUE)) stop('digest is required to validate local terminology', call. = FALSE)
+  manifest <- jsonlite::fromJSON(manifest_path, simplifyVector = FALSE)
+  if (!identical(manifest$schema_version, 1L) || !identical(manifest$raw_sha256, '3aef05383e918cc1304c53c5ca6f8a9467b6d700fc3ba18563744c1fbe904353') ||
+      !identical(manifest$active_current_unique_codes, 25699L) || length(manifest$files) != 3L) stop('Invalid pinned terminology manifest', call. = FALSE)
+  expected <- c('terminology/ifcc-npu-retrieved-2026-10-14/official.csv.gz', 'terminology/ifcc-npu-retrieved-2026-10-14/reviewed-display-labels.csv', 'npu-display-dictionary.csv')
+  if (!setequal(vapply(manifest$files, `[[`, character(1), 'path'), expected)) stop('Invalid terminology members', call. = FALSE)
+  for (entry in manifest$files) {
+    path <- file.path(config, entry$path)
+    if (!file.exists(path) || file.info(path)$size != entry$bytes) stop('Local terminology checksum mismatch: ', basename(path), call. = FALSE)
+    connection <- file(path, 'rb')
+    bytes <- tryCatch(readBin(connection, 'raw', n=entry$bytes), finally=close(connection))
+    if (!identical(digest::digest(bytes, algo='sha256', serialize=FALSE), entry$sha256)) stop('Local terminology checksum mismatch: ', basename(path), call. = FALSE)
+  }
+  TRUE
+}
+
+semantic_exact_id <- function(...) {
+  parts <- list(...)
+  paste0('current_', paste(vapply(parts, function(x) paste(format(charToRaw(enc2utf8(as.character(x)))), collapse=''), character(1)), collapse='_'))
+}
+
+semantic_exact_filter <- function(column, value) {
+  paste0('"', gsub('"', '""', column, fixed=TRUE), '" = ', "'", gsub("'", "''", value, fixed=TRUE), "'")
+}
+
+semantic_current_columns <- function(sources, column_profiles) {
+  rows <- if (is.data.frame(column_profiles)) column_profiles else data.frame()
+  if (!all(c('table_name','column_name') %in% names(rows))) rows <- data.frame(table_name=character(),column_name=character())
+  if (is.data.frame(sources) && all(c('table_name','schema_signature') %in% names(sources))) {
+    extras <- list(rows)
+    for (i in seq_len(nrow(sources))) {
+      signature <- sources$schema_signature[[i]]
+      if (is.na(signature) || !nzchar(signature)) next
+      fields <- strsplit(signature, '|', fixed=TRUE)[[1]]
+      for (field in fields) {
+        parts <- strsplit(field, ':', fixed=TRUE)[[1]]
+        if (length(parts) != 3L || !nzchar(parts[[1]])) next
+        extras[[length(extras)+1L]] <- data.frame(table_name=sources$table_name[[i]],column_name=parts[[1]],column_type=parts[[2]],column_class=parts[[3]],profile_kind='metadata_only')
+      }
+    }
+    rows <- bind_rows_base(extras)
+  }
+  if (!nrow(rows)) return(rows)
+  rows <- rows[!is.na(rows$table_name) & nzchar(rows$table_name) & !is.na(rows$column_name) & nzchar(rows$column_name),,drop=FALSE]
+  rows[!duplicated(paste(rows$table_name,rows$column_name,sep='\r')),,drop=FALSE]
+}
+
+semantic_identity_key <- function(rows) {
+  text <- function(key) {
+    value <- if(key %in% names(rows)) as.character(rows[[key]]) else rep('',nrow(rows))
+    value[is.na(value)] <- '';value
+  }
+  descriptor <- nzchar(text('raw_descriptor')) | text('data_shape')=='long_descriptor_table'
+  coded <- nzchar(text('raw_code')) | nzchar(text('raw_value'))
+  vapply(seq_len(nrow(rows)),function(i) {
+    fields <- if(descriptor[[i]]) c('source_name','raw_column','value_column','raw_descriptor','evidence_filter') else if(coded[[i]]) c('source_name','raw_column','value_column','raw_code','raw_value','code_system') else c('source_name','raw_column')
+    do.call(semantic_exact_id,as.list(c(if(descriptor[[i]]) 'descriptor' else if(coded[[i]]) 'code' else 'field',vapply(fields,function(k)text(k)[[i]],character(1)))))
+  },character(1))
+}
+
+semantic_reconcile_frame <- function(existing, generated, keys, refresh=character()) {
+  if(!is.data.frame(existing) || !nrow(existing)) return(generated)
+  key <- function(frame) vapply(seq_len(nrow(frame)),function(i) paste(vapply(keys,function(k) {
+    value <- if(k %in% names(frame)) frame[[k]][[i]] else ''
+    if(is.na(value)) '' else as.character(value)
+  },character(1)),collapse='\r'),character(1))
+  current_keys <- key(generated);old_keys <- key(existing)
+  existing <- existing[old_keys %in% current_keys & !duplicated(old_keys),,drop=FALSE]
+  index <- match(key(existing),current_keys)
+  for(field in intersect(refresh,names(generated))) existing[[field]] <- generated[[field]][index]
+  missing <- !current_keys %in% key(existing)
+  bind_rows_base(list(existing,generated[missing,,drop=FALSE]))
+}
+
+semantic_rehydrate_args <- function(args, project_root='.') {
+  generated <- build_semantic_outputs(project_root,args$sources,args$column_profiles,args$panels %||% list())
+  existing <- args$semantic_dictionary
+  if(is.data.frame(existing) && nrow(existing)) {
+    pairs <- paste(generated$dictionary$source_name,generated$dictionary$raw_column,sep='\r')
+    valid <- paste(existing$source_name,existing$raw_column,sep='\r') %in% pairs
+    descriptor <- !is.na(existing$raw_descriptor) & nzchar(existing$raw_descriptor)
+    fresh_keys <- semantic_identity_key(generated$dictionary)
+    descriptor_keys <- semantic_identity_key(existing)
+    assessment <- args$panels$vital_descriptor_assessment
+    for(i in which(descriptor)) {
+      name_pair <- paste(existing$source_name[[i]],existing$raw_column[[i]],sep='\r')
+      value_pair <- paste(existing$source_name[[i]],existing$value_column[[i]],sep='\r')
+      fields_current <- name_pair %in% pairs && value_pair %in% pairs
+      assessed <- is.data.frame(assessment) && all(c('source_name','name_col','value_col','inventory_status') %in% names(assessment)) &&
+        any(assessment$source_name==existing$source_name[[i]] & assessment$name_col==existing$raw_column[[i]] &
+          assessment$value_col==existing$value_column[[i]] & assessment$inventory_status=='assessed_complete',na.rm=TRUE)
+      present <- descriptor_keys[[i]] %in% fresh_keys
+      valid[[i]] <- fields_current && (!assessed || present)
+      if(valid[[i]] && !present) {
+        existing$mapping_status[[i]] <- 'saved_definition_inventory_unassessed'
+        existing$clinical_caveat[[i]] <- semantic_append_text(existing$clinical_caveat[[i]],'Saved descriptor definition; current descriptor inventory not assessed for this exact context. No current observation is asserted.')
+        for(field in intersect(c('n_rows','n_patients','pct_non_missing'),names(existing))) existing[[field]][[i]] <- NA_real_
+        for(field in intersect(c('min_date','max_date'),names(existing))) existing[[field]][[i]] <- ''
+      }
+    }
+    existing <- existing[valid,,drop=FALSE]
+    existing <- existing[!duplicated(semantic_identity_key(existing)),,drop=FALSE]
+    missing <- !semantic_identity_key(generated$dictionary) %in% semantic_identity_key(existing)
+    generated$dictionary <- bind_rows_base(list(existing,generated$dictionary[missing,,drop=FALSE]))
+  }
+  args$semantic_dictionary <- generated$dictionary
+  # Current explicit value/code evidence participates in product reconstruction.
+  if(is.data.frame(args$semantic_value_map)) {
+    pairs <- paste(generated$dictionary$source_name,generated$dictionary$raw_column,sep='\r')
+    valid <- paste(args$semantic_value_map$source_name,args$semantic_value_map$raw_column,sep='\r') %in% pairs
+    args$semantic_value_map <- args$semantic_value_map[valid,,drop=FALSE]
+    generated$value_map <- args$semantic_value_map
+  }
+  if(is.data.frame(args$semantic_code_map) && nrow(args$semantic_code_map)) {
+    saved <- align_semantic_frame(args$semantic_code_map,semantic_code_map_columns())
+    # An exact stable-ID match recovers old lineage without assigning a legacy
+    # source-only code to an arbitrary current field with the same code.
+    absent_field <- is.na(saved$raw_column) | !nzchar(saved$raw_column)
+    index <- match(saved$semantic_id,generated$code_map$semantic_id)
+    recover <- absent_field & !is.na(index)
+    saved$raw_column[recover] <- generated$code_map$raw_column[index[recover]]
+    absent_field <- is.na(saved$raw_column) | !nzchar(saved$raw_column)
+    for(i in which(absent_field)) saved$notes[[i]] <- semantic_append_text(saved$notes[[i]],'Legacy field lineage unavailable; retained as separate source-level evidence, not assigned to any current field.')
+    pairs <- paste(generated$dictionary$source_name,generated$dictionary$raw_column,sep='\r')
+    valid <- saved$source_name %in% generated$dictionary$source_name & (absent_field | paste(saved$source_name,saved$raw_column,sep='\r') %in% pairs)
+    saved <- saved[valid,,drop=FALSE]
+    key <- function(frame) vapply(seq_len(nrow(frame)),function(i) {
+      values <- as.character(frame[i,c('source_name','raw_column','code_system','code')]);values[is.na(values)] <- ''
+      do.call(semantic_exact_id,as.list(values))
+    },character(1))
+    old_keys <- key(saved)
+    saved <- saved[!duplicated(old_keys),,drop=FALSE]
+    generated$code_map <- bind_rows_base(list(saved,generated$code_map[!key(generated$code_map) %in% key(saved),,drop=FALSE]))
+  }
+  args$semantic_code_map <- generated$code_map
+  generated$panel_links <- semantic_panel_links_for_dictionary(generated$dictionary)
+  links <- args$semantic_panel_links
+  if(is.data.frame(links)) links <- links[links$semantic_id %in% generated$dictionary$semantic_id,,drop=FALSE]
+  # Preserve valid custom panel links as well as every generated default route.
+  generated$panel_links <- semantic_dedupe_panel_links(bind_rows_base(list(links,generated$panel_links)))
+  args$semantic_panel_links <- generated$panel_links
+  product <- build_product_layer_outputs(generated,sources=args$sources,panels=args$panels %||% list(),column_profiles=args$column_profiles,project_root=project_root)
+  product_keys <- list(clinical_concepts='clinical_concept_id',domain_panels='panel_id',panel_kpis=c('panel_id','kpi_id'),
+    panel_distributions=c('panel_id','clinical_concept_id','distribution_type','source_name','raw_column','raw_descriptor','raw_code','raw_value','display_value','statistic'),
+    panel_raw_fields=c('panel_id','semantic_id'),panel_parity=c('old_panel_id','new_panel_id'))
+  refresh <- list(clinical_concepts=c('raw_field_count','value_map_count','code_map_count','primary_sources','related_panel_ids','evidence_files','mapping_status_summary','n_rows','n_patients'),
+    domain_panels=c('source_names','related_clinical_concepts','panel_status','parity_status','missing_upstream_file'),
+    panel_kpis=c('value','source_name','evidence_file','count_scope','denominator_scope','profile_scope'),
+    panel_distributions=c('n','pct','statistic_value'),
+    panel_raw_fields=c('clinical_concept_id','source_name','object_name','raw_column','raw_descriptor','value_column','raw_code','raw_value','evidence_filter'),
+    panel_parity=names(empty_panel_parity()))
+  for(key in names(product)) {
+    arg <- if(key=='panel_kpis') 'panel_kpis_product' else key
+    old <- args[[arg]]
+    if(key=='panel_raw_fields' && is.data.frame(old) && nrow(old)) {
+      old$value_column <- generated$dictionary$value_column[match(old$semantic_id,generated$dictionary$semantic_id)]
+    }
+    args[[arg]] <- semantic_reconcile_frame(old,product[[key]],product_keys[[key]],refresh[[key]])
+  }
+  args
+}
+
+build_semantic_outputs <- function(project_root = '.', sources = NULL, column_profiles = NULL,
+                                   panels = list(), min_cell_count = atlas_min_cell_count()) {
+  validate_local_terminology(project_root)
+  out <- empty_semantic_outputs()
+  labels <- utils::read.csv(file.path(project_root,'config','clinical-display-dictionary.csv'),stringsAsFactors=FALSE,check.names=FALSE,fileEncoding='UTF-8')
+  labels <- labels[labels$kind=='field',,drop=FALSE]
+  columns <- semantic_current_columns(sources,column_profiles)
+  rows <- vector('list',nrow(columns))
+  for (i in seq_len(nrow(columns))) {
+    column <- columns[i,,drop=FALSE]; source <- as.character(column$table_name[[1]]); field <- as.character(column$column_name[[1]])
+    label <- labels[labels$system==source & labels$code==field,,drop=FALSE]
+    reviewed <- nrow(label)==1L && !is.na(label$label[[1]]) && nzchar(label$label[[1]])
+    context <- if(is.data.frame(sources) && 'table_name' %in% names(sources)) sources[sources$table_name==source,,drop=FALSE] else data.frame()
+    get <- function(frame,key,default='') if(nrow(frame) && key %in% names(frame)) first_nonblank(frame[[key]],default) else default
+    definition <- if(reviewed && grepl('^RKKP_(DaMyDa|LYFO|CLL)$',source)) registry_column_definition(field,source) else NULL
+    concept <- if(!is.null(definition) && definition$status!='candidate') definition$concept_id else semantic_exact_id(source,field)
+    group <- if(grepl('^RKKP_',source)) 'Disease Registries' else get(column,'domain',get(context,'domain','Source fields'))
+    rows[[i]] <- semantic_row(semantic_id=semantic_exact_id(source,field),clinical_concept_id=concept,
+      clinical_variable=if(reviewed) label$label[[1]] else field,clinical_group=group,
+      clinical_subgroup=get(column,'subdomain',get(context,'subdomain','Source fields')),
+      semantic_meaning=if(reviewed) label$definition[[1]] else 'Description unavailable',
+      source_name=source,object_name=source,schema_name=get(context,'schema'),table_name=get(context,'table',source),
+      raw_column=field,raw_descriptor='',raw_code='',raw_value='',code_system='',unit='',
+      value_type=get(column,'column_type'),data_shape='current_column_metadata',patient_id_column=get(context,'id_column_guess'),
+      date_column=get(context,'date_column_guess'),value_column=field,source_level='',geography='',
+      n_rows=NA_real_,n_patients=NA_real_,pct_non_missing=NA_real_,min_date='',max_date='',
+      evidence_file='atlas_column_profiles.csv; atlas_sources.csv',evidence_filter=paste0('source=',source,'; column=',field),
+      mapping_confidence=if(reviewed) 'reviewed_display_label' else 'unreviewed',mapping_status=if(reviewed) 'reviewed_display_label' else 'description_unavailable',
+      privacy_note=paste('Field metadata only; value profile:',get(column,'profile_kind','not_produced')),
+      clinical_caveat='Stored unit unverified. Field discovery and reviewed names do not establish observed values or clinical findings.',
+      search_terms=semantic_terms(c(source,field,if(reviewed)c(label$label,label$label_da) else character(),group)),
+      prior_display_label='',curator_label_provenance=if(reviewed) semantic_terms(c('config/clinical-display-dictionary.csv',label$source_label,label$retrieved_on)) else '')
+  }
+  # This explicit current-panel contract joins a measurement-name field, exact
+  # descriptor/filter and result field. No historical descriptor inventory is read.
+  descriptors <- panels$vital_descriptors
+  if (is.data.frame(descriptors) && all(c('source_name','name_col','value_col','descriptor') %in% names(descriptors))) {
+    descriptors <- unique(descriptors[c('source_name','name_col','value_col','descriptor')])
+    for(i in seq_len(nrow(descriptors))) {
+      r <- descriptors[i,,drop=FALSE]
+      if(any(is.na(r)) || any(!nzchar(unlist(r)))) next
+      def <- vital_descriptor_definition(r$descriptor[[1]])
+      rows[[length(rows)+1L]] <- semantic_row(semantic_id=semantic_exact_id(r$source_name,r$name_col,r$value_col,r$descriptor),
+        clinical_concept_id=def$concept_id,clinical_variable=def$variable,clinical_group='Vitals',clinical_subgroup=def$subgroup,
+        semantic_meaning=if(def$status=='candidate') 'Description unavailable' else def$meaning,source_name=r$source_name,object_name=r$source_name,
+        raw_column=r$name_col,raw_descriptor=r$descriptor,raw_code='',raw_value='',code_system='local_SP_descriptor',unit='',
+        value_type='numeric',data_shape='long_descriptor_table',value_column=r$value_col,
+        n_rows=NA_real_,n_patients=NA_real_,pct_non_missing=NA_real_,evidence_file='current panel: vital_descriptors',
+        evidence_filter=semantic_exact_filter(r$name_col,r$descriptor),mapping_confidence=def$confidence,
+        mapping_status=if(def$status=='candidate') 'description_unavailable' else 'reviewed_display_label',
+        privacy_note='Descriptor metadata only',clinical_caveat='Stored unit unverified; descriptor and result field must be interpreted together.',
+        search_terms=semantic_terms(c(r$source_name,r$name_col,r$value_col,r$descriptor,def$terms)),
+        curator_label_provenance='Reviewed vital descriptor display vocabulary in R/semantic_dictionary.R; no stored-unit verification')
+    }
+  }
+  out$dictionary <- align_semantic_frame(bind_rows_base(rows),semantic_dictionary_columns())
+  inventory <- panels$lab_npu_code_coverage
+  if(is.data.frame(inventory) && all(c('table_name','code_column','lab_code') %in% names(inventory))) {
+    inventory <- unique(inventory[c('table_name','code_column','lab_code')])
+    terminology <- utils::read.csv(file.path(project_root,'config','npu-display-dictionary.csv'),stringsAsFactors=FALSE,fileEncoding='UTF-8')
+    index <- match(toupper(inventory$lab_code),terminology$code)
+    out$code_map <- bind_rows_base(lapply(seq_len(nrow(inventory)),function(i) {
+      r <- inventory[i,,drop=FALSE]; hit <- index[[i]]; known <- !is.na(hit)
+      semantic_code_row(semantic_id=semantic_exact_id(r$table_name,r$code_column,r$lab_code),clinical_concept_id=semantic_exact_id('NPU',r$lab_code),
+        clinical_variable=if(known) terminology$label[[hit]] else 'Description unavailable',clinical_group='Laboratory',source_name=r$table_name,
+        object_name=r$table_name,raw_column=r$code_column,code_system='NPU',code=r$lab_code,code_name=if(known) terminology$label[[hit]] else 'Description unavailable',
+        panel='Current source code inventory',n_rows=NA_real_,n_patients=NA_real_,evidence_file='current panel: lab_npu_code_coverage',
+        mapping_confidence=if(known) {if(terminology$status[[hit]]=='active') 'official_reference' else 'reviewed_legacy_reference'} else 'unreviewed',
+        notes=paste('Exact source field:',r$code_column,if(known) terminology$note[[hit]] else '', '; reference unit does not verify stored source unit; official name coverage is separate from consensus grouping coverage.'))
+    }))
+  }
+  out$panel_links <- semantic_panel_links_for_dictionary(out$dictionary)
+  out
+}
+
+build_legacy_reference_semantic_outputs <- function(project_root = ".", sources = NULL, column_profiles = NULL,
                                    panels = list(), min_cell_count = atlas_min_cell_count()) {
   validate_cartography_reference(project_root)
   pieces <- list(

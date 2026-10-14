@@ -146,6 +146,7 @@ atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapte
   atlas_preflight_check('invalid_policy','clinical-source-membership.json',load_clinical_source_membership(project_root))
   atlas_preflight_check('invalid_configuration','transport version',atlas_transport_version())
   dictionary <- atlas_preflight_check('invalid_dictionary','npu-consensus-dictionary.tsv',load_npu_consensus_dictionary(project_root))
+  atlas_preflight_check('invalid_dictionary','pinned local terminology',validate_local_terminology(project_root))
   atlas_preflight_check('invalid_dictionary','npu-detective-surfaces.tsv',load_npu_detective_surfaces(project_root))
   atlas_preflight_check('invalid_dictionary','isotype-vectors.tsv',load_isotype_vectors(project_root,dictionary=dictionary))
   atlas_preflight_check('invalid_dictionary','mm-treatment-code-families.tsv',load_mm_treatment_code_families(project_root))

@@ -36,15 +36,15 @@ expect_true("dictionary_codes" %in% summary_panel$metric, "Dictionary summary sh
 expect_true(any(vector_panel$consensus_vector == "CREATININE_CODES" & vector_panel$n_dictionary_codes >= 2), "Vector panel should summarize dictionary codes by consensus vector.")
 
 labs <- data.frame(
-  analysiscode = c("NPU04998", "NPU04998", "npu01443", "not-a-code", "NPU99999"),
-  result = c(10, 11, 2, 99, 7),
+  analysiscode = c(rep("NPU04998", 5), "npu01443", "not-a-code", rep("NPU99999", 5)),
+  result = seq_len(12),
   stringsAsFactors = FALSE
 )
 usage <- panel_npu_lab_usage_by_vector(labs, "labs", dictionary, min_cell_count = 2L)
-unmatched_suppressed <- panel_npu_lab_unmatched_codes(labs, "labs", dictionary, min_cell_count = 2L)
+unmatched_suppressed <- panel_npu_lab_unmatched_codes(labs, "labs", dictionary, min_cell_count = 6L)
 unmatched_visible <- panel_npu_lab_unmatched_codes(labs, "labs", dictionary, min_cell_count = 1L)
 coverage <- panel_lab_codes(labs, "labs", min_cell_count = 1L)
-expect_true(any(usage$consensus_vector == "CREATININE_CODES" & usage$n_observed == 2L), "Observed dictionary NPUs should aggregate by consensus vector.")
+expect_true(any(usage$consensus_vector == "CREATININE_CODES" & usage$n_observed == 5L), "Observed dictionary NPUs should aggregate by consensus vector at the approved privacy floor.")
 expect_false(any(usage$consensus_vector == "CALCIUM_TOTAL_CODES"), "Vector usage below the minimum cell count should be suppressed.")
 expect_equal(nrow(unmatched_suppressed), 0L, "Unmatched observed NPU codes below the minimum cell count should be suppressed.")
 expect_true(any(unmatched_visible$npu_code == "NPU99999"), "Unmatched NPU-like codes should be visible only when the minimum cell count allows them.")

@@ -252,16 +252,22 @@ invisible(write_static_atlas(run_dir, payload, project_root = root))
 payload_js <- paste(readLines(file.path(run_dir, "site", "DALYCARE_atlas_payload.js"), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
 payload_json <- sub("^window\\.DALYCARE_ATLAS_PAYLOAD\\s*=\\s*", "", payload_js)
 payload_json <- sub(";\\s*$", "", payload_json)
-after <- c(
-  semantic_dictionary_rows = json_array_row_count(payload_json, "semantic_dictionary_rows"),
-  semantic_value_map_rows = json_array_row_count(payload_json, "semantic_value_map_rows"),
-  semantic_code_map_rows = json_array_row_count(payload_json, "semantic_code_map_rows"),
-  sources = json_array_row_count(payload_json, "sources"),
-  catalog_rows = json_array_row_count(payload_json, "catalog_rows"),
-  "cohort_counts.data_point_counts" = json_array_row_count(payload_json, "data_point_counts"),
-  "cohort_counts.treatment_strategy_strata_counts" = json_array_row_count(payload_json, "treatment_strategy_strata_counts"),
-  "cohort_counts.answerability_summary" = json_array_row_count(payload_json, "answerability_summary")
-)
+# Compare decoded clinical rows, including rows packed by transport v2. Searching
+# raw JSON arrays mistakes the deliberately null packed slots for lost evidence.
+wire <- jsonlite::fromJSON(payload_json,simplifyVector=FALSE)
+decoded <- wire$payload
+for(table in wire$row_tables) {
+  rows <- lapply(table$rows,function(row) {
+    keys <- unlist(table$schemas[[row[[1L]]+1L]],use.names=FALSE)
+    setNames(row[-1L],keys)
+  })
+  decoded <- atlas_evidence_set(decoded,unlist(table$path,use.names=FALSE),rows)
+}
+for(alias in wire$aliases) decoded <- atlas_evidence_set(decoded,unlist(alias$target,use.names=FALSE),atlas_evidence_get(decoded,unlist(alias$source,use.names=FALSE)))
+after <- vapply(names(before),function(key) {
+  path <- if(startsWith(key,'cohort_counts.')) c('mcl_triangle_feasibility',strsplit(key,'.',fixed=TRUE)[[1]]) else key
+  as.integer(count_rows(atlas_evidence_get(decoded,path)))
+},integer(1))
 
 for (name in names(before)) {
   expect_equal(

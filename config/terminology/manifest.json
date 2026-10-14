@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "snapshot": "ifcc-npu-retrieved-2026-10-14",
+  "retrieved_on": "2026-10-14",
+  "source_url": "https://cms.ifcc.org/wp-content/uploads/npu-codes-latest.csv",
+  "landing_url": "https://ifcc.org/ifcc-scientific-division/sd-committees/c-npu/",
+  "raw_sha256": "3aef05383e918cc1304c53c5ca6f8a9467b6d700fc3ba18563744c1fbe904353",
+  "raw_bytes": 11026108,
+  "active_current_unique_codes": 25699,
+  "publication_date": null,
+  "reviewed_legacy_fallback_codes": [
+    "NPU17597"
+  ],
+  "consensus_grouping": "Separate config/npu-consensus-dictionary.tsv; not official name coverage",
+  "files": [
+    {
+      "path": "terminology/ifcc-npu-retrieved-2026-10-14/official.csv.gz",
+      "sha256": "53343ff2c503b74d16b67b79cb75cb1c99f7dd1ee081c296c5d245c194799c59",
+      "bytes": 1205365
+    },
+    {
+      "path": "terminology/ifcc-npu-retrieved-2026-10-14/reviewed-display-labels.csv",
+      "sha256": "239819c889b53c2234564ce5ed1261756abd42026cf0124e0ff7be66067184d6",
+      "bytes": 81966
+    },
+    {
+      "path": "npu-display-dictionary.csv",
+      "sha256": "1c1c2579c36c9da40dc9669851bf0c64dc0dcc92d72e97e530373875a4e24391",
+      "bytes": 11064589
+    }
+  ]
+}

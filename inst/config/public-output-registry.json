@@ -4126,7 +4126,9 @@
         "mapping_confidence",
         "mapping_status",
         "privacy_note",
-        "clinical_caveat"
+        "clinical_caveat",
+        "value_column",
+        "evidence_filter"
       ],
       "group": "Evidence",
       "kind": "field_metadata",
@@ -4236,6 +4238,26 @@
           "mapping_confidence": "string",
           "notes": "string",
           "prior_display_label": "string",
+          "curator_label_provenance": "string",
+          "raw_column": "string"
+        },
+        {
+          "semantic_id": "string",
+          "clinical_concept_id": "string",
+          "clinical_variable": "string",
+          "clinical_group": "string",
+          "source_name": "string",
+          "object_name": "string",
+          "code_system": "string",
+          "code": "string",
+          "code_name": "string",
+          "panel": "string",
+          "n_rows": "number",
+          "n_patients": "number",
+          "evidence_file": "string",
+          "mapping_confidence": "string",
+          "notes": "string",
+          "prior_display_label": "string",
           "curator_label_provenance": "string"
         }
       ],
@@ -4250,7 +4272,8 @@
         "panel",
         "n_rows",
         "n_patients",
-        "mapping_confidence"
+        "mapping_confidence",
+        "raw_column"
       ],
       "group": "Evidence",
       "kind": "field_metadata",
@@ -5063,6 +5086,31 @@
           "profile_scope": "string",
           "privacy_note": "string",
           "clinical_caveat": "string",
+          "sort_order": "number",
+          "value_column": "string"
+        },
+        {
+          "panel_id": "string",
+          "panel_section": "string",
+          "semantic_id": "string",
+          "clinical_concept_id": "string",
+          "clinical_variable": "string",
+          "source_name": "string",
+          "object_name": "string",
+          "raw_column": "string",
+          "raw_descriptor": "string",
+          "raw_code": "string",
+          "raw_value": "string",
+          "raw_field_label": "string",
+          "mapping_status": "string",
+          "mapping_confidence": "string",
+          "evidence_file": "string",
+          "evidence_filter": "string",
+          "count_scope": "string",
+          "denominator_scope": "string",
+          "profile_scope": "string",
+          "privacy_note": "string",
+          "clinical_caveat": "string",
           "sort_order": "number"
         }
       ],
@@ -5085,7 +5133,9 @@
         "profile_scope",
         "privacy_note",
         "clinical_caveat",
-        "sort_order"
+        "sort_order",
+        "value_column",
+        "evidence_filter"
       ],
       "group": "Evidence",
       "kind": "aggregate_summary",

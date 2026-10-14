@@ -104,6 +104,7 @@ empty_panel_raw_fields <- function() {
     raw_code = character(),
     raw_value = character(),
     raw_field_label = character(),
+    value_column = character(),
     mapping_status = character(),
     mapping_confidence = character(),
     evidence_file = character(),
@@ -250,7 +251,6 @@ product_panel_raw_fields <- function(dictionary, panel_links, project_root = "."
         idx <- match(links$semantic_id[[i]], dictionary$semantic_id)
         if (is.na(idx)) next
         row <- dictionary[idx, , drop = FALSE]
-        if (product_identifier_like_column(row$raw_column[[1]] %||% "")) next
         panel_id <- product_normalize_panel_id(links$panel_id[[i]], row)
         rows[[length(rows) + 1L]] <- product_raw_field_row(
           panel_id = panel_id,
@@ -264,6 +264,7 @@ product_panel_raw_fields <- function(dictionary, panel_links, project_root = "."
           raw_descriptor = row$raw_descriptor[[1]],
           raw_code = row$raw_code[[1]],
           raw_value = row$raw_value[[1]],
+          value_column = row$value_column[[1]],
           raw_field_label = product_raw_field_label(row),
           mapping_status = row$mapping_status[[1]],
           mapping_confidence = row$mapping_confidence[[1]],
@@ -279,7 +280,6 @@ product_panel_raw_fields <- function(dictionary, panel_links, project_root = "."
       }
     }
   }
-  rows <- c(rows, product_structural_raw_fields(project_root, length(rows) + 1L))
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(empty_panel_raw_fields())
   out <- product_dedupe_raw_fields(out)
@@ -566,6 +566,7 @@ product_panel_distributions <- function(dictionary, value_map, code_map, panels,
         clinical_variable = code_map$clinical_variable[[i]],
         distribution_type = "code_map",
         source_name = code_map$source_name[[i]],
+        raw_column = if('raw_column' %in% names(code_map)) code_map$raw_column[[i]] else '',
         raw_code = code_map$code[[i]],
         display_value = code_map$code_name[[i]],
         value_class = code_map$code_system[[i]],
@@ -578,7 +579,6 @@ product_panel_distributions <- function(dictionary, value_map, code_map, panels,
       )
     }
   }
-  rows <- c(rows, product_vital_numeric_distributions(project_root, length(rows) + 1L))
   rows <- c(rows, product_registry_section_distributions(length(rows) + 1L))
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(empty_panel_distributions())
@@ -671,7 +671,6 @@ product_panel_kpis <- function(sources, panels, raw_fields, distributions, proje
     sort_order <- sort_order + 1L
   }
   rows <- c(rows, product_source_kpis(sources, specs, sort_order, membership_spec = membership_spec))
-  rows <- c(rows, product_vital_kpis(project_root, length(rows) + 1L))
   out <- bind_rows_base(rows)
   if (!nrow(out)) return(empty_panel_kpis())
   align_product_frame(out, names(empty_panel_kpis()))
@@ -985,6 +984,7 @@ product_sum_numeric <- function(x) {
 }
 
 product_concept_status <- function(rows) {
+  if (all(rows$data_shape %in% c('current_column_metadata','long_descriptor_table'))) return('metadata_only')
   statuses <- unique_nonblank(rows$mapping_status)
   if ("confirmed" %in% statuses) return("available")
   if ("inferred" %in% statuses) return("inferred")
@@ -1043,6 +1043,7 @@ product_concept_caveat <- function(id, rows) {
 }
 
 product_scope_for_evidence <- function(evidence_file) {
+  if (grepl('atlas_column_profiles.csv|atlas_sources.csv|current panel:', evidence_file, fixed=FALSE)) return('source_identity_metadata')
   evidence_file <- tolower(as.character(evidence_file %||% ""))
   if (!nzchar(evidence_file)) return("unknown")
   if (grepl("schema_overview|columns", evidence_file)) return("cartography_scan")
@@ -1061,7 +1062,7 @@ product_merge_scopes <- function(scopes) {
 }
 
 product_dedupe_raw_fields <- function(x) {
-  key <- paste(x$panel_id, x$source_name, x$raw_column, x$raw_descriptor, x$raw_code, x$raw_value, x$clinical_variable, sep = "\r")
+  key <- paste(x$panel_id, x$semantic_id, x$source_name, x$raw_column, x$value_column, x$raw_descriptor, x$evidence_filter, x$raw_code, x$raw_value, sep = "\r")
   x[!duplicated(key), , drop = FALSE]
 }
 

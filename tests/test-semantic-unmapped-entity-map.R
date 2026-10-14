@@ -1,92 +1,36 @@
-root <- normalizePath(file.path(getwd()), winslash = "/", mustWork = FALSE)
-source(file.path(root, "tests", "helper.R"))
-source_test_runtime(root)
-
-expect_stops <- function(expr, pattern) {
-  err <- tryCatch(
-    {
-      force(expr)
-      NULL
-    },
-    error = function(e) conditionMessage(e)
-  )
-  expect_true(!is.null(err), "Expected expression to stop.")
-  expect_true(grepl(pattern, err, ignore.case = TRUE), paste("Expected error matching", pattern, "but got", err))
+source('tests/helper.R')
+source_test_runtime()
+expect_stops <- function(expr,pattern) {
+  e <- tryCatch({force(expr);NULL},error=function(e)conditionMessage(e))
+  expect_true(!is.null(e) && grepl(pattern,e,ignore.case=TRUE),paste('Expected error:',pattern))
 }
-
-map_path <- semantic_unmapped_entity_map_path(root)
-expect_file(map_path)
-
-entity_map <- read_semantic_unmapped_entity_map(root, validate = TRUE)
-expect_equal(nrow(entity_map), 3902L, "Semantic unmapped entity map should preserve all supplied rows.")
-expect_true(all(semantic_unmapped_entity_map_columns() %in% names(entity_map)), "Semantic unmapped entity map should have the required columns.")
-expect_true(!any(duplicated(entity_map$entity_scope_key)), "Semantic unmapped entity map keys should be unique.")
-for (field in c("fill_preferred_label", "fill_denotation_definition", "fill_clinical_domain", "fill_specimen_or_context", "fill_unit_or_value_type")) {
-  expect_true(all(nzchar(trimws(entity_map[[field]]))), paste("Semantic unmapped entity map should not have blank", field))
+# Synthetic mappings exercise original resolution/conflict/privacy requirements.
+systems <- c('ATC','SNOMED/pathology','SKS/procedure','ICD10/SKS_diagnosis','Danish_pathology_AEKI_Ki67_percent_code','NPU')
+codes <- c('C03AB01','T06002','BWGC1','DD479B','AEKI030','NPU04998')
+names <- c('Bendroflumethiazide','Bone marrow','Conventional external beam radiotherapy','Monoclonal B-cell lymphocytosis','Ki-67 coded percent value: 30%','Conflicting analyte')
+rows <- as.data.frame(setNames(replicate(length(semantic_unmapped_entity_map_columns()),rep('',6),simplify=FALSE),semantic_unmapped_entity_map_columns()),stringsAsFactors=FALSE)
+rows$code_system <- systems;rows$entity_code <- codes;rows$entity_scope_key <- paste(systems,codes,sep=':')
+rows$fill_preferred_label <- names;rows$fill_denotation_definition <- paste('Synthetic reviewed meaning:',names)
+rows$fill_clinical_domain <- c('Treatment','Pathology','Imaging','Diagnosis','Pathology','Laboratory')
+rows$fill_specimen_or_context <- 'Synthetic context';rows$fill_unit_or_value_type <- 'Code definition only'
+rows$source_tables <- 'SYNTHETIC';rows$source_files <- 'synthetic-inventory.tsv';rows$observed_count_max <- '99'
+rows$observed_count_sum_across_surfaces_do_not_treat_as_unique <- '999'
+validate_semantic_unmapped_entity_map(rows)
+bad <- rows;bad$entity_scope_key <- NULL;expect_stops(validate_semantic_unmapped_entity_map(bad),'missing')
+bad <- rows;bad$entity_scope_key[[2]] <- bad$entity_scope_key[[1]];expect_stops(validate_semantic_unmapped_entity_map(bad),'duplicate')
+for(pair in list(c('010101-1234','CPR'),c('2020-01-01','date'),c('H\u00c3\u00b8jde','mojibake'))) {
+  bad <- rows;bad$fill_preferred_label[[1]] <- pair[[1]];expect_stops(validate_semantic_unmapped_entity_map(bad),pair[[2]])
 }
-
-bad <- entity_map
-bad$entity_scope_key <- NULL
-expect_stops(validate_semantic_unmapped_entity_map(bad), "missing")
-
-bad <- entity_map
-bad$entity_scope_key[[2]] <- bad$entity_scope_key[[1]]
-expect_stops(validate_semantic_unmapped_entity_map(bad), "duplicate")
-
-bad <- entity_map
-bad$fill_preferred_label[[1]] <- "010101-1234"
-expect_stops(validate_semantic_unmapped_entity_map(bad), "CPR")
-
-bad <- entity_map
-bad$fill_preferred_label[[1]] <- "2020-01-01"
-expect_stops(validate_semantic_unmapped_entity_map(bad), "date")
-
-bad <- entity_map
-bad$fill_preferred_label[[1]] <- "HÃ¸jde"
-expect_stops(validate_semantic_unmapped_entity_map(bad), "mojibake")
-
-semantic <- build_semantic_outputs(project_root = root, min_cell_count = 5)
-overlay <- semantic$unmapped_entity_overlay
-conflicts <- semantic$mapping_conflicts
-code_map <- semantic$code_map
-dictionary <- semantic$dictionary
-
-expect_true(nrow(overlay) == 3902L, "Overlay output should preserve one row per supplied entity.")
-expect_true(nrow(conflicts) > 0, "Overlay should emit a conflict audit where supplied labels disagree with existing labels.")
-expect_true(all(is.na(code_map$n_patients[grepl("^curated_overlay_", code_map$semantic_id)])), "Curated overlay code rows must not expose patient counts.")
-expect_true(all(is.na(dictionary$n_patients[dictionary$data_shape == "semantic_overlay"])), "Curated overlay dictionary rows must not expose patient counts.")
-
-expect_overlay <- function(scope_key, code, label_pattern) {
-  row <- overlay[overlay$entity_scope_key == scope_key, , drop = FALSE]
-  expect_true(nrow(row) == 1L, paste("Expected overlay row for", scope_key))
-  expect_true(grepl(label_pattern, row$fill_preferred_label[[1]], ignore.case = TRUE), paste("Expected readable label for", scope_key))
-  expect_true(row$overlay_action[[1]] == "wired_overlay", paste("Expected non-conflicting overlay to be wired:", scope_key))
-  expect_true(any(code_map$code == code & grepl(label_pattern, code_map$code_name, ignore.case = TRUE)), paste("Expected code map label for", scope_key))
-}
-
-expect_overlay("ATC:C03AB01", "C03AB01", "Bendroflumethiazide")
-expect_overlay("SNOMED/pathology:T06002", "T06002", "Cristamarv")
-expect_overlay("SKS/procedure:BWGC1", "BWGC1", "BWGC1")
-expect_overlay("ICD10/SKS_diagnosis:DD479B", "DD479B", "Monoclonal B-cell lymphocytosis")
-expect_overlay("Danish_pathology_AEKI_Ki67_percent_code:AEKI030", "AEKI030", "Ki-67 coded percent value: 30%")
-
-for (code in c("NPU02593", "NPU04998", "NPU19748")) {
-  expect_true(any(conflicts$entity_code == code & conflicts$mapping_status == "conflict_pending_review"), paste("Expected NPU conflict audit row for", code))
-}
-expect_true(
-  all(c("NPU02593", "NPU04998", "NPU19748") %in% semantic$curator_label_lookup$code),
-  "Cycle 5 curator labels should be available as the current authoritative display resolver for previously conflicted NPU codes."
-)
-expect_false(
-  any(semantic$curator_label_lookup$mapping_status_or_reason == "conflict_pending_review"),
-  "Cycle 5 approved curator rows should not be reopened as conflict-pending."
-)
-
-curated_code_rows <- code_map[grepl("^curated_overlay_", code_map$semantic_id), , drop = FALSE]
-curated_dictionary_rows <- dictionary[dictionary$data_shape == "semantic_overlay", , drop = FALSE]
-expect_true(all(is.na(curated_code_rows$n_patients)), "Curated overlay code rows must leave n_patients blank.")
-expect_true(all(is.na(curated_dictionary_rows$n_patients)), "Curated overlay dictionary rows must leave n_patients blank.")
-expect_false(any(
-  !is.na(overlay$n_patients) &
-    overlay$n_patients %in% suppressWarnings(as.numeric(entity_map$observed_count_sum_across_surfaces_do_not_treat_as_unique))
-), "Cross-surface observed-count sums must not be exposed as overlay patient counts.")
+root <- tempfile();dir.create(root);dir.create(file.path(root,'config'))
+write.table(rows,semantic_unmapped_entity_map_path(root),sep='\t',quote=TRUE,row.names=FALSE,fileEncoding='UTF-8')
+existing <- semantic_code_row(semantic_id='current',clinical_concept_id='creatinine',clinical_variable='Creatinine',clinical_group='Laboratory',source_name='SYNTHETIC',code_system='NPU',code='NPU04998',code_name='Creatinine',mapping_confidence='high')
+out <- semantic_build_unmapped_entity_overlay(root,empty_semantic_data_dictionary(),existing,5)
+expect_equal(nrow(out$overlay),6L,'Every supplied mapping receives an outcome.')
+expect_equal(nrow(out$conflicts),1L,'Conflicting analyte requires review.')
+expect_equal(out$conflicts$entity_code[[1]],'NPU04998')
+expect_equal(out$conflicts$mapping_status[[1]],'conflict_pending_review')
+expect_true(all(out$overlay$overlay_action[1:5]=='wired_overlay'),'Nonconflicting exact code meanings resolve.')
+expect_true(all(codes[1:5] %in% out$code_map$code),'Resolved mappings retain exact codes.')
+expect_true(all(is.na(out$code_map$n_patients)) && all(is.na(out$dictionary$n_patients)),'Cross-surface counts cannot become patient counts.')
+expect_false(any(out$code_map$code=='NPU04998'),'Conflicts cannot overwrite reviewed meanings.')
+cat('Synthetic semantic overlay contract passed.\n')

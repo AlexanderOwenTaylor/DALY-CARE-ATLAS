@@ -1,0 +1,2 @@
+config/npu-display-dictionary.csv -text
+config/terminology/** -text
