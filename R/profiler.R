@@ -141,7 +141,8 @@ empty_column_profiles <- function() {
     pct_missing = numeric(), n_distinct_capped = integer(), is_sensitive = logical(),
     is_date_like = logical(), is_numeric_like = logical(), min = numeric(),
     mean = numeric(), median = numeric(), p25 = numeric(), p75 = numeric(),
-    max = numeric(), min_date = character(), max_date = character()
+    max = numeric(), min_date = character(), max_date = character(),
+    sampling_method=character(),sample_size=numeric(),eligible_n=numeric(),sampling_complete=logical()
   )
 }
 
@@ -153,7 +154,7 @@ profile_column_profiles <- function(data, table_name, profile_mode = "full") {
     missing <- is.na(x) | trimws(as.character(x)) == ""
     n_available <- sum(!missing)
     is_sensitive <- safe_sensitive_column(nm, x)
-    is_date_like <- is_date_like_column(nm, x)
+    is_date_like <- is_date_like_column(nm, x) || identical(atlas_date_rule(table_name,nm)$evidence_status,"reviewed_mapping")
     is_numeric_like <- is_numeric_like_vector(x)
     profile_kind <- if (is_sensitive) {
       "sensitive"
@@ -165,7 +166,7 @@ profile_column_profiles <- function(data, table_name, profile_mode = "full") {
       "categorical"
     }
     numeric_stats <- column_numeric_stats(x, enabled = !is_sensitive && is_numeric_like && !identical(profile_mode, "schema"))
-    date_stats <- column_date_stats(x, enabled = !is_sensitive && is_date_like && !identical(profile_mode, "schema"))
+    date_stats <- column_date_stats(x, enabled = !is_sensitive && is_date_like && !identical(profile_mode, "schema"), format_rule=atlas_date_rule(table_name,nm)$format_rule)
     data.frame(
       table_name = table_name,
       column_name = nm,
@@ -189,6 +190,8 @@ profile_column_profiles <- function(data, table_name, profile_mode = "full") {
       max = numeric_stats$max,
       min_date = as.character(date_stats$min_date),
       max_date = as.character(date_stats$max_date),
+      sampling_method=if(is_numeric_like && !is_sensitive && profile_mode!="schema") "exact_in_memory" else NA_character_,
+      sample_size=NA_real_,eligible_n=NA_real_,sampling_complete=NA,
       stringsAsFactors = FALSE
     )
   })
@@ -213,10 +216,10 @@ column_numeric_stats <- function(x, enabled = TRUE) {
   )
 }
 
-column_date_stats <- function(x, enabled = TRUE) {
+column_date_stats <- function(x, enabled = TRUE, format_rule="iso") {
   empty <- list(min_date = NA_character_, max_date = NA_character_)
   if (!isTRUE(enabled)) return(empty)
-  values <- safe_as_date(x)
+  values <- safe_as_date(x,format_rule)
   values <- values[!is.na(values)]
   if (!length(values)) return(empty)
   list(min_date = as.character(min(values)), max_date = as.character(max(values)))
@@ -355,17 +358,12 @@ profile_panels <- function(data, table_name, profile_mode = "full", min_cell_cou
     registry_clinical_summary = panel_registry_summary(data, table_name),
     registry_field_summaries = registry_field_summaries(data, table_name, project_root, min_cell_count),
     sp_operational_sources = panel_sp_sources(data, table_name),
-    atlas_temporal_coverage_years = panel_temporal_coverage_years(
-      data,
-      table_name,
-      min_cell_count = min_cell_count
-    ),
-    atlas_spatial_region_counts = panel_spatial_region_counts(
-      data,
-      table_name,
-      min_cell_count = min_cell_count
-    )
+    atlas_temporal_coverage_years = empty_temporal_coverage_years(),
+    atlas_spatial_region_counts = empty_spatial_region_counts()
   )
+  summary_panels$coverage_evidence <- coverage_evidence_panels_from_data(data,table_name,min_cell_count)$coverage_evidence
+  summary_panels <- coverage_release_panels(summary_panels,data.frame(table_name=table_name),min_cell_count)
+  summary_panels <- c(summary_panels,vital_inventory_from_data(data,table_name,min_cell_count))
   if (identical(profile_mode, "summary")) {
     return(summary_panels)
   }

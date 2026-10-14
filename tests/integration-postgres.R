@@ -95,4 +95,152 @@ tryCatch({
   stopifnot(sum(as.numeric(aliases$n[aliases$status=='valid']))==20,!any(aliases$status=='conflicting'))
   cat('PASS PostgreSQL v2 fixed groups, coarsening, open tails, 19/20, constant, complements, same-band conflicts, aliases and exact parser boundaries.\n')
   cat('PASS PostgreSQL C1 production SQL acceptance: three registries, repeated people, conflicts, unknown encoding, threshold, malformed/overflow numeric values and missing keys.\n')
+  # D uses the real generated parser, exact membership aggregate and producer path.
+  source_test_runtime()
+  Sys.unsetenv(c('DALYCARE_REGISTRY_PERSON_KEYS_FILE','DALYCARE_DATE_FORMATS_FILE'))
+  ref<-DBI::Id(schema=schema,table='date_coverage');quoted<-as.character(DBI::dbQuoteIdentifier(connection,ref))
+  dates<-c('2024-02-29','2023-02-29','2024-02-30','2024-13-01','2024-01-01junk','01-02-03','01/02/2024',
+    '31-12-2024','20240101','2024-01-01T23:59:59Z','2024-01-01 24:00:00','2024-01-01T12:30:00+02:00',
+    '2024-01-01T12:30:00+24:00','2024-01-01T12:30:60Z','1900-02-29','2000-02-29',NA,'','9999-12-31','0000-01-01','\t2024-01-01\r\n','31.12.2024','01-02-03')
+  DBI::dbWriteTable(connection,ref,data.frame(id=seq_along(dates),value=dates),overwrite=TRUE,row.names=FALSE)
+  for(rule in c('iso','dmy_dash','dmy_slash','dmy_dot','ymd_compact')) {
+    expression<-dbi_text_date_string_expression('"value"',rule)
+    parsed<-DBI::dbGetQuery(connection,paste0('select ',expression,' parsed from ',quoted,' order by id'))$parsed
+    stopifnot(identical(parsed,as.character(safe_as_date(dates,rule))))
+  }
+  for(rule_name in c('iso','dmy_dash','dmy_slash','dmy_dot','ymd_compact')) {
+    rule<-list(format_rule=rule_name,sentinel_dates='9999-12-31')
+    reason<-coverage_date_format_sql(connection,'"value"',rule)
+    sql_reasons<-DBI::dbGetQuery(connection,paste0('select ',reason,' reason from ',quoted,' order by id'))$reason
+    stopifnot(identical(sql_reasons,coverage_date_format_values(dates,rule)))
+  }
+  compact<-dbi_text_date_string_expression('20240101','ymd_compact')
+  stopifnot(DBI::dbGetQuery(connection,paste('select',compact,'d'))$d==as.character(safe_as_date(20240101,'ymd_compact')))
+  extracted<-DBI::dbGetQuery(connection,paste0('select ',dbi_date_year_expression('"value"','text','text'),' y from ',quoted,' order by id'))$y
+  stopifnot(identical(extracted,as.integer(format(safe_as_date(dates),'%Y'))))
+  # Invalid dates cannot crash the Situation cast or contribute a year.
+  expression<-situation_date_expression(connection,data.frame(column_name='value',data_type='text',udt_name='text'),'value')
+  DBI::dbGetQuery(connection,paste0('select ',expression,' parsed from ',quoted))
+  data<-data.frame(patientid=c(1:10,1),event_date=c(rep('2024-01-01',5),rep('2025-01-01',5),'2025-02-01'),
+    Region=c(rep('Capital',3),rep('Region Hovedstaden',2),rep('Zealand',6)))
+  source_row<-data.frame(table_name='RKKP_CLL',n_rows=nrow(data),n_cols=ncol(data),min_date=NA_character_,max_date=NA_character_,date_column_guess='event_date')
+  normalize_e<-function(e){e<-e[order(e$dimension,e$group_value),];rownames(e)<-NULL;e}
+  compare_coverage<-function(d) {
+    DBI::dbWriteTable(connection,ref,d,overwrite=TRUE,row.names=FALSE)
+    profiles<-profile_column_profiles(d,'RKKP_CLL')
+    source_row$n_rows<-nrow(d)
+    pg<-dbi_coverage_evidence(connection,quoted,profiles,source_row)
+    memory<-coverage_evidence_panels_from_data(d,'RKKP_CLL')$coverage_evidence
+    stopifnot(identical(normalize_e(pg),normalize_e(memory)))
+    pg
+  }
+  evidence<-compare_coverage(data)
+  stopifnot(evidence$outside_person_count[evidence$dimension=='year'&evidence$group_value=='2024']==6)
+  rare<-data[c(1:5,11),];stopifnot(all(compare_coverage(rare)$release_status=='withheld_privacy'))
+  one<-data;one$patientid<-1;stopifnot(all(compare_coverage(one)$release_status=='withheld_privacy'))
+  missing<-data;missing$patientid[1]<-NA;stopifnot(all(compare_coverage(missing)$release_status=='missing_person_key'))
+  quality<-data.frame(patientid=1:20,event_date=rep(c('2024-01-01',NA,'2024-02-30','9999-12-31'),each=5),Region=rep(c('Capital','Zealand','confidential',''),each=5))
+  compare_coverage(quality)
+  partial<-data.frame(patientid=1:21,event_date=c(rep('2024-01-01',10),rep('2025-01-01',10),'bad'),Region=c(rep('Capital',10),rep('Zealand',10),'PRIVATE unknown'))
+  labels<-coverage_release_panels(list(coverage_evidence=compare_coverage(partial)),source_row)
+  stopifnot(identical(labels$atlas_temporal_coverage_years$year,c(2024L,2025L)),all(is.na(labels$atlas_temporal_coverage_years$n_rows)),
+    identical(labels$atlas_spatial_region_counts$region_code,c('1084','1085')),all(is.na(labels$atlas_spatial_region_counts$n_rows)))
+  mapped<-tempfile(fileext='.csv')
+  write.csv(data.frame(table_name='RKKP_CLL',column_name='event_date',format_rule='dmy_dash',reviewed=TRUE,sentinel_dates='9999-12-31'),mapped,row.names=FALSE)
+  Sys.setenv(DALYCARE_DATE_FORMATS_FILE=mapped)
+  quality$event_date<-rep(c('31-12-2024',NA,'29-02-2023','31-12-9999'),each=5)
+  compare_coverage(quality);Sys.unsetenv('DALYCARE_DATE_FORMATS_FILE');unlink(mapped)
+  # Reviewed mappings must reach both real SQL and streamed profile producers,
+  # including numeric representations and names outside the date heuristic.
+  for(case in list(list(column='event_date',type='integer',class='int4',rule='ymd_compact',values=rep(c(20240101L,20250101L),each=5)),
+    list(column='observation_token',type='text',class='text',rule='dmy_dash',values=rep(c('01-01-2024','01-01-2025'),each=5)))) {
+    mapped<-tempfile(fileext='.csv')
+    write.csv(data.frame(table_name='RKKP_CLL',column_name=case$column,format_rule=case$rule,reviewed=TRUE),mapped,row.names=FALSE)
+    Sys.setenv(DALYCARE_DATE_FORMATS_FILE=mapped)
+    frame<-data.frame(patientid=1:10);frame[[case$column]]<-case$values
+    DBI::dbWriteTable(connection,ref,frame,overwrite=TRUE,row.names=FALSE)
+    info<-data.frame(column_name=case$column,data_type=case$type,udt_name=case$class)
+    sql_profile<-dbi_column_profile(connection,quoted,info,'RKKP_CLL',10,'full')
+    stream_profile<-dbi_stream_column_profile(connection,quoted,info,'RKKP_CLL',10,'full')$profile
+    memory<-profile_column_profiles(frame,'RKKP_CLL')
+    memory<-memory[memory$column_name==case$column,]
+    for(profile in list(sql_profile,stream_profile))stopifnot(profile$profile_kind=='date',profile$min_date=='2024-01-01',profile$max_date=='2025-01-01',
+      profile$min_date==memory$min_date,profile$max_date==memory$max_date,!profile$is_numeric_like)
+    profiles<-rbind(profile_column_profiles(frame['patientid'],'RKKP_CLL'),sql_profile)
+    coverage<-dbi_coverage_evidence(connection,quoted,profiles,data.frame(table_name='RKKP_CLL',n_rows=10))
+    if(case$column=='event_date') {
+      stopifnot(identical(coverage_date_column_from_profiles(profiles),'event_date'),
+        identical(sort(coverage$group_value[coverage$dimension=='year']),c('2024','2025')),
+        all(coverage$release_status[coverage$dimension=='year']=='published'))
+    } else {
+      # A reviewed format establishes parsing, not clinical event selection.
+      temporal<-coverage[coverage$dimension%in%c('year','date_quality','date_format'),]
+      stopifnot(is.na(coverage_date_column_from_profiles(profiles)),all(temporal$collection_status=='missing_column'),
+        all(is.na(temporal$column_name)),all(is.na(temporal$group_value)),all(is.na(temporal$record_count)))
+    }
+    Sys.unsetenv('DALYCARE_DATE_FORMATS_FILE');unlink(mapped)
+  }
+  # Session-local casts must not change timestamptz profile UTC dates. Plain
+  # timestamp/date retain their calendar day and do not receive UTC conversion.
+  DBI::dbExecute(connection,paste('drop table',quoted))
+  DBI::dbExecute(connection,paste('create table',quoted,'(patientid text,event_date timestamptz,local_date date,local_timestamp timestamp)'))
+  DBI::dbExecute(connection,paste('insert into',quoted,"select g::text,TIMESTAMPTZ '2024-12-31 23:30:00-02:00',DATE '2024-12-31',TIMESTAMP '2024-12-31 23:30:00' from generate_series(1,10) g"))
+  DBI::dbExecute(connection,"SET LOCAL TIME ZONE 'America/New_York'")
+  info<-data.frame(column_name=c('event_date','local_date','local_timestamp'),data_type=c('timestamp with time zone','date','timestamp without time zone'),udt_name=c('timestamptz','date','timestamp'))
+  utc_day<-as.character(safe_as_date(as.POSIXct('2025-01-01 01:30:00',tz='UTC')))
+  typed_profiles<-lapply(seq_len(nrow(info)),function(i) {
+    expected<-if(i==1)utc_day else '2024-12-31'
+    profile<-dbi_column_profile(connection,quoted,info[i,,drop=FALSE],'RKKP_CLL',10,'full')
+    stream<-dbi_stream_column_profile(connection,quoted,info[i,,drop=FALSE],'RKKP_CLL',10,'full')$profile
+    stopifnot(profile$min_date==expected,profile$max_date==expected,stream$min_date==expected,stream$max_date==expected)
+    profile
+  })
+  profiles<-rbind(profile_column_profiles(data.frame(patientid=1:10),'RKKP_CLL'),typed_profiles[[1]])
+  coverage<-dbi_coverage_evidence(connection,quoted,profiles,data.frame(table_name='RKKP_CLL',n_rows=10))
+  stopifnot(identical(coverage$group_value[coverage$dimension=='year'],'2025'))
+  DBI::dbExecute(connection,"SET LOCAL TIME ZONE 'UTC'")
+  # Typed timestamptz uses UTC day, including a local-day boundary crossing.
+  q<-coverage_group_sql(connection,"TIMESTAMPTZ '2024-12-31 23:30:00-02:00'",'year',column_type='timestamp with time zone')
+  stopifnot(DBI::dbGetQuery(connection,paste('select',q,'g'))$g=='2025')
+  # Exercise the actual DB panel entry; no row-only streamed panel can authorize coverage.
+  DBI::dbWriteTable(connection,ref,data,overwrite=TRUE,row.names=FALSE)
+  panels<-dbi_panels_from_profiles(profile_column_profiles(data,'RKKP_CLL'),source_row,conn=connection,table_ref=quoted,min_cell_count=5L)
+  stopifnot(nrow(panels$coverage_evidence)>0,nrow(panels$atlas_temporal_coverage_years)==2)
+  # Actual streamed numeric profile records bounded sample size and full eligible N.
+  DBI::dbWriteTable(connection,ref,data.frame(value=as.numeric(1:1000)),overwrite=TRUE,row.names=FALSE)
+  Sys.setenv(DALYCARE_ATLAS_QUANTILE_SAMPLE_SIZE='20',DALYCARE_ATLAS_STREAM_CHUNK_SIZE='73',DALYCARE_ATLAS_PROGRESS='FALSE')
+  set.seed(173)
+  streamed<-dbi_stream_column_profile(connection,quoted,data.frame(column_name='value',data_type='double precision',udt_name='float8'),'synthetic',1000,'full')$profile
+  stopifnot(streamed$sample_size==20,streamed$eligible_n==1000,streamed$sampling_method=='algorithm_r_reservoir',streamed$sampling_complete,streamed$mean==500.5)
+  Sys.unsetenv(c('DALYCARE_ATLAS_QUANTILE_SAMPLE_SIZE','DALYCARE_ATLAS_STREAM_CHUNK_SIZE','DALYCARE_ATLAS_PROGRESS'))
+  dictionary<-load_npu_consensus_dictionary('.')
+  codes<-head(dictionary$npu_code[dictionary$consensus_vector=='CREATININE_CODES'],2)
+  for(has_codes in c(TRUE,FALSE)) {
+    frame<-if(has_codes)data.frame(analysiscode=rep(codes,each=3)) else data.frame(value=1:6)
+    DBI::dbWriteTable(connection,ref,frame,overwrite=TRUE,row.names=FALSE)
+    info<-data.frame(column_name=names(frame),data_type=if(has_codes)'text' else 'integer',udt_name=if(has_codes)'text' else 'int4')
+    bundle<-dbi_stream_column_profiles(connection,quoted,info,'SP_Labs',6,'full')
+    panels<-dbi_panels_from_profiles(bundle$column_profiles,data.frame(table_name='SP_Labs',n_rows=6),conn=connection,table_ref=quoted,
+      profile_strategy='stream_column',stream_profile_bundle=bundle,npu_dictionary=dictionary)
+    if(has_codes)stopifnot(panels$npu_lab_usage_by_vector$n_observed[panels$npu_lab_usage_by_vector$consensus_vector=='CREATININE_CODES']==6,
+      nrow(stream_npu_counts_from_bundle(bundle,'analysiscode',6))==0) else stopifnot(nrow(panels$npu_lab_usage_by_vector)==0)
+  }
+  # Controlled current inventory requires explicit reviewed SP person mapping.
+  vital<-data.frame(subject=1:10,displayname=rep(c('Puls','SpO2'),each=5),meas_value='PRIVATE measurement text')
+  DBI::dbWriteTable(connection,ref,vital,overwrite=TRUE,row.names=FALSE)
+  stopifnot(all(dbi_vital_inventory(connection,quoted,names(vital),'SP_VitaleVaerdier')$vital_descriptor_assessment$inventory_status=='needs_person_key'))
+  keyfile<-tempfile(fileext='.csv');write.csv(data.frame(table_name='SP_VitaleVaerdier',person_key='subject',reviewed=TRUE),keyfile,row.names=FALSE)
+  Sys.setenv(DALYCARE_REGISTRY_PERSON_KEYS_FILE=keyfile)
+  inventory<-dbi_vital_inventory(connection,quoted,names(vital),'SP_VitaleVaerdier')
+  stopifnot(identical(sort(inventory$vital_descriptors$descriptor),c('Puls','SpO2')),all(inventory$vital_descriptor_assessment$inventory_status=='assessed_complete'))
+  vital$displayname[1]<-'PRIVATE unknown descriptor';DBI::dbWriteTable(connection,ref,vital,overwrite=TRUE,row.names=FALSE)
+  inventory<-dbi_vital_inventory(connection,quoted,names(vital),'SP_VitaleVaerdier')
+  stopifnot(identical(inventory$vital_descriptors$descriptor,'SpO2'),all(inventory$vital_descriptor_assessment$inventory_status=='partial_withheld'),!any(grepl('PRIVATE',unlist(inventory))))
+  vital<-data.frame(subject=1:21,displayname=c(rep('Puls',10),rep('Temp',10),'PRIVATE unknown descriptor'),meas_value='PRIVATE measurement')
+  DBI::dbWriteTable(connection,ref,vital,overwrite=TRUE,row.names=FALSE)
+  inventory<-dbi_vital_inventory(connection,quoted,names(vital),'SP_VitaleVaerdier')
+  stopifnot(identical(sort(inventory$vital_descriptors$descriptor),c('Puls','Temp')),all(inventory$vital_descriptor_assessment$inventory_status=='partial_withheld'))
+  Sys.unsetenv('DALYCARE_REGISTRY_PERSON_KEYS_FILE');unlink(keyfile)
+  cat('PASS PostgreSQL D strict dates/mapped formats/Situation casts, overlapping person complements, alias regions, missing keys, actual producer, reservoir stream and controlled vital inventory.\n')
+
 },finally={DBI::dbRollback(connection);DBI::dbDisconnect(connection)})

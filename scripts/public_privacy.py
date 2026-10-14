@@ -43,6 +43,7 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None, metada
     has_ranges = any(isinstance(r,dict) and r.get('coverage_basis') == 'source_date_range'
                      for rows in (payload.get('panels',{}).get('atlas_temporal_coverage_years',[]), payload.get('review_temporal_coverage',{}).get('years',[])) for r in rows)
     def walk(obj, path=()):
+        if path and path[-1] in {"coverage_evidence","vital_descriptors","vital_descriptor_assessment"}: return []
         summary_row=isinstance(obj,dict) and bool({'category_counts_json','numeric_groups_json'} & obj.keys())
         summary_table=isinstance(obj,list) and any(isinstance(r,dict) and bool({'category_counts_json','numeric_groups_json'} & r.keys()) for r in obj)
         if path and path[-1]=='registry_field_summaries' or summary_row or summary_table:
@@ -84,6 +85,23 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None, metada
         if has_ranges and path == ('review_temporal_coverage','summary') and 'n_year_rows' in obj:
             obj=dict(obj,n_year_rows=None)
         r={key:(copy.deepcopy(v) if key in REFERENCE else walk(v,path+(key,))) for key,v in obj.items()}
+        for key in ('sampling_method','sample_size','eligible_n','sampling_complete'): r.pop(key,None)
+        if ('year' in r and 'coverage_basis' in r) or ('region_code' in r and 'count_basis' in r) or 'quality_state' in r:
+            support_k=number(r.get('support_k'))
+            supported=(support_k is not None and support_k>=k and all(r.get(key) is True for key in ('person_support_safe','outside_person_support_safe','outside_record_support_safe')))
+            valid=r.get('partition_complete') is True and supported
+            label_only=supported and (r.get('coverage_basis')=='person_supported_label_only' or r.get('count_basis')=='person_supported_label_only') and 'quality_state' not in r
+            for key in ('person_count','outside_person_count','outside_record_count','total_person_count','total_record_count'): r.pop(key,None)
+            if not valid:
+                for key in {'n_rows','pct_rows'} & r.keys(): r[key]=None
+                if not label_only:
+                    for key in {'year','region_code','region_name','quality_state'} & r.keys(): r[key]=None
+                r['count_privacy_status']='withheld_partition_counts' if label_only else 'unavailable_person_partition_evidence'
+        if 'coverage_status' in r and 'basis' in r and r.get('basis')!='person_supported_region_records':
+            for key in {'n_rows','pct_rows'} & r.keys(): r[key]=None
+            if r.get('coverage_status')=='observed': r['coverage_status']='not_assessed'
+        if 'choropleth_basis' in r and r.get('choropleth_basis')!='person_supported_region_records':
+            for key in {'damyda_n','choropleth_value','pct_total'} & r.keys(): r[key]=None
         for key in DATES & r.keys(): r[key]=None
         if DATES & r.keys(): r['date_privacy_status']='withheld_exact_clinical_bounds'
         field=str(r.get('column_name',r.get('source_column',r.get('date_column',r.get('raw_column','')))) or '')

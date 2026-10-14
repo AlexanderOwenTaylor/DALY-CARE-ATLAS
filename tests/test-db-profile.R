@@ -29,6 +29,8 @@ fake_damyda <- data.frame(
   ALB = c(34, 35, 36, 38, 39, 40),
   stringsAsFactors = FALSE
 )
+fake_damyda <- fake_damyda[rep(seq_len(nrow(fake_damyda)),each=5),]
+fake_damyda$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(fake_damyda)))
 npu_dictionary <- load_npu_consensus_dictionary(project_root = root)
 npu_surfaces <- load_npu_detective_surfaces(project_root = root)
 isotype_vectors <- load_isotype_vectors(project_root = root, dictionary = npu_dictionary)
@@ -198,7 +200,7 @@ db_profile <- profile_db_source(
 expect_equal(nrow(db_profile$column_profiles), ncol(fake_damyda), "DB aggregate profile should emit one column profile per source column.")
 expect_true(any(db_profile$column_profiles$column_name == "ALB" & db_profile$column_profiles$profile_kind == "numeric"), "DB aggregate profile should preserve numeric aggregate summaries.")
 expect_false(any(db_profile$column_top_values$column_name == "patientid"), "DB aggregate top values must not expose patient identifiers.")
-expect_true(any(db_profile$column_top_values$column_name == "Stadie" & db_profile$column_top_values$n >= 2), "DB aggregate top values should obey minimum-cell suppression.")
+expect_true(any(db_profile$column_top_values$column_name == "Stadie" & db_profile$column_top_values$n >= 5), "DB aggregate top values should obey minimum-cell suppression.")
 expect_true(any(db_profile$panels$lab_npu_code_coverage$lab_code == "NPU04998"), "DB aggregate profile should produce NPU code coverage without full-table loading.")
 expect_true(any(db_profile$panels$npu_lab_usage_by_vector$consensus_vector == "CREATININE_CODES"), "DB aggregate profile should produce dictionary-aware NPU vector usage.")
 expect_true(any(db_profile$panels$npu_lab_unmatched_codes$npu_code == "NPU99999"), "DB aggregate profile should produce suppressed-safe unmatched NPU summaries.")
@@ -212,7 +214,7 @@ expect_true(likely_text_date_column("Reg_Diagnose_dt", "text", "text"), "DB prof
 expect_true(likely_text_date_column("samplingtime", "text", "text"), "DB profiling should treat text time aliases as date-like.")
 expect_false(likely_text_date_column("diagnosekode", "text", "text"), "DB profiling should not treat diagnosis code fields as date-like.")
 expect_false(likely_text_date_column("diagnosetype", "text", "text"), "DB profiling should not treat diagnosis type fields as date-like.")
-expect_true(grepl("regexp_replace", dbi_date_year_expression("\"Reg_Diagnose_dt\"", "text", "text"), fixed = TRUE), "Text-date year extraction should be SQL-side and aggregate-safe.")
+expect_true(is.na(safe_as_date("2024-02-30")), "Invalid dates must not contribute a coverage year; SQL parity is executed in integration-postgres.R.")
 expect_equal(atlas_elapsed_label(65), "01:05", "DB progress helpers should format short elapsed times for RStudio heartbeats.")
 expect_equal(atlas_format_count(1234567), "1,234,567", "DB progress helpers should format row counts for RStudio heartbeats.")
 
@@ -301,14 +303,16 @@ Sys.unsetenv("DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN")
 fail_root <- tempfile("atlas_empty_fail_")
 empty_error <- tryCatch(
   run_atlas(project_root = root, source_map_path = skip_map, output_root = fail_root, mode = "report"),
-  error = function(e) conditionMessage(e)
+  error = function(e) e
 )
-expect_true(grepl("Refusing to write a misleading live DALY atlas", empty_error, fixed = TRUE), "Dataset-backed DALY maps with zero profiled sources should fail loudly by default.")
+expect_true(inherits(empty_error,"atlas_build_error") && identical(empty_error$stage,"interpretation"), "Dataset-backed DALY maps with zero profiled sources should fail loudly by default.")
 failed_dirs <- list.dirs(fail_root, recursive = FALSE, full.names = TRUE)
 expect_true(length(failed_dirs) == 1L, "Failed empty live runs should still leave one diagnostic run directory.")
 expect_file(file.path(failed_dirs[[1]], "outputs", "atlas_dalycare_access.csv"))
 expect_file(file.path(failed_dirs[[1]], "outputs", "atlas_run_action_items.csv"))
 expect_file(file.path(failed_dirs[[1]], "outputs", "output_manifest.csv"))
+failed_checks <- read.csv(file.path(failed_dirs[[1]],"outputs","atlas_checks.csv"))
+expect_true(any(failed_checks$check_id=="empty_live_run_refused"),"Refusal must retain its explicit diagnostic check despite sanitized outer errors.")
 
 Sys.setenv(DALYCARE_ATLAS_ALLOW_EMPTY_LIVE_RUN = "TRUE")
 skip_result <- run_atlas(project_root = root, source_map_path = skip_map, output_root = tempfile("atlas_skip_"), mode = "report")

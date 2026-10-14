@@ -35,19 +35,19 @@ temporal_quality <- panel_atlas_temporal_date_quality(data.frame(
   date_qc = c("clamped_display_range", "clamped_display_range", "missing_date_range", "missing_date_range"),
   stringsAsFactors = FALSE
 ))
-expect_true(all(c("future_sentinel", "past_sentinel", "missing_date_column", "text_date_unparsed") %in% temporal_quality$issue_type), "Temporal date quality should classify sentinel, missing, and unparsed date issues.")
+expect_true(all(c("after_display_range", "before_display_range", "missing_date_column", "text_date_unparsed") %in% temporal_quality$issue_type), "Temporal date quality should classify sentinel, missing, and unparsed date issues.")
 expect_true(any(temporal_quality$table_name == "future_source" & temporal_quality$severity == "warning"), "Future sentinel date-quality rows should be warnings.")
 
 example <- data.frame(
-  patientid = sprintf("010101%04d", seq_len(8)),
-  Reg_Diagnose_dt = as.Date("2020-01-01") + 0:7,
-  Region = c("1084", "1084", "1084", "1084", "1085", "1085", "1099", "1099"),
+  patientid = sprintf("010101%04d", seq_len(20)),
+  Reg_Diagnose_dt = as.Date("2020-01-01") + 0:19,
+  Region = c(rep("1084",10),rep("1085",5),rep("1099",5)),
   stringsAsFactors = FALSE
 )
 years <- panel_temporal_coverage_years(example, "RKKP_DaMyDa", min_cell_count = 2L)
-expect_true(any(years$year == 2020 & years$n_rows == 8), "In-memory temporal coverage should emit aggregate source-year counts.")
+expect_true(any(years$year == 2020 & years$n_rows == 20), "In-memory temporal coverage should emit aggregate source-year counts.")
 region_counts <- panel_spatial_region_counts(example, "RKKP_DaMyDa", min_cell_count = 2L)
-expect_true(any(region_counts$region_code == "1084" & region_counts$n_rows == 4), "Region count panel should normalize and count region codes.")
+expect_true(any(region_counts$region_code == "1084" & region_counts$n_rows == 10), "Region count panel should normalize and count region codes.")
 expect_false(any(region_counts$region_column == "patientid"), "Region count panel must not use patient identifiers.")
 
 sources <- data.frame(
@@ -56,12 +56,12 @@ sources <- data.frame(
   subdomain = c("DaMyDa", "Vitals"),
   atlas_role = c("clinical_registry", "vitals"),
   load_status = c("ok", "ok"),
-  n_rows = c(8, 100),
+  n_rows = c(20, 100),
   stringsAsFactors = FALSE
 )
 region_counts <- add_source_context_to_coverage_panels(region_counts, sources)
 coverage <- panel_atlas_spatial_region_coverage(sources, region_counts)
-expect_true(any(coverage$domain == "SP" & coverage$region_code == "1084" & coverage$coverage_status == "ehr"), "SP coverage should default to Capital/Zealand EHR regions.")
+expect_true(any(coverage$domain == "SP" & coverage$region_code == "1084" & coverage$expected_remit == "ehr"), "SP coverage should default to Capital/Zealand EHR regions.")
 choropleth <- panel_atlas_dk_choropleth_regions(
   sources,
   panels = list(damyda_clinical_profile = data.frame(
@@ -70,12 +70,12 @@ choropleth <- panel_atlas_dk_choropleth_regions(
     facet = "region",
     source_column = "Region",
     label = c("1084", "1085", "1099"),
-    n = c(4, 2, 2),
+    n = c(10, 5, 5),
     pct_rows = c(50, 25, 25),
     stringsAsFactors = FALSE
   )),
   region_counts = region_counts,
   region_coverage = coverage
 )
-expect_true(any(choropleth$region_code == "1084" & choropleth$damyda_n == 4), "Choropleth should use DaMyDa regional counts when available.")
+expect_true(any(choropleth$region_code == "1084" & choropleth$damyda_n == 10), "Choropleth should use DaMyDa regional counts when available.")
 expect_false(any(choropleth$region_code == "1099" & choropleth$map_include), "Other/unknown should not be included in Denmark map shading.")

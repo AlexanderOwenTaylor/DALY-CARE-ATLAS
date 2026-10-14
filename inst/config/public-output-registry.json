@@ -2377,6 +2377,24 @@
           "display_min_date": "string",
           "display_max_date": "string",
           "pct_available": "number",
+          "date_qc": "string",
+          "selection_basis": "string",
+          "event_meaning": "string"
+        },
+        {
+          "table_name": "string",
+          "domain": "string",
+          "subdomain": "string",
+          "atlas_role": "string",
+          "n_rows": "number",
+          "date_column": "string",
+          "raw_min_date": "string",
+          "raw_max_date": "string",
+          "display_min_year": "string",
+          "display_max_year": "string",
+          "display_min_date": "string",
+          "display_max_date": "string",
+          "pct_available": "number",
           "date_qc": "string"
         },
         {}
@@ -2388,7 +2406,9 @@
         "atlas_role",
         "n_rows",
         "date_column",
-        "pct_available"
+        "pct_available",
+        "selection_basis",
+        "event_meaning"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
@@ -2477,6 +2497,39 @@
           "year": "number",
           "n_rows": "number",
           "pct_rows": "number",
+          "coverage_basis": "string",
+          "partition_complete": "boolean",
+          "support_k": "number",
+          "person_support_safe": "boolean",
+          "outside_person_support_safe": "boolean",
+          "outside_record_support_safe": "boolean",
+          "count_privacy_status": "string"
+        },
+        {
+          "table_name": "string",
+          "domain": "string",
+          "subdomain": "string",
+          "atlas_role": "string",
+          "date_column": "string",
+          "year": "number",
+          "n_rows": "number",
+          "pct_rows": "number",
+          "coverage_basis": "string",
+          "partition_complete": "boolean",
+          "support_k": "number",
+          "person_support_safe": "boolean",
+          "outside_person_support_safe": "boolean",
+          "outside_record_support_safe": "boolean"
+        },
+        {
+          "table_name": "string",
+          "domain": "string",
+          "subdomain": "string",
+          "atlas_role": "string",
+          "date_column": "string",
+          "year": "number",
+          "n_rows": "number",
+          "pct_rows": "number",
           "coverage_basis": "string"
         },
         {}
@@ -2490,12 +2543,18 @@
         "pct_rows",
         "date_column",
         "year",
-        "coverage_basis"
+        "coverage_basis",
+        "partition_complete",
+        "support_k",
+        "person_support_safe",
+        "outside_person_support_safe",
+        "outside_record_support_safe",
+        "count_privacy_status"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
       "row_grain": "One supplied source/date-field/year/basis aggregate, or one collapsed metadata row for a withheld inferred source date range. Counts describe records, not people; field selection does not certify an event type, and range metadata does not establish continuous coverage.",
-      "count_basis": "source records by selected date field year; all source record denominator; inferred ranges withheld; not people",
+      "count_basis": "Records only; complete partition and cell/complement distinct-person support checked internally. Exact person series withheld because group memberships may overlap.",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
@@ -2683,6 +2742,41 @@
           "region_name": "string",
           "n_rows": "number",
           "pct_rows": "number",
+          "count_basis": "string",
+          "partition_complete": "boolean",
+          "support_k": "number",
+          "person_support_safe": "boolean",
+          "outside_person_support_safe": "boolean",
+          "outside_record_support_safe": "boolean",
+          "count_privacy_status": "string"
+        },
+        {
+          "table_name": "string",
+          "domain": "string",
+          "subdomain": "string",
+          "atlas_role": "string",
+          "region_column": "string",
+          "region_code": "string",
+          "region_name": "string",
+          "n_rows": "number",
+          "pct_rows": "number",
+          "count_basis": "string",
+          "partition_complete": "boolean",
+          "support_k": "number",
+          "person_support_safe": "boolean",
+          "outside_person_support_safe": "boolean",
+          "outside_record_support_safe": "boolean"
+        },
+        {
+          "table_name": "string",
+          "domain": "string",
+          "subdomain": "string",
+          "atlas_role": "string",
+          "region_column": "string",
+          "region_code": "string",
+          "region_name": "string",
+          "n_rows": "number",
+          "pct_rows": "number",
           "count_basis": "string"
         },
         {}
@@ -2697,12 +2791,18 @@
         "n_rows",
         "pct_rows",
         "count_basis",
-        "region_column"
+        "region_column",
+        "partition_complete",
+        "support_k",
+        "person_support_safe",
+        "outside_person_support_safe",
+        "outside_record_support_safe",
+        "count_privacy_status"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
       "row_grain": "One source/recorded-region-field/normalized-region/count-basis summary. The field alone does not establish residence or treatment location.",
-      "count_basis": "source rows or retained registry region counts; denominator depends on row count basis; distinct-person anonymity not established",
+      "count_basis": "Records only; complete partition and cell/complement distinct-person support checked internally. Exact person series withheld because group memberships may overlap.",
       "supplementary": false,
       "column_meanings": {
         "table_name": {
@@ -2805,6 +2905,18 @@
           "loaded_sources": "number",
           "mapped_sources": "number",
           "n_rows": "number",
+          "basis": "string",
+          "expected_remit": "string"
+        },
+        {
+          "region_code": "string",
+          "region_name": "string",
+          "display_label": "string",
+          "domain": "string",
+          "coverage_status": "string",
+          "loaded_sources": "number",
+          "mapped_sources": "number",
+          "n_rows": "number",
           "basis": "string"
         },
         {}
@@ -2816,7 +2928,8 @@
         "domain",
         "coverage_status",
         "n_rows",
-        "basis"
+        "basis",
+        "expected_remit"
       ],
       "group": "Panels",
       "kind": "aggregate_summary",
@@ -2879,6 +2992,18 @@
         "summary_method": {
           "label": "Stored summary method",
           "definition": "Supplied method explanation; quantiles may use a bounded stream sample."
+        },
+        "loaded_sources": {
+          "label": "Loaded sources in domain",
+          "definition": "Domain-wide count of loaded sources; not a regional observation count."
+        },
+        "mapped_sources": {
+          "label": "Mapped sources in domain",
+          "definition": "Domain-wide source-map count; not a regional observation count."
+        },
+        "expected_remit": {
+          "label": "Expected source remit",
+          "definition": "Reference remit from source domain metadata, independent of observed regional evidence."
         }
       },
       "navigation_terms": [
@@ -3488,6 +3613,65 @@
       ],
       "required": true,
       "schemas": [
+        {
+          "table_name": "string",
+          "column_name": "string",
+          "column_type": "string",
+          "column_class": "string",
+          "profile_kind": "string",
+          "n_rows": "number",
+          "n_available": "number",
+          "pct_available": "number",
+          "n_missing": "number",
+          "pct_missing": "number",
+          "n_distinct_capped": "number",
+          "is_sensitive": "boolean",
+          "is_date_like": "boolean",
+          "is_numeric_like": "boolean",
+          "min": "number",
+          "mean": "number",
+          "median": "number",
+          "p25": "number",
+          "p75": "number",
+          "max": "number",
+          "min_date": "string",
+          "max_date": "string",
+          "sampling_method": "string",
+          "sample_size": "number",
+          "eligible_n": "number",
+          "sampling_complete": "boolean"
+        },
+        {
+          "domain": "string",
+          "subdomain": "string",
+          "atlas_role": "string",
+          "table_name": "string",
+          "column_name": "string",
+          "column_type": "string",
+          "column_class": "string",
+          "profile_kind": "string",
+          "n_rows": "number",
+          "n_available": "number",
+          "pct_available": "number",
+          "n_missing": "number",
+          "pct_missing": "number",
+          "n_distinct_capped": "number",
+          "is_sensitive": "boolean",
+          "is_date_like": "boolean",
+          "is_numeric_like": "boolean",
+          "min": "number",
+          "mean": "number",
+          "median": "number",
+          "p25": "number",
+          "p75": "number",
+          "max": "number",
+          "min_date": "string",
+          "max_date": "string",
+          "sampling_method": "string",
+          "sample_size": "number",
+          "eligible_n": "number",
+          "sampling_complete": "boolean"
+        },
         {
           "domain": "string",
           "subdomain": "string",
@@ -9073,6 +9257,190 @@
         "field labels",
         "clinical terms"
       ]
+    },
+    {
+      "id": "coverage_evidence",
+      "title": "Coverage evidence",
+      "source_file": "outputs/panels/coverage_evidence.csv",
+      "arg_path": [
+        "panels",
+        "coverage_evidence"
+      ],
+      "payload_path": [],
+      "required": false,
+      "schemas": [
+        {
+          "table_name": "string",
+          "column_name": "string",
+          "dimension": "string",
+          "group_value": "string",
+          "record_count": "number",
+          "person_count": "number",
+          "outside_record_count": "number",
+          "outside_person_count": "number",
+          "total_record_count": "number",
+          "total_person_count": "number",
+          "missing_person_rows": "number",
+          "collection_status": "string",
+          "release_status": "string",
+          "format_rule": "string",
+          "format_rule_status": "string"
+        },
+        {
+          "table_name": "string",
+          "column_name": "string",
+          "dimension": "string",
+          "group_value": "string",
+          "record_count": "number",
+          "person_count": "number",
+          "outside_record_count": "number",
+          "outside_person_count": "number",
+          "total_record_count": "number",
+          "total_person_count": "number",
+          "missing_person_rows": "number",
+          "collection_status": "string",
+          "release_status": "string"
+        },
+        {}
+      ],
+      "projection": [],
+      "group": "Coverage evidence",
+      "kind": "aggregate_summary",
+      "row_grain": "Exact source/field scoped evidence; no keys or raw unrecognised tokens",
+      "count_basis": "Records and distinct people are separate; outside people include overlapping group membership",
+      "supplementary": true
+    },
+    {
+      "id": "vital_descriptors",
+      "title": "Vital descriptors",
+      "source_file": "outputs/panels/vital_descriptors.csv",
+      "arg_path": [
+        "panels",
+        "vital_descriptors"
+      ],
+      "payload_path": [],
+      "required": false,
+      "schemas": [
+        {
+          "source_name": "string",
+          "name_col": "string",
+          "value_col": "string",
+          "descriptor": "string"
+        },
+        {}
+      ],
+      "projection": [],
+      "group": "Coverage evidence",
+      "kind": "aggregate_summary",
+      "row_grain": "Exact source/field scoped evidence; no keys or raw unrecognised tokens",
+      "count_basis": "Records and distinct people are separate; outside people include overlapping group membership",
+      "supplementary": true
+    },
+    {
+      "id": "vital_descriptor_assessment",
+      "title": "Vital descriptor assessment",
+      "source_file": "outputs/panels/vital_descriptor_assessment.csv",
+      "arg_path": [
+        "panels",
+        "vital_descriptor_assessment"
+      ],
+      "payload_path": [],
+      "required": false,
+      "schemas": [
+        {
+          "source_name": "string",
+          "name_col": "string",
+          "value_col": "string",
+          "inventory_status": "string"
+        },
+        {}
+      ],
+      "projection": [],
+      "group": "Coverage evidence",
+      "kind": "aggregate_summary",
+      "row_grain": "Exact source/field scoped evidence; no keys or raw unrecognised tokens",
+      "count_basis": "Records and distinct people are separate; outside people include overlapping group membership",
+      "supplementary": true
+    },
+    {
+      "id": "atlas_coverage_status",
+      "title": "Atlas coverage status",
+      "source_file": "outputs/panels/atlas_coverage_status.csv",
+      "arg_path": [
+        "panels",
+        "atlas_coverage_status"
+      ],
+      "payload_path": [
+        "panels",
+        "atlas_coverage_status"
+      ],
+      "required": false,
+      "schemas": [
+        {
+          "table_name": "string",
+          "column_name": "string",
+          "dimension": "string",
+          "collection_status": "string",
+          "release_status": "string"
+        },
+        {}
+      ],
+      "projection": [
+        "table_name",
+        "column_name",
+        "dimension",
+        "collection_status",
+        "release_status"
+      ],
+      "group": "Coverage evidence",
+      "kind": "aggregate_summary",
+      "row_grain": "Exact source/field scoped evidence; no keys or raw unrecognised tokens",
+      "count_basis": "Records and distinct people are separate; outside people include overlapping group membership",
+      "supplementary": true
+    },
+    {
+      "id": "atlas_date_quality_counts",
+      "title": "Atlas date quality counts",
+      "source_file": "outputs/panels/atlas_date_quality_counts.csv",
+      "arg_path": [
+        "panels",
+        "atlas_date_quality_counts"
+      ],
+      "payload_path": [
+        "panels",
+        "atlas_date_quality_counts"
+      ],
+      "required": false,
+      "schemas": [
+        {
+          "table_name": "string",
+          "date_column": "string",
+          "quality_state": "string",
+          "n_rows": "number",
+          "partition_complete": "boolean",
+          "support_k": "number",
+          "person_support_safe": "boolean",
+          "outside_person_support_safe": "boolean",
+          "outside_record_support_safe": "boolean"
+        },
+        {}
+      ],
+      "projection": [
+        "table_name",
+        "date_column",
+        "quality_state",
+        "n_rows",
+        "partition_complete",
+        "support_k",
+        "person_support_safe",
+        "outside_person_support_safe",
+        "outside_record_support_safe"
+      ],
+      "group": "Coverage evidence",
+      "kind": "aggregate_summary",
+      "row_grain": "Exact source/field scoped evidence; no keys or raw unrecognised tokens",
+      "count_basis": "Records only; complete partition and cell/complement distinct-person support checked internally. Exact person series withheld because group memberships may overlap.",
+      "supplementary": true
     }
   ]
 }

@@ -9,6 +9,7 @@ icu <- data.frame(
   icu_stay_end = as.Date(c(NA, "2026-05-10", "2026-04-03", NA)),
   stringsAsFactors = FALSE
 )
+icu <- do.call(rbind,lapply(1:5,function(i) {x<-icu;x$patientid<-paste0(x$patientid,"-synthetic-",i);x}))
 current_ita <- situation_current_interval_from_data(
   icu,
   metric_id = "currently_ita",
@@ -17,7 +18,7 @@ current_ita <- situation_current_interval_from_data(
   end_col = "icu_stay_end",
   min_cell_count = 1L
 )
-expect_equal(current_ita$n_patients[[1]], 2L, "Current interval metrics should count patients active at the source-specific as-of date.")
+expect_equal(current_ita$n_patients[[1]], 10L, "Current interval metrics should count patients active at the source-specific as-of date.")
 expect_equal(current_ita$as_of_date[[1]], "2026-05-11", "Current interval metrics should anchor to the source max date.")
 
 adt_start_only <- data.frame(
@@ -42,15 +43,16 @@ adt <- data.frame(
   patient_class = c("Indlagt patient", "Indlagt patient", "Ambulant patient", "Indlagt patient"),
   stringsAsFactors = FALSE
 )
+adt <- do.call(rbind,lapply(1:5,function(i) {x<-adt;x$patientid<-paste0(x$patientid,"-synthetic-",i);x}))
 current_admitted <- situation_current_admission_from_data(
   adt,
   as_of = as.Date("2026-05-10"),
   min_cell_count = 1L,
   n_cohort = 100L
 )
-expect_equal(current_admitted$n_patients[[1]], 2L, "Current admission should count only active inpatient intervals.")
-expect_equal(current_admitted$n_rows[[1]], 2L, "Current admission should not count discharged or ambulatory contacts.")
-expect_equal(current_admitted$pct_cohort[[1]], 2, "Situation metrics should report percent of the cohort denominator.")
+expect_equal(current_admitted$n_patients[[1]], 10L, "Current admission should count only active inpatient intervals.")
+expect_equal(current_admitted$n_rows[[1]], 10L, "Current admission should not count discharged or ambulatory contacts.")
+expect_equal(current_admitted$pct_cohort[[1]], 10, "Situation metrics should report percent of the cohort denominator.")
 
 recent_admitted <- situation_recent_admission_date_from_data(
   adt,
@@ -61,7 +63,7 @@ recent_admitted <- situation_recent_admission_date_from_data(
   min_cell_count = 1L,
   n_cohort = 100L
 )
-expect_equal(recent_admitted$n_patients[[1]], 3L, "Recent admission should filter out ambulatory contact rows when patient_class is available.")
+expect_equal(recent_admitted$n_patients[[1]], 15L, "Recent admission should filter out ambulatory contact rows when patient_class is available.")
 expect_equal(recent_admitted$as_of_date[[1]], "2026-05-10", "Recent admission should use the source-specific as-of date.")
 
 diagnoses <- data.frame(
@@ -69,6 +71,7 @@ diagnoses <- data.frame(
   date_diagnosis = as.Date(c("2026-04-01", "2026-04-15", "2026-05-10", "2026-05-11", "2026-05-12", "2026-03-01", "2026-05-12")),
   stringsAsFactors = FALSE
 )
+diagnoses <- do.call(rbind,lapply(1:5,function(i) {x<-diagnoses;x$patientid<-paste0(x$patientid,"-synthetic-",i);x}))
 recent_dx_any_row <- situation_recent_from_data(
   diagnoses,
   metric_id = "diagnosed_30d",
@@ -76,22 +79,22 @@ recent_dx_any_row <- situation_recent_from_data(
   date_col = "date_diagnosis",
   min_cell_count = 1L
 )
-expect_equal(recent_dx_any_row$n_patients[[1]], 4L, "The generic recent-date fixture helper counts patients with any row inside the data-as-of window.")
+expect_equal(recent_dx_any_row$n_patients[[1]], 20L, "The generic recent-date fixture helper counts patients with any row inside the data-as-of window.")
 recent_dx <- situation_recent_earliest_from_data(
   diagnoses,
   date_col = "date_diagnosis",
   min_cell_count = 1L,
   n_cohort = 1000L
 )
-expect_equal(recent_dx$n_patients[[1]], 3L, "Diagnosed-30d should count patients whose earliest diagnosis date is inside the data-as-of window.")
-expect_equal(recent_dx$n_rows[[1]], 3L, "Earliest-diagnosis metrics should not count later diagnosis rows for old patients.")
+expect_equal(recent_dx$n_patients[[1]], 15L, "Diagnosed-30d should count patients whose earliest diagnosis date is inside the data-as-of window.")
+expect_equal(recent_dx$n_rows[[1]], 15L, "Earliest-diagnosis metrics should not count later diagnosis rows for old patients.")
 expect_equal(recent_dx$as_of_date[[1]], "2026-05-12", "Earliest-diagnosis metrics should anchor to the source max date.")
 expect_true(grepl("earliest_patient_diagnosis_date_30d", recent_dx$definition_basis[[1]], fixed = TRUE), "Diagnosed-30d should record earliest-diagnosis definition basis.")
 
 suppressed_dx <- situation_recent_earliest_from_data(
   diagnoses,
   date_col = "date_diagnosis",
-  min_cell_count = 10L
+  min_cell_count = 20L
 )
 expect_equal(suppressed_dx$definition_status[[1]], "suppressed", "Situation metrics should suppress small public counts.")
 expect_true(is.na(suppressed_dx$n_patients[[1]]), "Suppressed Situation metrics should not expose patient counts.")
@@ -184,3 +187,23 @@ implausible <- situation_metric_row(
   n_cohort = 100L
 )
 expect_equal(implausible$definition_status[[1]], "needs_review", "Implausibly high current-admitted metrics should be flagged for review.")
+
+# No valid dates means unavailable, never -Inf/current or a suppressed count.
+for(values in list(character(),rep(NA_character_,5),rep('2024-02-30',5))) {
+  data<-data.frame(patientid=seq_along(values),start=values,end=rep(NA_character_,length(values)),patient_class=rep('inpatient',length(values)))
+  rows<-list(
+    situation_recent_from_data(data,'recent','Recent','start'),
+    situation_recent_earliest_from_data(data,date_col='start'),
+    situation_current_interval_from_data(data,'icu_current','ICU','start','end'),
+    situation_current_admission_from_data(data,start_col='start',end_col='end'),
+    situation_recent_admission_date_from_data(data,'recent','Recent','start'))
+  for(row in rows) {
+    expect_true(is.na(row$as_of_date));expect_true(is.na(row$n_patients)&&is.na(row$n_rows))
+    expect_equal(row$definition_status,'unavailable');expect_equal(row$freshness_status,'unknown')
+  }
+}
+# ICU ends on the as-of day remain inclusive; admission ends remain exclusive.
+edge<-data.frame(patientid=1:5,start=rep('2024-01-01',5),end=rep('2024-01-02',5),patient_class='inpatient')
+expect_equal(situation_current_interval_from_data(edge,'icu','ICU','start','end')$n_patients,5L)
+expect_true(is.na(situation_current_admission_from_data(edge,start_col='start',end_col='end')$n_patients))
+cat('PASS Situation empty/NA/invalid dates unavailable and interval endpoints preserved\n')

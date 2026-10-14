@@ -1323,8 +1323,9 @@ dbi_schema_column_profiles <- function(schema_info, table_name, row_count) {
     column_type <- as.character(info$data_type[[1]] %||% "")
     column_class <- as.character(info$udt_name[[1]] %||% column_type)
     is_sensitive <- is_sensitive_column(column_name)
+    date_rule <- atlas_date_rule(table_name,column_name)
     is_sql_date <- sql_type_is_date(column_type, column_class)
-    is_text_date <- likely_text_date_column(column_name, column_type, column_class)
+    is_text_date <- !is_sql_date && (likely_text_date_column(column_name, column_type, column_class) || date_rule$evidence_status=="reviewed_mapping")
     is_date_like <- (is_sql_date || is_text_date) && !is_sensitive
     is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive && !is_date_like
     data.frame(
@@ -1350,6 +1351,7 @@ dbi_schema_column_profiles <- function(schema_info, table_name, row_count) {
       max = NA_real_,
       min_date = NA_character_,
       max_date = NA_character_,
+      sampling_method=NA_character_,sample_size=NA_real_,eligible_n=NA_real_,sampling_complete=NA,
       stringsAsFactors = FALSE
     )
   })
@@ -1411,8 +1413,9 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
   column_type <- as.character(info$data_type[[1]] %||% "")
   column_class <- as.character(info$udt_name[[1]] %||% column_type)
   is_sensitive <- is_sensitive_column(column_name)
+  date_rule <- atlas_date_rule(table_name,column_name)
   is_sql_date <- sql_type_is_date(column_type, column_class)
-  is_text_date <- likely_text_date_column(column_name, column_type, column_class)
+  is_text_date <- !is_sql_date && (likely_text_date_column(column_name, column_type, column_class) || date_rule$evidence_status=="reviewed_mapping")
   is_date_like <- (is_sql_date || is_text_date) && !is_sensitive
   is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive && !is_date_like
   profile_kind <- if (is_sensitive) "sensitive" else if (is_date_like) "date" else if (is_numeric_like) "numeric" else "categorical"
@@ -1499,7 +1502,7 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
     invisible(NULL)
   }
   update_years <- function(values) {
-    dates <- safe_as_date(values)
+    dates <- safe_as_date(values,date_rule$format_rule)
     dates <- dates[!is.na(dates)]
     if (!length(dates)) return(invisible(NULL))
     date_min <<- if (is.na(date_min)) min(dates) else min(date_min, min(dates))
@@ -1516,16 +1519,14 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
   }
   update_numeric <- function(values) {
     nums <- suppressWarnings(as.numeric(as.character(values)))
-    nums <- nums[!is.na(nums)]
+    nums <- nums[is.finite(nums)]
     if (!length(nums)) return(invisible(NULL))
-    numeric_n <<- numeric_n + length(nums)
+    reservoir <- numeric_reservoir_update(list(values=numeric_sample,seen=numeric_n),nums,sample_limit)
+    numeric_sample <<- reservoir$values
+    numeric_n <<- reservoir$seen
     numeric_sum <<- numeric_sum + sum(nums)
     numeric_min <<- min(numeric_min, min(nums))
     numeric_max <<- max(numeric_max, max(nums))
-    if (length(numeric_sample) < sample_limit) {
-      room <- sample_limit - length(numeric_sample)
-      numeric_sample <<- c(numeric_sample, head(nums, room))
-    }
     invisible(NULL)
   }
 
@@ -1580,7 +1581,7 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
     budget_context$add_action(
       column_name = column_name,
       query_category = "numeric_quantiles",
-      reason = paste("median/p25/p75 estimated from first", sample_limit, "non-missing streamed numeric values."),
+      reason = paste("median/p25/p75 estimated from a uniform reservoir of", sample_limit, "non-missing streamed numeric values."),
       current_behavior = "Exact min, max, mean, availability, and missingness were streamed; quantiles are bounded-sample approximations.",
       recommended_action = "Increase DALYCARE_ATLAS_QUANTILE_SAMPLE_SIZE for tighter approximate quantiles, or lower the streaming threshold for a provisioned exact SQL run."
     )
@@ -1672,6 +1673,10 @@ dbi_stream_column_profile <- function(conn, table_ref, info, table_name, row_cou
       max = numeric_stats$max,
       min_date = date_stats$min_date,
       max_date = date_stats$max_date,
+      sampling_method = if(is_numeric_like) "algorithm_r_reservoir" else NA_character_,
+      sample_size = if(is_numeric_like) length(numeric_sample) else NA_real_,
+      eligible_n = if(is_numeric_like) numeric_n else NA_real_,
+      sampling_complete = identical(status,"ok"),
       stringsAsFactors = FALSE
     ),
     top_values = top_values,
@@ -1706,8 +1711,9 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
   skip_distinct <- dbi_skip_distinct_count(column_type, column_class, row_count)
   counts <- dbi_column_counts(conn, table_ref, qcol, include_distinct = !skip_distinct)
   is_sensitive <- is_sensitive_column(column_name)
+  date_rule <- atlas_date_rule(table_name,column_name)
   is_sql_date <- sql_type_is_date(column_type, column_class)
-  is_text_date <- likely_text_date_column(column_name, column_type, column_class)
+  is_text_date <- !is_sql_date && (likely_text_date_column(column_name, column_type, column_class) || date_rule$evidence_status=="reviewed_mapping")
   is_date_like <- (is_sql_date || is_text_date) && !is_sensitive
   is_numeric_like <- sql_type_is_numeric(column_type, column_class) && !is_sensitive && !is_date_like
   profile_kind <- if (is_sensitive) {
@@ -1721,9 +1727,9 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
   }
   numeric_stats <- dbi_numeric_stats(conn, table_ref, qcol, enabled = is_numeric_like && !identical(profile_mode, "schema"))
   date_stats <- if (is_text_date && !is_sensitive) {
-    dbi_text_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"))
+    dbi_text_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"), format_rule=date_rule$format_rule)
   } else {
-    dbi_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"))
+    dbi_date_stats(conn, table_ref, qcol, enabled = is_date_like && !identical(profile_mode, "schema"),column_type=column_type,column_class=column_class)
   }
   n_missing <- suppressWarnings(as.numeric(counts$n_missing[[1]] %||% NA_real_))
   n_available <- if (is.na(n_missing) || is.na(row_count)) NA_real_ else row_count - n_missing
@@ -1750,6 +1756,7 @@ dbi_column_profile <- function(conn, table_ref, info, table_name, row_count, pro
     max = numeric_stats$max,
     min_date = date_stats$min_date,
     max_date = date_stats$max_date,
+    sampling_method=if(is_numeric_like) "exact_sql" else NA_character_,sample_size=NA_real_,eligible_n=NA_real_,sampling_complete=NA,
     stringsAsFactors = FALSE
   )
 }
@@ -1804,11 +1811,12 @@ dbi_numeric_stats <- function(conn, table_ref, qcol, enabled = TRUE) {
   )
 }
 
-dbi_date_stats <- function(conn, table_ref, qcol, enabled = TRUE) {
+dbi_date_stats <- function(conn, table_ref, qcol, enabled = TRUE,column_type="date",column_class="date") {
   empty <- list(min_date = NA_character_, max_date = NA_character_)
   if (!isTRUE(enabled)) return(empty)
+  date_value <- dbi_typed_date_expression(qcol,column_type,column_class)
   sql <- paste0(
-    "select min(", qcol, "::date) as min_date, max(", qcol, "::date) as max_date ",
+    "select min(", date_value, ") as min_date, max(", date_value, ") as max_date ",
     "from ", table_ref, " where ", qcol, " is not null"
   )
   out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) NULL)
@@ -1816,10 +1824,10 @@ dbi_date_stats <- function(conn, table_ref, qcol, enabled = TRUE) {
   list(min_date = as.character(out$min_date[[1]] %||% NA_character_), max_date = as.character(out$max_date[[1]] %||% NA_character_))
 }
 
-dbi_text_date_stats <- function(conn, table_ref, qcol, enabled = TRUE) {
+dbi_text_date_stats <- function(conn, table_ref, qcol, enabled = TRUE, format_rule="iso") {
   empty <- list(min_date = NA_character_, max_date = NA_character_)
   if (!isTRUE(enabled)) return(empty)
-  expr <- dbi_text_date_string_expression(qcol)
+  expr <- dbi_text_date_string_expression(qcol,format_rule)
   sql <- paste0(
     "select min(date_value) as min_date, max(date_value) as max_date ",
     "from (select ", expr, " as date_value from ", table_ref, ") atlas_text_dates ",
@@ -1907,26 +1915,29 @@ likely_text_date_column <- function(column_name, column_type, column_class = "")
   )
 }
 
-dbi_text_date_string_expression <- function(qcol) {
-  value <- paste0("btrim(", qcol, "::text)")
-  digits <- paste0("regexp_replace(", value, ", '[^0-9]', '', 'g')")
-  paste0(
-    "case when ", value, " ~ '^[0-9]{4}[-/]?[0-9]{2}[-/]?[0-9]{2}' ",
-    "then substring(", digits, " from 1 for 4) || '-' || substring(", digits, " from 5 for 2) || '-' || substring(", digits, " from 7 for 2) ",
-    "else null end"
-  )
+dbi_text_date_string_expression <- function(qcol, format_rule="iso") {
+  pattern <- atlas_date_format_pattern(format_rule)
+  value <- dbi_trim_date_text_expression(qcol)
+  canonical <- switch(format_rule,iso="substring(v from 1 for 10)",
+    dmy_dash="substring(v from 7 for 4)||'-'||substring(v from 4 for 2)||'-'||substring(v from 1 for 2)",
+    dmy_slash="substring(v from 7 for 4)||'-'||substring(v from 4 for 2)||'-'||substring(v from 1 for 2)",
+    dmy_dot="substring(v from 7 for 4)||'-'||substring(v from 4 for 2)||'-'||substring(v from 1 for 2)",
+    ymd_compact="substring(v from 1 for 4)||'-'||substring(v from 5 for 2)||'-'||substring(v from 7 for 2)")
+  clock <- if(format_rule=="iso") paste0(" and (case when length(v)=10 then true else substring(v from 12 for 2)::integer<=23 and substring(v from 15 for 2)::integer<=59 and substring(v from 18 for 2)::integer<=59 end)",
+    " and (case when v ~ '[+-][0-9]{2}:[0-9]{2}$' then substring(right(v,6) from 2 for 2)::integer<=23 and substring(right(v,6) from 5 for 2)::integer<=59 else true end)") else ""
+  # CASE guards every cast; make_date is reached only after Gregorian validation.
+  paste0("(select case when v ~ '",pattern,"' then (select case when y between 1 and 9999 and m between 1 and 12 and d between 1 and ",
+    "(case when m=2 then case when y%4=0 and (y%100<>0 or y%400=0) then 29 else 28 end when m in (4,6,9,11) then 30 else 31 end)",clock,
+    " then make_date(y,m,d)::text else null end from (select substring(c from 1 for 4)::integer y,substring(c from 6 for 2)::integer m,substring(c from 9 for 2)::integer d from (select ",canonical," c) canonical) parts) else null end from (select ",value," v) lexical)")
 }
 
-dbi_date_year_expression <- function(qcol, column_type = "", column_class = "") {
-  if (sql_type_is_text(column_type, column_class)) {
-    date_value <- dbi_text_date_string_expression(qcol)
-    date_value <- paste0("(", date_value, ")")
-    return(paste0(
-      "case when ", date_value, " is not null ",
-      "then substring(", date_value, " from 1 for 4)::integer else null end"
-    ))
-  }
-  paste0("extract(year from ", qcol, "::date)::integer")
+dbi_typed_date_expression <- function(qcol,column_type="date",column_class="date") {
+  if(grepl("timestamp with time zone|timestamptz",paste(column_type,column_class),ignore.case=TRUE))paste0("(",qcol," at time zone 'UTC')::date") else paste0(qcol,"::date")
+}
+
+dbi_date_year_expression <- function(qcol, column_type = "", column_class = "", format_rule="iso") {
+  date_value <- if(!sql_type_is_date(column_type,column_class)) dbi_text_date_string_expression(qcol,format_rule) else dbi_typed_date_expression(qcol,column_type,column_class)
+  paste0("extract(year from (",date_value,")::date)::integer")
 }
 
 dbi_columns_from_profiles <- function(column_profiles) {
@@ -1983,7 +1994,7 @@ dbi_checks_from_columns <- function(table_name, column_names) {
 }
 
 dbi_npu_code_counts <- function(conn, table_ref, column_name, table_name, row_count,
-                                min_cell_count = atlas_min_cell_count()) {
+                                min_cell_count = atlas_min_cell_count(), internal = FALSE) {
   if (is.na(column_name) || !nzchar(column_name)) {
     return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
   }
@@ -1993,7 +2004,7 @@ dbi_npu_code_counts <- function(conn, table_ref, column_name, table_name, row_co
     "select upper(regexp_replace((regexp_match(upper(", qcol, "::text), 'NPU[[:space:]_-]*[0-9]+'))[1], '[^A-Z0-9]', '', 'g')) as npu_code ",
     "from ", table_ref, " where ", qcol, " is not null and ", qcol, "::text ~* 'NPU[[:space:]_-]*[0-9]+'",
     ") x where npu_code is not null group by npu_code having count(*) >= ",
-    as.integer(normalize_min_cell_count(min_cell_count)),
+    if(isTRUE(internal)) 1L else as.integer(normalize_min_cell_count(min_cell_count)),
     " order by n_observed desc, npu_code"
   )
   out <- tryCatch(DBI::dbGetQuery(conn, sql), error = function(e) empty_df(npu_code = character(), n_observed = integer()))
@@ -2370,57 +2381,13 @@ stream_year_counts_for_column <- function(stream_profile_bundle, column_name) {
   counts[[column_name]]
 }
 
-dbi_temporal_coverage_years_from_stream <- function(column_profiles, source_row, stream_profile_bundle,
-                                                    min_cell_count = atlas_min_cell_count()) {
-  date_column <- coverage_date_column_from_profiles(column_profiles)
-  counts <- stream_year_counts_for_column(stream_profile_bundle, date_column)
-  if (!length(counts)) return(empty_temporal_coverage_years())
-  years <- suppressWarnings(as.integer(names(counts)))
-  n_rows <- suppressWarnings(as.integer(counts))
-  keep <- !is.na(years) &
-    years >= coverage_display_year_min() &
-    years <= coverage_display_year_max() &
-    n_rows >= normalize_min_cell_count(min_cell_count)
-  if (!any(keep)) return(empty_temporal_coverage_years())
-  data.frame(
-    table_name = source_row$table_name[[1]],
-    domain = "",
-    subdomain = "",
-    atlas_role = "",
-    date_column = date_column,
-    year = years[keep],
-    n_rows = n_rows[keep],
-    pct_rows = vapply(n_rows[keep], safe_pct, numeric(1), denom = source_row$n_rows[[1]]),
-    coverage_basis = "streamed_event_date_counts",
-    stringsAsFactors = FALSE
-  )
+dbi_temporal_coverage_years_from_stream <- function(column_profiles,source_row,stream_profile_bundle,min_cell_count=atlas_min_cell_count()) {
+  # Single-column streams have no exact person-to-year membership.
+  empty_temporal_coverage_years()
 }
-
-dbi_spatial_region_counts_from_stream <- function(column_profiles, source_row, stream_profile_bundle,
-                                                  min_cell_count = atlas_min_cell_count()) {
-  region_col <- region_column_from_profiles(column_profiles)
-  counts <- stream_counts_for_column(stream_profile_bundle, region_col)
-  if (!length(counts)) return(empty_spatial_region_counts())
-  code <- normalize_dk_region(names(counts))
-  out <- data.frame(
-    table_name = source_row$table_name[[1]],
-    domain = "",
-    subdomain = "",
-    atlas_role = "",
-    region_column = region_col,
-    region_code = code,
-    n_rows = suppressWarnings(as.integer(counts)),
-    stringsAsFactors = FALSE
-  )
-  out <- out[!is.na(out$region_code) & nzchar(out$region_code), , drop = FALSE]
-  out <- out[out$n_rows >= normalize_min_cell_count(min_cell_count), , drop = FALSE]
-  if (!nrow(out)) return(empty_spatial_region_counts())
-  out <- aggregate(n_rows ~ table_name + domain + subdomain + atlas_role + region_column + region_code, data = out, FUN = sum)
-  ref <- dk_region_reference()
-  out <- merge(out, ref[, c("region_code", "region_name")], by = "region_code", all.x = TRUE, sort = FALSE)
-  out$pct_rows <- vapply(out$n_rows, safe_pct, numeric(1), denom = source_row$n_rows[[1]])
-  out$count_basis <- "streamed_region_column_counts"
-  out[, c("table_name", "domain", "subdomain", "atlas_role", "region_column", "region_code", "region_name", "n_rows", "pct_rows", "count_basis"), drop = FALSE]
+dbi_spatial_region_counts_from_stream <- function(column_profiles,source_row,stream_profile_bundle,min_cell_count=atlas_min_cell_count()) {
+  # Alias counts and distinct people cannot be reconstructed from row frequencies.
+  empty_spatial_region_counts()
 }
 
 dbi_registry_categorical_panel_from_top_values <- function(column_profiles, source_row, registry, top_values) {
@@ -2472,7 +2439,7 @@ dbi_damyda_numeric_panel_from_profiles <- function(column_profiles, source_row) 
 }
 
 stream_npu_counts_from_bundle <- function(stream_profile_bundle, code_column, row_count,
-                                          min_cell_count = 1L) {
+                                          min_cell_count = atlas_min_cell_count(), internal = FALSE) {
   counts <- stream_counts_for_column(stream_profile_bundle, code_column)
   if (!length(counts)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
   codes <- normalize_npu_code(names(counts))
@@ -2480,7 +2447,7 @@ stream_npu_counts_from_bundle <- function(stream_profile_bundle, code_column, ro
   if (!any(ok)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
   tmp <- data.frame(npu_code = codes[ok], n_observed = suppressWarnings(as.integer(counts[ok])), stringsAsFactors = FALSE)
   agg <- aggregate(n_observed ~ npu_code, data = tmp, FUN = sum)
-  agg <- agg[agg$n_observed >= normalize_min_cell_count(min_cell_count), , drop = FALSE]
+  if(!isTRUE(internal)) agg <- agg[agg$n_observed >= normalize_min_cell_count(min_cell_count), , drop = FALSE]
   if (!nrow(agg)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
   agg$pct_rows <- vapply(agg$n_observed, safe_pct, numeric(1), denom = row_count)
   agg[order(-agg$n_observed, agg$npu_code), , drop = FALSE]
@@ -2555,35 +2522,9 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
   panels <- list()
   streamed <- identical(profile_strategy, "stream_column")
   if (!is.null(conn) && !is.null(table_ref)) {
-    if (streamed) {
-      panels$atlas_temporal_coverage_years <- dbi_temporal_coverage_years_from_stream(
-        column_profiles = column_profiles,
-        source_row = source_row,
-        stream_profile_bundle = stream_profile_bundle,
-        min_cell_count = min_cell_count
-      )
-      panels$atlas_spatial_region_counts <- dbi_spatial_region_counts_from_stream(
-        column_profiles = column_profiles,
-        source_row = source_row,
-        stream_profile_bundle = stream_profile_bundle,
-        min_cell_count = min_cell_count
-      )
-    } else {
-      panels$atlas_temporal_coverage_years <- dbi_temporal_coverage_years(
-        conn = conn,
-        table_ref = table_ref,
-        column_profiles = column_profiles,
-        source_row = source_row,
-        min_cell_count = min_cell_count
-      )
-      panels$atlas_spatial_region_counts <- dbi_spatial_region_counts(
-        conn = conn,
-        table_ref = table_ref,
-        column_profiles = column_profiles,
-        source_row = source_row,
-        min_cell_count = min_cell_count
-      )
-    }
+    panels$coverage_evidence <- dbi_coverage_evidence(conn,table_ref,column_profiles,source_row,min_cell_count,budget_context)
+    panels <- coverage_release_panels(panels,source_row,min_cell_count)
+    panels <- c(panels,dbi_vital_inventory(conn,table_ref,column_profiles$column_name,source_row$table_name[1],min_cell_count,budget_context))
   }
   registry <- registry_name(source_row$table_name[[1]])
   if (!is.na(registry)) {
@@ -2627,7 +2568,7 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
   if (!is.null(conn) && !is.null(table_ref) && !is.null(npu_dictionary) && nrow(npu_dictionary)) {
     code_column <- npu_code_column_from_names(column_profiles$column_name)
     counts <- if (streamed) {
-      stream_npu_counts_from_bundle(stream_profile_bundle, code_column, source_row$n_rows[[1]], min_cell_count = 1L)
+      stream_npu_counts_from_bundle(stream_profile_bundle, code_column, source_row$n_rows[[1]], internal = TRUE)
     } else {
       dbi_npu_code_counts(
         conn = conn,
@@ -2635,7 +2576,7 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
         column_name = code_column,
         table_name = source_row$table_name[[1]],
         row_count = source_row$n_rows[[1]],
-        min_cell_count = 1L
+        internal = TRUE
       )
     }
     panels$lab_npu_code_coverage <- npu_lab_code_coverage_from_counts(
@@ -2755,3 +2696,29 @@ dbi_panels_from_profiles <- function(column_profiles, source_row, conn = NULL, t
   }
   panels
 }
+
+# Vectorized Algorithm R: independent destinations for each incoming position;
+# only the last update to a repeated destination survives, as in sequential R.
+numeric_reservoir_update <- function(state, values, capacity) {
+  values <- values[is.finite(values)]
+  capacity <- as.integer(capacity)
+  stopifnot(length(capacity)==1L,!is.na(capacity),capacity>0L)
+  count <- length(values)
+  if(!count)return(state)
+  seen <- as.numeric(state$seen)
+  fill <- min(count,max(0L,capacity-length(state$values)))
+  if(fill>0L)state$values <- c(state$values,values[seq_len(fill)])
+  if(fill<count) {
+    positions <- seq.int(fill+1L,count)
+    destination <- floor(stats::runif(length(positions))*(seen+positions))+1
+    keep <- destination<=capacity
+    destination <- destination[keep]; replacement <- values[positions[keep]]
+    last <- !duplicated(destination,fromLast=TRUE)
+    state$values[destination[last]] <- replacement[last]
+  }
+  state$seen <- seen+count
+  state
+}
+
+# R trimws default strips exactly these four ASCII whitespace characters.
+dbi_trim_date_text_expression <- function(qcol) paste0("btrim(",qcol,"::text,chr(32)||chr(9)||chr(10)||chr(13))")

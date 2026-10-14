@@ -101,29 +101,68 @@ read_delimited_file <- function(path) {
   }
 }
 
-safe_as_date <- function(x) {
+# Text dates accept complete ISO calendar dates/timestamps by default. Day-first
+# and compact forms require an exact reviewed source/column mapping.
+atlas_date_format_pattern <- function(format_rule = "iso") {
+  switch(format_rule,
+    iso = "^[0-9]{4}-[0-9]{2}-[0-9]{2}([T ][0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]+)?(Z|[+-][0-9]{2}:[0-9]{2})?)?$",
+    dmy_dash = "^[0-9]{2}-[0-9]{2}-[0-9]{4}$",
+    dmy_slash = "^[0-9]{2}/[0-9]{2}/[0-9]{4}$",
+    dmy_dot = "^[0-9]{2}[.][0-9]{2}[.][0-9]{4}$",
+    ymd_compact = "^[0-9]{8}$", stop("Unsupported date format rule",call.=FALSE))
+}
+
+atlas_date_rule <- function(table_name, column_name) {
+  path <- Sys.getenv("DALYCARE_DATE_FORMATS_FILE", "")
+  default <- list(format_rule="iso", sentinel_dates=character(), evidence_status="iso_default")
+  if(!nzchar(path)) return(default)
+  mapping <- read.csv(path,colClasses="character",check.names=FALSE,stringsAsFactors=FALSE)
+  if(!all(c("table_name","column_name","format_rule","reviewed") %in% names(mapping))) stop("Invalid date mapping",call.=FALSE)
+  if(any(is.na(mapping$table_name)|!nzchar(trimws(mapping$table_name))|is.na(mapping$column_name)|!nzchar(trimws(mapping$column_name))))stop("Invalid exact date field mapping",call.=FALSE)
+  if(anyDuplicated(paste(mapping$table_name,mapping$column_name,sep="\r"))) stop("Duplicate date mapping",call.=FALSE)
+  for(rule in mapping$format_rule) atlas_date_format_pattern(rule)
+  if("sentinel_dates"%in%names(mapping))for(cell in mapping$sentinel_dates) {
+    if(is.na(cell)||!nzchar(cell))next
+    sentinels<-strsplit(cell,";",fixed=TRUE)[[1]]
+    if(any(!grepl("^[0-9]{4}-[0-9]{2}-[0-9]{2}$",sentinels)|is.na(safe_as_date(sentinels)))||anyDuplicated(sentinels))stop("Invalid sentinel mapping",call.=FALSE)
+  }
+  if(any(is.na(mapping$reviewed)|tolower(mapping$reviewed)!="true")) stop("Unreviewed date mapping",call.=FALSE)
+  row <- mapping[mapping$table_name==table_name & mapping$column_name==column_name,,drop=FALSE]
+  if(!nrow(row))return(default)
+  sentinels <- if("sentinel_dates" %in% names(row) && !is.na(row$sentinel_dates[1])) strsplit(row$sentinel_dates[1],";",fixed=TRUE)[[1]] else character()
+  if(length(sentinels) && any(is.na(safe_as_date(sentinels))))stop("Invalid sentinel mapping",call.=FALSE)
+  list(format_rule=row$format_rule[1],sentinel_dates=sentinels,evidence_status="reviewed_mapping")
+}
+
+safe_as_date <- function(x, format_rule = "iso") {
   if (inherits(x, "Date")) return(x)
-  if (inherits(x, "POSIXt")) return(as.Date(x))
-  if (is.numeric(x)) {
-    as_text <- as.character(x)
-    ymd_like <- !is.na(x) & x >= 19000101 & x <= 21001231 & grepl("^[0-9]{8}$", as_text)
-    out <- rep(as.Date(NA), length(x))
-    out[ymd_like] <- suppressWarnings(as.Date(as_text[ymd_like], format = "%Y%m%d"))
-    remaining <- !ymd_like
-    out[remaining] <- suppressWarnings(as.Date(x[remaining], origin = "1970-01-01"))
-    plausible <- !is.na(out) & out >= as.Date("1900-01-01") & out <= as.Date("2100-12-31")
-    out[!plausible] <- NA
-    return(out)
-  }
-  x <- trimws(as.character(x))
-  x[x == ""] <- NA_character_
-  formats <- c("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d", "%Y%m%d", "%d.%m.%Y")
+  if (inherits(x, "POSIXt")) return(as.Date(x, tz="UTC"))
   parsed <- rep(as.Date(NA), length(x))
-  for (fmt in formats) {
-    missing <- is.na(parsed) & !is.na(x)
-    if (!any(missing)) break
-    parsed[missing] <- suppressWarnings(as.Date(x[missing], format = fmt))
+  # Numeric values never get an epoch origin; only an explicit compact mapping
+  # can match their string representation.
+  x <- trimws(as.character(x))
+  ok <- !is.na(x) & grepl(atlas_date_format_pattern(format_rule),x)
+  value <- x
+  if(format_rule %in% c("dmy_dash","dmy_slash","dmy_dot")) value <- paste0(substr(x,7,10),"-",substr(x,4,5),"-",substr(x,1,2))
+  if(format_rule=="ymd_compact") value <- paste0(substr(x,1,4),"-",substr(x,5,6),"-",substr(x,7,8))
+  year <- suppressWarnings(as.integer(substr(value,1,4)))
+  month <- suppressWarnings(as.integer(substr(value,6,7)))
+  day <- suppressWarnings(as.integer(substr(value,9,10)))
+  leap <- year %% 4 == 0 & (year %% 100 != 0 | year %% 400 == 0)
+  days <- c(31L,28L,31L,30L,31L,30L,31L,31L,30L,31L,30L,31L)[pmax(1L,pmin(12L,month))]
+  days[!is.na(month) & month==2L & !is.na(leap) & leap] <- 29L
+  ok <- ok & !is.na(year) & year>=1L & month>=1L & month<=12L & day>=1L & day<=days
+  if(format_rule=="iso") {
+    timed <- nchar(x)>10L & !is.na(x)
+    clock_ok <- suppressWarnings(as.integer(substr(x,12,13)))<=23L & suppressWarnings(as.integer(substr(x,15,16)))<=59L & suppressWarnings(as.integer(substr(x,18,19)))<=59L
+    offset <- grepl("[+-][0-9]{2}:[0-9]{2}$",x)
+    tail <- substring(x,pmax(1,nchar(x)-5))
+    offset_ok <- suppressWarnings(as.integer(substr(tail,2,3)))<=23L & suppressWarnings(as.integer(substr(tail,5,6)))<=59L
+    ok[timed] <- ok[timed] & clock_ok[timed]
+    ok[offset] <- ok[offset] & offset_ok[offset]
   }
+  ok[is.na(ok)] <- FALSE
+  parsed[ok] <- as.Date(substr(value[ok],1,10),format="%Y-%m-%d")
   parsed
 }
 

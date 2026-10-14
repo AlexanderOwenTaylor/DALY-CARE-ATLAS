@@ -164,12 +164,12 @@ panel_npu_dictionary_vectors <- function(dictionary) {
   out[order(-out$n_dictionary_codes, out$consensus_vector), , drop = FALSE]
 }
 
-npu_counts_from_values <- function(values, denom, min_cell_count = atlas_min_cell_count()) {
+npu_counts_from_values <- function(values, denom, min_cell_count = atlas_min_cell_count(), internal = FALSE) {
   codes <- normalize_npu_code(values)
   codes <- codes[!is.na(codes) & nzchar(codes)]
   if (!length(codes)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
   tab <- sort(table(codes), decreasing = TRUE)
-  tab <- tab[as.integer(tab) >= normalize_min_cell_count(min_cell_count)]
+  if(!isTRUE(internal)) tab <- tab[as.integer(tab) >= normalize_min_cell_count(min_cell_count)]
   if (!length(tab)) return(empty_df(npu_code = character(), n_observed = integer(), pct_rows = numeric()))
   data.frame(
     npu_code = names(tab),
@@ -202,7 +202,7 @@ panel_npu_lab_usage_by_vector <- function(data, table_name, dictionary,
                                           min_cell_count = atlas_min_cell_count()) {
   code_col <- npu_code_column(data)
   if (is.na(code_col)) return(empty_npu_lab_usage_by_vector())
-  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L)
+  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L, internal = TRUE)
   npu_lab_usage_from_counts(
     counts = counts,
     table_name = table_name,
@@ -250,7 +250,7 @@ panel_npu_lab_unmatched_codes <- function(data, table_name, dictionary,
                                           min_cell_count = atlas_min_cell_count()) {
   code_col <- npu_code_column(data)
   if (is.na(code_col)) return(empty_npu_lab_unmatched_codes())
-  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L)
+  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L, internal = TRUE)
   npu_lab_unmatched_from_counts(
     counts = counts,
     table_name = table_name,

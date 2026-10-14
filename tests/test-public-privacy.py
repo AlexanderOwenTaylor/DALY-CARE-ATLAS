@@ -20,8 +20,29 @@ class PrivacyTests(unittest.TestCase):
   self.assertEqual(a,b)
   rows=a['panels']['atlas_temporal_coverage_years']
   self.assertEqual(len(rows),3); self.assertIsNone(rows[0]['year']); self.assertEqual(rows[0]['date_privacy_status'],'withheld_derived_source_range')
-  self.assertEqual([r['year'] for r in rows[1:]],[2020,2021]); self.assertEqual([r['n_rows'] for r in rows[1:]],[20,30])
+  self.assertEqual([r['year'] for r in rows[1:]],[None,None]); self.assertEqual([r['n_rows'] for r in rows[1:]],[None,None])
   self.assertEqual(a,sanitize_public_payload(a)); self.assertEqual(audit_public_payload(a),[])
+ def test_sampling_is_internal_and_supported_coverage_survives(self):
+  row=dict(table_name='S',date_column='D',coverage_basis='person_supported_complete_partition',year=2024,n_rows=10,pct_rows=50,person_count=5,outside_person_count=9,outside_record_count=9,person_support_safe=True,outside_person_support_safe=True,outside_record_support_safe=True,partition_complete=True,support_k=5)
+  payload={'panels':{'atlas_temporal_coverage_years':[row]},'column_profile_rows':[self.profile(sample_size=1,eligible_n=1,sampling_method='algorithm_r_reservoir',sampling_complete=True)]}
+  safe=sanitize_public_payload(payload)
+  self.assertEqual(safe['panels']['atlas_temporal_coverage_years'][0]['year'],2024)
+  for key in ('sample_size','eligible_n','sampling_method','sampling_complete'): self.assertNotIn(key,safe['column_profile_rows'][0])
+  for key in ('person_count','outside_person_count','outside_record_count'): self.assertNotIn(key,safe['panels']['atlas_temporal_coverage_years'][0])
+  row['outside_person_support_safe']=False
+  self.assertIsNone(sanitize_public_payload(payload)['panels']['atlas_temporal_coverage_years'][0]['year'])
+  self.assertEqual(safe,sanitize_public_payload(safe))
+ def test_supported_labels_survive_withheld_partition_counts(self):
+  row=dict(table_name='S',date_column='D',coverage_basis='person_supported_label_only',year=2024,n_rows=10,pct_rows=50,person_support_safe=True,outside_person_support_safe=True,outside_record_support_safe=True,partition_complete=False,support_k=5)
+  payload={'panels':{'atlas_temporal_coverage_years':[row]}}
+  safe=sanitize_public_payload(payload)
+  result=safe['panels']['atlas_temporal_coverage_years'][0]
+  self.assertEqual(result['year'],2024)
+  self.assertIsNone(result['n_rows']);self.assertIsNone(result['pct_rows'])
+  self.assertEqual(result['count_privacy_status'],'withheld_partition_counts')
+  self.assertEqual(safe,sanitize_public_payload(safe))
+  row['person_support_safe']=False
+  self.assertIsNone(sanitize_public_payload(payload)['panels']['atlas_temporal_coverage_years'][0]['year'])
  def profile(self, **kw):
   r=dict(table_name="RKKP_CLL",column_name="Reg_Leukocyttal",profile_kind="numeric",n_rows="100",n_available="80",n_missing="20",pct_available="80",pct_missing="20",n_distinct_capped="20",min="0",max="999999.123",mean="7",median="6",p25="4",p75="8")
   r.update(kw); return r

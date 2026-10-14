@@ -10,8 +10,10 @@ df <- data.frame(
   stringsAsFactors = FALSE
 )
 
+df <- df[rep(seq_len(nrow(df)),each=5),]
+df$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(df)))
 profile <- profile_source(df, "labs", "file", "labs.csv", min_cell_count = 1L)
-expect_equal(profile$source$n_rows[[1]], 3L, "Profile should record row count.")
+expect_equal(profile$source$n_rows[[1]], 15L, "Profile should record row count.")
 expect_true("patientid" %in% profile$columns$column_name, "Column inventory should include patientid column names.")
 expect_false(any(profile$value_frequencies$column_name == "patientid"), "Value frequencies must suppress patient identifiers.")
 expect_true(any(profile$checks$check_id == "sensitive_column_values_suppressed"), "Privacy suppression check should be emitted.")
@@ -30,7 +32,7 @@ isotype_vectors <- load_isotype_vectors(project_root = root, dictionary = npu_di
 treatment_families <- load_mm_treatment_code_families(project_root = root)
 npu_profile <- profile_source(
   data.frame(
-    analysiscode = c("NPU04998", "NPU04998", "NPU01443", "NPU99999", "not-a-code"),
+    analysiscode = c(rep("NPU04998",5), "NPU01443", "NPU99999", "not-a-code"),
     stringsAsFactors = FALSE
   ),
   "labs_npu",
@@ -44,7 +46,7 @@ expect_false(any(npu_profile$panels$npu_lab_usage_by_vector$consensus_vector == 
 expect_equal(nrow(npu_profile$panels$npu_lab_unmatched_codes), 0L, "Unmatched NPU codes below the minimum cell count should be suppressed.")
 
 component_npu_profile <- profile_source(
-  data.frame(component = c("NPU04998", "NPU04998", "not-a-code"), stringsAsFactors = FALSE),
+  data.frame(component = c(rep("NPU04998",5), "not-a-code"), stringsAsFactors = FALSE),
   "SP_AlleProvesvar",
   "file",
   "labs.csv",
@@ -55,9 +57,9 @@ expect_true(any(component_npu_profile$panels$npu_lab_usage_by_vector$consensus_v
 
 code_discovery_profile <- profile_source(
   data.frame(
-    patientid = 1:8,
-    analysiscode = c("NPU04998", "NPU04998", "NPU28638", "NPU28638", "NPU99999", "NPU99999", "NPU01443", "not-a-code"),
-    samplingdate = c("2021-01-01", "2021-01-02", "2021-02-01", "2021-02-02", "2022-01-01", "2022-01-02", "2022-03-01", "2022-04-01"),
+    patientid = 1:17,
+    analysiscode = c(rep(c("NPU04998","NPU28638","NPU99999"),each=5),"NPU01443","not-a-code"),
+    samplingdate = c(rep("2021-01-01",10),rep("2022-01-01",7)),
     stringsAsFactors = FALSE
   ),
   "SP_AlleProvesvar",
@@ -78,9 +80,9 @@ expect_true(any(code_discovery_profile$panels$isotype_bucket_summary$bucket == "
 
 treatment_profile <- profile_source(
   data.frame(
-    patientid = 1:7,
-    procedurekode = c("BWHA154", "BWHA154", "BWG123", "BWG124", "MH02AB02", "ZZZ999", ""),
-    procedure_date = c("2021-06-01", "2021-06-02", "2021-06-03", "2021-06-04", "2021-06-05", "2021-06-06", "2021-06-07"),
+    patientid = 1:13,
+    procedurekode = c(rep("BWHA154",5),rep("BWG123",5),"MH02AB02","ZZZ999",""),
+    procedure_date = rep("2021-06-01",13),
     stringsAsFactors = FALSE
   ),
   "SDS_procedurer_andre",
@@ -133,10 +135,12 @@ registry_damyda <- data.frame(
   Reg_Creatinin = c(72, 85, NA, 110),
   stringsAsFactors = FALSE
 )
+registry_damyda <- registry_damyda[rep(seq_len(nrow(registry_damyda)),each=5),]
+registry_damyda$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(registry_damyda)))
 registry_profile <- profile_source(registry_damyda, "RKKP_DaMyDa", "file", "damyda.csv", min_cell_count = 1L)
 summary_panel <- registry_profile$panels$registry_clinical_summary
 expect_equal(summary_panel$registry[[1]], "DaMyDa", "Registry summary should identify DaMyDa.")
-expect_true(is.na(summary_panel$n_patients[[1]]), "Registry person counts require an operator-reviewed exact person key.")
+expect_equal(summary_panel$n_patients[[1]],20L,"The reviewed exact RKKP patientid policy counts distinct synthetic people.")
 
 clinical_panel <- registry_profile$panels$damyda_clinical_profile
 expect_true(nrow(clinical_panel) > 0, "DaMyDa clinical profile should be generated.")
@@ -164,6 +168,8 @@ dalycare_damyda <- data.frame(
   LDH = c(180, 210, 190, 260),
   stringsAsFactors = FALSE
 )
+dalycare_damyda <- dalycare_damyda[rep(seq_len(nrow(dalycare_damyda)),each=5),]
+dalycare_damyda$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(dalycare_damyda)))
 dalycare_damyda_profile <- profile_source(dalycare_damyda, "RKKP_DaMyDa", "file", "damyda.csv", min_cell_count = 1L)
 expect_true(any(dalycare_damyda_profile$panels$damyda_clinical_profile$source_column == "Stadie"), "DaMyDa aliases should match cleaner/raw Stadie.")
 expect_true(any(dalycare_damyda_profile$panels$damyda_clinical_profile$source_column == "Cyto_FishUdfoert"), "DaMyDa aliases should match cleaner/raw FISH status.")
@@ -178,6 +184,8 @@ lyfo <- data.frame(
   Reg_BSymptomer = c("yes", "no", "yes"),
   stringsAsFactors = FALSE
 )
+lyfo <- lyfo[rep(seq_len(nrow(lyfo)),each=5),]
+lyfo$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(lyfo)))
 lyfo_profile <- profile_source(lyfo, "RKKP_LYFO", "file", "lyfo.csv", min_cell_count = 1L)
 expect_true(nrow(lyfo_profile$panels$lyfo_clinical_profile) > 0, "LYFO clinical profile should be generated.")
 expect_true(any(lyfo_profile$panels$lyfo_clinical_profile$facet == "subtype"), "LYFO profile should include subtype.")
@@ -191,6 +199,8 @@ dalycare_lyfo <- data.frame(
   Reg_BSymptomer = c("yes", "no", "yes"),
   stringsAsFactors = FALSE
 )
+dalycare_lyfo <- dalycare_lyfo[rep(seq_len(nrow(dalycare_lyfo)),each=5),]
+dalycare_lyfo$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(dalycare_lyfo)))
 dalycare_lyfo_profile <- profile_source(dalycare_lyfo, "RKKP_LYFO", "file", "lyfo.csv", min_cell_count = 1L)
 expect_true(any(dalycare_lyfo_profile$panels$lyfo_clinical_profile$source_column == "Reg_Stadium"), "LYFO aliases should match Reg_Stadium.")
 expect_true(any(dalycare_lyfo_profile$panels$lyfo_clinical_profile$source_column == "Reg_PerformanceStatusWHO"), "LYFO aliases should match Reg_PerformanceStatusWHO.")
@@ -204,6 +214,8 @@ cll <- data.frame(
   Reg_TP53 = c("wildtype", "mutated", "mutated"),
   stringsAsFactors = FALSE
 )
+cll <- cll[rep(seq_len(nrow(cll)),each=5),]
+cll$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(cll)))
 cll_profile <- profile_source(cll, "RKKP_CLL", "file", "cll.csv", min_cell_count = 1L)
 expect_true(nrow(cll_profile$panels$cll_clinical_profile) > 0, "CLL clinical profile should be generated.")
 expect_true(any(cll_profile$panels$cll_clinical_profile$facet == "tp53"), "CLL profile should include TP53.")
@@ -218,6 +230,8 @@ dalycare_cll <- data.frame(
   Reg_Performancestatus = c("0", "1", "1", "2"),
   stringsAsFactors = FALSE
 )
+dalycare_cll <- dalycare_cll[rep(seq_len(nrow(dalycare_cll)),each=5),]
+dalycare_cll$patientid <- sprintf("SYNTHETIC-%03d",seq_len(nrow(dalycare_cll)))
 dalycare_cll_profile <- profile_source(dalycare_cll, "RKKP_CLL", "file", "cll.csv", min_cell_count = 1L)
 expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_BinetStadium"), "CLL aliases should match Reg_BinetStadium.")
 expect_true(any(dalycare_cll_profile$panels$cll_clinical_profile$source_column == "Reg_Umuteret"), "CLL aliases should match Reg_Umuteret.")

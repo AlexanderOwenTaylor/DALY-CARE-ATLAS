@@ -342,15 +342,15 @@ situation_column_info <- function(schema, column_name) {
   row[1, , drop = FALSE]
 }
 
-situation_date_expression <- function(conn, schema, column_name) {
+situation_date_expression <- function(conn, schema, column_name,table_name="") {
   qcol <- DBI::dbQuoteIdentifier(conn, column_name)
   info <- situation_column_info(schema, column_name)
   column_type <- info$data_type[[1]] %||% ""
   column_class <- info$udt_name[[1]] %||% column_type
-  if (sql_type_is_text(column_type, column_class)) {
-    return(paste0("(", dbi_text_date_string_expression(qcol), ")::date"))
+  if (!sql_type_is_date(column_type, column_class)) {
+    return(paste0("(", dbi_text_date_string_expression(qcol,atlas_date_rule(table_name,column_name)$format_rule), ")::date"))
   }
-  paste0(qcol, "::date")
+  dbi_typed_date_expression(qcol,column_type,column_class)
 }
 
 situation_as_of_query <- function(conn, table_ref, date_expr) {
@@ -428,7 +428,7 @@ situation_dbi_recent_date <- function(def, ctx, n_cohort = NA_real_, min_cell_co
   patient_col <- situation_patient_column(ctx$columns)
   date_col <- situation_find_column(ctx$columns, def$date_candidates)
   if (is.na(patient_col) || is.na(date_col)) return(situation_metric_unavailable_result(def, ctx, "Required patient/date columns were not found."))
-  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col)
+  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col,ctx$row$table_name[[1]] %||% "")
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, date_expr)
   if (is.na(as_of)) return(situation_metric_unavailable_result(def, ctx, "No valid as-of date was available."))
   start <- as_of - as.integer(def$window_days %||% 30L)
@@ -455,7 +455,7 @@ situation_dbi_recent_earliest_date <- function(def, ctx, n_cohort = NA_real_, mi
   if (is.na(patient_col) || is.na(date_col)) {
     return(situation_metric_unavailable_result(def, ctx, "Required patient/date columns for earliest-diagnosis logic were not found.", n_cohort = n_cohort))
   }
-  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col)
+  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col,ctx$row$table_name[[1]] %||% "")
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, date_expr)
   if (is.na(as_of)) {
     return(situation_metric_unavailable_result(def, ctx, "No valid as-of diagnosis date was available.", n_cohort = n_cohort))
@@ -497,7 +497,7 @@ situation_dbi_recent_event_or_date <- function(def, ctx, n_cohort = NA_real_, mi
   patient_col <- situation_patient_column(ctx$columns)
   date_col <- situation_find_column(ctx$columns, def$date_candidates)
   if (is.na(patient_col) || is.na(date_col)) return(situation_metric_unavailable_result(def, ctx, "Required patient/date columns were not found."))
-  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col)
+  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col,ctx$row$table_name[[1]] %||% "")
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, date_expr)
   if (is.na(as_of)) return(situation_metric_unavailable_result(def, ctx, "No valid as-of date was available."))
   start <- as_of - as.integer(def$window_days %||% 30L)
@@ -537,8 +537,8 @@ situation_dbi_current_admission_interval <- function(def, ctx, n_cohort = NA_rea
   if (is.na(patient_col) || is.na(start_col) || is.na(end_col)) {
     return(situation_metric_unavailable_result(def, ctx, "Required paired patient/admission start/end columns were not found.", n_cohort = n_cohort))
   }
-  start_expr <- situation_date_expression(ctx$conn, ctx$schema, start_col)
-  end_expr <- situation_date_expression(ctx$conn, ctx$schema, end_col)
+  start_expr <- situation_date_expression(ctx$conn, ctx$schema, start_col,ctx$row$table_name[[1]] %||% "")
+  end_expr <- situation_date_expression(ctx$conn, ctx$schema, end_col,ctx$row$table_name[[1]] %||% "")
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, paste0("greatest(coalesce(", start_expr, ", '1900-01-01'::date), coalesce(", end_expr, ", '1900-01-01'::date))"))
   if (is.na(as_of)) return(situation_metric_unavailable_result(def, ctx, "No valid as-of date was available.", n_cohort = n_cohort))
   qpatient <- DBI::dbQuoteIdentifier(ctx$conn, patient_col)
@@ -563,7 +563,7 @@ situation_dbi_recent_interval_date <- function(def, ctx, n_cohort = NA_real_, mi
   if (is.na(patient_col) || is.na(date_col)) {
     return(situation_metric_unavailable_result(def, ctx, "Required patient/date columns were not found.", n_cohort = n_cohort))
   }
-  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col)
+  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col,ctx$row$table_name[[1]] %||% "")
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, date_expr)
   if (is.na(as_of)) return(situation_metric_unavailable_result(def, ctx, "No valid as-of date was available.", n_cohort = n_cohort))
   start <- as_of - as.integer(def$window_days %||% 30L)
@@ -587,8 +587,8 @@ situation_dbi_current_interval <- function(def, ctx, n_cohort = NA_real_, min_ce
   start_col <- situation_find_column(ctx$columns, def$start_candidates)
   end_col <- situation_find_column(ctx$columns, def$end_candidates)
   if (is.na(patient_col) || is.na(start_col)) return(situation_metric_unavailable_result(def, ctx, "Required patient/start-date columns were not found."))
-  start_expr <- situation_date_expression(ctx$conn, ctx$schema, start_col)
-  end_expr <- if (!is.na(end_col)) situation_date_expression(ctx$conn, ctx$schema, end_col) else "null::date"
+  start_expr <- situation_date_expression(ctx$conn, ctx$schema, start_col,ctx$row$table_name[[1]] %||% "")
+  end_expr <- if (!is.na(end_col)) situation_date_expression(ctx$conn, ctx$schema, end_col,ctx$row$table_name[[1]] %||% "") else "null::date"
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, paste0("greatest(coalesce(", start_expr, ", '1900-01-01'::date), coalesce(", end_expr, ", '1900-01-01'::date))"))
   if (is.na(as_of)) return(situation_metric_unavailable_result(def, ctx, "No valid as-of date was available."))
   qpatient <- DBI::dbQuoteIdentifier(ctx$conn, patient_col)
@@ -608,7 +608,7 @@ situation_dbi_current_event_or_interval <- function(def, ctx, n_cohort = NA_real
   if (is.na(event_col) || is.na(date_col) || is.na(patient_col)) {
     return(situation_dbi_current_interval(def, ctx, n_cohort = n_cohort, min_cell_count = min_cell_count))
   }
-  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col)
+  date_expr <- situation_date_expression(ctx$conn, ctx$schema, date_col,ctx$row$table_name[[1]] %||% "")
   as_of <- situation_as_of_query(ctx$conn, ctx$table_ref, date_expr)
   if (is.na(as_of)) return(situation_metric_unavailable_result(def, ctx, "No valid as-of date was available."))
   qpatient <- DBI::dbQuoteIdentifier(ctx$conn, patient_col)
@@ -731,11 +731,17 @@ apply_situation_freshness <- function(summary, breakdowns, freshness) {
   )
 }
 
+situation_latest_valid_date <- function(dates) {
+  dates<-dates[!is.na(dates)&is.finite(as.numeric(dates))]
+  if(length(dates))max(dates) else as.Date(NA)
+}
+
 situation_recent_from_data <- function(data, metric_id, label, date_col, patient_col = "patientid",
                                        window_days = 30L, min_cell_count = atlas_min_cell_count(),
                                        n_cohort = NA_real_, definition_basis = "fixture_recent_date") {
   dates <- safe_as_date(data[[date_col]])
-  as_of <- max(dates, na.rm = TRUE)
+  as_of <- situation_latest_valid_date(dates)
+  if(is.na(as_of))return(situation_unavailable_row(list(metric_id=metric_id,label=label,window_days=window_days,definition_basis=definition_basis),"No valid as-of date was available.",n_cohort=n_cohort))
   ok <- !is.na(dates) & dates >= as_of - window_days & dates <= as_of
   patients <- unique(data[[patient_col]][ok])
   patients <- patients[!is.na(patients) & trimws(as.character(patients)) != ""]
@@ -780,10 +786,10 @@ situation_recent_earliest_from_data <- function(data, metric_id = "diagnosed_30d
     return(situation_unavailable_row(def, "Required patient/date columns for earliest-diagnosis logic were not found.", n_cohort = n_cohort))
   }
   dates <- safe_as_date(data[[date_col]])
-  if (all(is.na(dates))) {
+  if (is.na(situation_latest_valid_date(dates))) {
     return(situation_unavailable_row(def, "No valid as-of diagnosis date was available.", n_cohort = n_cohort))
   }
-  as_of <- max(dates, na.rm = TRUE)
+  as_of <- situation_latest_valid_date(dates)
   patients <- trimws(as.character(data[[patient_col]]))
   valid <- !is.na(dates) & nzchar(patients) & !is.na(patients) & dates <= as_of
   if (!any(valid)) {
@@ -815,7 +821,8 @@ situation_current_interval_from_data <- function(data, metric_id, label, start_c
                                                  n_cohort = NA_real_, definition_basis = "fixture_current_interval") {
   starts <- safe_as_date(data[[start_col]])
   ends <- if (!is.null(end_col) && end_col %in% names(data)) safe_as_date(data[[end_col]]) else rep(as.Date(NA), nrow(data))
-  as_of <- max(c(starts, ends), na.rm = TRUE)
+  as_of <- situation_latest_valid_date(c(starts,ends))
+  if(is.na(as_of))return(situation_unavailable_row(list(metric_id=metric_id,label=label,window_days=NA_integer_,definition_basis=definition_basis),"No valid as-of interval date was available.",n_cohort=n_cohort))
   ok <- !is.na(starts) & starts <= as_of & (is.na(ends) | ends >= as_of)
   patients <- unique(data[[patient_col]][ok])
   patients <- patients[!is.na(patients) & trimws(as.character(patients)) != ""]
@@ -860,8 +867,10 @@ situation_current_admission_from_data <- function(data, start_col = "kontakt_sta
   }
   starts <- safe_as_date(data[[start_col]])
   ends <- safe_as_date(data[[end_col]])
-  if (is.null(as_of)) as_of <- max(c(starts, ends), na.rm = TRUE)
-  as_of <- as.Date(as_of)
+  latest<-situation_latest_valid_date(c(starts,ends))
+  if (is.null(as_of)) as_of <- latest
+  as_of <- safe_as_date(as_of)
+  if(is.na(latest)||length(as_of)!=1L||is.na(as_of)||!is.finite(as.numeric(as_of)))return(situation_unavailable_row(def,"No valid as-of admission date was available.",n_cohort=n_cohort))
   inpatient <- situation_inpatient_rows(data, class_col)
   ok <- !is.na(starts) & starts <= as_of & (is.na(ends) | ends > as_of) & inpatient
   patients <- unique(data[[patient_col]][ok])
@@ -887,8 +896,10 @@ situation_recent_admission_date_from_data <- function(data, metric_id, label, da
     return(situation_unavailable_row(def, "Required patient/date columns were not found.", n_cohort = n_cohort))
   }
   dates <- safe_as_date(data[[date_col]])
-  if (is.null(as_of)) as_of <- max(dates, na.rm = TRUE)
-  as_of <- as.Date(as_of)
+  latest<-situation_latest_valid_date(dates)
+  if (is.null(as_of)) as_of <- latest
+  as_of <- safe_as_date(as_of)
+  if(is.na(latest)||length(as_of)!=1L||is.na(as_of)||!is.finite(as.numeric(as_of)))return(situation_unavailable_row(list(metric_id=metric_id,label=label,window_days=window_days,definition_basis="fixture_recent_inpatient_contact_date"),"No valid as-of admission date was available.",n_cohort=n_cohort))
   inpatient <- situation_inpatient_rows(data, class_col)
   ok <- !is.na(dates) & dates >= as_of - window_days & dates <= as_of & inpatient
   patients <- unique(data[[patient_col]][ok])

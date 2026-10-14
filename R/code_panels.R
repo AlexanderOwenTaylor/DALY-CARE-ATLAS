@@ -248,7 +248,7 @@ panel_npu_detective_code_inventory <- function(data, table_name, dictionary, sur
                                                min_cell_count = atlas_min_cell_count()) {
   code_col <- npu_code_column(data)
   if (is.na(code_col)) return(empty_npu_detective_code_inventory())
-  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L)
+  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), internal = TRUE)
   npu_detective_inventory_from_counts(counts, table_name, code_col, nrow(data), dictionary, surfaces, min_cell_count)
 }
 
@@ -256,7 +256,7 @@ panel_npu_detective_candidates <- function(data, table_name, dictionary, surface
                                            min_cell_count = atlas_min_cell_count()) {
   code_col <- npu_code_column(data)
   if (is.na(code_col)) return(empty_npu_detective_candidates())
-  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L)
+  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), internal = TRUE)
   npu_detective_candidates_from_counts(counts, table_name, code_col, nrow(data), dictionary, surfaces, min_cell_count)
 }
 
@@ -364,7 +364,7 @@ isotype_bucket_summary_from_usage <- function(usage, table_name, denom, min_cell
 panel_isotype_code_usage <- function(data, table_name, isotype_vectors, min_cell_count = atlas_min_cell_count()) {
   code_col <- npu_code_column(data)
   if (is.na(code_col)) return(empty_isotype_code_usage())
-  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), min_cell_count = 1L)
+  counts <- npu_counts_from_values(data[[code_col]], denom = nrow(data), internal = TRUE)
   isotype_code_usage_from_counts(counts, table_name, code_col, nrow(data), isotype_vectors, min_cell_count)
 }
 

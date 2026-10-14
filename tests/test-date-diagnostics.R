@@ -1,0 +1,18 @@
+source('tests/helper.R');source_test_runtime()
+x<-c(NA,'','2024-01-01','2024-01-01T12:00:00Z','2023-02-29','2024-01-01T24:00:00Z',
+ '31-12-2024','01/02/2024','31.12.2024','20240101','01-02-03','PRIVATE RAW TEXT')
+d<-data.frame(patientid=seq_along(x),event_date=x)
+e<-coverage_evidence_from_data(d,'RKKP_CLL','event_date','date_format')
+expected<-c('missing','valid_iso_date','valid_iso_timestamp','impossible_calendar','invalid_timestamp',
+ 'candidate_dmy_dash','ambiguous_slash_date','candidate_dmy_dot','candidate_compact_ymd','ambiguous_short_date','other_unrecognised')
+expect_true(setequal(e$group_value,expected),'Date diagnostics must retain bounded format/parse reasons, not generic unrecognised only.')
+expect_equal(e$record_count[e$group_value=='missing'],2)
+expect_false(any(grepl('PRIVATE|2024|31-12',unlist(e))))
+expect_true(all(e$format_rule=='iso' & e$format_rule_status=='iso_default'))
+mapping<-tempfile(fileext='.csv');write.csv(data.frame(table_name='RKKP_CLL',column_name='event_date',format_rule='dmy_dash',reviewed=TRUE,sentinel_dates='9999-12-31'),mapping,row.names=FALSE)
+Sys.setenv(DALYCARE_DATE_FORMATS_FILE=mapping)
+e<-coverage_evidence_from_data(data.frame(patientid=1:15,event_date=rep(c('31-12-2024','29-02-2023','31-12-9999'),each=5)),'RKKP_CLL','event_date','date_format')
+expect_true(setequal(e$group_value,c('valid_mapped_date','impossible_calendar','documented_sentinel')))
+expect_true(all(e$format_rule=='dmy_dash' & e$format_rule_status=='reviewed_mapping'))
+Sys.unsetenv('DALYCARE_DATE_FORMATS_FILE');unlink(mapping)
+cat('PASS bounded internal date format reasons and exact rule assessment\n')

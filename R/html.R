@@ -123,6 +123,11 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           patobank_ki67_percent = NULL,
                           mcl_triangle_feasibility = NULL, membership_spec = NULL,
                           membership_origin = 'fresh_run', metadata_context = NULL, project_root = '.') {
+  panels <- coverage_release_panels(panels,sources)
+  panels$atlas_spatial_region_coverage <- panel_atlas_spatial_region_coverage(sources,panels$atlas_spatial_region_counts)
+  panels$atlas_dk_choropleth_regions <- panel_atlas_dk_choropleth_regions(sources,panels,panels$atlas_spatial_region_counts,panels$atlas_spatial_region_coverage)
+  # Internal evidence and scoped descriptor membership belong in registered CSVs.
+  panels[c("coverage_evidence","vital_descriptors","vital_descriptor_assessment")] <- NULL
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -1389,9 +1394,11 @@ public_rows <- function(x, max_rows = 200) {
   x <- head(x, max_rows)
   lapply(seq_len(nrow(x)), function(i) {
     row <- as.list(x[i, , drop = FALSE])
-    lapply(row, function(value) {
+    result <- lapply(row, function(value) {
       if (length(value) == 0 || is.na(value)) NULL else as.character(value)
     })
+    for(key in intersect(c("partition_complete","person_support_safe","outside_person_support_safe","outside_record_support_safe"),names(row)))result[key]<-list(if(is.na(row[[key]]))NULL else row[[key]])
+    result
   })
 }
 

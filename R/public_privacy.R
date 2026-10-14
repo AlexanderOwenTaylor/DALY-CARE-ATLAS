@@ -34,6 +34,7 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   range_rows <- c(payload$panels$atlas_temporal_coverage_years,payload$review_temporal_coverage$years)
   has_ranges <- any(vapply(range_rows,function(r) is.list(r) && scalar(r,'coverage_basis') == 'source_date_range',logical(1)))
   walk <- function(obj, path = character()) {
+    if(length(path) && tail(path,1)%in%c("coverage_evidence","vital_descriptors","vital_descriptor_assessment"))return(list())
     summary_row<-function(r)is.list(r)&&!is.null(names(r))&&any(c('category_counts_json','numeric_groups_json') %in% names(r))
     summary_table<-is.list(obj)&&is.null(names(obj))&&any(vapply(obj,summary_row,logical(1)))
     if((length(path) && tail(path,1)=='registry_field_summaries')||summary_row(obj)||summary_table) {
@@ -89,6 +90,31 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
     if(atlas_metadata_path(path))return(atlas_metadata_fallback(obj,metadata_context))
     if(has_ranges && identical(path,c('review_temporal_coverage','summary')) && 'n_year_rows' %in% names(obj)) obj['n_year_rows'] <- list(NULL)
     r <- obj
+    r[c("sampling_method","sample_size","eligible_n","sampling_complete")] <- NULL
+    coverage_year <- "year" %in% names(r) && "coverage_basis" %in% names(r)
+    coverage_region <- "region_code" %in% names(r) && "count_basis" %in% names(r)
+    if(coverage_year || coverage_region || "quality_state" %in% names(r)) {
+      support_k<-num(r$support_k)
+      supported <- is.finite(support_k) && support_k>=k &&
+        all(vapply(c("person_support_safe","outside_person_support_safe","outside_record_support_safe"),function(key)identical(r[[key]],TRUE),logical(1)))
+      valid <- identical(r$partition_complete,TRUE) && supported
+      label_only <- supported && (coverage_year || coverage_region) &&
+        (identical(r$coverage_basis,"person_supported_label_only") || identical(r$count_basis,"person_supported_label_only"))
+      # Distinct people can overlap across years/regions. Publishing exact
+      # support series and their union can expose a small intersection.
+      r[c("person_count","outside_person_count","outside_record_count","total_person_count","total_record_count")]<-NULL
+      if(!valid) {
+        r <- blank(r,c("n_rows","pct_rows"))
+        if(!label_only)r <- blank(r,c("year","region_code","region_name","quality_state"))
+        r$count_privacy_status <- if(label_only)"withheld_partition_counts" else "unavailable_person_partition_evidence"
+      }
+    }
+    if("coverage_status" %in% names(r) && "basis" %in% names(r) && scalar(r,"basis")!="person_supported_region_records") {
+      r <- blank(r,c("n_rows","pct_rows"))
+      if(scalar(r,"coverage_status")=="observed")r$coverage_status<-"not_assessed"
+    }
+    if("choropleth_basis" %in% names(r) && scalar(r,"choropleth_basis")!="person_supported_region_records")
+      r<-blank(r,c("damyda_n","choropleth_value","pct_total"))
     for (key in names(r)) if (!key %in% reference) r[key] <- list(walk(r[[key]],c(path,key)))
     r <- blank(r,dates)
     if (any(dates %in% names(r))) r$date_privacy_status <- "withheld_exact_clinical_bounds"

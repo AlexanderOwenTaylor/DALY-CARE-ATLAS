@@ -143,6 +143,7 @@ atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapte
     })
   }
   registry <- atlas_preflight_check('invalid_policy','public-output-registry.json',atlas_output_registry(project_root))
+  atlas_preflight_check('invalid_policy','date format mapping',atlas_date_rule('', ''))
   atlas_preflight_check('invalid_policy','clinical-source-membership.json',load_clinical_source_membership(project_root))
   atlas_preflight_check('invalid_configuration','transport version',atlas_transport_version())
   dictionary <- atlas_preflight_check('invalid_dictionary','npu-consensus-dictionary.tsv',load_npu_consensus_dictionary(project_root))
@@ -353,6 +354,11 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
     lyfo_clinical_profile = empty_registry_categorical(),
     cll_clinical_profile = empty_registry_categorical(),
     sp_operational_sources = data.frame(stringsAsFactors = FALSE),
+    coverage_evidence = empty_coverage_evidence(),
+    atlas_coverage_status = empty_coverage_status(),
+    atlas_date_quality_counts = empty_date_quality_counts(),
+    vital_descriptors = empty_vital_descriptors(),
+    vital_descriptor_assessment = empty_vital_descriptor_assessment(),
     atlas_temporal_coverage = empty_temporal_coverage(),
     atlas_temporal_coverage_years = empty_temporal_coverage_years(),
     atlas_temporal_date_quality = empty_temporal_date_quality(),

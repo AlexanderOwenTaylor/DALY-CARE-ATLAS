@@ -1,0 +1,23 @@
+source('tests/helper.R');source_test_runtime()
+dictionary<-load_npu_consensus_dictionary(project_root='.')
+codes<-head(dictionary$npu_code[dictionary$consensus_vector=='CREATININE_CODES'],2)
+d<-data.frame(analysiscode=rep(codes,each=3))
+usage<-panel_npu_lab_usage_by_vector(d,'labs',dictionary)
+expect_equal(usage$n_observed[usage$consensus_vector=='CREATININE_CODES'],6L)
+expect_equal(nrow(panel_lab_codes(d,'labs')),0L)
+bundle<-list(categorical_counts=list(analysiscode=setNames(c(3L,3L),codes)))
+profiles<-profile_column_profiles(d,'SP_Labs')
+streamed<-dbi_panels_from_profiles(profiles,data.frame(table_name='SP_Labs',n_rows=6),
+ conn=DBI::ANSI(),table_ref='unused',profile_strategy='stream_column',stream_profile_bundle=bundle,npu_dictionary=dictionary)
+expect_equal(streamed$npu_lab_usage_by_vector$n_observed[streamed$npu_lab_usage_by_vector$consensus_vector=='CREATININE_CODES'],6L)
+expect_equal(nrow(stream_npu_counts_from_bundle(bundle,'analysiscode',6)),0L)
+expect_equal(nrow(stream_npu_counts_from_bundle(bundle,'analysiscode',6,min_cell_count=1)),0L)
+expect_equal(sum(stream_npu_counts_from_bundle(bundle,'analysiscode',6,internal=TRUE)$n_observed),6L)
+empty<-dbi_panels_from_profiles(profile_column_profiles(data.frame(value=1:6),'SP_Labs'),data.frame(table_name='SP_Labs',n_rows=6),
+ conn=DBI::ANSI(),table_ref='unused',profile_strategy='stream_column',stream_profile_bundle=list(categorical_counts=list()),npu_dictionary=dictionary)
+expect_equal(nrow(empty$npu_lab_usage_by_vector),0L)
+source('R/public_privacy.R')
+public<-atlas_public_privacy(list(panels=list(npu_lab_usage_by_vector=atlas_evidence_rows(usage))),'.')
+expect_true(is.null(public$panels$npu_lab_usage_by_vector[[1]]$n_observed),
+ 'Six records do not establish distinct-person support for public NPU usage.')
+cat('PASS private NPU codes aggregate before per-code public suppression; counts remain records\n')
