@@ -2,7 +2,25 @@ source('tests/helper.R'); source_test_runtime()
 local({
   root <- normalizePath('.',winslash='/')
   tmp <- tempfile('build-recovery-'); dir.create(tmp)
-  on.exit(unlink(tmp,recursive=TRUE),add=TRUE)
+  tmp <- normalizePath(tmp,winslash='/')
+  link <- file.path(tmp,'linked')
+  link_created <- FALSE
+  remove_fixture_link <- function() {
+    if (!link_created) return(invisible(NULL))
+    # Delete only this fixture entry, before recursively cleaning its scratch root.
+    expect_equal(normalizePath(dirname(link),winslash='/'),tmp)
+    expect_equal(dirname(tmp),normalizePath(tempdir(),winslash='/'))
+    if (.Platform$OS.type == 'windows') {
+      # R unlink can misidentify directory symlinks as junction reparse points.
+      command <- paste0("[System.IO.Directory]::Delete('",gsub("'","''",link,fixed=TRUE),"')")
+      expect_equal(system2('powershell.exe',c('-NoProfile','-NonInteractive','-Command',shQuote(command))),0L)
+    } else {
+      expect_equal(unlink(link),0L)
+    }
+    expect_false(dir.exists(link) || file.exists(link),'Fixture link must be removed without traversing its target.')
+    link_created <<- FALSE
+  }
+  on.exit({remove_fixture_link();unlink(tmp,recursive=TRUE)},add=TRUE)
   # A missing Linux path returns NA, which must never be interpreted as a link.
   assign('Sys.readlink',function(paths) rep(NA_character_,length(paths)),envir=.GlobalEnv)
   on.exit(if(exists('Sys.readlink',envir=.GlobalEnv,inherits=FALSE))rm('Sys.readlink',envir=.GlobalEnv),add=TRUE)
@@ -15,11 +33,13 @@ local({
   expect_true(inherits(try(atlas_site_destination(blocked),silent=TRUE),'try-error'))
   expect_true(inherits(try(atlas_site_destination(file.path(tmp,'..','site')),silent=TRUE),'try-error'))
   target <- file.path(tmp,'real'); dir.create(target)
-  link <- file.path(tmp,'linked')
-  if (suppressWarnings(file.symlink(target,link))) {
+  sentinel <- file.path(target,'keep.txt');writeLines('keep',sentinel)
+  link_created <- isTRUE(suppressWarnings(file.symlink(target,link)))
+  if (link_created) {
     expect_true(inherits(try(atlas_site_destination(link),silent=TRUE),'try-error'))
     expect_true(inherits(try(atlas_site_destination(file.path(link,'nested','site')),silent=TRUE),'try-error'))
-    unlink(link)
+    remove_fixture_link()
+    expect_file(sentinel)
   }
   if (.Platform$OS.type != 'windows' && Sys.info()[['user']] != 'root') {
     locked <- file.path(tmp,'locked');dir.create(locked);Sys.chmod(locked,'0555')
