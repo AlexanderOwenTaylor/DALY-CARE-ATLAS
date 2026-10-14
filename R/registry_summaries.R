@@ -10,6 +10,7 @@ registry_summary_policy <- function(project_root = ".") {
   policy$fields
 }
 
+
 # C2 foundation: these reviewed recognitions do not authorise v1 numeric publication.
 # A normalisation permission belongs to an exact source field and never to a registry.
 registry_summary_reviewed_mappings <- function(project_root='.') {
@@ -206,7 +207,7 @@ registry_summary_final_guard <- function(rows, project_root, k) {
   if (is.data.frame(guarded)) return(guarded)
   if (!length(guarded)) return(empty_registry_field_summaries())
   # The public guard returns a list of named flat records.
-  do.call(rbind, lapply(guarded, function(row) as.data.frame(lapply(row, function(x) if (is.null(x)) NA else x), stringsAsFactors=FALSE)))
+  registry_contract_frame(guarded)
 }
 
 registry_summary_input_text <- function(x) {
@@ -351,3 +352,13 @@ dbi_registry_field_summaries <- function(conn, table_ref, table_name, column_nam
   })
   registry_summary_final_guard(do.call(rbind,rows),project_root,k)
 }
+
+.registry_files <- vapply(sys.frames(),function(f)if(is.character(f$ofile))f$ofile[1] else '',character(1))
+.registry_file <- tail(.registry_files[nzchar(.registry_files)],1)
+if(length(.registry_file)) {
+  .registry_producer_path <- file.path(dirname(.registry_file),'registry_v2_producer.R')
+  if(!exists('registry_v2_fields',mode='function')) source(file.path(dirname(.registry_file),'registry_summary_privacy.R'),local=TRUE)
+  source(.registry_producer_path,local=TRUE)
+  rm(.registry_producer_path)
+}
+rm(list=intersect(c('.registry_files','.registry_file'),ls(all.names=TRUE)))

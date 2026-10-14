@@ -57,7 +57,7 @@ expect_file(csv)
 frame <- read.csv(csv,stringsAsFactors=FALSE,check.names=FALSE)
 published <- frame[frame$summary_status=='published',,drop=FALSE]
 expect_equal(sort(paste(published$table_name,published$source_column,sep='::')),sort(unlist(expected)))
-expect_true(all(published$denominator_n==90 & published$n_valid==60 & published$n_missing==10 & published$n_invalid==10 & published$n_conflicting==10))
+expect_true(all(published$denominator_n==90 & published$n_valid==60 & published$n_missing==10 & published$n_unrecognised==10 & published$n_conflicting==10))
 expect_true(all(published$unit_status=='unverified'))
 rebuilt <- atlas_payload_from_run_outputs(run$run_dir,root)
 rows <- rebuilt$payload$panels$registry_field_summaries
@@ -88,6 +88,6 @@ for(site in c(file.path(run$run_dir,'site'),file.path(work,'python-site'))) {
 Sys.setenv(DALYCARE_MIN_CELL_COUNT='15')
 raised <- atlas_payload_from_run_outputs(run$run_dir,root)$payload$panels$registry_field_summaries
 expect_false(any(vapply(raised,function(r)r$summary_status=='published',logical(1))))
-expect_true(all(vapply(raised,function(r)is.null(r$denominator_n) && is.null(r$mean) && r$category_counts_json=='[]',logical(1))))
+expect_true(all(vapply(raised,function(r)is.null(r$denominator_n) && is.null(r$approximate_mean) && r$category_counts_json=='[]',logical(1))))
 Sys.unsetenv(c('DALYCARE_MIN_CELL_COUNT','DALYCARE_REGISTRY_PERSON_KEYS_FILE'))
 cat('Automatic one-click three-registry runner, typed CSV round trip, R/Python bundles, repeated guards, byte absence and raised-threshold acceptance passed\n')

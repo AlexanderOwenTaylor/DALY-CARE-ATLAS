@@ -1,0 +1,14 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict'),v=require('../inst/templates/registry-v2.js');
+const work='.artifact-temp/registry-v2',resource=JSON.parse(fs.readFileSync(`${work}/resource.json`)),rows=JSON.parse(fs.readFileSync(`${work}/golden.json`));
+const html=fs.readFileSync('inst/templates/DALYCARE_atlas.html','utf8').replace(/\r/g,'');
+const ctx=vm.createContext({payload:{},URLSearchParams,window:{DALYCARERegistryV2:v,DALYCARE_REGISTRY_V2_RESOURCE:resource},formatNumber:x=>x===undefined?'—':String(x),escapeHtml:x=>String(x),panels:{registry_field_summaries:[rows[0]]},panelRows:k=>ctx.panels[k],registryDiscoverySpecs:{reg_damyda:{source:'RKKP_DaMyDa'}}});
+const a=html.indexOf('      const registryFieldSummaryColumns'),b=html.indexOf('      function handleRegistrySummaryPage',a);vm.runInContext(html.slice(a,b),ctx);
+const x=html.indexOf('      function registryExactSource('),y=html.indexOf('\n      const registryFieldSummaryColumns',x);vm.runInContext(html.slice(x,y),ctx);
+const field=resource.fields.find(s=>s.table_name==='RKKP_CLL'&&s.source_column==='Reg_BinetStadium');
+const legacy=Object.fromEntries(v.legacySchema.map(k=>[k,null]));for(const k of ['table_name','source_column','kind','topic','phase','label'])legacy[k]=field[k];
+Object.assign(legacy,{contract_version:'registry-summary-v1',unit_status:'unverified',count_basis:'distinct_people_one_unambiguous_value_per_field',summary_method:'exact_complete_field_3sf',summary_status:'published',minimum_cell_count:5,denominator_n:20,n_valid:20,n_missing:0,n_invalid:0,n_conflicting:0,category_counts_json:'[{"code":"0","n":10},{"code":"1","n":10}]'});ctx.legacy=legacy;
+assert(vm.runInContext('validateRegistryFieldSummary(legacy)',ctx));legacy.source_column='SYNTHETIC_UNREGISTERED_FIELD';assert.equal(vm.runInContext('validateRegistryFieldSummary(legacy)',ctx),null);
+legacy.source_column=field.source_column;legacy.category_counts_json='[{"code":"0","n":1,"n":10},{"code":"1","n":10}]';assert.equal(vm.runInContext('validateRegistryFieldSummary(legacy)',ctx),null);
+const rendered=vm.runInContext("renderRegistryFieldSummaries('reg_damyda','baseline')",ctx);assert(rendered.includes('0 unrecognised'));assert(!rendered.includes('Units and clinical ranges are unverified'));assert(!rendered.includes('Mean, median and quartiles are supplied to three significant digits'));assert(rendered.includes('containing bands'));assert(rendered.includes('stored-unit evidence'));
+ctx.category={...legacy,contract_version:'registry-summary-v2',n_unrecognised:0,categories:[{code:'Y',label:'Recorded yes',n:20}]};assert(vm.runInContext('renderRegistryObservedField(category)',ctx).includes('Recorded code Y'));
+console.log('PASS clinical strict legacy validation and truthful v2 counts, methods and code-plus-meaning');

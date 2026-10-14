@@ -441,9 +441,11 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
         spec = specs.get(table['id'])
         if spec and spec['payload_path'] and spec['projection']:
             _set(logical,spec['payload_path'],table['rows'])
-    safe_tables = sanitize_public_payload(logical, minimum, root)
-    guarded = sanitize_public_payload(payload, minimum, root)
-    if audit_public_payload(safe_tables, project_root=root, min_cell_count=minimum) or audit_public_payload(guarded, project_root=root, min_cell_count=minimum):
+    from metadata_privacy import metadata_context
+    context=metadata_context(logical,root)
+    safe_tables = sanitize_public_payload(logical, minimum, root, context)
+    guarded = sanitize_public_payload(payload, minimum, root, context)
+    if audit_public_payload(safe_tables, project_root=root, min_cell_count=minimum, metadata_context=context) or audit_public_payload(guarded, project_root=root, min_cell_count=minimum, metadata_context=context):
         raise ValueError('Public privacy audit failed')
     field_labels = _field_labels(safe_tables.get('clinical_display_dictionary'))
     vital_profiles = _vital_profiles(safe_tables.get('column_profile_rows'))
@@ -471,6 +473,8 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             shutil.copyfile(root/'inst/templates'/source,stage/name)
         def write(name, text):
             (stage/name).write_bytes(text.encode('utf-8'))
+        from registry_v2 import public_resource
+        write('registry-v2.js','window.DALYCARE_REGISTRY_V2_RESOURCE = '+compact(public_resource(root))+';\n'+(root/'inst/templates/registry-v2.js').read_text(encoding='utf-8'))
         write('DALYCARE_atlas_payload.js',payload_script)
         write('DALYCARE_atlas_payload.json',payload_json)
         entry = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance)
@@ -493,7 +497,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             allowed = set(spec['projection']) | PRIVACY_COLUMNS if spec else set()
             if not set(keys) <= allowed or (not spec and (table['columns'] or table['source_file'])):
                 raise ValueError('Unreviewed public schema')
-            rows = [{k:r.get(k) for k in keys} for r in rows]
+            if table_id!='registry_field_summaries': rows = [{k:r.get(k) for k in keys} for r in rows]
             table.pop('rows',None); table['shards'] = []
             if table['status'] == 'snapshot_preview': table['status'] = 'limited'
             pending, parts = [], []
@@ -502,7 +506,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             pending_script_bytes = len(empty_script.encode('utf-8'))
             for row in rows:
                 for col in table['columns']:
-                    v = row[col['key']]; kind = col['type']
+                    v = row.get(col['key']); kind = col['type']
                     if v is not None and not ((kind=='string' and isinstance(v,str)) or (kind=='boolean' and isinstance(v,bool)) or (kind=='number' and isinstance(v,(float,int)) and not isinstance(v,bool))):
                         raise ValueError('Typed evidence mismatch: '+table_id)
                 # Serialize each row once. JSON string escaping is additive across
@@ -542,7 +546,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
         if total>registry['public_table_max_bytes']:
             raise ValueError('Public table-data budget exceeded')
         limits = dict(input_max_bytes=registry['input_max_bytes'],public_table_max_bytes=registry['public_table_max_bytes'],shard_max_rows=250,shard_max_bytes=SHARD_BYTES,cache_max_bytes=1048576,page_rows=50,minimum_cell_count=minimum,public_table_bytes=total)
-        catalogue = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance,privacy_policy_version=VERSION,limits=limits,tables=catalogue_tables)
+        catalogue = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance,privacy_policy_version=VERSION,minimum_cell_count=minimum,limits=limits,tables=catalogue_tables)
         if field_labels:
             catalogue['field_labels'] = field_labels
         if vital_profiles:

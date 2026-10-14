@@ -82,6 +82,11 @@ def read_registered_csv(path, spec, max_bytes=67108864):
                             raise ValueError('Invalid boolean input')
                         value = value.upper() == 'TRUE'
                     row[key] = value
+                if spec.get('id')=='registry_field_summaries' and len(spec['schemas'])>2 and set(header)==set(spec['schemas'][2]):
+                    version=row.get('contract_version')
+                    selected=spec['schemas'][0] if version=='registry-summary-v2' else spec['schemas'][1] if version=='registry-summary-v1' else None
+                    if selected is None or any(row[k] is not None for k in set(row)-set(selected)): raise ValueError('Invalid mixed contract row')
+                    row={k:row[k] for k in selected}
                 rows.append(row)
             return rows
     except (csv.Error, StopIteration, UnicodeError, OSError) as exc:
@@ -225,7 +230,8 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
         rows = _get(safe, spec['payload_path']) if spec['payload_path'] and spec['projection'] else []
         allowed = set(spec['projection']) | privacy_columns
         keys = list(spec['projection']) + sorted({k for row in rows or [] for k in row if k in privacy_columns and k not in spec['projection']})
-        descriptor['rows'] = [{k: row.get(k) for k in keys} for row in rows or []]
+        if spec['id']=='registry_field_summaries': keys=[k for k in keys if any(k in row for row in rows or [])]
+        descriptor['rows'] = list(rows or []) if spec['id']=='registry_field_summaries' else [{k: row.get(k) for k in keys} for row in rows or []]
         descriptor['represented_row_count'] = len(descriptor['rows'])
         if any(row.get('date_privacy_status') == 'withheld_derived_source_range' for row in rows or []):
             descriptor['source_row_count'] = None

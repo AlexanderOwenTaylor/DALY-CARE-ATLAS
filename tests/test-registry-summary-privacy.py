@@ -26,7 +26,7 @@ class RegistryPrivacyTests(unittest.TestCase):
         out=self.guard(rows,k)
         self.assertEqual(len(out),1)
         self.assertNotEqual(out[0]['summary_status'],'published')
-        for key in MODULE.COUNTS+MODULE.STATS: self.assertIsNone(out[0][key],key)
+        for key in MODULE.COUNTS+MODULE.STATS: self.assertIsNone(out[0].get(key),key)
         self.assertEqual(out[0]['category_counts_json'],'[]')
         self.assertEqual(out,self.guard(out,k))
         self.assertEqual(MODULE.audit_registry_summaries(out,ROOT,k),[])

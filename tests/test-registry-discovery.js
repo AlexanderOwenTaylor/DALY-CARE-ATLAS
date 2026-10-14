@@ -3,11 +3,14 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
 const vm=require('node:vm');
+const legacyPolicy=JSON.parse(fs.readFileSync(path.join(__dirname,'../inst/config/registry-summary-policy.json'),'utf8'));
+const summaryGuard=require('../inst/templates/registry-v2.js');
+const summaryResource={fields:legacyPolicy.fields.map(f=>({...f,legacy_categories:f.categories}))};
 const html=fs.readFileSync(path.join(__dirname,'../inst/templates/DALYCARE_atlas.html'),'utf8').replace(/\r/g,'');
 function load(start,end,ctx){const a=html.indexOf(start),b=html.indexOf(end,a);assert.ok(a>=0&&b>a,`Missing block: ${start}`);vm.runInContext(html.slice(a,b),ctx);}
 function fn(name,ctx){const a=html.indexOf(`      function ${name}(`),b=html.indexOf('\n      function ',a+1);assert.ok(a>=0,`Missing function: ${name}`);vm.runInContext(html.slice(a,b<0?undefined:b),ctx);}
 function runtime(extra={}){
-const ctx=vm.createContext({URLSearchParams,payload:{},panels:{},catalogRows:[],columnRows:[],panelDistributionRows:[],panelRawFieldRows:[],reviewClinical:{},reviewTemporal:{},reviewSpatial:{},clinicalConceptRows:[],domainPanelRows:[],panelKpiRows:[],renderTermHelp:()=>'',semanticOverlayDisplayForRow:()=>null,semanticOverlaySourceForDisplay:v=>v,semanticRawName:r=>r.raw_column||'',renderScopeChip:()=>'',...extra});
+const ctx=vm.createContext({URLSearchParams,window:{DALYCARERegistryV2:summaryGuard,DALYCARE_REGISTRY_V2_RESOURCE:summaryResource},payload:{},panels:{},catalogRows:[],columnRows:[],panelDistributionRows:[],panelRawFieldRows:[],reviewClinical:{},reviewTemporal:{},reviewSpatial:{},clinicalConceptRows:[],domainPanelRows:[],panelKpiRows:[],renderTermHelp:()=>'',semanticOverlayDisplayForRow:()=>null,semanticOverlaySourceForDisplay:v=>v,semanticRawName:r=>r.raw_column||'',renderScopeChip:()=>'',...extra});
  load('      function text(', '      function metric(',ctx);
  vm.runInContext(html.split('/* CLINICIAN_DISPLAY_START */')[1].split('/* CLINICIAN_DISPLAY_END */')[0],ctx);
  for(const name of ['finiteSummary','fieldPercent','fieldUnitCopy','browseFieldsLink','sourceEvidenceLinks','normalizeClinicalKey','observedRowsWithheld','withheldObservedState','toneColor','cssClass'])fn(name,ctx);
@@ -255,7 +258,9 @@ test('registry overview numeric cards apply the same unknown restriction guard',
 
 // Hand-checked complete v1 rows: 40 distinct people, 30 with a usable value and two five-person exclusions.
 function registrySummaryFixture(source='RKKP_CLL',field='Reg_BinetStadium',extra={}){
- return {contract_version:'registry-summary-v1',table_name:source,source_column:field,kind:'categorical',topic:'stage',phase:'Registration',label:'Recorded stage',unit_status:'unverified',count_basis:'distinct_people_one_unambiguous_value_per_field',summary_method:'exact_complete_field_3sf',summary_status:'published',minimum_cell_count:5,denominator_n:40,n_valid:30,n_missing:5,n_invalid:5,n_conflicting:0,n_distinct:null,minimum_value_support:null,category_counts_json:'[{"code":"1","n":20},{"code":"2","n":10},{"code":"0","n":0}]',mean:null,median:null,p25:null,p75:null,...extra};
+ const spec=legacyPolicy.fields.find(s=>s.table_name===source&&s.source_column===field),metadata=spec?Object.fromEntries(['kind','topic','phase','label'].map(k=>[k,spec[k]])):{};
+ const codes=spec?.categories?.slice(0,2)||['1','2','0'];
+ return {contract_version:'registry-summary-v1',table_name:source,source_column:field,kind:'categorical',topic:'stage',phase:'Registration',label:'Recorded stage',unit_status:'unverified',count_basis:'distinct_people_one_unambiguous_value_per_field',summary_method:'exact_complete_field_3sf',summary_status:'published',minimum_cell_count:5,denominator_n:40,n_valid:30,n_missing:5,n_invalid:5,n_conflicting:0,n_distinct:null,minimum_value_support:null,category_counts_json:'[{"code":"1","n":20},{"code":"2","n":10},{"code":"0","n":0}]',mean:null,median:null,p25:null,p75:null,...metadata,category_counts_json:JSON.stringify(codes.map((code,i)=>({code,n:i===0?20:i===1?10:0}))),...extra};
 }
 function numericRegistrySummaryFixture(source='RKKP_CLL',field='Reg_Leukocyttal',extra={}){
  return registrySummaryFixture(source,field,{kind:'numeric',topic:'laboratory',label:'Leukocyte count',category_counts_json:'[]',n_distinct:3,minimum_value_support:10,mean:2,median:2,p25:0,p75:4,...extra});
@@ -268,17 +273,17 @@ test('complete field summaries render all three canonical registries with people
   const summary=registrySummaryFixture(source,field),numeric=numericRegistrySummaryFixture(source,'Reg_Haemoglobin');
   const {run}=runtime({panels:{registry_field_summaries:[summary,numeric]}});
   const result=theme(run(`${renderer}()`),`${panel.slice(4)}-theme-stage`);
-  assert.match(result,/40 people in this source/);assert.match(result,/30 with a usable value/);assert.match(result,/5 missing.*5 invalid.*0 conflicting/);assert.match(result,new RegExp(`${source} / ${field}`));assert.match(result,/Recorded code 1 — definition not supplied/);assert.match(result,/Registration/);assert.match(result,/<td>0<\/td>/);assert.doesNotMatch(result,/response rate|% recorded/);
+  assert.match(result,/40 people in this source/);assert.match(result,/30 with a usable value/);assert.match(result,/5 missing.*5 invalid.*0 conflicting/);assert.match(result,new RegExp(`${source} / ${field}`));assert.match(result,/Recorded code 1 — meaning unverified in this legacy export/);assert.match(result,/registration/);assert.doesNotMatch(result,/<td>0<\/td>/);assert.doesNotMatch(result,/response rate|% recorded/);
   const baseline=theme(run(`${renderer}()`),`${panel.slice(4)}-theme-baseline`);assert.match(baseline,/contract checks failed/);assert.doesNotMatch(baseline,/Mean<\/dt>|Median<\/dt>|0–4/);assert.doesNotMatch(baseline,/minimum|maximum|mg\/L|IQR width/i);
  }
 });
 test('independent treatment selection fields retain phases and response abbreviations keep literal meanings',()=>{
- const fields=[registrySummaryFixture('RKKP_CLL','Beh_Kemo_Fludarabin',{topic:'treatment',phase:'Treatment',label:'Fludarabine selection'}),registrySummaryFixture('RKKP_CLL','Rec_Kemo_Fludarabin',{topic:'treatment',phase:'Recurrence',label:'Fludarabine selection'}),registrySummaryFixture('RKKP_CLL','Beh_Responsevaluering',{topic:'response',phase:'Treatment',label:'Response evaluation',category_counts_json:'[{"code":"CR","n":20},{"code":"PR","n":10}]'})];
+ const fields=[registrySummaryFixture('RKKP_CLL','Beh_Kemo_Fludarabin'),registrySummaryFixture('RKKP_CLL','Rec_Kemo_Fludarabin'),registrySummaryFixture('RKKP_CLL','Beh_Responsevaluering',{category_counts_json:'[{"code":"CR","n":20},{"code":"PR","n":10}]'})];
  const {run}=runtime({panels:{registry_field_summaries:fields}});const result=run('renderCLLPanel()');
- assert.equal((result.match(/Fludarabine selection/g)||[]).length,2);assert.match(result,/Form phase: Treatment/);assert.match(result,/Form phase: Recurrence/);assert.match(result,/Recorded code CR — definition not supplied/);assert.doesNotMatch(result,/complete remission|partial remission|response rate|total treatment/i);
+ assert.match(result,/Chemotherapy assessment: Fludarabine/);assert.match(result,/Relapse chemotherapy assessment: Fludarabine/);assert.match(result,/Form phase: treatment form/);assert.match(result,/Recorded code CR — meaning unverified in this legacy export/);assert.doesNotMatch(result,/complete remission|partial remission|response rate|total treatment/i);
 });
 test('field summary contract rejects forged status, rare partitions and incomplete counts before any values render',()=>{
- const mutations=[{n_missing:null},{n_conflicting:1,n_missing:4},{n_valid:31},{minimum_cell_count:4},{summary_status:'approved'},{count_basis:'records'},{contract_version:'v2'},{source_name:'RKKP_LYFO'},{category_counts_json:'[{"code":"SECRET","n":1},{"code":"SAFE","n":29}]'},{category_counts_json:'[{"code":"SECRET","n":20},{"code":"SECRET","n":10}]'},{category_counts_json:'{}'},{category_counts_json:[{code:'SECRET',n:30}]},{category_counts_json:'[{"code":"SECRET","n":30,"private":true}]'},{mean:87654321}];
+ const mutations=[{category_counts_json:'[{"code":"0","n":20},{"code":"1","n":10},{"code":"2","n":0}]'},{n_missing:null},{n_conflicting:1,n_missing:4},{n_valid:31},{minimum_cell_count:4},{summary_status:'approved'},{count_basis:'records'},{contract_version:'v2'},{source_name:'RKKP_LYFO'},{category_counts_json:'[{"code":"SECRET","n":1},{"code":"SAFE","n":29}]'},{category_counts_json:'[{"code":"SECRET","n":20},{"code":"SECRET","n":10}]'},{category_counts_json:'{}'},{category_counts_json:[{code:'SECRET',n:30}]},{category_counts_json:'[{"code":"SECRET","n":30,"private":true}]'},{mean:87654321}];
  for(const mutation of mutations){const {run}=runtime({panels:{registry_field_summaries:[registrySummaryFixture('RKKP_CLL','Reg_BinetStadium',{...mutation,label:'PRIVATE_LABEL'})]}});const result=run("renderRegistryFieldSummaries('reg_cll','stage')");assert.doesNotMatch(result,/PRIVATE_LABEL|SECRET|87,654,321|people in this source|<tbody>/);assert.match(result,/not published|not generated|withheld/i);}
 });
 test('duplicate field identities block every row even when their topics differ; aliases do not borrow canonical summaries',()=>{
@@ -298,11 +303,15 @@ test('summary states disclose absence, person-key requirement and withholding on
  }
  const {run}=runtime({panels:{registry_field_summaries:[unpublishedRegistrySummaryFixture('needs_person_key',{denominator_n:87654321})]}});assert.doesNotMatch(run('renderCLLPanel()'),/87,654,321/);
 });
-test('observed summary labels escape HTML and pages bound eager field cards',()=>{
- const rows=Array.from({length:25},(_,i)=>registrySummaryFixture('RKKP_CLL',`Field${i}`,{topic:'treatment',label:i===0?'<img src=x onerror=alert(1)>':`Selection ${i}`,phase:'<b>form</b>'}));
- const {ctx,run}=runtime({panels:{registry_field_summaries:rows}});const first=run("renderRegistryFieldSummaries('reg_cll','treatment')");assert.match(first,/&lt;img/);assert.match(first,/&lt;b&gt;form/);assert.doesNotMatch(first,/<img|Selection 24/);assert.equal((first.match(/data-registry-observed-field=/g)||[]).length,12);assert.match(first,/data-registry-summary-page="1"/);
- const second=run("renderRegistryFieldSummaries('reg_cll','treatment',1)");assert.match(second,/Selection 12/);assert.doesNotMatch(second,/Selection 0(?:<|&)/);
+function pagingFixtures(){return legacyPolicy.fields.filter(f=>f.table_name==='RKKP_CLL'&&f.topic==='treatment'&&f.kind==='categorical'&&f.categories.length>=2).map(f=>registrySummaryFixture(f.table_name,f.source_column));}
+test('observed renderer escapes text and exact approved summaries bound eager field cards',()=>{
+ const rows=pagingFixtures();assert(rows.length>12);const {ctx,run}=runtime({panels:{registry_field_summaries:rows}});
+ ctx.escapeRow={...rows[0],label:'<img src=x onerror=alert(1)>',phase:'<b>form</b>',categories:[{code:'0',n:20},{code:'1',n:10}]};
+ const escaped=run('renderRegistryObservedField(escapeRow)');assert.match(escaped,/&lt;img/);assert.match(escaped,/&lt;b&gt;form/);assert.doesNotMatch(escaped,/<img/);
+ const first=run("renderRegistryFieldSummaries('reg_cll','treatment')");assert.equal((first.match(/data-registry-observed-field=/g)||[]).length,12);assert.match(first,/data-registry-summary-page="1"/);
+ const second=run("renderRegistryFieldSummaries('reg_cll','treatment',1)");assert(second.includes(`data-registry-observed-field="${rows[12].source_column}"`));assert(!second.includes(`data-registry-observed-field="${rows[0].source_column}"`));
 });
+
 module.exports={runtime,registrySummaryFixture,numericRegistrySummaryFixture,unpublishedRegistrySummaryFixture};
 test('a registry with checked people distributions does not claim all category frequencies are withheld',()=>{
  const {run}=runtime({catalogRows:[{table_name:'RKKP_CLL'}],panels:{registry_field_summaries:[registrySummaryFixture()],cll_clinical_profile:[row('SECRET',87654321,{source_column:'Reg_BinetStadium',value_privacy_status:'withheld_unvalidated_distribution'})]}});
@@ -316,11 +325,11 @@ test('old exports explain the missing people summaries once without four empty r
 test('installed summary paging renders the requested slice and focuses the updated status',()=>{
  const listeners=[],effects=[],status={id:'observed-status'},replacement={querySelector:()=>status},holder={innerHTML:'',firstElementChild:replacement},block={dataset:{registrySummaryPanel:'reg_cll',registrySummaryTheme:'treatment'},replaceWith:node=>effects.push(node)};
  const document={createElement:()=>holder,addEventListener:(type,callback)=>listeners.push({type,callback})};
- const {ctx,run}=runtime({document,scrollToAtlasTarget:node=>effects.push(node.id),panels:{registry_field_summaries:Array.from({length:25},(_,i)=>registrySummaryFixture('RKKP_CLL',`Field${i}`,{topic:'treatment',label:`Selection ${i}`}))}});
+ const {ctx,run}=runtime({document,scrollToAtlasTarget:node=>effects.push(node.id),panels:{registry_field_summaries:pagingFixtures()}});
  for(const name of ['handleRegistryCatalogueSearch','handleRegistryCataloguePage','handleRegistryCatalogueAction']) fn(name,ctx);
  vm.runInContext(html.split('/* REGISTRY_CATALOGUE_ACTION_START */')[1].split('/* REGISTRY_CATALOGUE_ACTION_END */')[0],ctx);const listener=listeners.find(entry=>entry.type==='click' && entry.callback.name==='handleRegistrySummaryPage');assert.ok(listener,'Observed-summary paging must be installed');
  listener.callback({target:{closest:()=>({dataset:{registrySummaryPage:'1'},closest:()=>block})}});
- assert.match(holder.innerHTML,/Selection 12/);assert.doesNotMatch(holder.innerHTML,/Selection 0(?:<|&)/);assert.deepEqual(effects,[replacement,'observed-status']);
+ assert(holder.innerHTML.includes(`data-registry-observed-field="${pagingFixtures()[12].source_column}"`));assert(!holder.innerHTML.includes(`data-registry-observed-field="${pagingFixtures()[0].source_column}"`));assert.deepEqual(effects,[replacement,'observed-status']);
 });
 test('field summaries respect the archived run threshold and nested counts must be integers',()=>{
  for(const extra of [{payload:{privacy_metadata:{minimum_cell_count:10}}},{payload:{run_summary:[{metric:'min_cell_count',value:'10'}]}}]){

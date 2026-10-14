@@ -125,7 +125,7 @@ atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapte
     })
   }
   for(name in c('DALYCARE_entry.html','DALYCARE_atlas.html','DALYCARE_outputs.html','atlas-entry.js','atlas-outputs.js',
-    'atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')) {
+    'atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css','registry-v2.js')) {
     atlas_preflight_check('missing_or_invalid_template',name,{
       resource <- atlas_bundle_resource(name,project_root)
       expected_bytes <- file.info(resource)$size
@@ -152,6 +152,11 @@ atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapte
   atlas_preflight_check('invalid_dictionary','mm-treatment-code-families.tsv',load_mm_treatment_code_families(project_root))
   atlas_preflight_check('invalid_policy','registry-summary-policy.json',{
     if(!length(registry_summary_policy(project_root))) stop('Required reviewed registry policy unavailable',call.=FALSE)
+  })
+  atlas_preflight_check('invalid_policy','registry v2 local policy and unit evidence',registry_v2_preflight(project_root))
+  atlas_preflight_check('invalid_policy','approved metadata definitions',{
+    if(!exists('atlas_metadata_preflight',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
+    atlas_metadata_preflight(project_root)
   })
   # These dictionaries are required by the final HTML serializer as well as the
   # clinical interpretation. Validate them before any source profiling starts.
@@ -772,7 +777,7 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
   # Validate the merged artifact before CSV export: duplicate source rows cannot
   # publish individually valid copies of the same exact field.
   panels$registry_field_summaries <- registry_summary_final_guard(
-    panels$registry_field_summaries, project_root, atlas_min_cell_count()
+    registry_v2_complete(panels$registry_field_summaries,project_root,atlas_min_cell_count()), project_root, atlas_min_cell_count()
   )
   completion <- atlas_completion_report(source_map, sources, panels$registry_field_summaries,
     project_root, run_id, "building", lifecycle)
@@ -999,16 +1004,17 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
     rows <- if (is.data.frame(registry_rows) && nrow(registry_rows)) registry_rows[registry_rows$table_name==table,,drop=FALSE] else data.frame()
     statuses <- if (nrow(rows)) rows$summary_status else character()
     count <- function(states) as.integer(sum(statuses %in% states))
-    unavailable <- count("field_unavailable")
+    unavailable <- count(c("field_unavailable","field_absent"))
     unassessed <- max(0L,length(specs)-length(unique(if(nrow(rows)) rows$source_column else character())))
-    reason <- if (policy_status=="unavailable") "Restore the required reviewed registry policy and JSON dependency." else if (source_status=="source_not_requested") "Select this exact registry in the source map." else if (source_status=="source_unavailable") "Review source resolution, access and memory diagnostics." else if (source_status=="schema_only") "Schema mode omits clinical summaries." else if (any(statuses %in% c("needs_person_key","missing_person_key"))) "Check the exact live patientid column or authoritative private mapping." else if (any(statuses %in% c("query_failed","resource_limit"))) "Review aggregate query and resource-budget diagnostics." else if (any(grepl("^withheld_",statuses))) "Privacy gates withhold ineligible fields." else if (unavailable || unassessed) "Some reviewed fields are absent or unassessed." else "All reviewed fields assessed; see field statuses."
+    reason <- if (policy_status=="unavailable") "Restore the required reviewed registry policy and JSON dependency." else if (source_status=="source_not_requested") "Select this exact registry in the source map." else if (source_status=="source_unavailable") "Review source resolution, access and memory diagnostics." else if (source_status=="schema_only") "Schema mode omits clinical summaries." else if (any(statuses %in% c("needs_person_key","missing_person_key"))) "Check the exact live patientid column or authoritative private mapping." else if (any(statuses %in% c("query_failed","resource_limit"))) "Review aggregate query and resource-budget diagnostics." else if (any(grepl("^withheld_",statuses))) "Privacy gates withhold ineligible fields." else if(any(statuses %in% c("needs_unit_evidence","needs_numeric_policy"))) "Supply reviewed exact-field stored-unit evidence and approved fixed bands." else if (unavailable || unassessed) "Some reviewed fields are absent or unassessed." else "All reviewed fields assessed; see field statuses."
     data.frame(table_name=table,source_status=source_status,policy_status=policy_status,
       policy_issue_count=as.integer(policy_status=="unavailable"),expected_fields=if(policy_status=="available") length(specs) else NA_integer_,
-      published_fields=count("published"),privacy_withheld_fields=count(c("withheld_small_group","withheld_constant","withheld_near_unique")),
+      published_fields=count("published"),privacy_withheld_fields=count(c("withheld_small_group","withheld_constant","withheld_near_unique","withheld_privacy")),
       field_unavailable_fields=unavailable,key_issue_fields=count(c("needs_person_key","missing_person_key")),
       config_issue_fields=count("needs_person_key"),missing_key_fields=count("missing_person_key"),
       query_issue_fields=count("query_failed"),budget_issue_fields=count("resource_limit"),
-      no_values_fields=count("no_values"),invalid_contract_fields=count("invalid_contract"),
+      no_values_fields=count(c("no_values","empty_source","all_missing","all_unrecognised","all_conflicting","no_usable_values")),
+      needs_unit_evidence_fields=count(c("needs_unit_evidence","needs_numeric_policy")),needs_mapping_fields=count(c("needs_mapping","all_unrecognised")),source_unavailable_fields=count("source_unavailable"),invalid_contract_fields=count("invalid_contract"),
       unassessed_fields=unassessed,action=reason,stringsAsFactors=FALSE)
   })
   registries <- do.call(rbind,registries)
@@ -1016,7 +1022,7 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
   registry_coverage <- if (!nrow(selected)) "not_requested" else if (any(selected$policy_status=="unavailable")) "unknown" else if (
     any(selected$source_status!="profiled" | selected$field_unavailable_fields>0 |
       selected$key_issue_fields>0 | selected$query_issue_fields>0 | selected$budget_issue_fields>0 |
-      selected$invalid_contract_fields>0 | selected$unassessed_fields>0)) "partial" else "complete"
+      selected$invalid_contract_fields>0 | selected$unassessed_fields>0 | selected$needs_unit_evidence_fields>0 | selected$needs_mapping_fields>0 | selected$source_unavailable_fields>0)) "partial" else "complete"
   summary <- rbind(summary,data.frame(metric="registry_coverage_status",value=registry_coverage,stringsAsFactors=FALSE))
   collection <- if(identical(coverage,'complete')) 'complete' else 'partial'
   if(is.data.frame(sources) && 'profile_mode' %in% names(sources) && any(sources$profile_mode=='schema',na.rm=TRUE)) collection <- 'partial'

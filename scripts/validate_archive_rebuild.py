@@ -31,8 +31,20 @@ def records(value):
 
 
 def identity(row):
+    if row.get('source_name') and row.get('raw_column'):
+        return (row['source_name'], row['raw_column'])
     return (row.get('table_name') or row.get('source_name'),
             row.get('column_name') or row.get('source_column') or row.get('raw_column'))
+
+
+def privacy_identities(row):
+    # Catalogue reconciliation chooses the logical semantic pair. Privacy scans
+    # must consider all claimed locations/columns so no alternate pair hides one.
+    sources = {row[key] for key in ('table_name', 'source_name')
+               if isinstance(row.get(key), str) and row[key]}
+    columns = {row[key] for key in ('column_name', 'source_column', 'raw_column')
+               if isinstance(row.get(key), str) and row[key]}
+    return {(source, column) for source in sources for column in columns}
 
 
 def check_small_profiles(reference, value):
@@ -51,7 +63,7 @@ def check_small_profiles(reference, value):
             raise ValueError('Invalid small-support reference')
         protected.setdefault(tuple(key), set(STATISTICS)).update(statistics)
     for row in records(value):
-        statistics = protected.get(identity(row), ())
+        statistics = set().union(*(protected.get(pair, ()) for pair in privacy_identities(row)))
         if any(row.get(key) not in EMPTY for key in statistics):
             raise ValueError('A small-support profile retains public statistics')
 

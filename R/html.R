@@ -122,7 +122,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
                           ki67_discovery = NULL,
                           patobank_ki67_percent = NULL,
                           mcl_triangle_feasibility = NULL, membership_spec = NULL,
-                          membership_origin = 'fresh_run') {
+                          membership_origin = 'fresh_run', metadata_context = NULL, project_root = '.') {
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()
@@ -164,7 +164,21 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_action_items <- sanitize_public_frame(action_items)
   public_db_query_log <- public_db_diagnostics(db_query_log)
   public_db_budget_actions <- public_db_diagnostics(db_budget_actions)
-  public_semantic_dictionary <- sanitize_public_frame(semantic_dictionary)
+  if(!exists('atlas_metadata_context',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
+  if(is.null(metadata_context))metadata_context<-atlas_metadata_context(root=project_root,columns=column_profiles,sources=sources)
+  metadata_frame<-function(frame,path) {
+    out<-sanitize_public_frame(frame)
+    if(is.data.frame(frame)) {
+      for(key in setdiff(names(frame),names(out)))out[[key]]<-rep(NA_character_,nrow(frame))
+      out<-out[names(frame)]
+    }
+    if(is.data.frame(frame)&&nrow(frame))for(i in seq_len(nrow(frame))) {
+      row<-as.list(frame[i,,drop=FALSE])
+      if(atlas_metadata_identity_approved(row,path,project_root,metadata_context))for(key in intersect(c('semantic_id','source_name','object_name','raw_column','value_column','raw_descriptor','evidence_file','evidence_filter'),names(out)))out[[key]][i]<-frame[[key]][i]
+    }
+    out
+  }
+  public_semantic_dictionary <- metadata_frame(semantic_dictionary,'semantic_dictionary')
   public_semantic_value_map <- sanitize_public_frame(semantic_value_map)
   public_semantic_code_map <- sanitize_public_frame(semantic_code_map)
   public_semantic_panel_links <- sanitize_public_frame(semantic_panel_links)
@@ -177,7 +191,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   public_domain_panels <- sanitize_public_frame(domain_panels)
   public_panel_kpis <- sanitize_public_frame(panel_kpis_product)
   public_panel_distributions <- sanitize_public_frame(panel_distributions)
-  public_panel_raw_fields <- sanitize_public_frame(panel_raw_fields)
+  public_panel_raw_fields <- metadata_frame(panel_raw_fields,'panel_raw_fields')
   public_panel_parity <- sanitize_public_frame(panel_parity)
   public_legacy_resource_audit <- sanitize_public_frame(legacy_resource_audit)
   public_billeddiagnostik_del2_regression_audit <- sanitize_public_frame(billeddiagnostik_del2_regression_audit)
@@ -212,6 +226,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     run_id = run_id,
     generated_at = generated_at,
     builder_credit = atlas_builder_credit(),
+    sources = atlas_evidence_rows(sources[,intersect(c('table_name','schema','table'),names(sources)),drop=FALSE]),
     source_count = nrow(sources),
     loaded_source_count = sum(sources$load_status == "ok", na.rm = TRUE),
     column_count = nrow(columns),
@@ -234,7 +249,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     review_temporal_date_quality = public_rows(panel_or_empty(panels, "atlas_temporal_date_quality"), max_rows = 500),
     review_semantic_summary = public_rows(semantic_summary(semantic_dictionary, semantic_value_map, semantic_code_map, semantic_panel_links), max_rows = 100),
     review_domain_jump_links = review_domain_jump_links(),
-    review_clinical_variables = review_clinical_variables(clinical_concepts, panel_raw_fields, panel_distributions, panel_kpis_product),
+    review_clinical_variables = review_clinical_variables(clinical_concepts, public_panel_raw_fields, panel_distributions, panel_kpis_product),
     review_nav = review_nav(),
     review_overview = review_overview(
       sources = sources,
@@ -277,7 +292,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     column_profile_rows = public_rows(public_column_profiles, max_rows = 3000),
     column_top_value_rows = public_rows(public_column_top_values, max_rows = 3000),
     column_profile_summary = public_rows(column_profile_summary(column_profiles), max_rows = 200),
-    semantic_dictionary_rows = public_rows(public_semantic_dictionary, max_rows = nrow(public_semantic_dictionary)),
+    semantic_dictionary_rows = atlas_evidence_rows(public_semantic_dictionary),
     semantic_value_map_rows = public_rows(public_semantic_value_map, max_rows = 5000),
     semantic_code_map_rows = public_rows(public_semantic_code_map, max_rows = 5000),
     semantic_panel_links = public_rows(public_semantic_panel_links, max_rows = nrow(public_semantic_panel_links)),
@@ -290,7 +305,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
     domain_panel_rows = public_rows(public_domain_panels, max_rows = 500),
     panel_kpi_rows = public_rows(public_panel_kpis, max_rows = 2000),
     panel_distribution_rows = public_rows(public_panel_distributions, max_rows = max(5000, nrow(public_panel_distributions))),
-    panel_raw_field_rows = public_rows(public_panel_raw_fields, max_rows = nrow(public_panel_raw_fields)),
+    panel_raw_field_rows = atlas_evidence_rows(public_panel_raw_fields),
     panel_parity_rows = public_rows(public_panel_parity, max_rows = 500),
     legacy_cartography_audit_rows = public_rows(public_legacy_resource_audit, max_rows = 1000),
     billeddiagnostik_del2_regression_audit_rows = public_rows(public_billeddiagnostik_del2_regression_audit, max_rows = 1000),
@@ -461,7 +476,7 @@ review_domain_jump_links <- function() {
 review_clinical_variables <- function(clinical_concepts, panel_raw_fields, panel_distributions, panel_kpis) {
   list(
     concepts = public_rows(clinical_concepts, max_rows = 5000),
-    raw_fields = public_rows(panel_raw_fields, max_rows = 5000),
+    raw_fields = atlas_evidence_rows(panel_raw_fields),
     distributions = public_rows(panel_distributions, max_rows = 5000),
     kpis = public_rows(panel_kpis, max_rows = 2000)
   )
@@ -1280,6 +1295,7 @@ panel_group <- function(name) {
 public_column_profile_rows <- function(column_profiles) {
   if (!is.data.frame(column_profiles) || !nrow(column_profiles)) return(empty_column_profiles())
   out <- sanitize_public_frame(column_profiles)
+  for(key in intersect(c('table_name','column_name'),names(out)))out[[key]]<-column_profiles[[key]]
   if ("is_sensitive" %in% names(out) && "column_name" %in% names(out)) {
     sensitive <- as.logical(out$is_sensitive)
     sensitive[is.na(sensitive)] <- FALSE

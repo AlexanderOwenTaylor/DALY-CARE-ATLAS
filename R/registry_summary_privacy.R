@@ -53,6 +53,7 @@ atlas_registry_privacy_policy <- function(project_root='.') {
   out
 }
 atlas_registry_privacy_rows <- function(rows) {
+  if(is.data.frame(rows)&&!is.null(attr(rows,'registry_contract_rows')))return(attr(rows,'registry_contract_rows'))
   if(is.data.frame(rows)) return(lapply(seq_len(nrow(rows)),function(i) {
     row <- as.list(rows[i,,drop=FALSE]); lapply(row,function(x) if(length(x)==1L&&is.atomic(x)&&is.na(x)) NULL else x)
   }))
@@ -113,6 +114,15 @@ atlas_registry_privacy_published <- function(row,field,k) {
 }
 atlas_registry_summary_guard <- function(rows,project_root='.',min_cell_count=5) {
   rows <- atlas_registry_privacy_rows(rows); if(is.null(rows)) return(list())
+  if(any(vapply(rows,function(r)identical(r$contract_version,'registry-summary-v2'),logical(1)))) {
+    modern<-vapply(rows,function(r)identical(r$contract_version,'registry-summary-v2'),logical(1))
+    # Reject duplicate identities even when their contract versions differ.
+    ids<-vapply(rows,atlas_registry_privacy_identity,character(1));dup<-duplicated(ids)|duplicated(ids,fromLast=TRUE)
+    rows<-lapply(seq_along(rows),function(i){r<-rows[[i]];if(dup[i]){r$summary_status<-'invalid_contract';r$minimum_cell_count<-max(vapply(rows[ids==ids[i]],atlas_registry_privacy_k,numeric(1),min_cell_count=min_cell_count))};r})
+    result<-c(registry_v2_guard(rows[modern],project_root,min_cell_count),atlas_registry_summary_guard(rows[!modern],project_root,min_cell_count))
+    order<-match(unique(ids),vapply(result,atlas_registry_privacy_identity,character(1)))
+    return(result[order[!is.na(order)]])
+  }
   policy <- atlas_registry_privacy_policy(project_root)
   identities <- vapply(rows,atlas_registry_privacy_identity,character(1)); seen <- character(); out <- list()
   for(i in seq_along(rows)) {
@@ -134,6 +144,11 @@ atlas_registry_summary_guard <- function(rows,project_root='.',min_cell_count=5)
 }
 atlas_registry_summary_audit <- function(rows,project_root='.',min_cell_count=5) {
   rows <- atlas_registry_privacy_rows(rows); violations <- list()
+  if(is.list(rows)&&any(vapply(rows,function(r)identical(r$contract_version,'registry-summary-v2'),logical(1)))) {
+    modern<-vapply(rows,function(r)identical(r$contract_version,'registry-summary-v2'),logical(1));a<-registry_v2_guard(rows[modern],project_root,min_cell_count,TRUE);b<-atlas_registry_summary_audit(rows[!modern],project_root,min_cell_count)
+    dup<-anyDuplicated(vapply(rows,atlas_registry_privacy_identity,character(1)))>0
+    return(list(ok=a$ok&&b$ok&&!dup,violations=c(a$violations,b$violations,if(dup)list(list(path='registry_field_summaries',reason='duplicate_identity')))))
+  }
   fail <- function(path,reason) violations[[length(violations)+1L]] <<- list(path=path,reason=reason)
   if(is.null(rows)) {fail('registry_field_summaries','invalid_list'); return(list(ok=FALSE,violations=violations))}
   policy <- atlas_registry_privacy_policy(project_root); identities <- vapply(rows,atlas_registry_privacy_identity,character(1))
@@ -150,3 +165,8 @@ atlas_registry_summary_audit <- function(rows,project_root='.',min_cell_count=5)
   }
   list(ok=!length(violations),violations=violations)
 }
+
+.registry_files <- vapply(sys.frames(),function(f)if(is.character(f$ofile))f$ofile[1] else '',character(1))
+.registry_file <- tail(.registry_files[nzchar(.registry_files)],1)
+if(length(.registry_file)) source(file.path(dirname(.registry_file),'registry_v2.R'),local=TRUE)
+rm(.registry_files,.registry_file)

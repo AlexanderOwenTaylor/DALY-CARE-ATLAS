@@ -356,9 +356,11 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
     spec <- registry$artifacts[[index]]
     if(length(spec$payload_path) && length(spec$projection)) logical <- atlas_evidence_set(logical,unlist(spec$payload_path),table$rows)
   }
-  safe <- atlas_public_privacy(logical,project_root,minimum)
-  payload <- atlas_public_privacy(payload,project_root,minimum)
-  atlas_evidence_audit(safe,project_root,minimum);atlas_evidence_audit(payload,project_root,minimum)
+  if(!exists('atlas_metadata_context',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
+  metadata_context<-atlas_metadata_context(logical,project_root)
+  safe <- atlas_public_privacy(logical,project_root,minimum,metadata_context)
+  payload <- atlas_public_privacy(payload,project_root,minimum,metadata_context)
+  atlas_evidence_audit(safe,project_root,minimum,metadata_context);atlas_evidence_audit(payload,project_root,minimum,metadata_context)
   field_labels <- atlas_bundle_field_labels(safe[['clinical_display_dictionary']])
   vital_profiles <- atlas_bundle_vital_profiles(safe[['column_profile_rows']])
   transport <- atlas_payload_transport(atlas_sanitize_payload_text(payload),transport_version,
@@ -383,6 +385,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   }
   resources <- c(DALYCARE_atlas.html='DALYCARE_entry.html',DALYCARE_clinical.html='DALYCARE_atlas.html',DALYCARE_outputs.html='DALYCARE_outputs.html',`atlas-entry.js`='atlas-entry.js',`atlas-outputs.js`='atlas-outputs.js',`atlas-transport.js`='atlas-transport.js',`atlas-pages.css`='atlas-pages.css',`atlas-vitals.js`='atlas-vitals.js',`atlas-vitals.css`='atlas-vitals.css')
   for(name in names(resources)) if(!file.copy(atlas_bundle_resource(resources[[name]],project_root),file.path(stage,name))) stop('Resource copy failed',call.=FALSE)
+  write('registry-v2.js',paste0('window.DALYCARE_REGISTRY_V2_RESOURCE = ',atlas_bundle_json(registry_v2_public_resource(project_root)),';\n',paste(readLines(atlas_bundle_resource('registry-v2.js',project_root),warn=FALSE,encoding='UTF-8'),collapse='\n')))
   write('DALYCARE_atlas_payload.js',transport_assets$script)
   write('DALYCARE_atlas_payload.json',transport_assets$json)
   write('DALYCARE_entry.js',paste0('window.DALYCARE_ENTRY = ',atlas_bundle_json(list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance)),';\n'))
@@ -402,7 +405,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
     rows <- if(length(spec$projection) && length(spec$payload_path)) atlas_evidence_get(safe,unlist(spec$payload_path)) else list()
     keys <- vapply(table$columns,function(c)c$key,character(1))
     if(any(!keys %in% c(unlist(spec$projection),if(!is.null(spec)) privacy)) || (is.null(spec) && (length(keys) || nzchar(table$source_file)))) stop('Unreviewed public schema',call.=FALSE)
-    rows <- lapply(rows,function(r)setNames(lapply(keys,function(k)r[[k]]),keys))
+    if(!identical(id,'registry_field_summaries')) rows <- lapply(rows,function(r)setNames(lapply(keys,function(k)r[[k]]),keys))
     table$rows <- NULL;table$shards <- list()
     if(identical(table$status,'snapshot_preview')) table$status <- 'limited'
     parts <- list();pending <- list();pending_bytes <- 2
@@ -447,7 +450,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   }
   if(total>registry$public_table_max_bytes) stop('Public table-data budget exceeded',call.=FALSE)
   limits <- list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes,shard_max_rows=250L,shard_max_bytes=262144L,cache_max_bytes=1048576L,page_rows=50L,minimum_cell_count=minimum,public_table_bytes=total)
-  catalogue <- list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance,privacy_policy_version=payload$privacy_metadata$policy_version,limits=limits,tables=catalog_tables)
+  catalogue <- list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance,privacy_policy_version=payload$privacy_metadata$policy_version,minimum_cell_count=minimum,limits=limits,tables=catalog_tables)
   if(length(field_labels)) catalogue$field_labels <- field_labels
   if(length(vital_profiles)) catalogue$vital_profiles <- vital_profiles
   write('DALYCARE_output_catalogue.js',paste0('window.DALYCARE_OUTPUT_CATALOGUE = ',atlas_bundle_json(catalogue),';\n'))

@@ -91,15 +91,26 @@
       const rows=JSON.parse(data.rows_json);
       if(!Array.isArray(rows) || rows.length!==r.s.rows || rows.length>MAX_ROWS)throw new Error('Shard row count mismatch or limit exceeded');
       const keys=new Set(r.t.columns.map(c=>c.key));
+      const registryIds=new Set();
       for(const row of rows) {
         if(!row || typeof row!=='object' || Array.isArray(row) || Object.keys(row).some(k=>!keys.has(k)))throw new Error('Shard contains unreviewed schema columns');
         for(const column of r.t.columns) {
-          if(!own(row,column.key))throw new Error('Shard missing schema column');
+          if(!own(row,column.key)) {
+            const contract=row.contract_version==='registry-summary-v2'?window.DALYCARERegistryV2?.schema:window.DALYCARERegistryV2?.legacySchema;
+            if(r.t.id==='registry_field_summaries'&&contract&&!contract.includes(column.key))continue;
+            throw new Error('Shard missing schema column');
+          }
           const value=row[column.key];if(value===null)continue;
           if(typeof value==='object' || !['string','number','boolean'].includes(typeof value))throw new Error('Invalid row value');
           if(column.type==='number' && (typeof value!=='number' || !Number.isFinite(value)))throw new Error('Invalid numeric schema value');
           if(column.type==='boolean' && typeof value!=='boolean')throw new Error('Invalid boolean schema value');
           if(column.type==='string' && typeof value!=='string')throw new Error('Invalid string schema value');
+        }
+        if(r.t.id==='registry_field_summaries') {
+          const identity=JSON.stringify([row.table_name,row.source_column]),guard=window.DALYCARERegistryV2;
+          const checked=row.contract_version==='registry-summary-v2'?guard?.validate(row,window.DALYCARE_REGISTRY_V2_RESOURCE,r.c.minimum_cell_count||5):guard?.validateLegacy(row,window.DALYCARE_REGISTRY_V2_RESOURCE,r.c.minimum_cell_count||5);
+          if(!checked||registryIds.has(identity))throw new Error('Registry field contract failed');
+          registryIds.add(identity);
         }
       }
       settle(null,rows,r.s.bytes);
@@ -109,16 +120,17 @@
     const {t}=tableFor(tableId);selectTable(tableId);cancel();const epoch=scanEpoch;
     const check=()=>{if(signal?.aborted || epoch!==scanEpoch || activeTable!==tableId)throw new Error('Search incomplete: cancelled');};
     const abort=()=>{if(epoch===scanEpoch)cancel();};signal?.addEventListener('abort',abort,{once:true});
-    let scanned=0,matches=0;const rows=[],start=Math.max(0,Number.isFinite(Number(page))?Math.floor(Number(page)):0)*PAGE_ROWS;
+    let scanned=0,matches=0;const registrySeen=new Set();if(tableId==='registry_field_summaries'&&t.shards.reduce((n,s)=>n+s.rows,0)>217)throw new Error('Registry field inventory exceeds policy');const rows=[],start=Math.max(0,Number.isFinite(Number(page))?Math.floor(Number(page)):0)*PAGE_ROWS;
     const needle=String(query||'').toLocaleLowerCase();
     try {
       check();
-      if(!needle&&!criteria.source&&!criteria.field) {
+      if(!needle&&!criteria.source&&!criteria.field&&tableId!=='registry_field_summaries') {
         const total=t.shards.reduce((n,s)=>n+s.rows,0);let offset=0;
         for(const shard of t.shards){check();if(offset<start+PAGE_ROWS && offset+shard.rows>start){const data=await loadShard(tableId,shard.id);check();for(let i=Math.max(0,start-offset);i<data.length && rows.length<PAGE_ROWS;i++)rows.push(data[i]);scanned+=data.length;}offset+=shard.rows;}
         return {rows,total_matches:total,scanned_rows:scanned,complete:true};
       }
       for(const shard of t.shards){check();const data=await loadShard(tableId,shard.id);check();for(const row of data){
+        if(tableId==='registry_field_summaries'){const id=JSON.stringify([row.table_name,row.source_column]);if(registrySeen.has(id))throw new Error('Duplicate registry field identity');registrySeen.add(id);}
         const inScope=(!criteria.source||row.table_name===criteria.source)&&(!criteria.field||fieldKey(row)===criteria.field);
         const namesOnly=criteria.fieldNames===true&&fieldTable(tableId),alias=fieldTable(tableId)?[fieldLabel(row),own(sourceLabels,row.table_name)?sourceLabels[row.table_name]:''].join(' '):'';
         const matchesQuery=!needle||(namesOnly?[fieldKey(row),fieldLabel(row)].some(value=>String(value||'').toLocaleLowerCase().includes(needle)):t.columns.some(c=>row[c.key]!==null&&String(row[c.key]).toLocaleLowerCase().includes(needle))||alias.toLocaleLowerCase().includes(needle));
@@ -159,6 +171,8 @@
     value_privacy_status:privacyLabels,count_privacy_status:privacyLabels,date_privacy_status:privacyLabels,availability_privacy_status:privacyLabels
   });
   Object.assign(reviewedLabels.numeric_privacy_status,privacyLabels);
+  reviewedLabels.summary_status={published:'Published complete distribution',field_absent:'Field absent from checked schema',source_unavailable:'Source unavailable',needs_person_key:'Reviewed person key required',missing_person_key:'Person key missing',query_failed:'Query did not complete',resource_limit:'Resource limit reached',withheld_privacy:'Withheld by complete-distribution privacy checks',needs_unit_evidence:'Verified stored-unit evidence required',needs_numeric_policy:'Approved fixed bands required',needs_mapping:'Source-specific mapping required',invalid_contract:'Withheld: contract validation failed',empty_source:'Completed empty source',all_missing:'All assessed values missing',all_unrecognised:'All assessed values unrecognised',all_conflicting:'All assessed people have conflicting values',no_usable_values:'No usable values after complete assessment',no_values:'Legacy reason unavailable'};
+  Object.assign(reviewedLabels.summary_method,{fixed_bands_midpoint_mean_nearest_rank_intervals:'Approximate midpoint mean and containing-band quartiles',complete_reviewed_recorded_codes:'Complete person-counted recorded codes'});
   reviewedLabels.summary_method['supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample']='Supplied mean and quantiles; quartiles may use a sample of source records';
   function formatValue(value,key,row={}) {
     if(value!==null && value!==undefined && ['mean','median','p25','p75','sd','q25','q75','iqr','min','max'].includes(key)) return 'Withheld: verified grouped evidence required';

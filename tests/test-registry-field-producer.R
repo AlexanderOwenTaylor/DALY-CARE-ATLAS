@@ -28,9 +28,9 @@ rows <- registry_field_summaries(base,"RKKP_DaMyDa",root)
 expect_equal(status(rows,"Stadie"),"published")
 expect_equal(as.numeric(field(rows,"Stadie")$denominator_n),40)
 expect_equal(status(rows,"Reg_Haemoglobin"),"needs_unit_evidence")
-expect_true(is.na(field(rows,"Reg_Haemoglobin")$mean))
-expect_true(is.na(field(rows,"Reg_Haemoglobin")$p25))
-expect_true(is.na(field(rows,"Reg_Haemoglobin")$p75))
+expect_true(is.na(field(rows,"Reg_Haemoglobin")$approximate_mean))
+expect_true(is.na(field(rows,"Reg_Haemoglobin")$p25_band))
+expect_true(is.na(field(rows,"Reg_Haemoglobin")$p75_band))
 expect_false(any(grepl("private-",as.character(unlist(rows)),fixed=TRUE)))
 repeated <- registry_field_summaries(rbind(base,base),"RKKP_DaMyDa",root)
 expect_equal(field(repeated,"Reg_Haemoglobin"),field(rows,"Reg_Haemoglobin"),"Repeated identical measurements collapse per person.")
@@ -40,16 +40,16 @@ expect_equal(status(conflicted,"Stadie"),"published")
 expect_equal(as.numeric(field(conflicted,"Stadie")$n_conflicting),5)
 expect_equal(as.numeric(field(conflicted,"Stadie")$denominator_n),40)
 rare_conflict <- registry_field_summaries(rbind(base,transform(base[1,],Stadie="III")),"RKKP_DaMyDa",root)
-expect_equal(status(rare_conflict,"Stadie"),"withheld_small_group")
+expect_equal(status(rare_conflict,"Stadie"),"withheld_privacy")
 unknown <- base; unknown$Stadie[1] <- "unapproved raw text"
 unknown_rows <- registry_field_summaries(unknown,"RKKP_DaMyDa",root)
-expect_equal(status(unknown_rows,"Stadie"),"withheld_small_group")
+expect_equal(status(unknown_rows,"Stadie"),"withheld_privacy")
 expect_false(any(grepl("unapproved",as.character(unlist(unknown_rows)),fixed=TRUE)))
 neg <- base; neg$Reg_Haemoglobin[1:5] <- -1; neg$Reg_Haemoglobin[6:10] <- Inf
 negative <- registry_field_summaries(neg,"RKKP_DaMyDa",root)
 expect_equal(status(negative,"Reg_Haemoglobin"),"needs_unit_evidence")
-expect_true(is.na(field(negative,"Reg_Haemoglobin")$n_invalid))
-expect_true(is.na(field(negative,"Reg_Haemoglobin")$p25))
+expect_true(is.na(field(negative,"Reg_Haemoglobin")$n_unrecognised))
+expect_true(is.na(field(negative,"Reg_Haemoglobin")$p25_band))
 adjacent <- base; adjacent$Reg_Haemoglobin <- c(1.0000000000000002,rep(1,19),rep(2,20))
 expect_equal(status(registry_field_summaries(adjacent,"RKKP_DaMyDa",root),"Reg_Haemoglobin"),"needs_unit_evidence","Typed adjacent double rare tails must not collapse.")
 merged <- registry_summary_final_guard(rbind(rows,rows),root,5)
@@ -58,7 +58,7 @@ expect_true(all(is.na(merged$denominator_n)) && all(merged$category_counts_json=
 rare <- base; rare$Reg_Haemoglobin[1] <- 1.23456
 rare_rows <- registry_field_summaries(rare,"RKKP_DaMyDa",root)
 expect_equal(status(rare_rows,"Reg_Haemoglobin"),"needs_unit_evidence")
-expect_true(all(is.na(field(rare_rows,"Reg_Haemoglobin")[c("denominator_n","n_valid","n_distinct","mean","p25","p75")])) )
+expect_true(all(is.na(field(rare_rows,"Reg_Haemoglobin")[c("denominator_n","n_valid","band_level","approximate_mean","p25_band","p75_band")])) )
 const <- base; const$Reg_Haemoglobin <- 1
 expect_equal(status(registry_field_summaries(const,"RKKP_DaMyDa",root),"Reg_Haemoglobin"),"needs_unit_evidence")
 blank_key <- base; blank_key$secret_person[1] <- ""
@@ -75,7 +75,7 @@ for (tbl in c("RKKP_LYFO","RKKP_CLL")) {
   expect_true(all(vapply(c(stagecol,"Beh_Responsevaluering",tx),function(col) status(rows,col)=="published",logical(1))))
 }
 Sys.setenv(DALYCARE_MIN_CELL_COUNT="21")
-expect_equal(status(registry_field_summaries(base,"RKKP_DaMyDa",root,min_cell_count=1),"Stadie"),"withheld_small_group")
+expect_equal(status(registry_field_summaries(base,"RKKP_DaMyDa",root,min_cell_count=1),"Stadie"),"withheld_privacy")
 Sys.setenv(DALYCARE_MIN_CELL_COUNT="5")
 expect_equal(nrow(registry_field_summaries(base,"fake_RKKP_DaMyDa",root)),0L)
 # SQL is executed independently by Python's standard SQLite engine when RSQLite is unavailable.
@@ -99,7 +99,7 @@ setMethod("dbQuoteString",signature(conn="RegistryTestSQLiteConnection",x="chara
 setMethod("dbGetQuery",signature(conn="RegistryTestSQLiteConnection",statement="character"),function(conn,statement,...) {
   fixture_query_count <<- fixture_query_count+1L
   expect_true(grepl("GROUP BY pid",statement,fixed=TRUE),"Person resolution stays inside SQL.")
-  expect_true(grepl("SELECT status,value,n FROM grouped LIMIT",statement,fixed=TRUE),"DB returns grouped counts only.")
+  expect_true(grepl("SELECT status,value,n FROM grouped ORDER BY status,value LIMIT",statement,fixed=TRUE),"DB returns grouped counts only.")
   if(fixture_mode=="error") stop("Synthetic query failure with no source data")
   if(fixture_mode=="timeout") stop("Synthetic statement timeout")
   if(fixture_mode=="missing_key") return(data.frame(status="key_missing",value="",n=1))

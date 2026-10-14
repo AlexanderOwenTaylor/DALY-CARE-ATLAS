@@ -127,6 +127,18 @@ def _schema_ok(row,field):
 
 def sanitize_registry_summaries(rows,project_root=None,min_cell_count=5):
     if not isinstance(rows,list): return []
+    if any(isinstance(r,dict) and r.get('contract_version')=='registry-summary-v2' for r in rows):
+        from registry_v2 import guard
+        modern=[r for r in rows if isinstance(r,dict) and r.get('contract_version')=='registry-summary-v2']
+        legacy=[r for r in rows if r not in modern]
+        ids=Counter(_identity(r) for r in rows)
+        thresholds={id:max(_k(r,min_cell_count) for r in rows if _identity(r)==id) for id in ids}
+        modern=[dict(r,summary_status='invalid_contract',minimum_cell_count=thresholds[_identity(r)]) if ids[_identity(r)]>1 else r for r in modern]
+        legacy=[dict(r,summary_status='invalid_contract',minimum_cell_count=thresholds[_identity(r)]) if ids[_identity(r)]>1 else r for r in legacy]
+        result=guard(modern,project_root,min_cell_count)+sanitize_registry_summaries(legacy,project_root,min_cell_count)
+        byid={}
+        for r in result:byid.setdefault(_identity(r),r)
+        return [byid[id] for id in dict.fromkeys(_identity(r) for r in rows) if id in byid]
     policy=registry_summary_policy(project_root)
     counts=Counter(_identity(r) for r in rows)
     out=[]; seen=set()
@@ -152,6 +164,11 @@ def audit_registry_summaries(rows,project_root=None,min_cell_count=5):
     policy=registry_summary_policy(project_root)
     identities=Counter(_identity(row) for row in rows)
     errors=[]
+    if isinstance(rows,list) and any(isinstance(r,dict) and r.get('contract_version')=='registry-summary-v2' for r in rows):
+        from registry_v2 import guard
+        modern=[r for r in rows if isinstance(r,dict) and r.get('contract_version')=='registry-summary-v2'];legacy=[r for r in rows if r not in modern]
+        ids=[_identity(r) for r in rows]
+        return guard(modern,project_root,min_cell_count,True)+audit_registry_summaries(legacy,project_root,min_cell_count)+(['registry_field_summaries.duplicate_identity'] if len(set(ids))!=len(ids) else [])
     for index,row in enumerate(rows):
         prefix=f'registry_field_summaries.{index}'
         identity=_identity(row); field=policy.get(identity)

@@ -1,2 +1,6 @@
 config/npu-display-dictionary.csv -text
 config/terminology/** -text
+config/registry-summary-policy-v2.json -text
+inst/config/registry-summary-policy-v2.json -text
+config/mcl_triangle_count_value_mappings.tsv -text whitespace=cr-at-eol
+config/mcl_triangle_treatment_code_mappings.tsv -text whitespace=cr-at-eol

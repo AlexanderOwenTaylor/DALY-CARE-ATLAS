@@ -35,14 +35,14 @@ def run(name):
 def counts(result): return {(s,v):n for s,v,n in result}
 load(base)
 assert counts(run('Stadie'))=={('valid','I'):20,('valid','II'):20}
-assert counts(run('Reg_Haemoglobin'))=={('valid','1'):10,('valid','2'):10,('valid','3'):10,('valid','4'):10}
+assert counts(run('Reg_Haemoglobin'))=={('valid','unbound'):40}
 load(base+base)
 assert counts(run('Stadie'))=={('valid','I'):20,('valid','II'):20}
 load(base+[(r[0],'III','8') for r in base[:5]])
 assert counts(run('Stadie'))=={('conflicting',''):5,('valid','I'):15,('valid','II'):20}
-assert counts(run('Reg_Haemoglobin'))=={('conflicting',''):5,('valid','1'):5,('valid','2'):10,('valid','3'):10,('valid','4'):10}
+assert counts(run('Reg_Haemoglobin'))=={('conflicting',''):5,('valid','unbound'):35}
 load([(pid,st,('-1' if i<5 else 'Inf' if i<10 else val)) for i,(pid,st,val) in enumerate(base)])
-assert counts(run('Reg_Haemoglobin'))=={('invalid',''):10,('valid','2'):10,('valid','3'):10,('valid','4'):10}
+assert counts(run('Reg_Haemoglobin'))=={('invalid',''):10,('valid','unbound'):30}
 load([(pid,('arbitrary secret free text' if i==0 else st),val) for i,(pid,st,val) in enumerate(base)])
 assert ('invalid','') in counts(run('Stadie'))
 assert all('arbitrary' not in str(row) for row in run('Stadie'))
@@ -51,7 +51,7 @@ assert counts(run('Stadie'))[('key_missing','')]==1
 # Adjacent representable doubles must never collapse and conceal a rare tail.
 load([(pid,st,('1.0000000000000002' if i==0 else '1' if i<20 else '2')) for i,(pid,st,val) in enumerate(base)])
 rare_groups=run('Reg_Haemoglobin')
-assert sorted(n for status,value,n in rare_groups)==[1,19,20], rare_groups
+assert counts(rare_groups)=={('valid','unbound'):40}, rare_groups  # No stored numeric values leave unbound SQL.
 rare_path=p/'rare-double-groups.csv'
 with rare_path.open('w',newline='') as f:
  writer=csv.writer(f);writer.writerow(['status','value','n']);writer.writerows(rare_groups)
@@ -63,21 +63,24 @@ if libs.exists(): env.setdefault('R_LIBS_USER',str(libs))
 temp=root/'.artifact-temp/registry-temp';temp.mkdir(parents=True,exist_ok=True)
 for key in ('TEMP','TMP','TMPDIR'): env[key]=str(temp)
 env['LC_ALL']='English_United States.utf8' if os.name=='nt' else 'C.UTF-8'
-code="""source('R/registry_summaries.R'); source('R/registry_summary_privacy.R'); spec <- Filter(function(s) s$table_name=='RKKP_DaMyDa' && s$source_column=='Reg_Haemoglobin',registry_summary_policy('.'))[[1]]; groups <- read.csv('.artifact-temp/registry-sql-fixtures/rare-double-groups.csv',colClasses=c('character','character','numeric')); out <- registry_summary_from_groups(spec,groups,5); stopifnot(out$summary_status=='needs_unit_evidence',is.na(out$n_valid),is.na(out$mean)); cat('Adjacent-double SQL results withheld by R producer.\n')"""
+code="""source('R/registry_summaries.R'); source('R/registry_summary_privacy.R'); spec <- Filter(function(s) s$table_name=='RKKP_DaMyDa' && s$source_column=='Reg_Haemoglobin',registry_summary_policy('.'))[[1]]; groups <- read.csv('.artifact-temp/registry-sql-fixtures/rare-double-groups.csv',colClasses=c('character','character','numeric')); out <- registry_summary_from_groups(spec,groups,5); stopifnot(out$summary_status=='needs_unit_evidence',is.na(out$n_valid),is.na(out$approximate_mean)); cat('Adjacent-double SQL results withheld by R producer.\n')"""
 r_gate=p/'verify-rare-double.R'; r_gate.write_text(code,encoding='utf-8')
 subprocess.run([runtime,str(r_gate)],cwd=root,env=env,check=True)
 # Real-typed SQLite values need round-trip formatting before CAST-to-text.
 conn.execute('drop table cohort')
 conn.execute('create table cohort(secret_person text, Stadie text, Reg_Haemoglobin real)')
 load([(pid,st,(1.0000000000000002 if i==0 else 1.0 if i<20 else 2.0)) for i,(pid,st,val) in enumerate(base)])
-assert sorted(n for status,value,n in run('Reg_Haemoglobin'))==[1,19,20]
+assert counts(run('Reg_Haemoglobin'))=={('valid','unbound'):40}
+# Distinct adjacent values for one person must conflict before any band assignment.
+load([('same', 'I', 1.0),('same','I',1.0000000000000002)])
+assert counts(run('Reg_Haemoglobin'))=={('conflicting',''):1}
 # Recreate text fixture for remaining cap and complete tests.
 conn.execute('drop table cohort')
 conn.execute('create table cohort(secret_person text, Stadie text, Reg_Haemoglobin text)')
 # Cap+1 deliberately returns incomplete grouped results, which R must withhold.
 load(base)
 q=queries['Reg_Haemoglobin'].replace('LIMIT 5001','LIMIT 3')
-assert len(conn.execute(q).fetchall())==3
+assert len(conn.execute(q).fetchall())==1  # Finite unbound outcome; no exact-value cardinality leaks.
 load(base)
 for name in queries:
  result=run(name)

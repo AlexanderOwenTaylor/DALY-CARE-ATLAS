@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 from registry_summary_privacy import sanitize_registry_summaries, audit_registry_summaries
+from metadata_privacy import metadata_only, metadata_identity_approved, metadata_screen, metadata_path, metadata_fallback, metadata_context as build_metadata_context
 
 VERSION = '2026-10-11-public-privacy-1'
 STATS = {'min', 'max', 'mean', 'median', 'p25', 'p75', 'sd', 'q25', 'q75', 'iqr'}
@@ -30,7 +31,8 @@ def measurement_policy(root=None):
     with (root/'config/public-measurement-policy.csv').open(encoding='utf-8-sig',newline='') as f:
         return {(r['table_name'],r['column_name']) for r in csv.DictReader(f)}
 
-def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
+def sanitize_public_payload(payload, min_cell_count=5, project_root=None, metadata_context=None):
+    if metadata_context is None:metadata_context=build_metadata_context(payload,project_root)
     archived=[threshold(r.get('value')) for r in payload.get('run_summary',[]) if isinstance(r,dict) and r.get('metric')=='min_cell_count']
     k=max(threshold(min_cell_count),threshold(payload.get('privacy_metadata',{}).get('minimum_cell_count')),threshold(os.environ.get('DALYCARE_MIN_CELL_COUNT','5')),*archived)
     registry_k=k
@@ -41,8 +43,11 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
     has_ranges = any(isinstance(r,dict) and r.get('coverage_basis') == 'source_date_range'
                      for rows in (payload.get('panels',{}).get('atlas_temporal_coverage_years',[]), payload.get('review_temporal_coverage',{}).get('years',[])) for r in rows)
     def walk(obj, path=()):
-        if path and path[-1]=='registry_field_summaries':
-            return sanitize_registry_summaries(obj,project_root,registry_k)
+        summary_row=isinstance(obj,dict) and bool({'category_counts_json','numeric_groups_json'} & obj.keys())
+        summary_table=isinstance(obj,list) and any(isinstance(r,dict) and bool({'category_counts_json','numeric_groups_json'} & r.keys()) for r in obj)
+        if path and path[-1]=='registry_field_summaries' or summary_row or summary_table:
+            result=sanitize_registry_summaries([obj] if summary_row else obj,project_root,registry_k)
+            return (result[0] if result else {}) if summary_row else result
         if isinstance(obj,list):
             if path in year_paths:
                 normalized=[]; seen=set()
@@ -74,6 +79,8 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
             if isinstance(obj,str) and path and path[-1] in {'message','note','story','date_qc','description'}:
                 return re.sub(r'\b\d{4}-\d{2}-\d{2}\b','[clinical date withheld]',obj)
             return copy.deepcopy(obj)
+        if metadata_identity_approved(obj,path,project_root,metadata_context): return metadata_screen(obj,metadata_context)
+        if metadata_path(path):return metadata_fallback(obj,metadata_context)
         if has_ranges and path == ('review_temporal_coverage','summary') and 'n_year_rows' in obj:
             obj=dict(obj,n_year_rows=None)
         r={key:(copy.deepcopy(v) if key in REFERENCE else walk(v,path+(key,))) for key,v in obj.items()}
@@ -146,18 +153,25 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None):
     result['privacy_metadata']={'policy_version':VERSION,'minimum_cell_count':k,'count_basis':'legacy summaries: source_rows; published registry_field_summaries: distinct people per exact field','categorical_policy':'legacy distributions withheld; registry_field_summaries require complete-field distinct-person validation','summary_scope':'stored_source_row_profile'}
     return result
 
-def audit_public_payload(payload,project_root=None,min_cell_count=5):
+def audit_public_payload(payload,project_root=None,min_cell_count=5,metadata_context=None):
     """Independent structural audit; returns only paths, never patient-derived values."""
+    if metadata_context is None:metadata_context=build_metadata_context(payload,project_root)
     errors=[]
     k=effective_threshold(payload,min_cell_count=min_cell_count)
     suppressed={(str(r.get('table_name','')),str(r.get('column_name',''))) for r in payload.get('column_profile_rows',[]) if r.get('availability_privacy_status')=='withheld_small_complementary_cells'}
     def visit(obj,path):
-        if path and path[-1]=='registry_field_summaries':
-            errors.extend('.'.join(path[:-1]+(reason,)) for reason in audit_registry_summaries(obj,project_root,k))
+        summary_row=isinstance(obj,dict) and bool({'category_counts_json','numeric_groups_json'} & obj.keys())
+        summary_table=isinstance(obj,list) and any(isinstance(r,dict) and bool({'category_counts_json','numeric_groups_json'} & r.keys()) for r in obj)
+        if path and path[-1]=='registry_field_summaries' or summary_row or summary_table:
+            errors.extend('.'.join(path[:-1]+(reason,)) for reason in audit_registry_summaries([obj] if summary_row else obj,project_root,k))
             return
         if isinstance(obj,list):
             for i,x in enumerate(obj): visit(x,path+(str(i),))
         elif isinstance(obj,dict):
+            if metadata_only(obj,tuple(x for x in path if not x.isdigit()),project_root,metadata_context): return
+            if metadata_path(tuple(x for x in path if not x.isdigit())):
+                if obj!=metadata_fallback(obj,metadata_context):errors.append('.'.join(path+('unapproved_metadata',)))
+                return
             field=str(obj.get('column_name',obj.get('source_column',obj.get('date_column',''))) or '')
             table=str(obj.get('table_name',obj.get('registry','')) or '')
             if (table,field) in suppressed:

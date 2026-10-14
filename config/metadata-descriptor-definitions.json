@@ -1,0 +1,1358 @@
+{
+  "version": "metadata-descriptor-definitions-v1",
+  "normalisation": "lower_trim_ascii_space",
+  "descriptors": [
+    "vaegt",
+    "vagt",
+    "vægt",
+    "hojde",
+    "højde",
+    "puls",
+    "spo2",
+    "saturation",
+    "resp",
+    "resp frekvens",
+    "resp_frekvens",
+    "bt diastolisk",
+    "bt_diastolisk",
+    "bt systolisk",
+    "bt_systolisk",
+    "temp",
+    "ilt l/min",
+    "ilt_l_min",
+    "ews total",
+    "ews_total"
+  ],
+  "provenance": {
+    "evidence_tier": "local_reviewed_display_vocabulary",
+    "definition_source": "vital_descriptor_definition",
+    "review_version": "C2-fix1"
+  },
+  "display_definitions": [
+    {
+      "descriptor": "vaegt",
+      "clinical_variable": "Weight",
+      "semantic_meaning": "Body weight observation.",
+      "clinical_concept_id": "weight",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Anthropometrics",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "vagt",
+      "clinical_variable": "Weight",
+      "semantic_meaning": "Body weight observation.",
+      "clinical_concept_id": "weight",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Anthropometrics",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "vægt",
+      "clinical_variable": "Weight",
+      "semantic_meaning": "Body weight observation.",
+      "clinical_concept_id": "weight",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Anthropometrics",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "hojde",
+      "clinical_variable": "Height",
+      "semantic_meaning": "Body height observation.",
+      "clinical_concept_id": "height",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Anthropometrics",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "højde",
+      "clinical_variable": "Height",
+      "semantic_meaning": "Body height observation.",
+      "clinical_concept_id": "height",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Anthropometrics",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "puls",
+      "clinical_variable": "Pulse",
+      "semantic_meaning": "Pulse or heart-rate observation.",
+      "clinical_concept_id": "pulse",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "spo2",
+      "clinical_variable": "Oxygen saturation",
+      "semantic_meaning": "Peripheral oxygen saturation observation.",
+      "clinical_concept_id": "oxygen_saturation",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "saturation",
+      "clinical_variable": "Oxygen saturation",
+      "semantic_meaning": "Peripheral oxygen saturation observation.",
+      "clinical_concept_id": "oxygen_saturation",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "resp",
+      "clinical_variable": "Respiratory rate",
+      "semantic_meaning": "Respiratory-rate observation.",
+      "clinical_concept_id": "respiratory_rate",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "resp frekvens",
+      "clinical_variable": "Respiratory rate",
+      "semantic_meaning": "Respiratory-rate observation.",
+      "clinical_concept_id": "respiratory_rate",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "resp_frekvens",
+      "clinical_variable": "Respiratory rate",
+      "semantic_meaning": "Respiratory-rate observation.",
+      "clinical_concept_id": "respiratory_rate",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "bt diastolisk",
+      "clinical_variable": "Diastolic blood pressure",
+      "semantic_meaning": "Diastolic blood-pressure observation.",
+      "clinical_concept_id": "blood_pressure_diastolic",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "bt_diastolisk",
+      "clinical_variable": "Diastolic blood pressure",
+      "semantic_meaning": "Diastolic blood-pressure observation.",
+      "clinical_concept_id": "blood_pressure_diastolic",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "bt systolisk",
+      "clinical_variable": "Systolic blood pressure",
+      "semantic_meaning": "Systolic blood-pressure observation.",
+      "clinical_concept_id": "blood_pressure_systolic",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "bt_systolisk",
+      "clinical_variable": "Systolic blood pressure",
+      "semantic_meaning": "Systolic blood-pressure observation.",
+      "clinical_concept_id": "blood_pressure_systolic",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "temp",
+      "clinical_variable": "Temperature",
+      "semantic_meaning": "Body-temperature observation.",
+      "clinical_concept_id": "temperature",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Physiology",
+      "mapping_confidence": "high"
+    },
+    {
+      "descriptor": "ilt l/min",
+      "clinical_variable": "Oxygen flow",
+      "semantic_meaning": "Oxygen flow rate observation.",
+      "clinical_concept_id": "oxygen_flow",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Respiratory support",
+      "mapping_confidence": "medium"
+    },
+    {
+      "descriptor": "ilt_l_min",
+      "clinical_variable": "Oxygen flow",
+      "semantic_meaning": "Oxygen flow rate observation.",
+      "clinical_concept_id": "oxygen_flow",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Respiratory support",
+      "mapping_confidence": "medium"
+    },
+    {
+      "descriptor": "ews total",
+      "clinical_variable": "EWS total",
+      "semantic_meaning": "Early Warning Score total.",
+      "clinical_concept_id": "early_warning_score",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Deterioration",
+      "mapping_confidence": "medium"
+    },
+    {
+      "descriptor": "ews_total",
+      "clinical_variable": "EWS total",
+      "semantic_meaning": "Early Warning Score total.",
+      "clinical_concept_id": "early_warning_score",
+      "clinical_group": "Vitals",
+      "clinical_subgroup": "Deterioration",
+      "mapping_confidence": "medium"
+    }
+  ],
+  "registry_concepts": [
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Immunterapi",
+      "clinical_concept_id": "cll_immunotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Kemo_Bendamustin",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Kemo_Chlorambucil",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Kemo_Fludarabin",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Kemo_none",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Kemo_other",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Leukocyttal",
+      "clinical_concept_id": "leukocytes"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_MRD",
+      "clinical_concept_id": "mrd"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Responsevaluering",
+      "clinical_concept_id": "response_evaluation"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_Responsevaluering_dt",
+      "clinical_concept_id": "response_evaluation"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TRANSPLANT",
+      "clinical_concept_id": "transplant"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TargeteretBeh_Ibrutinib",
+      "clinical_concept_id": "cll_targeted_therapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TargeteretBeh_None",
+      "clinical_concept_id": "cll_targeted_therapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TargeteretBeh_Other",
+      "clinical_concept_id": "cll_targeted_therapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TargeteretBeh_acalabrutinib",
+      "clinical_concept_id": "cll_targeted_therapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TargeteretBeh_idelalisib",
+      "clinical_concept_id": "cll_targeted_therapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Beh_TargeteretBeh_venetoclax",
+      "clinical_concept_id": "cll_targeted_therapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Binet",
+      "clinical_concept_id": "binet_stage"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Rec_Immunterapi",
+      "clinical_concept_id": "cll_immunotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Rec_Kemo_Bendamustin",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Rec_Kemo_Chlorambucil",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Rec_Kemo_Fludarabin",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Rec_Kemo_none",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Rec_Kemo_other",
+      "clinical_concept_id": "cll_chemotherapy"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Reg_Behandlet",
+      "clinical_concept_id": "current_524b4b505f434c4c_5265675f426568616e646c6574"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Reg_Behandling",
+      "clinical_concept_id": "current_524b4b505f434c4c_5265675f426568616e646c696e67"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Reg_Binet",
+      "clinical_concept_id": "current_524b4b505f434c4c_5265675f42696e6574"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Reg_BinetStadium",
+      "clinical_concept_id": "binet_stage"
+    },
+    {
+      "source_name": "RKKP_CLL",
+      "raw_column": "Reg_Leukocyttal",
+      "clinical_concept_id": "leukocytes"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_AktuelSygdomsstatus",
+      "clinical_concept_id": "current_524b4b505f44614d794461_46555f416b7475656c537967646f6d73737461747573"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Adriamycin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Allogen",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Bendamustin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Bortezomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Carfilzomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Cyklophosphamid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Daratumumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Denosumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Elotuzumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Isatuximab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Ixazomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Lenalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Melfalan",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_MelfalanStamcelle",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Pamidronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Panobinostat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Pomalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Steroid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Straalebeh",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Thalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_Zolendronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_none",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "FU_Behandling_other",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Albumin_gl",
+      "clinical_concept_id": "albumin"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Albumin_mMoll",
+      "clinical_concept_id": "albumin"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Adriamycin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Allogen",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_AutoStam",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Bendamustin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Bortezomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Carfilzomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Cyklophosphamid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Cytosstatika",
+      "clinical_concept_id": "cytogenetic_risk"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Daratumumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Denosumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Elotuzumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Isatuximab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Ixazomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Lenalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Melfalan",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_MelfalanStamcelle",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Pamidronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Panobinostat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Pomalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Steroid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Straalebeh",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Thalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_Zolendronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_bisfosfonater",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Behandling_other",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Creatinin_MikMoll",
+      "clinical_concept_id": "creatinine"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Creatinin_mMoll",
+      "clinical_concept_id": "creatinine"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_Haemoglobin",
+      "clinical_concept_id": "haemoglobin"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_MRD",
+      "clinical_concept_id": "current_524b4b505f44614d794461_50425f4d5244"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_MaksimaleRespons",
+      "clinical_concept_id": "response"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_Bortezomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_Carfilzomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_Lenalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_Pomalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_Steroid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_Thalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "PB_VedligeholdBeh_other",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Albumin_gl",
+      "clinical_concept_id": "albumin"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Albumin_mMoll",
+      "clinical_concept_id": "albumin"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Behandlet",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_CReaktivtProtein_gl",
+      "clinical_concept_id": "crp"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_CReaktivtProtein_nMoll",
+      "clinical_concept_id": "crp"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_CalciumAlbuminkorrigeret",
+      "clinical_concept_id": "albumin_corrected_calcium"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_CalciumIoniseret",
+      "clinical_concept_id": "calcium"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Creatinin_mikmoll",
+      "clinical_concept_id": "creatinine"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Creatinin_mmoll",
+      "clinical_concept_id": "creatinine"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Haemoglobin",
+      "clinical_concept_id": "haemoglobin"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Hoejde",
+      "clinical_concept_id": "height"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_ISS_Stadie",
+      "clinical_concept_id": "stage"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_IgA_gl",
+      "clinical_concept_id": "current_524b4b505f44614d794461_5265675f4967415f676c"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_IgA_mikmoll",
+      "clinical_concept_id": "current_524b4b505f44614d794461_5265675f4967415f6d696b6d6f6c6c"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_IgG_gl",
+      "clinical_concept_id": "current_524b4b505f44614d794461_5265675f4967475f676c"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_IgG_mikmoll",
+      "clinical_concept_id": "current_524b4b505f44614d794461_5265675f4967475f6d696b6d6f6c6c"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_IgM_gl",
+      "clinical_concept_id": "current_524b4b505f44614d794461_5265675f49674d5f676c"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_LDH",
+      "clinical_concept_id": "ldh"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Adriamycin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Allogen",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_AutoStam",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Bendamustin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Bortezomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Carfilzomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Cyklophosphamid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Cytosstatika",
+      "clinical_concept_id": "cytogenetic_risk"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Daratumumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Denosumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Isatuximab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Ixazomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Lenalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Melfalan",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_MelfalanStamcell",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Pamidronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Panobinostat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Pomalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Steroid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Straalebeh",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Thalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_Zolendronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_bisfosfonater",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_none",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_PlanlagtBeh_other",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Planlagtbeh_Elotuzumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Respons1",
+      "clinical_concept_id": "response"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Respons2",
+      "clinical_concept_id": "response"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Reg_Vaegt",
+      "clinical_concept_id": "weight"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Adriamycin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Allogen",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_AutoStam",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Bendamustin",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Bortezomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Carfilzomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Cyklophosphamid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Cytosstatika",
+      "clinical_concept_id": "cytogenetic_risk"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Daratumumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Denosumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Elotuzumab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Isatuximab",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Ixazomib",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Lenalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Melfalan",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_MelfalanStamcelle",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Pamidronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Panobinostat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Pomalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Steroid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Straalebeh",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Thalidomid",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_Zolendronat",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_bisfosfonater",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Behandling_other",
+      "clinical_concept_id": "treatment"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_Respons",
+      "clinical_concept_id": "response"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "SB_UdvikletProgression",
+      "clinical_concept_id": "relapse_progression"
+    },
+    {
+      "source_name": "RKKP_DaMyDa",
+      "raw_column": "Stadie",
+      "clinical_concept_id": "stage"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_AndenLymfomspecifikBeh",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f416e64656e4c796d666f6d737065636966696b426568"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_ErDerForetagetKemo",
+      "clinical_concept_id": "lyfo_treatment_field"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_GivetSynkrontMedKemoterapi",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f476976657453796e6b726f6e744d65644b656d6f746572617069"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Hoejdosisbehandling",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f486f656a646f736973626568616e646c696e67"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Immunoterapi",
+      "clinical_concept_id": "lyfo_treatment_field"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Kemoterapiregime1",
+      "clinical_concept_id": "lyfo_treatment_field"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Kemoterapiregime2",
+      "clinical_concept_id": "lyfo_treatment_field"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Kemoterapiregime3",
+      "clinical_concept_id": "lyfo_treatment_field"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Operationstype",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f4f7065726174696f6e7374797065"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Radioimmunoterapi",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f526164696f696d6d756e6f746572617069"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Responsevaluering",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f526573706f6e736576616c756572696e67"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_StereoidSomMonoterapi",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f53746572656f6964536f6d4d6f6e6f746572617069"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Straaleterapi",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f53747261616c65746572617069"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_TypeAutologStamcellestoette",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f547970654175746f6c6f675374616d63656c6c6573746f65747465"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Beh_Vedligeholdelsesbehandling",
+      "clinical_concept_id": "current_524b4b505f4c59464f_4265685f5665646c696765686f6c64656c736573626568616e646c696e67"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "FU_Sygdomsstatus",
+      "clinical_concept_id": "current_524b4b505f4c59464f_46555f537967646f6d73737461747573"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_AndenLymfomspecifik",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_ErDerForetagetKemoterapi",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_GivetSynkrontMedKemoterapi",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Hoejdosisbehandling",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Immunoterapi",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Kemoterapiregime1",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Kemoterapiregime2",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Kemoterapiregime3",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Operationstype",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_PaabegyndtVedligehold",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Radioimmunoterapi",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Responsevaluering",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_StereoidSomMonoterapi",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Rec_Straaleterapi",
+      "clinical_concept_id": "lyfo_followup_relapse"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Albumin_gL",
+      "clinical_concept_id": "albumin"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Albumin_mikmoll",
+      "clinical_concept_id": "albumin"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_AnnArbor",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f416e6e4172626f72"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Behandlet",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f426568616e646c6574"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_CalciumAlbuminkorrigeret",
+      "clinical_concept_id": "albumin_corrected_calcium"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_CalciumIoniseret",
+      "clinical_concept_id": "ionised_calcium"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Creatinin_mikmoll",
+      "clinical_concept_id": "creatinine"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Creatinin_millimoll",
+      "clinical_concept_id": "creatinine"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Haemoglobin",
+      "clinical_concept_id": "haemoglobin"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_ImmunglobulinA_Mikmoll",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f496d6d756e676c6f62756c696e415f4d696b6d6f6c6c"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_ImmunglobulinA_gL",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f496d6d756e676c6f62756c696e415f674c"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_ImmunglobulinG_Mikmoll",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f496d6d756e676c6f62756c696e475f4d696b6d6f6c6c"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_ImmunglobulinG_gL",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f496d6d756e676c6f62756c696e475f674c"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_ImmunglobulinM_Mikmoll",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f496d6d756e676c6f62756c696e4d5f4d696b6d6f6c6c"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_ImmunglobulinM_gL",
+      "clinical_concept_id": "current_524b4b505f4c59464f_5265675f496d6d756e676c6f62756c696e4d5f674c"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_LDHVaerdi",
+      "clinical_concept_id": "ldh"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Lactatdehydrogenase",
+      "clinical_concept_id": "ldh"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Leukocytter",
+      "clinical_concept_id": "leukocytes"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Stadium",
+      "clinical_concept_id": "ann_arbor_stage"
+    },
+    {
+      "source_name": "RKKP_LYFO",
+      "raw_column": "Reg_Thrombocytter",
+      "clinical_concept_id": "platelets"
+    }
+  ],
+  "panels": [
+    {
+      "panel_id": "reg_damyda",
+      "panel_section": "Disease Registries"
+    },
+    {
+      "panel_id": "reg_lyfo",
+      "panel_section": "Disease Registries"
+    },
+    {
+      "panel_id": "reg_cll",
+      "panel_section": "Disease Registries"
+    },
+    {
+      "panel_id": "diagnosis_atlas",
+      "panel_section": "Disease Registries"
+    },
+    {
+      "panel_id": "clinical_vitals",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "clinical_social_history",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "clinical_adt",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "clinical_notes",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "clinical_imaging",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "clinical_microbiology",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "treatment",
+      "panel_section": "Treatment"
+    },
+    {
+      "panel_id": "laboratory_npu",
+      "panel_section": "Laboratory"
+    },
+    {
+      "panel_id": "clinical_pathology",
+      "panel_section": "Clinical Data"
+    },
+    {
+      "panel_id": "clinical_biobank",
+      "panel_section": "Laboratory"
+    }
+  ]
+}

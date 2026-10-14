@@ -33,6 +33,14 @@ class ArchiveAcceptanceTests(unittest.TestCase):
         self.assertEqual(result['reconciled_distributions'], 1)
         self.assertEqual(result['small_support_profiles'], 1)
 
+    def test_semantic_identity_uses_logical_source_not_physical_table(self):
+        for row in self.tables['semantic_dictionary']:
+            row['table_name']='PHYSICAL_ALIAS'
+        self.assertEqual(module.compare_tables(self.reference,self.tables)['columns'],2)
+        self.tables['semantic_dictionary'][1]['raw_column']='[sensitive]'
+        with self.assertRaisesRegex(ValueError,'catalogue'):
+            module.compare_tables(self.reference,self.tables)
+
     def test_hidden_identifier_column_metadata_is_not_allowed(self):
         self.tables['semantic_dictionary'].pop()
         with self.assertRaisesRegex(ValueError, 'catalogue'):
@@ -52,6 +60,26 @@ class ArchiveAcceptanceTests(unittest.TestCase):
         nested = {'legacy': {'profiles': [{'source_name': 'Source.Ø', 'raw_column': 'field-x', 'mean': 123.456}]}}
         with self.assertRaisesRegex(ValueError, 'small-support'):
             module.check_small_profiles(self.reference, nested)
+
+    def test_protected_profile_identity_cannot_be_shadowed_by_semantic_pair(self):
+        row = {'table_name': 'Source.Ø', 'column_name': 'field-x',
+               'source_name': 'OTHER_LOGICAL_SOURCE', 'raw_column': 'other_field', 'mean': 7}
+        with self.assertRaisesRegex(ValueError, 'small-support'):
+            module.check_small_profiles(self.reference, {'nested': [row]})
+
+    def test_protected_registry_identity_cannot_be_shadowed_by_semantic_pair(self):
+        row = {'table_name': 'Source.Ø', 'source_column': 'field-x',
+               'source_name': 'OTHER_LOGICAL_SOURCE', 'raw_column': 'other_field', 'mean': 7}
+        with self.assertRaisesRegex(ValueError, 'small-support'):
+            module.check_small_profiles(self.reference, {'nested': [row]})
+
+    def test_protected_semantic_identity_cannot_be_shadowed_by_profile_pair(self):
+        row = {'source_name': 'Source.Ø', 'raw_column': 'field-x',
+               'table_name': 'PHYSICAL_ALIAS', 'column_name': 'other_field', 'mean': 7}
+        with self.assertRaisesRegex(ValueError, 'small-support'):
+            module.check_small_profiles(self.reference, {'nested': [row]})
+        row['mean'] = None
+        module.check_small_profiles(self.reference, {'nested': [row]})
 
     def test_reference_declared_statistics_are_screened(self):
         self.reference['small_support_profiles'][0]['statistic_columns'].append('raw_min_date')

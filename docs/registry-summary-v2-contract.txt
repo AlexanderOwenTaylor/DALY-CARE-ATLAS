@@ -1,0 +1,173 @@
+REGISTRY SUMMARY V2
+
+Entry and authority
+RUN_DALYCARE_ATLAS_73_SOURCE.R remains the entrypoint. Both fresh collection and
+offline rebuilding use the same final guards. A fresh run emits one outcome for
+each of the 217 exact configured fields. Missing source outcomes are explicit.
+The v1 reader remains available for exact historical categorical contracts;
+v1 numeric statistics never constitute v2 evidence. Legacy no_values has an
+unknown reason. CSV hydration selects the versioned schema; a registered union
+schema is an explicit mixed-version transport adapter and accepts only empty
+properties outside each row's own version. Guards still reject extra properties.
+
+Policy identity
+config/registry-summary-policy-v2.json and inst/config copy have identical,
+Git byte-pinned contents. policy_checksum is SHA256 over those exact bytes.
+The policy validates against the 217 legacy identities and finite recorded codes,
+plus exact reviewed source mappings. Generic recorded codes have unverified
+meaning. Reviewed recognition aliases use exact-field ASCII case conversion
+and ASCII-space trimming only where explicitly permitted. Person identifiers
+never undergo this normalization. Repeated aliases collapse; any remaining
+distinct nonblank tokens for one person conflict, including two numeric values
+in the same band or a recognised token plus an unrecognised token.
+
+Local numeric evidence
+No production unit bindings or assumed clinical band edges ship.
+Set DALYCARE_REGISTRY_NUMERIC_POLICY_FILE to a private local JSON resource:
+  version: registry-numeric-policy-v1
+  policies: array of records containing exactly
+    numeric_policy_id, table_name, source_column, unit_code, edges, levels,
+    minimum_people, constant_policy.
+edges is an ordered nonnegative finite partition starting at zero and ending
+with JSON null for positive infinity. Levels contain strictly increasing edge
+indices starting at zero and ending at the last edge. The first level contains
+every edge; every later level is a subset of the preceding level's edges.
+At most 64 base bands and 16 levels are accepted. minimum_people is an integer
+at least 20; constant_policy is withhold. Policy IDs are exact field bindings.
+
+Set DALYCARE_REGISTRY_UNIT_EVIDENCE_FILE to a private local JSON resource:
+  version: registry-unit-evidence-v2
+  bindings: array of records containing exactly
+    table_name, source_column, unit_code, stored_to_display_multiplier,
+    stored_to_display_offset, evidence_id, evidence_source, evidence_revision,
+    evidence_checksum, review_status, numeric_policy_id,
+    numeric_policy_checksum, numeric_policy_version, evidence_tier.
+The multiplier is finite and positive; offset is finite. review_status is
+verified; evidence_tier is authoritative_source_metadata. evidence_checksum
+is the reviewed metadata's SHA256. numeric_policy_version is
+registry-numeric-policy-v1 and numeric_policy_checksum is SHA256 over the exact
+local policy file bytes. Both exact field and unit must match the policy. Rows also retain
+unit_binding_checksum, SHA256 of the complete local binding file bytes, so
+changing a conversion under an unchanged evidence ID invalidates old rows.
+An operator must verify genuine stored-unit metadata before supplying this
+binding. The loader verifies shape/linkage, not the truth of an attestation.
+The older registry-unit-evidence-v1 loader remains a compatibility foundation;
+it cannot authorize grouped publication. Configured malformed or stale files
+fail local preflight without printing their paths or contents.
+
+Rebuilds require the same locally verified resources. Saved rows or arbitrary
+64-hex values cannot authorize their own unit evidence. Missing/stale resources
+withhold publication. Changing policy bytes requires new matching evidence;
+old exported rows cannot silently inherit the changed policy.
+
+Release and estimates
+Collection, data and publication statuses are separate. A completed partition
+is denominator_n = n_valid + n_missing + n_unrecognised + n_conflicting.
+Detailed data states and counts are withheld when any positive partition or
+complement is below k. k is the maximum of five, requested ceiling, environment
+ceiling, archived run/privacy threshold and the strict integer row threshold.
+Failed/incomplete queries carry no derived quantities. Unknown input tokens,
+identifiers and exception messages never leave the grouped SQL result.
+
+Numeric parsing accepts bounded decimal/exponent grammar, up to 1024 characters
+and four exponent digits. Zero and exact decimal values from
+2.2250738585072014e-308 through 1.7976931348623157e308 are allowed. Negative,
+nonfinite, malformed, underflow and out-of-range tokens are unrecognised,
+never inferred missing sentinels. Decimal bounds are checked before conversion
+to double and before band assignment. No pre-band rounding occurs.
+Nonidentity conversions perform binary64 multiplication followed by addition in
+R, SQLite and PostgreSQL. The protected conversion domain requires a nonzero
+product between 4.450147717014403e-308 and 8.988465674311579e307, or an exact
+zero input; absolute offset is at most 8.988465674311579e307. Values outside
+this numerical safety domain are unrecognised. Identity conversions retain the
+full parsing domain. PostgreSQL uses a wider decimal precheck solely to avoid
+float exceptions before applying the same binary64 acceptance checks.
+
+Whole-person resolution precedes SQL grouping into fixed base-band IDs.
+Only bands/statuses/counts and an internal constant flag return to R.
+At least minimum_people valid people are required. Every nonzero released band
+and its complements against valid and total people must be safe. The first
+predeclared safe adjacent coarsening is selected. If none passes, all derived
+quantities are withheld. No tail or top-N subset may be dropped. Constants are
+withheld. Continuous near-unique exact measurements may qualify via safe bands;
+no exact-value support, cardinality, extrema or raw statistics are released.
+
+The mean is the weighted midpoint mean of released closed bands. It is null
+with an occupied open tail or only one occupied band. Quartiles are containing
+band IDs at ranks ceiling(n_valid*p), p = 0.25, 0.5, 0.75. IQR is the interval
+[max(0,Q3.lower-Q1.upper), Q3.upper-Q1.lower]; an infinite Q1 upper bound gives
+lower zero, and an infinite Q3 upper bound gives null/unbounded upper.
+The modal band is the highest-count band, breaking ties by partition order.
+R, Python and browser independently recompute these estimates from released
+counts. The published schema contains no exact mean/quantile/extrema fields.
+
+Public browser resource
+Both site writers create registry-v2.js. It defines
+window.DALYCARE_REGISTRY_V2_RESOURCE and loads the independent browser guard.
+Only exact field metadata, recorded-code labels, policy checksum, validated
+numeric policies and public binding identity/unit/conversion/checksum are
+included. evidence_source, evidence_revision and local filenames are excluded.
+The resource derives from local validated configuration, never archived rows.
+The external script works with file:// and hosted sites and is manifested.
+
+Catalogue metadata
+Metadata authority is established before generic projection from the current or
+rebuilt run's registered column_profiles (exact table_name/column_name pairs)
+and sources (logical table_name, physical table, schema). Semantic rows cannot
+supply their own authority. Unicode, punctuation and sensitive schema names
+remain exact; observation values have no such exemption. Physical locations
+are preserved when independently present in sources; conflicting source
+identities do not establish a location. Both site writers pass the same context
+through nested payload guards and audits. The sources public projection now
+includes only schema/table in addition to its existing approved columns.
+
+A full/projected registered semantic schema, null observed quantities, canonical
+semantic ID and exact registered evidence filter/file are necessary but not
+sufficient. Descriptor identity additionally needs the bundled finite reviewed
+metadata-descriptor-definitions-v1 reference or an exact locally approved
+source/descriptor-column/value-column/descriptor tuple. The reference includes
+explicit provenance and generated display definitions/registry concepts/panels
+from existing reviewed product definitions. Its aliases are reference definitions,
+never claimed observed spellings. Both config/inst copies must agree.
+
+Optional DALYCARE_METADATA_DEFINITIONS_FILE uses exactly version, definitions,
+provenance. version is approved-metadata-definitions-v1; definitions is an array
+of exact source_name, raw_column, value_column, raw_descriptor objects (at most
+10000); provenance has evidence_id, evidence_checksum (64 hex), evidence_tier
+reviewed_descriptor_definition, review_status verified. The file is local trusted
+curation, not an archived row or a public attestation. Both referenced columns
+must also exist in the independent current inventory. No production definitions
+are supplied. R preflight validates this optional resource and the bundled
+versioned reference before DB profiling; malformed configuration fails closed.
+
+Approved identity does not exempt arbitrary derivative text. Labels/meanings,
+concepts, notes, search text and locations are screened from independent reviewed
+references and current schema metadata. Unknown descriptions remain explicitly
+unavailable. Unapproved rows retain only independently proven field pointers
+and a fixed withholding note; raw descriptor/filter/encoded ID and derivative
+text are cleared. Original-row audits reject unscreened metadata. Saved valid
+definition-only rows remain unassessed, without manufacturing observations.
+
+Reviewed raw/canonical lineage
+The in-memory producer keeps raw_tokens separately from canonical_tokens; SQL
+normalization carries raw_token separately from canonical v. Neither original
+input nor a recorded code is replaced by a display label. Public field resources
+include bounded mapping_lineage records: table_name, source_column, raw_token,
+canonical_token, normalisation, evidence_tier, evidence_row, evidence_checksum,
+review_status, evidence_key, caveat. These are reviewed recognition definitions,
+not a list of observed spellings or their frequencies. Paths, arbitrary unknown
+tokens and individual observations are excluded. The clinical view displays
+recorded canonical code plus reviewed meaning (or explicit unverified meaning).
+
+The 217 registry fields contain no date-valued policy; this contract does not
+manufacture date-format interpretations for unrelated date fields.
+
+Validation
+tests/test-registry-v2.R creates synthetic local evidence and grouped fixtures.
+tests/test-registry-v2.py executes actual generated SQLite SQL and the Python
+guard. tests/test-registry-v2.js verifies the same R golden rows independently.
+tests/test-registry-v2-metadata.R tests exact metadata lineage and spoof rejection.
+tests/test-registry-v2-handoff.R verifies all-field outcomes, typed handoff and
+both offline/hosting assets. tests/integration-postgres.R requires explicit
+DALYCARE_TEST_POSTGRES=1 and standard PGHOST/PGPORT/PGUSER/PGDATABASE/PGPASSWORD.
+Without opt-in it reports SKIP; this is not PostgreSQL acceptance.

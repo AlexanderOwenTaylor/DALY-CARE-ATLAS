@@ -17,7 +17,7 @@ for(support in c(5,19,20,1000)) {
 }
 spec <- Filter(function(s) s$kind=='numeric',registry_summary_policy('.'))[[1]]
 numeric <- registry_summary_from_groups(spec,data.frame(status='valid',value=c('1','16'),n=20),5)
-stopifnot(numeric$summary_status=='needs_unit_evidence',is.na(numeric$mean))
+stopifnot(numeric$summary_status=='needs_unit_evidence',is.na(numeric$approximate_mean))
 for(environment in c('5','10')) {
   Sys.setenv(DALYCARE_MIN_CELL_COUNT=environment)
   payload <- list(privacy_metadata=list(minimum_cell_count=if(environment=='5') 10 else 5),counts=list(list(n=7)),column_profile_rows=list(list(table_name='T',column_name='C',n_available=7,n_missing=20,pct_available=26)))

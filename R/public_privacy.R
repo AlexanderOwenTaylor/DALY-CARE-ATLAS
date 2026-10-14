@@ -1,5 +1,7 @@
 # Final serialization guard. Public counts are source rows, not unique people.
-atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5) {
+atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5, metadata_context = NULL) {
+  if(!exists('atlas_metadata_only',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
+  if(is.null(metadata_context))metadata_context<-atlas_metadata_context(payload,project_root)
   num <- function(x) {
     if (is.null(x) || length(x) != 1L || is.logical(x)) return(NA_real_)
     z <- suppressWarnings(as.numeric(x)); if (!is.finite(z)) NA_real_ else z
@@ -32,13 +34,16 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   range_rows <- c(payload$panels$atlas_temporal_coverage_years,payload$review_temporal_coverage$years)
   has_ranges <- any(vapply(range_rows,function(r) is.list(r) && scalar(r,'coverage_basis') == 'source_date_range',logical(1)))
   walk <- function(obj, path = character()) {
-    if(length(path) && tail(path,1)=='registry_field_summaries') {
+    summary_row<-function(r)is.list(r)&&!is.null(names(r))&&any(c('category_counts_json','numeric_groups_json') %in% names(r))
+    summary_table<-is.list(obj)&&is.null(names(obj))&&any(vapply(obj,summary_row,logical(1)))
+    if((length(path) && tail(path,1)=='registry_field_summaries')||summary_row(obj)||summary_table) {
       if(!exists('atlas_registry_summary_guard',mode='function')) {
         helper <- file.path(project_root,'R','registry_summary_privacy.R')
         if(file.exists(helper)) source(helper,local=environment(),encoding='UTF-8')
       }
       if(!exists('atlas_registry_summary_guard',mode='function')) return(list())
-      return(atlas_registry_summary_guard(obj,project_root,registry_k))
+      result<-atlas_registry_summary_guard(if(summary_row(obj))list(obj) else obj,project_root,registry_k)
+      return(if(summary_row(obj))if(length(result))result[[1]] else list() else result)
     }
     if (is.data.frame(obj)) obj <- lapply(seq_len(nrow(obj)), function(i) as.list(obj[i,,drop=FALSE]))
     if (!is.list(obj)) {
@@ -80,6 +85,8 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
       })
       return(out)
     }
+    if(atlas_metadata_identity_approved(obj,path,project_root,metadata_context))return(atlas_metadata_screen(obj,metadata_context))
+    if(atlas_metadata_path(path))return(atlas_metadata_fallback(obj,metadata_context))
     if(has_ranges && identical(path,c('review_temporal_coverage','summary')) && 'n_year_rows' %in% names(obj)) obj['n_year_rows'] <- list(NULL)
     r <- obj
     for (key in names(r)) if (!key %in% reference) r[key] <- list(walk(r[[key]],c(path,key)))

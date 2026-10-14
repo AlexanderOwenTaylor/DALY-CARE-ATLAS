@@ -2207,6 +2207,7 @@
   <script src="DALYCARE_atlas_payload.js"></script>
   <script src="atlas-transport.js"></script>
   <script src="atlas-vitals.js"></script>
+  <script src="registry-v2.js"></script>
   <script>
     (function () {
       /* ATLAS_PAYLOAD_INIT_START */
@@ -5801,6 +5802,7 @@
       // Finite v1 literals only. Source/field-specific code policy is checked before export.
       const registryFieldSummaryCodes = new Set(['0','1','2','3','4','5','6','7','8','9','A','B','C','I','II','III','IV','CR','CRi','PR','VGPR','sCR','SD','PD','TRUE','FALSE','Yes','No','Ja','Nej']);
       const registryFieldSummaryStatuses = {
+        field_absent:'Field absent from the checked source schema',source_unavailable:'Source unavailable in this run',withheld_privacy:'Summary withheld by complete-distribution privacy checks',needs_mapping:'Recorded values require source-specific mapping',needs_numeric_policy:'Approved fixed numeric bands required',empty_source:'Completed source contains no people',all_missing:'All assessed people have no recorded value',all_unrecognised:'All assessed values are unrecognised',all_conflicting:'All assessed people have conflicting recorded values',no_usable_values:'Completed assessment found no usable values',not_applicable:'No observed distribution applies',
         needs_person_key:'Reviewed person-key mapping required',missing_person_key:'Person key missing from the source',
         field_unavailable:'Field unavailable in this run',query_failed:'Summary query did not complete',resource_limit:'Summary resource limit reached',
         withheld_small_group:'Summary withheld for small groups',withheld_constant:'Summary withheld for a constant numeric field',
@@ -5812,42 +5814,12 @@
         return Number.isFinite(n) && n>=0 && (!integer || Number.isSafeInteger(n)) ? n : null;
       }
       function validateRegistryFieldSummary(row) {
-        if(!row || typeof row!=='object' || Array.isArray(row) || registryFieldSummaryColumns.some(key=>!Object.prototype.hasOwnProperty.call(row,key)) || Object.keys(row).some(key=>!registryFieldSummaryColumns.includes(key))) return null;
-        if(row.contract_version!=='registry-summary-v1' || !['RKKP_DaMyDa','RKKP_LYFO','RKKP_CLL'].includes(row.table_name) || registryExactSource(row)!==row.table_name || typeof row.source_column!=='string' || !row.source_column.trim() || row.source_column.length>160 || /[\x00-\x1f]/.test(row.source_column)) return null;
-        if(!['categorical','numeric'].includes(row.kind) || !['stage','treatment','response','laboratory'].includes(row.topic) || typeof row.label!=='string' || !row.label.trim() || row.label.length>240 || typeof row.phase!=='string' || !row.phase.trim() || row.phase.length>120 || row.unit_status!=='unverified' || row.count_basis!=='distinct_people_one_unambiguous_value_per_field' || row.summary_method!=='exact_complete_field_3sf') return null;
-        const k=registryFieldSummaryNumber(row.minimum_cell_count,true);
-        if(k===null || k<5 || typeof row.category_counts_json!=='string') return null;
-        const archivedThresholds=[payload.privacy_metadata?.minimum_cell_count,...(payload.run_summary || []).filter(item=>item.metric==='min_cell_count').map(item=>item.value)].filter(value=>value!==undefined && value!==null);
-        if(archivedThresholds.some(value=>registryFieldSummaryNumber(value,true)===null || k<Math.max(5,registryFieldSummaryNumber(value,true)))) return null;
-        let categories;
-        try { categories=JSON.parse(row.category_counts_json); } catch { return null; }
-        if(!Array.isArray(categories)) return null;
-        const quantities=['denominator_n','n_valid','n_missing','n_invalid','n_conflicting','n_distinct','minimum_value_support','mean','median','p25','p75'];
-        if(row.summary_status!=='published') {
-          return Object.prototype.hasOwnProperty.call(registryFieldSummaryStatuses,row.summary_status) && categories.length===0 && quantities.every(key=>row[key]===null) ? {...row,categories:[]} : null;
-        }
-        if(row.kind==='numeric') return null;
-        const numbers={};
-        for(const key of ['denominator_n','n_valid','n_missing','n_invalid','n_conflicting']) { numbers[key]=registryFieldSummaryNumber(row[key],true); if(numbers[key]===null) return null; }
-        const total=numbers.denominator_n, valid=numbers.n_valid;
-        const cellSafe=(n,denominator)=>n===0 || n>=k && (denominator-n===0 || denominator-n>=k);
-        if(total<k || valid===0 || ['n_valid','n_missing','n_invalid','n_conflicting'].reduce((sum,key)=>sum+numbers[key],0)!==total || ['n_valid','n_missing','n_invalid','n_conflicting'].some(key=>!cellSafe(numbers[key],total))) return null;
-        if(row.kind==='categorical') {
-          if(['n_distinct','minimum_value_support','mean','median','p25','p75'].some(key=>row[key]!==null) || !categories.length) return null;
-          const codes=new Set();let sum=0;
-          for(const entry of categories) {
-            if(!entry || typeof entry!=='object' || Array.isArray(entry) || Object.keys(entry).sort().join(',')!=='code,n' || !registryFieldSummaryCodes.has(entry.code) || codes.has(entry.code)) return null;
-            const n=registryFieldSummaryNumber(entry.n,true);
-            if(typeof entry.n!=='number' || n===null || !cellSafe(n,valid) || !cellSafe(n,total)) return null;
-            codes.add(entry.code);sum+=n;
-          }
-          if(sum!==valid) return null;
-        } else {
-          if(categories.length || valid<20) return null;
-          for(const key of ['n_distinct','minimum_value_support','mean','median','p25','p75']) { numbers[key]=registryFieldSummaryNumber(row[key],['n_distinct','minimum_value_support'].includes(key)); if(numbers[key]===null) return null; }
-          if(numbers.n_distinct<=1 || numbers.n_distinct>=.9*valid || numbers.minimum_value_support<k || numbers.n_distinct*numbers.minimum_value_support>valid || numbers.p25>numbers.median || numbers.median>numbers.p75) return null;
-        }
-        return {...row,...numbers,categories:categories.map(entry=>({code:entry.code,n:Number(entry.n)}))};
+        const thresholds=[payload.privacy_metadata?.minimum_cell_count,...(payload.run_summary||[]).filter(r=>r.metric==='min_cell_count').map(r=>r.value)].filter(v=>v!==undefined&&v!==null);
+        if(thresholds.some(v=>registryFieldSummaryNumber(v,true)===null))return null;
+        const guard=window.DALYCARERegistryV2,resource=window.DALYCARE_REGISTRY_V2_RESOURCE,k=Math.max(5,...thresholds.map(Number));
+        if(row?.contract_version==='registry-summary-v2')return guard?.validate(row,resource,k)||null;
+        const checked=guard?.validateLegacy(row,resource,k);
+        return checked?{...checked,categories:guard.strictCells(checked.category_counts_json,'code')||[]}:null;
       }
       function registryFieldSummariesForTheme(panelId,themeId) {
         const source=registryDiscoverySpecs[panelId]?.source, topic={stage:'stage',treatment:'treatment',response:'response',baseline:'laboratory'}[themeId];
@@ -5866,9 +5838,10 @@
       }
       function renderRegistryObservedField(row) {
         const identity=`${row.table_name} / ${row.source_column}`;
-        const counts=`${formatNumber(row.denominator_n)} people in this source · ${formatNumber(row.n_valid)} with a usable value · ${formatNumber(row.n_missing)} missing · ${formatNumber(row.n_invalid)} invalid · ${formatNumber(row.n_conflicting)} conflicting`;
+        const counts=`${formatNumber(row.denominator_n)} people in this source · ${formatNumber(row.n_valid)} with a usable value · ${formatNumber(row.n_missing)} missing · ${formatNumber(row.contract_version==='registry-summary-v2'?row.n_unrecognised:row.n_invalid)} ${row.contract_version==='registry-summary-v2'?'unrecognised':'invalid (legacy classification)'} · ${formatNumber(row.n_conflicting)} conflicting`;
         const stored=value=>value.toLocaleString(undefined,{maximumSignificantDigits:3});
-        const values=row.kind==='numeric' ? `<p class="mini"><strong>Unit not verified</strong> · raw stored measurement</p><dl class="registry-observed-stats"><dt>Mean</dt><dd>${stored(row.mean)}</dd><dt>Median</dt><dd>${stored(row.median)}</dd><dt>Q1–Q3 (middle 50%)</dt><dd>${stored(row.p25)}–${stored(row.p75)}</dd></dl>` : `<div class="table-wrap"><table><thead><tr><th scope="col">Recorded category</th><th scope="col">People</th></tr></thead><tbody>${row.categories.map(category=>`<tr><td>${escapeHtml(`Recorded code ${category.code} — definition not supplied`)}</td><td>${formatNumber(category.n)}</td></tr>`).join('')}</tbody></table></div>`;
+        const bandLabel=b=>`[${b.lower}, ${b.upper===null?'∞':b.upper})`;
+        const values=row.contract_version==='registry-summary-v2'&&row.kind==='numeric' ? `<p class="mini">${escapeHtml(row.unit_code)} · approximate summaries from released fixed bands</p><p class="mini">Midpoint mean: ${row.approximate_mean===null?'Unavailable with occupied open tails or a single band':stored(row.approximate_mean)}. Q1 / median / Q3 containing bands: ${[row.p25_band,row.median_band,row.p75_band].map(id=>escapeHtml(bandLabel(row.groups.find(b=>b.id===id)))).join(' / ')}. IQR interval: ${row.iqr_lower} to ${row.iqr_upper===null?'unbounded':row.iqr_upper}. Modal band: ${escapeHtml(bandLabel(row.groups.find(b=>b.id===row.modal_band)))}</p><table><thead><tr><th>Fixed band</th><th>People</th></tr></thead><tbody>${row.groups.map(b=>`<tr><td>${escapeHtml(bandLabel(b))}</td><td>${formatNumber(b.n)}</td></tr>`).join('')}</tbody></table>` : row.kind==='numeric' ? `<p class="mini"><strong>Unit not verified</strong> · raw stored measurement</p><dl class="registry-observed-stats"><dt>Mean</dt><dd>${stored(row.mean)}</dd><dt>Median</dt><dd>${stored(row.median)}</dd><dt>Q1–Q3 (middle 50%)</dt><dd>${stored(row.p25)}–${stored(row.p75)}</dd></dl>` : `<div class="table-wrap"><table><thead><tr><th scope="col">Recorded category</th><th scope="col">People</th></tr></thead><tbody>${row.categories.map(category=>`<tr><td>${escapeHtml(`Recorded code ${category.code} — ${category.label || 'meaning unverified in this legacy export'}`)}</td><td>${formatNumber(category.n)}</td></tr>`).join('')}</tbody></table></div>`;
         return `<article class="registry-observed-field" data-registry-observed-field="${escapeHtml(row.source_column)}"><h4>${escapeHtml(row.label)}</h4><p class="mini registry-field-identity"><code>${escapeHtml(identity)}</code><br>Form phase: ${escapeHtml(row.phase)}</p><p class="mini">${counts}</p>${values}<a class="registry-field-action" href="DALYCARE_outputs.html?${escapeHtml(new URLSearchParams({view:'all',table:'registry_field_summaries',source:row.table_name,field:row.source_column}).toString())}">Summary evidence →</a></article>`;
       }
       function renderRegistryFieldSummaries(panelId,themeId,requestedPage=0) {
@@ -5878,7 +5851,7 @@
         const states=new Map();evidence.states.forEach(status=>states.set(status,(states.get(status)||0)+1));
         const stateCopy=[...states].map(([status,n])=>`<p class="mini registry-summary-status">${escapeHtml(registryFieldSummaryStatuses[status])} · ${n} ${n===1?'field':'fields'}.</p>`).join('');
         const pager=pages>1 ? `<div class="toolbar"><button type="button" data-registry-summary-page="${page-1}"${page===0?' disabled':''}>Previous summaries</button><span class="mini">Page ${page+1} of ${pages}</span><button type="button" data-registry-summary-page="${page+1}"${page+1>=pages?' disabled':''}>Next summaries</button></div>` : '';
-        const details=total ? `<details class="registry-summary-method"><summary>People, exclusions and summary rules</summary><p class="mini">Each exact field counts distinct people with one unambiguous nonblank value. Identical repeated values collapse; differing values are conflicting. Blank-only values are missing. ${evidence.published.some(row=>row.kind==='numeric') ? 'Numeric summaries include finite nonnegative values only; negative and unparseable values are invalid and excluded. Units and clinical ranges are unverified. Mean, median and quartiles are supplied to three significant digits.' : 'Category definitions are not supplied; literal codes and response abbreviations retain their stored form.'}</p>${themeId==='treatment' ? '<p class="mini">Each treatment selection is separate. People may appear in several fields; these counts do not establish administered treatment or total exposure.</p>' : ''}<p class="mini">Small partition cells, complements and rare numeric values withhold the whole field. No time ordering is inferred.</p></details>` : '';
+        const details=total ? `<details class="registry-summary-method"><summary>People, exclusions and summary rules</summary><p class="mini">Each exact field counts distinct people with one unambiguous nonblank value. Identical repeated values collapse; differing values are conflicting. Blank-only values are missing. ${evidence.published.some(row=>row.kind==='numeric') ? 'Grouped numeric summaries use independently supplied stored-unit evidence and a fixed-band policy. Unrecognised tokens are excluded. The approximate mean uses closed-band midpoints; quartiles identify containing bands and the IQR is an interval. Occupied open tails have no invented midpoint.' : 'Recorded canonical codes remain visible alongside reviewed meanings where available; unverified code meanings remain explicit. Reviewed aliases are recognition definitions, not claims about observed spellings.'}</p>${themeId==='treatment' ? '<p class="mini">Each treatment selection is separate. People may appear in several fields; these counts do not establish administered treatment or total exposure.</p>' : ''}<p class="mini">Small partition cells, complements and unsafe numeric bands withhold the whole field. No time ordering is inferred.</p></details>` : '';
         return `<div class="registry-observed-summaries" data-registry-summary-panel="${panelId}" data-registry-summary-theme="${themeId}"><h4>Results in this dataset</h4><p class="mini" tabindex="-1" role="status" data-registry-observed-status>${total ? `${page*12+1}–${Math.min(total,(page+1)*12)} of ${total} fields with summaries.` : evidence.states.length ? 'Field summaries are not published for this topic.' : 'Field summaries not generated in this export.'}</p>${stateCopy}${pager}<div class="registry-observed-grid">${rows.map(renderRegistryObservedField).join('')}</div>${details}</div>`;
       }
       function handleRegistrySummaryPage(event) {

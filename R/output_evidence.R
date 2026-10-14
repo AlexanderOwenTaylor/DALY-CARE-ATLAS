@@ -66,6 +66,15 @@ atlas_read_registered_csv <- function(path, spec, max_bytes=67108864) {
         x[[key]] <- as.logical(toupper(value))
       }
     }
+    if(identical(spec$id,'registry_field_summaries')&&length(spec$schemas)>2&&setequal(names(x),names(spec$schemas[[3]]))) {
+      records<-lapply(seq_len(nrow(x)),function(i) {
+        row<-lapply(as.list(x[i,,drop=FALSE]),function(v)if(is.na(v))NULL else v)
+        selected<-if(identical(row$contract_version,'registry-summary-v2'))spec$schemas[[1]] else if(identical(row$contract_version,'registry-summary-v1'))spec$schemas[[2]] else fail()
+        if(any(vapply(setdiff(names(row),names(selected)),function(k)!is.null(row[[k]]),logical(1))))fail()
+        row[names(selected)]
+      })
+      x<-registry_contract_frame(records)
+    }
     x
   },warning=function(w) fail())
 }
@@ -81,6 +90,7 @@ atlas_evidence_set <- function(x,path,value) {
 }
 atlas_evidence_rows <- function(x) {
   if (!is.data.frame(x)) return(x)
+  if(!is.null(attr(x,'registry_contract_rows')))return(attr(x,'registry_contract_rows'))
   lapply(seq_len(nrow(x)),function(i) lapply(as.list(x[i,,drop=FALSE]),function(v) if(is.na(v)) NULL else unname(v)))
 }
 
@@ -266,11 +276,7 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
     frame <- atlas_evidence_get(args,path)
     full <- atlas_evidence_get(guarded,unlist(spec$payload_path,use.names=FALSE))
     if (identical(spec$id,'registry_field_summaries') && is.list(full)) {
-      schema <- spec$schemas[[1]]
-      frame <- as.data.frame(setNames(lapply(names(schema),function(key) {
-        if (schema[[key]]=='number') vapply(full,function(row) if(is.null(row[[key]])) NA_real_ else as.numeric(row[[key]]),numeric(1))
-        else vapply(full,function(row) row[[key]] %||% NA_character_,character(1))
-      }),names(schema)),stringsAsFactors=FALSE)
+      frame <- registry_contract_frame(full)
       args <- atlas_evidence_set(args,path,frame)
       next
     }
@@ -318,16 +324,25 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
   list(payload=payload,tables=tables,context=context,membership_spec=membership_spec)
 }
 
-atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5) {
+atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5,metadata_context=NULL) {
+  if(!exists('atlas_metadata_only',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
+  if(is.null(metadata_context))metadata_context<-atlas_metadata_context(x,project_root)
   min_cell_count <- atlas_effective_threshold(x,min_cell_count=min_cell_count)
   visit <- function(row,path=character()) {
     if(!is.list(row)) return(invisible(NULL))
-    if(length(path) && tail(path,1)=='registry_field_summaries') {
-      result <- atlas_registry_summary_audit(row,project_root,min_cell_count)
+    summary_row<-function(r)is.list(r)&&!is.null(names(r))&&any(c('category_counts_json','numeric_groups_json') %in% names(r))
+    summary_table<-is.null(names(row))&&any(vapply(row,summary_row,logical(1)))
+    if((length(path) && tail(path,1)=='registry_field_summaries')||summary_row(row)||summary_table) {
+      result <- atlas_registry_summary_audit(if(summary_row(row))list(row) else row,project_root,min_cell_count)
       if(!isTRUE(result$ok)) stop('Registry summary privacy audit failed',call.=FALSE)
       return(invisible(NULL))
     }
     if(is.null(names(row))) {for(v in row) visit(v,path);return(invisible(NULL))}
+    if(atlas_metadata_only(row,path,project_root,metadata_context))return(invisible(NULL))
+    if(atlas_metadata_path(path)) {
+      if(!identical(row,atlas_metadata_fallback(row,metadata_context)))stop('Unapproved metadata value in public evidence',call.=FALSE)
+      return(invisible(NULL))
+    }
     if(any(tail(path,1) %in% c('npu_display_dictionary','clinical_display_dictionary'))) return(invisible(NULL))
     forbidden <- intersect(c('min','max','min_date','max_date','raw_min_date','raw_max_date','display_min_date','display_max_date'),names(row))
     forbidden <- c(forbidden,intersect(c('mean','median','p25','p75','sd','q25','q75','iqr'),names(row)))
@@ -400,7 +415,8 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
     spec <- registry$artifacts[[i]]
     rows <- if(length(spec$payload_path) && length(spec$projection)) atlas_evidence_get(safe,unlist(spec$payload_path,use.names=FALSE)) else list()
     keys <- unique(c(unlist(spec$projection,use.names=FALSE),sort(intersect(unique(unlist(lapply(rows,names))),privacy))))
-    descriptors[[i]]$rows <- lapply(rows,function(row) setNames(lapply(keys,function(k)row[[k]]),keys))
+    if(identical(spec$id,'registry_field_summaries')) keys<-keys[keys %in% unique(unlist(lapply(rows,names)))]
+    descriptors[[i]]$rows <- if(identical(spec$id,'registry_field_summaries')) rows else lapply(rows,function(row) setNames(lapply(keys,function(k)row[[k]]),keys))
     descriptors[[i]]$represented_row_count <- length(descriptors[[i]]$rows)
     if(any(vapply(rows,function(row) identical(row$date_privacy_status,'withheld_derived_source_range'),logical(1)))) {
       descriptors[[i]]['source_row_count'] <- list(NULL)
