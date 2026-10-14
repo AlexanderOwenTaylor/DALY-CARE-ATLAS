@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 import csv
+from decimal import Decimal, InvalidOperation
 import hashlib
 import json
 from pathlib import Path
@@ -151,6 +152,94 @@ def verify_original(reference, original):
             raise ValueError('Original archive evidence changed during rebuilding')
 
 
+def canonical_rows(rows, columns):
+    """Compare CSV and JSON values without losing typed codes or row duplicates."""
+    def cell(value, column):
+        if value is None or value == '':
+            return None
+        kind = column['type']
+        if kind == 'number':
+            if isinstance(value, bool):
+                raise ValueError('Invalid numeric public copy')
+            try:
+                number = Decimal(str(value))
+            except InvalidOperation as error:
+                raise ValueError('Invalid numeric public copy') from error
+            if not number.is_finite():
+                raise ValueError('Nonfinite numeric public copy')
+            return ('number', number)
+        if kind == 'boolean':
+            if type(value) is bool:
+                return value
+            if value not in ('TRUE', 'FALSE', 'true', 'false'):
+                raise ValueError('Invalid boolean public copy')
+            return value.upper() == 'TRUE'
+        if kind != 'string' or not isinstance(value, str):
+            raise ValueError('Invalid string public copy')
+        if column['key'].endswith('_json'):
+            return ('json', json.dumps(json.loads(value), sort_keys=True, separators=(',', ':'), allow_nan=False))
+        return ('string', value)
+    keys = [column['key'] for column in columns]
+    if len(keys) != len(set(keys)):
+        raise ValueError('Invalid public table schema')
+    result = Counter()
+    for row in rows:
+        if not isinstance(row, dict) or set(keys) != row.keys():
+            raise ValueError('Invalid public table-copy schema')
+        result[tuple(cell(row[key], column) for key, column in zip(keys, columns))] += 1
+    return result
+
+
+def compare_csv_downloads(site, tables, catalogue):
+    for table in catalogue['tables']:
+        table_id = table['id']
+        path = inside(site, 'downloads/' + table_id + '.csv')
+        header, rows = read_public_csv(path)
+        keys = [column['key'] for column in table['columns']]
+        if header != keys:
+            raise ValueError('Public CSV schema disagrees with its table')
+        if any(set(row) != set(keys) or any(value is None for value in row.values()) for row in rows):
+            raise ValueError('Public CSV schema has malformed row widths')
+        if canonical_rows(rows, table['columns']) != canonical_rows(tables[table_id], table['columns']):
+            raise ValueError('Public CSV disagrees with its screened table')
+
+
+def read_public_csv(path):
+    size = path.stat().st_size
+    if not 0 < size <= 67108864:
+        raise ValueError('Public CSV exceeds bounded input size')
+    previous = csv.field_size_limit(size)
+    try:
+        with path.open(encoding='utf-8-sig', newline='') as handle:
+            reader = csv.DictReader(handle, strict=True)
+            header = reader.fieldnames
+            return header, list(reader)
+    except (csv.Error, UnicodeError) as error:
+        raise ValueError('Malformed public CSV') from error
+    finally:
+        csv.field_size_limit(previous)
+
+
+def compare_payload_tables(payload, tables, catalogue, registry):
+    """Only registered data paths represent table copies; absent lazy data is fine."""
+    descriptors = {table['id']: table for table in catalogue['tables']}
+    for spec in registry['artifacts']:
+        path = spec.get('payload_path')
+        if spec['id'] not in descriptors or not path:
+            continue
+        value = payload
+        for key in path:
+            if not isinstance(value, dict) or key not in value:
+                break
+            value = value[key]
+        else:
+            table = descriptors[spec['id']]
+            if not isinstance(value, list):
+                raise ValueError('Invalid registered public payload table')
+            if canonical_rows(value, table['columns']) != canonical_rows(tables[spec['id']], table['columns']):
+                raise ValueError('Public payload disagrees with its screened table')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--reference', required=True, type=Path)
@@ -163,33 +252,39 @@ def main():
     verify_original(reference, args.original)
     tables, catalogue = read_site_tables(args.site)
     result = compare_tables(reference, tables, args.allow_stricter_withholding)
+    compare_csv_downloads(args.site, tables, catalogue)
     check_small_profiles(reference, catalogue)
     # Independent copies in every CSV and JSON are inspected, not only UI tables.
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from site_bundle import decode_transport
+    registry = json.loads((Path(__file__).resolve().parents[1] / 'inst/config/public-output-registry.json').read_text(encoding='utf-8'))
     inspected = Counter()
     for path in args.site.rglob('*'):
         if not path.is_file():
             continue
+        inside(args.site, path.relative_to(args.site))
         if path.suffix.lower() == '.csv':
-            with path.open(encoding='utf-8-sig', newline='') as handle:
-                check_small_profiles(reference, list(csv.DictReader(handle)))
+            check_small_profiles(reference, read_public_csv(path)[1])
             inspected['csv'] += 1
         elif path.suffix.lower() == '.json':
             data = json.loads(path.read_text(encoding='utf-8-sig'))
             if isinstance(data, dict) and 'transport_version' in data:
                 data = decode_transport(data)
             check_small_profiles(reference, data)
+            compare_payload_tables(data, tables, catalogue, registry)
             inspected['json'] += 1
         elif path.suffix.lower() == '.js':
             text = path.read_text(encoding='utf-8-sig').strip()
             prefix = 'window.DALYCARE_ATLAS_PAYLOAD = '
             if text.startswith(prefix):
-                check_small_profiles(reference, decode_transport(json_statement(text, prefix)))
+                data = decode_transport(json_statement(text, prefix))
+                check_small_profiles(reference, data)
+                compare_payload_tables(data, tables, catalogue, registry)
                 inspected['payload_js'] += 1
     if not inspected['csv']:
         raise ValueError('The rebuilt site contains no screened CSV downloads')
-    result.update(formats_inspected=dict(inspected), input_hashes_unchanged=True)
+    result.update(formats_inspected=dict(inspected), input_hashes_unchanged=True,
+                  csv_tables_reconciled=len(tables), registered_payload_copies_reconciled=True)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(result))

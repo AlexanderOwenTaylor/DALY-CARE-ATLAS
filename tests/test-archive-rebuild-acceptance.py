@@ -1,5 +1,6 @@
 """Synthetic tests for the local-only production archive acceptance checker."""
 import importlib.util
+import csv
 import json
 from pathlib import Path
 import tempfile
@@ -96,6 +97,66 @@ class ArchiveAcceptanceTests(unittest.TestCase):
             (root / 'evidence.csv').write_text('changed', encoding='utf-8')
             with self.assertRaisesRegex(ValueError, 'changed'):
                 module.verify_original({'input_files_sha256': {'evidence.csv': 'original-checksum'}}, root)
+
+    def test_csv_downloads_match_screened_table_rows_and_types(self):
+        descriptor = {'id': 'sample', 'columns': [{'key': 'code', 'type': 'string'},
+                       {'key': 'n', 'type': 'number'}, {'key': 'flag', 'type': 'boolean'}]}
+        rows = [{'code': '0012', 'n': 10, 'flag': False}, {'code': 'Ø', 'n': None, 'flag': None}]
+        with tempfile.TemporaryDirectory() as directory:
+            site = Path(directory)
+            (site / 'downloads').mkdir()
+            path = site / 'downloads/sample.csv'
+            with path.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.writer(handle)
+                writer.writerows([['code', 'n', 'flag'], ['Ø', '', ''], ['0012', '10.0', 'FALSE']])
+            module.compare_csv_downloads(site, {'sample': rows}, {'tables': [descriptor]})
+            path.write_text('code,n,flag\n0012,9,FALSE\nØ,,\n', encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'disagrees'):
+                module.compare_csv_downloads(site, {'sample': rows}, {'tables': [descriptor]})
+            path.write_text('code,n,flag,patient_value\n0012,10,FALSE,secret\nØ,,,\n', encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'schema'):
+                module.compare_csv_downloads(site, {'sample': rows}, {'tables': [descriptor]})
+
+    def test_registered_payload_copy_cannot_change_distribution(self):
+        descriptor = {'id': 'registry_field_summaries', 'columns': [
+            {'key': key, 'type': 'number' if key == 'n_valid' else 'string'}
+            for key in self.tables['registry_field_summaries'][0]]}
+        registry = {'artifacts': [{'id': descriptor['id'], 'payload_path': ['panel_groups', 'registry_field_summaries']}]}
+        payload = {'panel_groups': {'registry_field_summaries': [dict(self.tables['registry_field_summaries'][0])]}}
+        catalogue = {'tables': [descriptor]}
+        module.compare_payload_tables(payload, self.tables, catalogue, registry)
+        payload['panel_groups']['registry_field_summaries'][0]['category_counts_json'] = '[{"code":"A","n":10}]'
+        with self.assertRaisesRegex(ValueError, 'disagrees'):
+            module.compare_payload_tables(payload, self.tables, catalogue, registry)
+        payload['panel_groups']['registry_field_summaries'] = []
+        with self.assertRaisesRegex(ValueError, 'disagrees'):
+            module.compare_payload_tables(payload, self.tables, catalogue, registry)
+        # A lean payload may omit a detailed table and load its registered shards.
+        module.compare_payload_tables({}, self.tables, catalogue, registry)
+
+    def test_payload_copies_cannot_add_unregistered_values(self):
+        columns = [{'key': 'code', 'type': 'string'}]
+        with self.assertRaisesRegex(ValueError, 'schema'):
+            module.canonical_rows([{'code': 'A', 'patient_value': 'SYNTHETIC_UNEXPECTED'}], columns)
+
+    def test_comparison_preserves_all_numeric_digits(self):
+        columns = [{'key': 'n', 'type': 'number'}]
+        first = module.canonical_rows([{'n': 123456789012345678901234567890}], columns)
+        second = module.canonical_rows([{'n': 123456789012345678901234567891}], columns)
+        self.assertNotEqual(first, second)
+        self.assertEqual(module.canonical_rows([{'n': '-0.0'}, {'n': '10.0'}], columns),
+                         module.canonical_rows([{'n': 10}, {'n': 0}], columns))
+
+    def test_valid_shard_sized_csv_cell_is_read_without_global_limit_leak(self):
+        descriptor = {'id': 'reference', 'columns': [{'key': 'definition', 'type': 'string'}]}
+        rows = [{'definition': 'x' * 150000}]
+        old_limit = csv.field_size_limit()
+        with tempfile.TemporaryDirectory() as directory:
+            site = Path(directory)
+            (site / 'downloads').mkdir()
+            (site / 'downloads/reference.csv').write_text('definition\n' + rows[0]['definition'] + '\n', encoding='utf-8')
+            module.compare_csv_downloads(site, {'reference': rows}, {'tables': [descriptor]})
+        self.assertEqual(csv.field_size_limit(), old_limit)
 
 
 if __name__ == '__main__':
