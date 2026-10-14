@@ -306,7 +306,41 @@ atlas_bundle_vital_profiles <- function(profiles) {
   }
   selected
 }
+# Check every existing ancestor before creating anything. Sys.readlink returns NA
+# for ordinary/missing paths on some platforms; only a known nonempty target is a link.
+atlas_site_destination <- function(site_dir) {
+  if(!is.character(site_dir) || length(site_dir)!=1L || is.na(site_dir) || !nzchar(site_dir))
+    stop('Unsafe site destination',call.=FALSE)
+  path <- gsub('\\\\','/',path.expand(site_dir))
+  if(basename(path) %in% c('','.','..') || grepl('(^|/)\\.\\.(/|$)',path)) stop('Unsafe site destination',call.=FALSE)
+  if(!grepl('^/|^[A-Za-z]:/',path)) path <- file.path(getwd(),path)
+  path <- gsub('/\\./','/',path)
+  path <- sub('/+$','',path)
+  ancestor <- path
+  repeat {
+    link <- suppressWarnings(Sys.readlink(ancestor))
+    if(any(!is.na(link) & nzchar(link))) stop('Unsafe linked site destination',call.=FALSE)
+    if(dir.exists(ancestor)) {
+      canonical <- normalizePath(ancestor,winslash='/',mustWork=TRUE)
+      expected <- ancestor
+      if(.Platform$OS.type=='windows') {canonical <- tolower(canonical);expected <- tolower(expected)}
+      if(!identical(sub('/+$','',canonical),sub('/+$','',expected))) stop('Unsafe linked site destination',call.=FALSE)
+    } else if(file.exists(ancestor)) stop('Unsafe file destination',call.=FALSE)
+    parent <- dirname(ancestor)
+    if(identical(parent,ancestor)) break
+    ancestor <- parent
+  }
+  parent <- dirname(path)
+  if(!dir.exists(parent) && !dir.create(parent,recursive=TRUE,showWarnings=FALSE)) stop('Site parent is not writable',call.=FALSE)
+  probe <- tempfile('.atlas-write-check-',tmpdir=parent)
+  on.exit(if(dir.exists(probe)) unlink(probe,recursive=TRUE),add=TRUE)
+  if(!dir.create(probe,showWarnings=FALSE) ||
+     !isTRUE(suppressWarnings(file.create(file.path(probe,'probe'))))) stop('Site parent is not writable',call.=FALSE)
+  file.path(normalizePath(parent,winslash='/',mustWork=TRUE),basename(path))
+}
+
 atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list(),membership_spec=NULL,transport_version=NULL) {
+  output <- atlas_site_destination(site_dir)
   transport_version <- atlas_transport_version(transport_version)
   if(is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
   membership_path <- clinical_source_membership_path(project_root)
@@ -330,12 +364,9 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   transport <- atlas_payload_transport(atlas_sanitize_payload_text(payload),transport_version,
     max_bytes=atlas_transport_limit(registry$input_max_bytes))
   transport_assets <- atlas_transport_assets(transport,registry$input_max_bytes)
-  parent <- dirname(site_dir);dir.create(parent,recursive=TRUE,showWarnings=FALSE)
-  parent <- normalizePath(parent,winslash='/',mustWork=TRUE)
-  output <- file.path(parent,basename(site_dir))
-  if(dir.exists(output) && !identical(tolower(normalizePath(output,winslash='/')),tolower(output))) stop('Unsafe linked site destination',call.=FALSE)
-  if(basename(site_dir) %in% c('','..','.') || nzchar(Sys.readlink(output)) || (file.exists(output) && !dir.exists(output))) stop('Unsafe site destination',call.=FALSE)
-  stage <- tempfile(paste0('.',basename(output),'-stage-'),tmpdir=parent);dir.create(stage)
+  parent <- dirname(output)
+  stage <- tempfile(paste0('.',basename(output),'-stage-'),tmpdir=parent)
+  if(!dir.create(stage,showWarnings=FALSE)) stop('Cannot create site staging directory',call.=FALSE)
   stage <- normalizePath(stage,winslash='/',mustWork=TRUE)
   # Build IDs are controlled hexadecimal, independent of display run IDs.
   build_id <- paste(sample(c(0:9,letters[1:6]),32,replace=TRUE),collapse='')

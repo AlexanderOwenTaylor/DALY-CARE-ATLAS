@@ -24,4 +24,5 @@ qa_pdsa_cycle*/
 # Generated site bundles and local QA artifacts
 site/
 .artifact-temp/
+.atlas-recovery/
 site.manifest.json

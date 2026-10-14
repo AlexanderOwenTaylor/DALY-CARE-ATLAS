@@ -1,7 +1,212 @@
-run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
+# Lifecycle diagnostics deliberately use base R only, including startup failures.
+# Raw conditions are never serialized: database drivers may include SQL or secrets.
+atlas_recovery_instructions <- function(stage) {
+  if(stage %in% c('startup','preflight')) return('Restore required runtime resources and dependencies; choose a writable output directory, then rerun the source entrypoint.')
+  if(stage=='collection') return('Review retained source, access and memory diagnostics; correct access or resource limits, then rerun collection.')
+  'Keep the run outputs and logs. Correct the failing build resource, then rebuild offline with scripts/rebuild_atlas_from_outputs.R using the existing run directory; recollect only if inputs are incomplete.'
+}
+
+atlas_lifecycle_start <- function(project_root, output_root, stage='preflight') {
+  state <- new.env(parent=emptyenv())
+  state$stage <- stage;state$status <- 'running';state$error <- '';state$error_code <- '';state$error_resource <- ''
+  state$outcomes <- c(collection='not_started',interpretation='not_started',website='not_started',packaging='not_implemented')
+  state$run_id <- paste0(format(Sys.time(),'%Y%m%d_%H%M%S'),'-p',Sys.getpid(),'-',paste(sample(c(0:9,letters[1:6]),8,TRUE),collapse=''))
+  state$run_dir <- file.path(output_root,state$run_id)
+  state$log_dirs <- character()
+  # A project-level record survives an invalid or unwritable selected output root.
+  candidates <- unique(c(file.path(project_root,'atlas_runs','.recovery'),file.path(getwd(),'atlas_runs','.recovery'),
+    file.path(path.expand('~'),'.dalycare-atlas','recovery')))
+  for(base in candidates) {
+    path <- file.path(base,state$run_id)
+    ok <- tryCatch({
+      suppressWarnings(dir.create(path,recursive=TRUE,showWarnings=FALSE))
+      probe <- file.path(path,'.probe')
+      if(!isTRUE(suppressWarnings(file.create(probe)))) FALSE else {unlink(probe);TRUE}
+    },error=function(e) FALSE)
+    if(ok) {state$log_dirs <- normalizePath(path,winslash='/',mustWork=TRUE);break}
+  }
+  if(!length(state$log_dirs)) stop('Cannot persist recovery diagnostics; choose a writable project or working directory.',call.=FALSE)
+  state$events <- data.frame(timestamp=character(),level=character(),table_name=character(),stage=character(),message=character(),stringsAsFactors=FALSE)
+  options(dalycare.atlas.active_run_dir=state$run_dir,dalycare.atlas.failure_diagnostics=NULL)
+  atlas_lifecycle_event(state,'info','Attempt started')
+  state
+}
+
+atlas_lifecycle_atomic_write <- function(path,writer) {
+  stage <- tempfile('.atlas-state-',tmpdir=dirname(path))
+  on.exit(if(file.exists(stage))unlink(stage),add=TRUE)
+  writer(stage)
+  if(!file.rename(stage,path)) stop('Cannot replace build status; previous status retained.',call.=FALSE)
+  invisible(path)
+}
+
+atlas_lifecycle_save <- function(state) {
+  rows <- data.frame(metric=c('run_id','run_status','failing_stage','current_stage','sanitised_error','error_code','error_resource',
+    'recovery_instructions',paste0(names(state$outcomes),'_status')),
+    value=c(state$run_id,state$status,if(state$status=='failed')state$stage else '',state$stage,state$error,state$error_code,state$error_resource,
+      atlas_recovery_instructions(state$stage),unname(state$outcomes)),stringsAsFactors=FALSE)
+  written <- character()
+  for(path in state$log_dirs) {
+    ok <- tryCatch({
+      atlas_lifecycle_atomic_write(file.path(path,'atlas_build_status.tsv'),function(stage)
+        utils::write.table(rows,stage,sep='\t',quote=TRUE,row.names=FALSE,fileEncoding='UTF-8'))
+      atlas_lifecycle_atomic_write(file.path(path,'atlas_recovery.txt'),function(stage)
+        writeLines(c(paste('Stage:',state$stage),paste('Status:',state$status),state$error,atlas_recovery_instructions(state$stage)),stage,useBytes=TRUE))
+      TRUE
+    },error=function(e) FALSE)
+    if(ok) written <- c(written,path)
+  }
+  if(!length(written)) stop('Cannot persist build diagnostics.',call.=FALSE)
+  diagnostics <- file.path(tail(written,1L),'atlas_build_status.tsv')
+  options(dalycare.atlas.failure_diagnostics=diagnostics)
+  invisible(diagnostics)
+}
+
+atlas_lifecycle_event <- function(state,level='info',message='Stage progress recorded',table_name='') {
+  state$events <- rbind(state$events,data.frame(timestamp=format(Sys.time(),'%Y-%m-%dT%H:%M:%S%z'),
+    level=if(level %in% c('info','warning','error'))level else 'info',table_name=table_name,stage=state$stage,
+    message=message,stringsAsFactors=FALSE))
+  for(path in state$log_dirs) tryCatch({
+    log <- file.path(path,'atlas_execution_log.tsv')
+    append <- file.exists(log)
+    con <- file(log,if(append)'at' else 'wt',encoding='UTF-8')
+    tryCatch({
+      utils::write.table(if(append)tail(state$events,1L) else state$events,con,
+        sep='\t',quote=TRUE,row.names=FALSE,col.names=!append)
+      flush(con)
+    },finally=close(con))
+  },error=function(e) invisible(NULL))
+  atlas_lifecycle_save(state)
+}
+
+atlas_lifecycle_stage <- function(state,stage,previous_status='complete') {
+  if(state$stage %in% names(state$outcomes)) state$outcomes[[state$stage]] <- previous_status
+  state$stage <- stage
+  if(stage %in% names(state$outcomes)) state$outcomes[[stage]] <- 'running'
+  atlas_lifecycle_event(state,'info','Stage started')
+}
+
+atlas_lifecycle_fail <- function(state,error=NULL) {
+  state$status <- 'failed'
+  state$error_code <- if(inherits(error,'atlas_preflight_error')) error$code else 'unexpected_stage_error'
+  state$error_resource <- if(inherits(error,'atlas_preflight_error')) error$resource else ''
+  state$error <- paste0('Atlas ',state$stage,' failed: ',state$error_code,
+    if(nzchar(state$error_resource))paste0(' (',state$error_resource,')') else '',
+    '. Raw error details withheld; inspect retained internal diagnostics.')
+  if(state$stage %in% names(state$outcomes)) state$outcomes[[state$stage]] <- 'failed'
+  diagnostics <- atlas_lifecycle_event(state,'error',state$error)
+  structure(list(message=paste0(state$error,' Diagnostics written to: ',diagnostics),call=NULL,
+    stage=state$stage,code=state$error_code,resource=state$error_resource,diagnostics=diagnostics,run_dir=state$run_dir),class=c('atlas_build_error','error','condition'))
+}
+
+atlas_preflight_check <- function(code,resource,expr) {
+  tryCatch(force(expr),error=function(e) stop(structure(list(message=paste(code,resource),call=NULL,
+    code=code,resource=resource),class=c('atlas_preflight_error','error','condition'))))
+}
+
+atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapter=NULL) {
+  # Match DESCRIPTION Imports for source runs too; never install at runtime.
+  packages <- c('dplyr','jsonlite','purrr','readr','stringr','tibble','tidyr')
+  description <- file.path(project_root,'DESCRIPTION')
+  if(file.exists(description)) packages <- atlas_preflight_check('invalid_configuration','DESCRIPTION',{
+    imports <- read.dcf(description,fields='Imports')[[1L]]
+    trimws(strsplit(gsub('\\([^)]*\\)','',imports),',')[[1L]])
+  })
+  for(package in unique(c('jsonlite',packages))) atlas_preflight_check('missing_dependency',package,{
+    if(!requireNamespace(package,quietly=TRUE)) stop('Required build dependency unavailable',call.=FALSE)
+  })
+  source_map <- atlas_preflight_check('invalid_source_map','selected source map',read_source_map(source_map_path,project_root=project_root))
+  if(is.null(db_adapter) && any(source_map$source_type=='dataset') && atlas_db_profile_enabled()) {
+    atlas_preflight_check('missing_dependency','DBI',if(!requireNamespace('DBI',quietly=TRUE)) stop('Required database dependency unavailable',call.=FALSE))
+    native_connection <- nzchar(Sys.getenv('DALYCARE_ATLAS_DBNAME',unset=Sys.getenv('PGDATABASE',unset=''))) ||
+      file.exists(dalycare_default_db_access_path())
+    if(native_connection) atlas_preflight_check('missing_dependency','RPostgres',{
+      if(!requireNamespace('RPostgres',quietly=TRUE)) stop('Required database driver unavailable',call.=FALSE)
+    })
+  }
+  for(name in c('DALYCARE_entry.html','DALYCARE_atlas.html','DALYCARE_outputs.html','atlas-entry.js','atlas-outputs.js',
+    'atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')) {
+    atlas_preflight_check('missing_or_invalid_template',name,{
+      resource <- atlas_bundle_resource(name,project_root)
+      expected_bytes <- file.info(resource)$size
+      if(is.na(expected_bytes) || expected_bytes<=0) stop('Required template is empty',call.=FALSE)
+      connection <- suppressWarnings(file(resource,'rb'))
+      tryCatch(withCallingHandlers({
+        observed_bytes <- 0
+        repeat {
+          chunk <- readBin(connection,'raw',n=65536L)
+          if(!length(chunk)) break
+          observed_bytes <- observed_bytes+length(chunk)
+        }
+        if(observed_bytes!=expected_bytes) stop('Required template read is incomplete',call.=FALSE)
+      },warning=function(w)stop('Required template could not be read',call.=FALSE)),finally=close(connection))
+    })
+  }
+  registry <- atlas_preflight_check('invalid_policy','public-output-registry.json',atlas_output_registry(project_root))
+  atlas_preflight_check('invalid_policy','clinical-source-membership.json',load_clinical_source_membership(project_root))
+  atlas_preflight_check('invalid_configuration','transport version',atlas_transport_version())
+  dictionary <- atlas_preflight_check('invalid_dictionary','npu-consensus-dictionary.tsv',load_npu_consensus_dictionary(project_root))
+  atlas_preflight_check('invalid_dictionary','npu-detective-surfaces.tsv',load_npu_detective_surfaces(project_root))
+  atlas_preflight_check('invalid_dictionary','isotype-vectors.tsv',load_isotype_vectors(project_root,dictionary=dictionary))
+  atlas_preflight_check('invalid_dictionary','mm-treatment-code-families.tsv',load_mm_treatment_code_families(project_root))
+  atlas_preflight_check('invalid_policy','registry-summary-policy.json',{
+    if(!length(registry_summary_policy(project_root))) stop('Required reviewed registry policy unavailable',call.=FALSE)
+  })
+  # These dictionaries are required by the final HTML serializer as well as the
+  # clinical interpretation. Validate them before any source profiling starts.
+  for(name in c('npu-display-dictionary.csv','clinical-display-dictionary.csv','public-measurement-policy.csv')) {
+    atlas_preflight_check(if(name=='public-measurement-policy.csv')'invalid_policy' else 'invalid_dictionary',name,{
+    path <- file.path(project_root,'config',name)
+    if(!file.exists(path)) path <- system.file('config',name,package='dalycareatlas')
+    if(!nzchar(path) || !file.exists(path)) stop('Required display dictionary or policy unavailable',call.=FALSE)
+    rows <- utils::read.csv(path,check.names=FALSE,stringsAsFactors=FALSE,fileEncoding='UTF-8')
+    required <- switch(name,'public-measurement-policy.csv'=c('table_name','column_name'),
+      'clinical-display-dictionary.csv'=c('kind','system','code','label'),c('code','label'))
+    if(!all(required %in% names(rows)) || !nrow(rows)) stop('Invalid display dictionary or policy',call.=FALSE)
+    if(name!='public-measurement-policy.csv') {
+      id <- if(name=='npu-display-dictionary.csv') 'npu_display_dictionary' else 'clinical_display_dictionary'
+      spec <- Filter(function(s)identical(s$id,id),registry$artifacts)[[1]]
+      registered <- atlas_read_registered_csv(path,spec,registry$input_max_bytes)
+      if(id=='clinical_display_dictionary') atlas_bundle_field_labels(atlas_evidence_rows(registered))
+    }
+    })
+  }
+  for(relative in c('site','outputs/panels','logs/probe')) atlas_preflight_check('destination_invalid_or_not_writable',relative,
+    atlas_site_destination(file.path(run_dir,relative)))
+  invisible(source_map)
+}
+
+run_atlas <- function(project_root, source_map_path, output_root = 'atlas_runs',mode='report',
+                      bootstrap_path=dalycare_resolve_bootstrap_path(Sys.getenv('DALYCARE_BOOTSTRAP_PATH',unset='')),
+                      db_adapter=NULL) {
+  project_root <- normalizePath(project_root,winslash='/',mustWork=FALSE)
+  output_root <- if(grepl('^[A-Za-z]:|^/',output_root))output_root else file.path(project_root,output_root)
+  state <- atlas_lifecycle_start(project_root,output_root)
+  tryCatch({
+    mode <- match.arg(mode,c('report','strict'))
+    map_path <- if(file.exists(source_map_path))source_map_path else file.path(project_root,source_map_path)
+    atlas_build_preflight(project_root,map_path,state$run_dir,db_adapter)
+    state$log_dirs <- c(state$log_dirs,file.path(state$run_dir,'logs'))
+    atlas_lifecycle_stage(state,'collection')
+    result <- atlas_run_impl(project_root,source_map_path,output_root,mode,bootstrap_path,db_adapter,state)
+    state$outcomes[['website']] <- 'complete'
+    values <- setNames(result$completion$summary$value,result$completion$summary$metric)
+    state$outcomes[['collection']] <- values[['collection_status']]
+    state$outcomes[['interpretation']] <- values[['interpretation_status']]
+    state$status <- 'partial' # Packaging is a separate, not yet implemented phase.
+    state$stage <- 'finished'
+    atlas_lifecycle_event(state,'info','Build finished; review separate phase outcomes')
+    result$build_status <- atlas_lifecycle_save(state)
+    result$phase_outcomes <- state$outcomes
+    result$overall_status <- state$status
+    invisible(result)
+  },error=function(e) stop(atlas_lifecycle_fail(state,e)))
+}
+
+atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_runs",
                       mode = "report",
                       bootstrap_path = dalycare_resolve_bootstrap_path(Sys.getenv("DALYCARE_BOOTSTRAP_PATH", unset = "")),
-                      db_adapter = NULL) {
+                      db_adapter = NULL, lifecycle) {
   mode <- match.arg(mode, c("report", "strict"))
   project_root <- normalizePath(project_root, winslash = "/", mustWork = FALSE)
   registry_options <- options(dalycare.registry.project_root = project_root)
@@ -10,7 +215,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   source_map_path <- if (file.exists(source_map_path)) source_map_path else file.path(project_root, source_map_path)
   output_root <- if (grepl("^[A-Za-z]:|^/", output_root)) output_root else file.path(project_root, output_root)
 
-  run_id <- atlas_run_id()
+  run_id <- lifecycle$run_id
   run_dir <- file.path(output_root, run_id)
   output_dir <- file.path(run_dir, "outputs")
   panel_dir <- file.path(output_dir, "panels")
@@ -27,24 +232,23 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   completion_summary_path <- file.path(output_dir, "atlas_completion_summary.csv")
   registry_completion_path <- file.path(output_dir, "atlas_registry_completion.csv")
   on.exit({
-    if (!run_completed) {
+    if (!run_completed && dir.exists(output_dir)) tryCatch({
       completed_sources <- safe_read_output_csv(file.path(output_dir,"atlas_sources.csv"), sources)
       completion <- atlas_completion_report(source_map, completed_sources, panels$registry_field_summaries,
-        project_root, run_id, "failed")
+        project_root, run_id, "failed", lifecycle)
       write_csv(completion$summary, completion_summary_path)
       write_csv(completion$registries, registry_completion_path)
-    }
+    },error=function(e) invisible(NULL))
   }, add=TRUE)
 
-  log_rows <- list()
   log_event <- function(level, table_name, message) {
-    log_rows[[length(log_rows) + 1L]] <<- data.frame(
-      timestamp = atlas_timestamp(),
-      level = level,
-      table_name = table_name %||% "",
-      message = message,
-      stringsAsFactors = FALSE
-    )
+    safe_message <- if(level=='error') 'Source operation failed; inspect internal outputs.' else if(level=='warning') 'Source diagnostic available in internal outputs.' else 'Source or build progress recorded.'
+    for(prefix in c('Starting DALY-CARE atlas run','Loaded NPU consensus dictionary','Loaded NPU detective surfaces',
+      'Loaded isotype NPU mappings','Loaded MM treatment code rules','Using load strategy','Diagnostic manifest written',
+      'Static atlas written','Output manifest written','Run summary')) if(startsWith(message,prefix)) safe_message <- prefix
+    safe_table <- if(!is.null(source_map) && is.character(table_name) && length(table_name)==1L &&
+      !is.na(table_name) && table_name %in% source_map$table_name) table_name else ''
+    atlas_lifecycle_event(lifecycle,level,safe_message,safe_table)
   }
 
   generated_at <- atlas_timestamp()
@@ -276,6 +480,10 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   }
 
   sources <- safe_read_output_csv(stream_paths$sources, bind_rows_base(source_rows))
+  collection_status <- if(!is.data.frame(sources) || nrow(sources)!=nrow(source_map) ||
+    !isTRUE(all(sources$load_status=='ok',na.rm=FALSE)) ||
+    ('profile_mode' %in% names(sources) && any(sources$profile_mode=='schema',na.rm=TRUE))) 'partial' else 'complete'
+  atlas_lifecycle_stage(lifecycle,'interpretation',collection_status)
   columns <- safe_read_output_csv(stream_paths$columns, bind_rows_base(column_rows))
   column_profiles <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_profiles, bind_rows_base(column_profile_rows)), sources)
   column_top_values <- add_source_context_to_column_outputs(safe_read_output_csv(stream_paths$column_top_values, bind_rows_base(column_top_value_rows)), sources)
@@ -566,7 +774,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     panels$registry_field_summaries, project_root, atlas_min_cell_count()
   )
   completion <- atlas_completion_report(source_map, sources, panels$registry_field_summaries,
-    project_root, run_id, "building")
+    project_root, run_id, "building", lifecycle)
   # Mutable attempt state is kept outside the immutable build-context manifest.
   # Final status is written only after the site build succeeds.
   write_csv(completion$summary, completion_summary_path)
@@ -582,7 +790,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
     manifest <- output_manifest(all_paths, run_dir = run_dir)
     manifest_path <- write_csv(manifest, file.path(output_dir, "output_manifest.csv"))
     log_event("info", "", "Diagnostic manifest written")
-    write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
+    atlas_lifecycle_save(lifecycle)
     stop(empty_live_run_message(source_map, source_resolution), "\nDiagnostics written to: ", run_dir, call. = FALSE)
   }
 
@@ -730,15 +938,17 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
   payload <- reconstructed$payload
   memory_log_path <- write_tsv(bind_rows_base(memory_log_rows), file.path(log_dir, "atlas_memory_log.tsv"))
   manifest_paths <- c(output_paths,panel_paths,atlas_context_input_paths(run_dir,reconstructed$context,project_root),list(memory_log=memory_log_path))
+  interpretation_status <- completion$summary$value[completion$summary$metric=='interpretation_status']
+  atlas_lifecycle_stage(lifecycle,'website',interpretation_status)
   site_paths <- write_static_atlas(run_dir,payload,project_root=project_root,output_evidence=reconstructed$tables,manifest_paths=manifest_paths,membership_spec=membership_spec)
   manifest_path <- site_paths$manifest
   log_event("info", "", "Static atlas written")
   log_event("info", "", "Output manifest written")
   log_event("info", "", paste("Run summary:", run_summary_log_message(run_summary)))
-  write_tsv(bind_rows_base(log_rows), file.path(log_dir, "atlas_execution_log.tsv"))
+  atlas_lifecycle_save(lifecycle)
 
   completion <- atlas_completion_report(source_map, sources, panels$registry_field_summaries,
-    project_root, run_id, "complete")
+    project_root, run_id, "complete", lifecycle)
   write_csv(completion$summary, completion_summary_path)
   write_csv(completion$registries, registry_completion_path)
   run_completed <- TRUE
@@ -758,7 +968,7 @@ run_atlas <- function(project_root, source_map_path, output_root = "atlas_runs",
 # Safe completion metadata: source/field inventory counts and controlled statuses.
 # Never include person keys, clinical values, SQL text, or raw query errors.
 atlas_completion_report <- function(source_map, sources, registry_rows, project_root,
-                                    run_id, build_status) {
+                                    run_id, build_status, lifecycle=NULL) {
   expected <- if (is.data.frame(source_map)) nrow(source_map) else 0L
   profiled <- skipped <- 0L
   if (is.data.frame(sources) && nrow(sources) && "load_status" %in% names(sources)) {
@@ -807,12 +1017,26 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
       selected$key_issue_fields>0 | selected$query_issue_fields>0 | selected$budget_issue_fields>0 |
       selected$invalid_contract_fields>0 | selected$unassessed_fields>0)) "partial" else "complete"
   summary <- rbind(summary,data.frame(metric="registry_coverage_status",value=registry_coverage,stringsAsFactors=FALSE))
+  collection <- if(identical(coverage,'complete')) 'complete' else 'partial'
+  if(is.data.frame(sources) && 'profile_mode' %in% names(sources) && any(sources$profile_mode=='schema',na.rm=TRUE)) collection <- 'partial'
+  interpretation <- if(registry_coverage %in% c('complete','not_requested')) 'complete' else 'partial'
+  website <- if(build_status=='complete') 'complete' else if(build_status=='failed') 'not_started' else 'running'
+  if(build_status=='failed' && !is.null(lifecycle)) {
+    stage <- lifecycle$stage
+    if(stage=='collection') {collection <- 'failed';interpretation <- 'not_started'}
+    if(stage=='interpretation') interpretation <- 'failed'
+    if(stage=='website') website <- 'failed'
+  }
+  summary <- rbind(summary,data.frame(metric=c('collection_status','interpretation_status','website_status','packaging_status','overall_status'),
+    value=c(collection,interpretation,website,'not_implemented',if(build_status=='failed')'failed' else if(build_status=='complete')'partial' else 'running'),stringsAsFactors=FALSE))
   list(summary=summary,registries=registries)
 }
 
 atlas_print_completion_report <- function(completion) {
   values <- stats::setNames(completion$summary$value,completion$summary$metric)
   cat("Build status: ", values[["build_status"]], "; source coverage: ", values[["coverage_status"]], "\n", sep="")
+  if('overall_status' %in% names(values)) cat('Overall: ',values[['overall_status']],'; collection: ',values[['collection_status']],
+    '; interpretation: ',values[['interpretation_status']],'; website: ',values[['website_status']],'; packaging: ',values[['packaging_status']],'\n',sep='')
   cat("Reviewed registry-field coverage: ", values[["registry_coverage_status"]], "\n", sep="")
   cat("Sources expected/profiled/missing/skipped: ", paste(values[c("expected_sources","profiled_sources","missing_sources","skipped_sources")],collapse="/"), "\n", sep="")
   for (i in seq_len(nrow(completion$registries))) {
