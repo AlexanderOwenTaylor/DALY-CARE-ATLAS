@@ -11,7 +11,8 @@
     RKKP_CLL:{Reg_BinetStadium:'Binet stage',Reg_Umuteret:'IGHV mutation-status field',Reg_FISH:'FISH result field',Reg_Del13q14:'Chromosome 13q14 deletion field',Reg_Del11q:'Chromosome 11q deletion field',Reg_Del17p:'Chromosome 17p deletion field',Reg_Trisomi12:'Trisomy 12 field',Reg_TP53:'TP53 field',Reg_Performancestatus:'Performance status',Reg_ZAP70:'ZAP-70 marker field',Reg_CD38Positiv:'CD38 positivity field',Reg_Beta2Microglobulin:'Beta-2 microglobulin field'}
   };
   const sourceLabels={RKKP_DaMyDa:'Myeloma registry',RKKP_LYFO:'Lymphoma registry',RKKP_CLL:'CLL registry'};
-  const fieldKey=row=>own(row,'column_name')?row.column_name:own(row,'source_column')?row.source_column:own(row,'date_column')?row.date_column:row.region_column;
+  const rowSource=row=>own(row,'source_name')?row.source_name:row.table_name;
+  const fieldKey=row=>own(row,'raw_column')?row.raw_column:own(row,'column_name')?row.column_name:own(row,'source_column')?row.source_column:own(row,'date_column')?row.date_column:row.region_column;
   function fieldLabel(row){
     const c=window.DALYCARE_OUTPUT_CATALOGUE,field=fieldKey(row),sourceName=row.table_name;
     // Only old catalogues use the copied registry fallback. New maps are exact,
@@ -140,18 +141,18 @@
     selectTable(tableId);cancel();const epoch=scanEpoch;
     const check=()=>{if(signal?.aborted || epoch!==scanEpoch || activeTable!==tableId)throw new Error('Search incomplete: cancelled');};
     const abort=()=>{if(epoch===scanEpoch)cancel();};signal?.addEventListener('abort',abort,{once:true});
-    let scanned=0,matches=0;const registrySeen=new Set();if(tableId==='registry_field_summaries'&&t.shards.reduce((n,s)=>n+s.rows,0)>217)throw new Error('Registry field inventory exceeds policy');const rows=[],start=Number.isInteger(criteria.offset)&&criteria.offset>=0?criteria.offset:Math.max(0,Number.isFinite(Number(page))?Math.floor(Number(page)):0)*PAGE_ROWS;let pageBytes=0;const pageLimit=tableId==='registry_field_summaries'?131072:MAX_BYTES;
+    let scanned=0,matches=0;const registrySeen=new Set();if(tableId==='registry_field_summaries'&&t.shards.reduce((n,s)=>n+s.rows,0)>217)throw new Error('Registry field inventory exceeds policy');const rows=[],start=Number.isInteger(criteria.offset)&&criteria.offset>=0?criteria.offset:Math.max(0,Number.isFinite(Number(page))?Math.floor(Number(page)):0)*PAGE_ROWS;let pageBytes=0;const pageLimit=['registry_field_summaries','semantic_dictionary'].includes(tableId)?131072:MAX_BYTES;
     const needle=String(query||'').toLocaleLowerCase();
     try {
       check();
       const locatedRegistry=tableId==='registry_field_summaries'&&t.shards.every(s=>Array.isArray(s.fields));
       if(locatedRegistry){const identities=new Set(),known=new Set(window.DALYCARE_REGISTRY_V2_RESOURCE.fields.map(r=>JSON.stringify([r.table_name,r.source_column])));for(const shard of t.shards)for(const pair of shard.fields){const key=JSON.stringify(pair);if(identities.has(key)||!known.has(key))throw new Error('Duplicate or unknown registry locator identity');identities.add(key);}}
-      if(!needle&&((tableId==='column_profiles'&&(criteria.source||criteria.field))||locatedRegistry)&&t.shards.every(s=>Array.isArray(s.fields))){
-        const match=pair=>(!criteria.source||pair[0]===criteria.source)&&(!criteria.field||pair[1]===criteria.field);
+      if(!needle&&((['column_profiles','semantic_dictionary'].includes(tableId)&&(criteria.source||criteria.field))||locatedRegistry)&&t.shards.every(s=>Array.isArray(s.fields))){
+        const match=pair=>(!criteria.source||pair[0]===criteria.source)&&(!criteria.field||pair[1]===criteria.field)&&(!Array.isArray(criteria.fields)||criteria.fields.includes(pair[1]));
         const total=t.shards.reduce((n,s)=>n+s.fields.filter(match).length,0);let offset=0;
         for(const shard of t.shards){const count=shard.fields.filter(match).length;check();if(offset<start+PAGE_ROWS&&offset+count>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&pageBytes+charge>pageLimit)break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();
-          if(data.some((row,i)=>row.table_name!==shard.fields[i][0]||fieldKey(row)!==shard.fields[i][1]))throw new Error('Exact field locator disagrees with screened rows');
-          const selected=data.filter(row=>match([row.table_name,fieldKey(row)]));for(let i=Math.max(0,start-offset);i<selected.length&&rows.length<PAGE_ROWS;i++)rows.push(selected[i]);scanned+=data.length;
+          if(data.some((row,i)=>rowSource(row)!==shard.fields[i][0]||fieldKey(row)!==shard.fields[i][1]))throw new Error('Exact field locator disagrees with screened rows');
+          const selected=data.filter(row=>match([rowSource(row),fieldKey(row)]));for(let i=Math.max(0,start-offset);i<selected.length&&rows.length<PAGE_ROWS;i++)rows.push(selected[i]);scanned+=data.length;
         }offset+=count;}
         return {rows,total_matches:total,scanned_rows:scanned,complete:true,reference_context,next_offset:start+rows.length};
       }
@@ -163,11 +164,11 @@
       const boundedScope=!needle&&!!(criteria.source||criteria.field)&&!criteria.explicitFull;let exhausted=true;
       for(const shard of t.shards){
         const charge=shard.asset_bytes||shard.bytes;if(boundedScope&&((pageBytes&&pageBytes+charge>pageLimit)||rows.length>=PAGE_ROWS)){exhausted=false;break;}if(boundedScope)pageBytes+=charge;
-        if(tableId==='column_profiles'&&criteria.source&&criteria.field&&Array.isArray(shard.fields)&&!shard.fields.some(pair=>Array.isArray(pair)&&pair[0]===criteria.source&&pair[1]===criteria.field))continue;
+        if(['column_profiles','semantic_dictionary'].includes(tableId)&&criteria.source&&Array.isArray(shard.fields)&&!shard.fields.some(pair=>Array.isArray(pair)&&pair[0]===criteria.source&&(!criteria.field||pair[1]===criteria.field)))continue;
         if(tableId==='npu_reference_search'&&/^npu\d{5}$/i.test(needle)&&typeof shard.first==='string'&&typeof shard.last==='string'&&(needle.toUpperCase()<shard.first||needle.toUpperCase()>shard.last))continue;
         check();const data=await loadShard(tableId,shard.id);check();for(const row of data){
         if(tableId==='registry_field_summaries'){const id=JSON.stringify([row.table_name,row.source_column]);if(registrySeen.has(id))throw new Error('Duplicate registry field identity');registrySeen.add(id);}
-        const inScope=(!criteria.source||row.table_name===criteria.source)&&(!criteria.field||fieldKey(row)===criteria.field);
+        const inScope=(!criteria.source||rowSource(row)===criteria.source)&&(!criteria.field||fieldKey(row)===criteria.field)&&(!Array.isArray(criteria.fields)||criteria.fields.includes(fieldKey(row)));
         const namesOnly=criteria.fieldNames===true&&fieldTable(tableId),alias=fieldTable(tableId)?[fieldLabel(row),own(sourceLabels,row.table_name)?sourceLabels[row.table_name]:''].join(' '):'';
         const matchesQuery=!needle||(namesOnly?[fieldKey(row),fieldLabel(row)].some(value=>String(value||'').toLocaleLowerCase().includes(needle)):t.columns.some(c=>row[c.key]!==null&&String(row[c.key]).toLocaleLowerCase().includes(needle))||alias.toLocaleLowerCase().includes(needle));
         if(inScope&&matchesQuery){if(matches>=start&&rows.length<PAGE_ROWS)rows.push(row);matches++;}

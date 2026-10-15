@@ -74,7 +74,16 @@ expect_equal(status,0L,paste(readLines(file.path(work,'rebuild.log'),warn=FALSE)
 after <- atlas_payload_from_run_outputs(run$run_dir,root)
 expect_equal(after$payload$panels$registry_field_summaries,rows)
 # Python rebuild validates the same exported contract and keeps both JS/JSON transports.
-status <- system2(Sys.which('python'),shQuote(c('scripts/build_ui_iteration.py','--input-dir',file.path(run$run_dir,'site'),'--output-dir',file.path(work,'python-site'),'--run-dir',run$run_dir)),stdout=file.path(work,'python.log'),stderr=file.path(work,'python.log'))
+# The lazy bootstrap deliberately cannot impersonate a full payload import.
+rejected <- system2(Sys.which('python'),shQuote(c('scripts/build_ui_iteration.py','--input-dir',file.path(run$run_dir,'site'),'--output-dir',file.path(work,'rejected-lazy-site'),'--run-dir',run$run_dir)),stdout=file.path(work,'lazy-rejection.log'),stderr=file.path(work,'lazy-rejection.log'))
+expect_true(rejected!=0L)
+expect_true(any(grepl('lazy export requires its original aggregate run',readLines(file.path(work,'lazy-rejection.log')),fixed=TRUE)))
+expect_false(dir.exists(file.path(work,'rejected-lazy-site')))
+# Supply the complete typed CSV-rebuilt payload through the supported full importer.
+full_input<-file.path(work,'complete-import');dir.create(full_input,showWarnings=FALSE)
+wire<-atlas_transport_assets(atlas_payload_transport(after$payload),atlas_output_registry(root)$input_max_bytes)
+writeLines(wire$script,file.path(full_input,'DALYCARE_atlas_payload.js'),useBytes=TRUE)
+status <- system2(Sys.which('python'),shQuote(c('scripts/build_ui_iteration.py','--input-dir',full_input,'--output-dir',file.path(work,'python-site'),'--run-dir',run$run_dir)),stdout=file.path(work,'python.log'),stderr=file.path(work,'python.log'))
 expect_equal(status,0L,paste(readLines(file.path(work,'python.log'),warn=FALSE),collapse='\n'))
 for(site in c(file.path(run$run_dir,'site'),file.path(work,'python-site'))) {
   paths <- list.files(site,recursive=TRUE,full.names=TRUE)
@@ -83,6 +92,8 @@ for(site in c(file.path(run$run_dir,'site'),file.path(work,'python-site'))) {
   expect_file(file.path(site,'DALYCARE_clinical.html'))
   expect_file(file.path(site,'DALYCARE_atlas_payload.js'))
   expect_file(file.path(site,'DALYCARE_atlas_payload.json'))
+  public<-read_public_table(site,'registry_field_summaries');expect_equal(length(public),length(rows));expect_equal(sum(vapply(public,function(r)r$summary_status=='published',logical(1))),9L)
+  download<-read.csv(file.path(site,'downloads/registry_field_summaries.csv'),stringsAsFactors=FALSE);expect_equal(nrow(download),length(rows));expect_equal(sum(download$summary_status=='published'),9L)
 }
 # A changed threshold is reapplied to the complete exported evidence, not just the UI.
 Sys.setenv(DALYCARE_MIN_CELL_COUNT='15')

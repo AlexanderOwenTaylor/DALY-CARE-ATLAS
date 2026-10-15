@@ -8,24 +8,26 @@ atlas_loading_budget <- function(stage,directory) {
   for(entry in directory$tables){text<-paste(readLines(file.path(stage,entry$descriptor),encoding='UTF-8',warn=FALSE),collapse='\n');table<-jsonlite::fromJSON(sub('\\);$','',sub('^.*?registerDescriptor\\(','',text)),simplifyVector=FALSE)$table;descriptors[[table$id]]<-list(entry=entry,table=table)
     deps<-c(common,entry$descriptor);shards<-table$shards
     if(table$id=='registry_field_summaries')deps<-c(deps,'registry-v2.js')
-    count<-0L;page_bytes<-0;page_limit<-if(table$id=='registry_field_summaries')131072 else 262144;for(s in shards){charge<-file.info(file.path(stage,s$src))$size;if(count>=50||(page_bytes>0&&page_bytes+charge>page_limit))break;deps<-c(deps,s$src);count<-count+s$rows;page_bytes<-page_bytes+charge}
+    if(table$id=='semantic_dictionary')deps<-c(deps,'DALYCARE_membership.js')
+    count<-0L;page_bytes<-0;page_limit<-if(table$id%in%c('registry_field_summaries','semantic_dictionary'))131072 else 262144;for(s in shards){charge<-file.info(file.path(stage,s$src))$size;if(count>=50||(page_bytes>0&&page_bytes+charge>page_limit))break;deps<-c(deps,s$src);count<-count+s$rows;page_bytes<-page_bytes+charge}
     routes[[length(routes)+1L]]<-list(route=paste0('table=',table$id),bytes=size(deps))
     if(!identical(table$provenance,'project_reference')&&!table$id%in%c('column_profiles','registry_field_summaries','npu_reference_search')){
-      filtered<-c(common,entry$descriptor);charged<-0
+      filtered<-c(common,entry$descriptor,if(table$id=='semantic_dictionary')'DALYCARE_membership.js');charged<-0
       for(shard in shards){amount<-file.info(file.path(stage,shard$src))$size;if(charged>0&&charged+amount>page_limit)break;filtered<-c(filtered,shard$src);charged<-charged+amount}
       routes[[length(routes)+1L]]<-list(route=paste0('source-filtered bounded scan=',table$id),bytes=size(filtered))
     }
 
-    if(table$id%in%c('column_profiles','registry_field_summaries')&&length(shards)){
-      scoped<-c(common,entry$descriptor,if(table$id=='registry_field_summaries')'registry-v2.js')
+    if(table$id%in%c('column_profiles','registry_field_summaries','semantic_dictionary')&&length(shards)){
+      scoped<-c(common,entry$descriptor,if(table$id=='registry_field_summaries')'registry-v2.js' else if(table$id=='semantic_dictionary')'DALYCARE_membership.js')
       routes[[length(routes)+1L]]<-list(route=paste(table$id,'exact field detail (largest shard)'),bytes=size(scoped)+max(file.info(file.path(stage,vapply(shards,function(s)s$src,character(1))))$size))
       sources<-unique(unlist(lapply(shards,function(s)vapply(s$fields,function(pair)pair[[1]],character(1)))))
       for(source in sources){deps<-scoped;count<-0L;page_bytes<-0;for(s in shards){n<-sum(vapply(s$fields,function(pair)pair[[1]]==source,logical(1)));if(n&&count<50){charge<-file.info(file.path(stage,s$src))$size;if(page_bytes>0&&page_bytes+charge>page_limit)break;deps<-c(deps,s$src);count<-count+n;page_bytes<-page_bytes+charge}};routes[[length(routes)+1L]]<-list(route='source field first page',bytes=size(deps))}
     }
   }
+  if(all(c('column_profiles','registry_field_summaries')%in%names(descriptors))){profile<-descriptors$column_profiles;registry<-descriptors$registry_field_summaries;deps<-c(common,profile$entry$descriptor,registry$entry$descriptor);routes[[length(routes)+1L]]<-list(route='unconfigured registry field profile fallback',bytes=size(deps)+max(c(0,file.info(file.path(stage,vapply(profile$table$shards,function(s)s$src,character(1))))$size)))}
   if(all(c('npu_reference_search','npu_display_dictionary')%in%names(descriptors))){search<-descriptors$npu_reference_search;reference<-descriptors$npu_display_dictionary;deps<-c(common,search$entry$descriptor,reference$entry$descriptor);pairs<-size(deps);definitions<-setNames(vapply(reference$table$shards,function(s)s$src,character(1)),vapply(reference$table$shards,function(s)s$id,character(1)));for(s in search$table$shards)for(key in unlist(s$definitions))pairs<-c(pairs,size(c(deps,s$src,definitions[[key]])));routes[[length(routes)+1L]]<-list(route='selected NPU item (largest actual dependency pair)',bytes=max(pairs))}
   exceeded<-Filter(function(r)!is.finite(r$bytes)||r$bytes>524288,routes)
-  if(length(exceeded))stop('Cold route dependency byte budget exceeded: ',exceeded[[1]]$route,' ',exceeded[[1]]$bytes,call.=FALSE)
+  if(length(exceeded)){item<-exceeded[[1]];stop(structure(list(message=paste('Cold route dependency byte budget exceeded:',item$route,item$bytes),call=NULL,budget_route=item$route,budget_bytes=item$bytes,budget_limit=524288),class=c('atlas_budget_error','error','condition')))}
   result<-list(schema_version=1L,build_id=directory$build_id,limit=524288L,accounting='Emitted bytes without gzip or cache credit; explicit later search/detail transfers excluded',routes=routes)
   con<-file(file.path(stage,'loading-budget.json'),'wb');writeBin(charToRaw(enc2utf8(paste0(atlas_bundle_json(result),'\n'))),con);close(con);invisible(result)
 }
@@ -33,12 +35,14 @@ atlas_publication_boundary <- function(expr,phase='website') {
   tryCatch(force(expr),error=function(e){
     if(inherits(e,'atlas_publication_error'))stop(e)
     message<-conditionMessage(e)
+    budget_diagnostic<-if(inherits(e,'atlas_budget_error')&&is.character(e$budget_route)&&length(e$budget_route)==1L&&grepl('^[A-Za-z0-9_ =()/-]+$',e$budget_route)&&is.numeric(e$budget_bytes)&&length(e$budget_bytes)==1L&&is.finite(e$budget_bytes))paste0('Cold route ',e$budget_route,': ',e$budget_bytes,' bytes exceeds ',e$budget_limit,'; reduce automatic dependency transfers.')else ''
+    if(nzchar(budget_diagnostic))message(budget_diagnostic)
     patterns<-c(`clinical-source-membership`='publication_membership_invalid',checksum='publication_checksum_mismatch',schema='publication_schema_invalid',budget='publication_byte_budget',privacy='publication_privacy_failed',path='publication_path_invalid',ZIP='package_validation_failed',rename='publication_promotion_failed')
     hits<-names(patterns)[vapply(names(patterns),function(p)grepl(p,message,ignore.case=TRUE),logical(1))]
     code<-if(length(hits))unname(patterns[[hits[[1]]]])else if(phase=='packaging')'package_failed' else 'site_writer_failed'
     allowed<-c('atlas_publication_boundary','atlas_write_site_bundle','atlas_public_manifest','atlas_validate_public_site','atlas_package_site','write_static_atlas')
     calls<-vapply(sys.calls(),function(call)if(is.symbol(call[[1]]))as.character(call[[1]])else '',character(1))
-    breadcrumbs<-paste(c(intersect(calls,allowed),intersect(class(e),c('simpleError','error','atlas_publication_error'))),collapse=';')
+    breadcrumbs<-paste(c(budget_diagnostic,intersect(calls,allowed),intersect(class(e),c('simpleError','error','atlas_publication_error'))),collapse=';')
     resource<-if(code=='publication_membership_invalid')'clinical-source-membership.json' else if(phase=='packaging')'public archive' else 'public site'
     stop(structure(list(message=paste(code,resource,'Rebuild from retained aggregate outputs; verify the named public resource.'),call=NULL,code=code,resource=resource,breadcrumbs=substr(breadcrumbs,1,512)),class=c('atlas_publication_error','error','condition')))
   })

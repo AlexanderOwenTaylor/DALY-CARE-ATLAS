@@ -86,7 +86,7 @@ class RegistryPrivacyTests(unittest.TestCase):
         self.assertNotIn('FORBIDDEN',json.dumps(other));self.assertEqual(other['column_top_value_rows'][0]['summary_status'],'invalid_contract')
     def test_r_python_parity_adversarial(self):
         rscript=Path(os.environ.get('RSCRIPT') or shutil.which('Rscript') or 'C:/Program Files/R/R-4.3.1/bin/Rscript.exe')
-        if not rscript.exists(): self.skipTest('R runtime unavailable')
+        self.assertTrue(rscript.is_file(),'R runtime is required for adversarial parity')
         rows=[self.row(),self.row('numeric')]
         cases=[rows,[dict(rows[0],n_valid=29)],[dict(rows[1],mean=-1)],[rows[0],dict(rows[0],summary_status='query_failed')],[dict(rows[0],extra='FORBIDDEN')],[dict(rows[0],category_counts_json='[')]]
         for change in (dict(n_valid=True),dict(n_missing=1.5),dict(n_valid=29),dict(summary_status=['published']),dict(minimum_cell_count=10),dict(unit_status='verified'),dict(minimum_cell_count=5.9)):
@@ -96,7 +96,11 @@ class RegistryPrivacyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT/'.artifact-temp') as temp:
             input_path=Path(temp)/'input.json'; output_path=Path(temp)/'output.json'
             input_path.write_text(json.dumps(cases),encoding='utf-8')
-            env=dict(os.environ,TEMP=temp,TMP=temp,TMPDIR=temp,LANG='English_United States.utf8',LC_ALL='English_United States.utf8',R_LIBS_USER='C:/Users/User/AppData/Local/R/win-library/4.3')
+            env=dict(os.environ,TEMP=temp,TMP=temp,TMPDIR=temp)
+            if os.name=='nt':
+                env.setdefault('LC_ALL','English_United States.utf8')
+                libs=Path('C:/Users/User/AppData/Local/R/win-library/4.3')
+                if libs.is_dir():env.setdefault('R_LIBS_USER',str(libs))
             run=subprocess.run([str(rscript),str(ROOT/'tests/test-registry-summary-privacy.R'),str(input_path),str(output_path)],cwd=ROOT,env=env,capture_output=True,text=True)
             self.assertEqual(run.returncode,0,run.stdout+run.stderr)
             rout=json.loads(output_path.read_text())

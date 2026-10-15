@@ -7,7 +7,7 @@ local({
   expect_equal(values[['collection_status']],'complete')
   expect_equal(values[['interpretation_status']],'complete')
   expect_equal(values[['website_status']],'complete')
-  expect_equal(values[['packaging_status']],'not_implemented')
+  expect_equal(values[['packaging_status']],'not_started')
   expect_equal(values[['overall_status']],'partial')
   sources$load_status <- 'failed'
   report <- atlas_completion_report(sources,sources,NULL,root,'fixture','complete')

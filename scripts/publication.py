@@ -15,7 +15,8 @@ def loading_budget(stage,directory):
         descriptors[table['id']]=(entry,table)
         deps=common+[entry['descriptor']];shards=table['shards']
         if table['id']=='registry_field_summaries':deps+=['registry-v2.js']
-        count=0;page_bytes=0;page_limit=131072 if table['id']=='registry_field_summaries' else 262144
+        if table['id']=='semantic_dictionary':deps+=['DALYCARE_membership.js']
+        count=0;page_bytes=0;page_limit=131072 if table['id'] in ('registry_field_summaries','semantic_dictionary') else 262144
         for s in shards:
             charge=(stage/s['src']).stat().st_size
             if count>=50 or (page_bytes and page_bytes+charge>page_limit):break
@@ -24,15 +25,15 @@ def loading_budget(stage,directory):
         # A scoped non-locator scan may inspect nonmatching shards up to its
         # byte allowance. Charge that complete prefix, not merely 50 rows.
         if table.get('provenance')!='project_reference' and table['id'] not in ('column_profiles','registry_field_summaries','npu_reference_search'):
-            filtered=common+[entry['descriptor']];charged=0
+            filtered=common+[entry['descriptor']]+(['DALYCARE_membership.js'] if table['id']=='semantic_dictionary' else []);charged=0
             for shard in shards:
                 amount=(stage/shard['src']).stat().st_size
                 if charged and charged+amount>page_limit:break
                 filtered.append(shard['src']);charged+=amount
             routes.append(dict(route='source-filtered bounded scan='+table['id'],bytes=size(filtered)))
 
-        if table['id'] in ('column_profiles','registry_field_summaries') and shards:
-            scoped=common+[entry['descriptor']]+(['registry-v2.js'] if table['id']=='registry_field_summaries' else [])
+        if table['id'] in ('column_profiles','registry_field_summaries','semantic_dictionary') and shards:
+            scoped=common+[entry['descriptor']]+(['registry-v2.js'] if table['id']=='registry_field_summaries' else ['DALYCARE_membership.js'] if table['id']=='semantic_dictionary' else [])
             routes.append(dict(route=table['id']+' exact field detail (largest shard)',bytes=size(scoped)+max((stage/s['src']).stat().st_size for s in shards)))
             sources={pair[0] for s in shards for pair in s.get('fields',[])}
             for source in sources:
@@ -44,6 +45,10 @@ def loading_budget(stage,directory):
                         if page_bytes and page_bytes+charge>page_limit:break
                         deps.append(s['src']);count+=n;page_bytes+=charge
                 routes.append(dict(route='source field first page',bytes=size(deps)))
+    if all(k in descriptors for k in ('column_profiles','registry_field_summaries')):
+        profile,registry=descriptors['column_profiles'],descriptors['registry_field_summaries']
+        deps=common+[profile[0]['descriptor'],registry[0]['descriptor']]
+        routes.append(dict(route='unconfigured registry field profile fallback',bytes=size(deps)+max(((stage/s['src']).stat().st_size for s in profile[1]['shards']),default=0)))
     if all(k in descriptors for k in ('npu_reference_search','npu_display_dictionary')):
         search,reference=descriptors['npu_reference_search'],descriptors['npu_display_dictionary']
         deps=common+[search[0]['descriptor'],reference[0]['descriptor']]

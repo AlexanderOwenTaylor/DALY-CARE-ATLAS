@@ -29,7 +29,7 @@ test('NPU reference search covers unloaded definitions and opens exact Unicode d
  await h.window.DALYCARE_SHELL.showDefinition(result.rows[0]);assert.match(h.element('detail-content').innerHTML,new RegExp(entry.code));assert.ok(h.requested.some(x=>x===last.src));assert.ok(h.element('detail-content').innerHTML.includes(entry.definition.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')));
 });
 test('cold old NPU item URL opens the exact definition within the complete dependency budget',async()=>{
- const h=harness('','#laboratory/lab-npu?q=NPU04998&item=NPU04998');await h.ready();assert.match(h.element('load-state').textContent,/reference definition NPU04998/);assert.ok(h.bytes()<=524288,`NPU cold closure ${h.bytes()}`);
+ const h=harness('','#laboratory/lab-npu?q=NPU04998&item=NPU04998&source=SP_Laboratorieproever');await h.ready();assert.equal((h.element('detail-content').innerHTML.match(/aria-label="Evidence context"/g)||[]).length,1);assert.match(h.element('load-state').textContent,/reference definition NPU04998/);assert.ok(h.bytes()<=524288,`NPU cold closure ${h.bytes()}`);
 });
 test('production mixed registry first page validates its complete locator inventory before one shard',async()=>{
  const h=harness('?table=registry_field_summaries');await h.ready();assert.match(h.element('detail-content').innerHTML,/registry-summary-v2/);assert.match(h.element('detail-content').innerHTML,/registry-summary-v1/);
@@ -81,8 +81,30 @@ test('cold reference source context does not scan all definitions or imply obser
  const h=harness('?table=npu_display_dictionary&source=SP_Laboratorieproever');await h.ready();assert.ok(h.bytes()<=524288,`scoped reference cold ${h.bytes()}`);assert.equal(h.requested.filter(x=>/^output-shards\/npu_display_dictionary/.test(x)).length,1);assert.match(h.element('detail-content').innerHTML,/Reference definitions/);assert.match(h.element('detail-content').innerHTML,/navigation context/i);
 });
 test('completed navigation clears prior selected definition and field search state',async()=>{
- const h=harness('','#laboratory/lab-npu?q=NPU04998&item=NPU04998');await h.ready();assert.match(h.element('detail-content').innerHTML,/NPU04998/);await h.navigate('#registries/reg-damyda');assert.equal(h.element('detail-content').innerHTML,'');assert.equal(h.element('search-results').innerHTML,'');
+ const h=harness('','#laboratory/lab-npu?q=NPU04998&item=NPU04998');await h.ready();assert.match(h.element('detail-content').innerHTML,/NPU04998/);await h.navigate('#registries/reg-damyda');assert.doesNotMatch(h.element('detail-content').innerHTML,/NPU04998/);assert.match(h.element('detail-content').innerHTML,/RKKP_DaMyDa/);assert.equal(h.element('search-results').innerHTML,'');
  const field=harness('?source=Synthetic_Source_21&field=exact_field_2199');await field.ready();assert.match(field.element('detail-content').innerHTML,/exact_field_2199/);await field.navigate('#treatment');assert.equal(field.element('detail-content').innerHTML,'');
+});
+
+test('registry theme uses exact reviewed identities and the selected clinical answer precedes lineage',async()=>{
+ const h=harness('','#registries/reg-damyda?theme=stage');await h.ready();assert.match(h.element('detail-content').innerHTML,/data-primary-answer/);assert.ok(h.bytes()<=524288);
+ const route=h.window.DALYCARE_SHELL.route();assert.equal(route.source,'RKKP_DaMyDa');
+ const resource=h.window.DALYCARE_REGISTRY_V2_RESOURCE,fields=resource.fields.filter(r=>r.table_name==='RKKP_DaMyDa'&&r.topic==='stage').map(r=>r.source_column);
+ const result=await h.window.DALYCARE_OUTPUTS.scanTable('registry_field_summaries','',0,undefined,undefined,{source:'RKKP_DaMyDa',fields});assert.ok(result.rows.length>0);assert.ok(result.rows.every(r=>r.topic==='stage'));
+ const none=await h.window.DALYCARE_OUTPUTS.scanTable('registry_field_summaries','',0,undefined,undefined,{source:'RKKP_DaMyDa',fields:[]});assert.equal(none.total_matches,0);
+});
+
+test('exact registry identity prefers its validated clinical outcome and global links discard source query',async()=>{
+ const h=harness('?table=column_profiles&source=RKKP_DaMyDa&field=Stadie');await h.ready();assert.ok(h.requested.some(x=>x.startsWith('output-shards/registry_field_summaries')));assert.ok(!h.requested.some(x=>x.startsWith('output-shards/column_profiles')));assert.match(h.element('detail-content').innerHTML,/data-primary-answer/);assert.ok(h.bytes()<=524288);
+ assert.match(h.element('task-content').innerHTML,/href="DALYCARE_clinical.html#clinical\/clinical-vitals"/);assert.doesNotMatch(h.element('task-content').innerHTML,/href="#/);
+});
+
+test('local q and explicitly empty global g remain distinct on saved routes',async()=>{
+ const h=harness('','#laboratory/lab-npu?q=NPU04998&g=&item=NPU04998');await h.ready();assert.equal(h.window.DALYCARE_SHELL.route().q,'NPU04998');assert.equal(h.window.DALYCARE_SHELL.route().g,'');assert.equal(h.element('search-results').innerHTML,'');assert.match(h.element('detail-content').innerHTML,/NPU04998/);
+});
+
+test('semantic source-field locators use logical source and raw column across unloaded shards',async()=>{
+ for(const name of fs.readdirSync(path.join(site,'output-shards')).filter(n=>n.startsWith('semantic_dictionary-')))assert.ok(fs.statSync(path.join(site,'output-shards',name)).size<=131072,'semantic writer uses bounded transfer target');
+ const h=harness('?table=semantic_dictionary&source=Synthetic_Source_21&field=exact_field_2199');await h.ready();assert.match(h.element('detail-content').innerHTML,/exact_field_2199/);assert.equal(h.requested.filter(x=>/^output-shards\/semantic_dictionary/.test(x)).length,1);assert.ok(h.bytes()<=524288);
 });
 
 test('small source-filtered evidence completes automatically; large prefix stays explicitly partial',async()=>{
@@ -91,4 +113,8 @@ test('small source-filtered evidence completes automatically; large prefix stays
  const budgets=JSON.parse(fs.readFileSync(path.join(site,'loading-budget.json'),'utf8')).routes;
  for(const [table,h] of [['sources',small],['registry_clinical_summary',large]])assert.ok(budgets.find(r=>r.route==='source-filtered bounded scan='+table).bytes>=h.bytes(),'producer budget must cover actual filtered dependency bytes');
  const complete=await large.window.DALYCARE_SHELL.showTable('registry_clinical_summary','','Synthetic_Source_21','',0,null,true);assert.equal(complete.complete,true);assert.equal(complete.scanned_rows,4);assert.match(large.element('load-state').textContent,/Complete: 0 matching/);
+});
+
+test('global field submission searches other sources from a selected source route',async()=>{
+ const h=harness('?source=Synthetic_Source_21');await h.ready();h.element('search-query').value='exact_field_0';h.element('field-search').onsubmit({preventDefault(){}});assert.match(h.element('search-results').innerHTML,/Synthetic_Source_0/);
 });

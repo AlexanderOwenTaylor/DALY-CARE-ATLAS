@@ -441,6 +441,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
     if(identical(table$status,'snapshot_preview')) table$status <- 'limited'
     parts <- list();pending <- list();pending_bytes <- 2
     pending_script_bytes <- nchar(enc2utf8(registration(id,'s0001',list())$script),type='bytes')
+    shard_target<-if(id=='semantic_dictionary')131072 else 262144
     shard_row_limit<-if(id=='registry_field_summaries')50L else if(id=='column_profiles')100L else 250L
     for(row in rows) {
       for(column in table$columns) {
@@ -455,8 +456,8 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
       row_bytes <- nchar(enc2utf8(serialized),type='bytes')
       escaped_bytes <- nchar(enc2utf8(atlas_bundle_json(serialized)),type='bytes')-2
       separator <- as.integer(length(pending)>0L)
-      if(length(pending)>=shard_row_limit || pending_bytes+separator+row_bytes>262144 ||
-         pending_script_bytes+separator+escaped_bytes>262144) {
+      if(length(pending)>=shard_row_limit || pending_bytes+separator+row_bytes>shard_target ||
+         pending_script_bytes+separator+escaped_bytes>shard_target) {
         if(length(pending)) parts[[length(parts)+1L]] <- pending
         pending <- list();pending_bytes <- 2;separator <- 0L
         pending_script_bytes <- nchar(enc2utf8(registration(id,sprintf('s%04d',length(parts)+1L),list())$script),type='bytes')
@@ -479,7 +480,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
       relative <- paste0('output-shards/',id,'-',shard_id,'.js');write(relative,item$script)
       total <- total+item$bytes
       table$shards[[i]] <- list(id=shard_id,src=relative,rows=length(parts[[i]]),bytes=item$bytes,asset_bytes=nchar(enc2utf8(item$script),type='bytes'))
-      if(id%in%c('column_profiles','registry_field_summaries'))table$shards[[i]]$fields<-lapply(jsonlite::fromJSON(item$data,simplifyVector=FALSE),function(r)list(r$table_name,r[[if(id=='column_profiles')'column_name' else 'source_column']]))
+      if(id%in%c('column_profiles','registry_field_summaries','semantic_dictionary'))table$shards[[i]]$fields<-lapply(jsonlite::fromJSON(item$data,simplifyVector=FALSE),function(r)list(r[[if(id=='semantic_dictionary')'source_name' else 'table_name']],r[[if(id=='semantic_dictionary')'raw_column' else if(id=='column_profiles')'column_name' else 'source_column']]))
     }
     catalog_tables[[length(catalog_tables)+1L]] <- table
     write(paste0('table-descriptors/',id,'.js'),paste0('window.DALYCARE_OUTPUTS.registerDescriptor(',atlas_bundle_json(list(schema_version=1L,build_id=build_id,table=table)),');\n'))

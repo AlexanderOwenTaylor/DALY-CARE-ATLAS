@@ -515,6 +515,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             pending_bytes = 2  # JSON array brackets, including for an empty shard.
             _, empty_script = _registration(build_id,table_id,'s0001','[]')
             pending_script_bytes = len(empty_script.encode('utf-8'))
+            shard_target=131072 if table_id=='semantic_dictionary' else SHARD_BYTES
             shard_row_limit=50 if table_id=='registry_field_summaries' else 100 if table_id=='column_profiles' else 250
             for row in rows:
                 for col in table['columns']:
@@ -527,7 +528,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                 row_bytes = len(serialized.encode('utf-8'))
                 escaped_bytes = len(compact(serialized).encode('utf-8')) - 2
                 separator = int(bool(pending))
-                if len(pending)>=shard_row_limit or pending_bytes+separator+row_bytes>SHARD_BYTES or pending_script_bytes+separator+escaped_bytes>SHARD_BYTES:
+                if len(pending)>=shard_row_limit or pending_bytes+separator+row_bytes>shard_target or pending_script_bytes+separator+escaped_bytes>shard_target:
                     if pending:
                         parts.append(pending); pending=[]
                     pending_bytes = 2
@@ -558,7 +559,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                 relative = 'output-shards/'+table_id+'-'+shard_id+'.js'
                 write(relative,script); size=len(data.encode());total+=size
                 shard=dict(id=shard_id,src=relative,rows=len(part),bytes=size,asset_bytes=len(script.encode('utf-8')))
-                if table_id in ('column_profiles','registry_field_summaries'):shard['fields']=[[r.get('table_name'),r.get('column_name' if table_id=='column_profiles' else 'source_column')] for r in map(json.loads,part)]
+                if table_id in ('column_profiles','registry_field_summaries','semantic_dictionary'):shard['fields']=[[r.get('source_name' if table_id=='semantic_dictionary' else 'table_name'),r.get('raw_column' if table_id=='semantic_dictionary' else 'column_name' if table_id=='column_profiles' else 'source_column')] for r in map(json.loads,part)]
                 table['shards'].append(shard)
             catalogue_tables.append(table)
             write('table-descriptors/'+table_id+'.js','window.DALYCARE_OUTPUTS.registerDescriptor('+compact(dict(schema_version=1,build_id=build_id,table=table))+');\n')
