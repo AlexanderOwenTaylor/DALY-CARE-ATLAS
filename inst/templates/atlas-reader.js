@@ -150,7 +150,7 @@
       if(!needle&&((['column_profiles','semantic_dictionary'].includes(tableId)&&(criteria.source||criteria.field))||locatedRegistry)&&t.shards.every(s=>Array.isArray(s.fields))){
         const match=pair=>(!criteria.source||pair[0]===criteria.source)&&(!criteria.field||pair[1]===criteria.field)&&(!Array.isArray(criteria.fields)||criteria.fields.includes(pair[1]));
         const total=t.shards.reduce((n,s)=>n+s.fields.filter(match).length,0);let offset=0;
-        for(const shard of t.shards){const count=shard.fields.filter(match).length;check();if(offset<start+PAGE_ROWS&&offset+count>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&pageBytes+charge>pageLimit)break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();
+        for(const shard of t.shards){const count=shard.fields.filter(match).length;check();if(count>0&&offset<start+PAGE_ROWS&&offset+count>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&pageBytes+charge>pageLimit)break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();
           if(data.some((row,i)=>rowSource(row)!==shard.fields[i][0]||fieldKey(row)!==shard.fields[i][1]))throw new Error('Exact field locator disagrees with screened rows');
           const selected=data.filter(row=>match([rowSource(row),fieldKey(row)]));for(let i=Math.max(0,start-offset);i<selected.length&&rows.length<PAGE_ROWS;i++)rows.push(selected[i]);scanned+=data.length;
         }offset+=count;}

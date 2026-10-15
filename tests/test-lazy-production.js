@@ -118,3 +118,31 @@ test('small source-filtered evidence completes automatically; large prefix stays
 test('global field submission searches other sources from a selected source route',async()=>{
  const h=harness('?source=Synthetic_Source_21');await h.ready();h.element('search-query').value='exact_field_0';h.element('field-search').onsubmit({preventDefault(){}});assert.match(h.element('search-results').innerHTML,/Synthetic_Source_0/);
 });
+
+test('form Enter opens an exact NPU definition and reference back clears stale field results',async()=>{
+ const h=harness('','#laboratory/lab-npu?source=SP_Laboratorieproever');await h.ready();h.element('search-results').innerHTML='STALE_ZERO_FIELDS';h.element('search-query').value=' npu04998 ';
+ await h.element('field-search').onsubmit({preventDefault(){}});assert.match(h.element('load-state').textContent,/reference definition NPU04998/);assert.match(h.element('detail-content').innerHTML,/Creatinine/);assert.equal(h.element('search-results').innerHTML,'');assert.match(h.element('detail-content').innerHTML,/Reference definitions do not establish observed usage/);assert.match(h.element('detail-content').innerHTML,/source=SP_Laboratorieproever/);
+ assert.equal(h.requested.filter(n=>n.startsWith('output-shards/npu_reference_search')).length,1);assert.equal(h.requested.filter(n=>n.startsWith('output-shards/npu_display_dictionary')).length,1);
+ await h.element('back-reference').onclick();assert.match(h.element('detail-content').innerHTML,/NPU reference matches/);assert.match(h.element('detail-content').innerHTML,/NPU04998/);
+ h.element('search-query').value='Creatinine';await h.element('reference-search').onclick();assert.match(h.element('detail-content').innerHTML,/NPU reference matches/);assert.match(h.element('detail-content').innerHTML,/Creatinine/);
+});
+
+test('explicit field search keeps its intent and offers exact-code reference recovery',async()=>{
+ const html=fs.readFileSync(path.join(site,'DALYCARE_clinical.html'),'utf8');assert.match(html,/<button id="field-search-button" type="button">Search fields/);assert.match(html,/Enter opens an exact NPU code/);
+ const h=harness('?source=Synthetic_Source_21');await h.ready();h.element('search-query').value='NPU04998';h.element('field-search-button').onclick();assert.match(h.element('load-state').textContent,/field identities searched/);assert.match(h.element('search-results').innerHTML,/No matching exact field names/);assert.ok(!h.requested.some(n=>n.startsWith('output-shards/npu_')));
+ const recovery=h.element('search-results').innerHTML.match(/href="([^"]+)">Open NPU04998 reference definition/)[1].replaceAll('&amp;','&');assert.match(recovery,/source=Synthetic_Source_21/);await h.navigate(recovery.slice(recovery.indexOf('#')));assert.match(h.element('detail-content').innerHTML,/Creatinine/);assert.equal(h.element('search-results').innerHTML,'');
+ h.element('search-query').value='exact_field_0';h.element('field-search-button').onclick();assert.match(h.element('search-results').innerHTML,/Synthetic_Source_0/);
+});
+
+for(const table of ['registry_field_summaries','column_profiles'])test('early exact '+table+' skips all trailing zero-match locator shards',async()=>{
+ const descriptor=JSON.parse(fs.readFileSync(path.join(site,'table-descriptors',table+'.js'),'utf8').split('registerDescriptor(')[1].trim().slice(0,-2)).table,first=descriptor.shards[0],pair=first.fields[0];assert.ok(descriptor.shards.length>=3);assert.ok(first.asset_bytes+descriptor.shards[1].asset_bytes<=(table==='registry_field_summaries'?131072:262144),'fixture must allow the erroneous extra transfer');
+ const h=harness('?'+new URLSearchParams({table,source:pair[0],field:pair[1]}));await h.ready();assert.deepEqual(h.requested.filter(p=>p.startsWith('output-shards/')),[first.src]);assert.match(h.element('load-state').textContent,/Complete: 1 matching screened rows/);assert.ok(h.bytes()<=524288);
+});
+
+test('opening an existing reference result clears intervening field no-match feedback',async()=>{
+ const h=harness('','#laboratory/lab-npu?source=SP_Laboratorieproever');await h.ready();const buttons=[{dataset:{definition:'0'}}];h.element('detail-content').querySelectorAll=selector=>selector==='[data-definition]'?buttons:[];
+ h.element('search-query').value='NPU04998';await h.element('reference-search').onclick();assert.match(h.element('detail-content').innerHTML,/<button data-definition="0">Open exact definition/);
+ h.element('field-search-button').onclick();assert.match(h.element('search-results').innerHTML,/No matching exact field names/);assert.match(h.element('detail-content').innerHTML,/NPU reference matches/);
+ await buttons[0].onclick();assert.match(h.element('load-state').textContent,/reference definition NPU04998/);assert.equal(h.element('search-results').innerHTML,'');assert.match(h.element('detail-content').innerHTML,/Creatinine/);assert.match(h.element('detail-content').innerHTML,/source=SP_Laboratorieproever/);
+ await h.element('back-reference').onclick();assert.match(h.element('detail-content').innerHTML,/NPU reference matches/);
+});
