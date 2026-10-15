@@ -515,7 +515,8 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             pending_bytes = 2  # JSON array brackets, including for an empty shard.
             _, empty_script = _registration(build_id,table_id,'s0001','[]')
             pending_script_bytes = len(empty_script.encode('utf-8'))
-            shard_target=131072 if table_id=='semantic_dictionary' else SHARD_BYTES
+            shard_target=131072 if table_id in ('column_profiles','registry_field_summaries','semantic_dictionary') else SHARD_BYTES
+            pending_source=None
             shard_row_limit=50 if table_id=='registry_field_summaries' else 100 if table_id=='column_profiles' else 250
             for row in rows:
                 for col in table['columns']:
@@ -528,7 +529,8 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                 row_bytes = len(serialized.encode('utf-8'))
                 escaped_bytes = len(compact(serialized).encode('utf-8')) - 2
                 separator = int(bool(pending))
-                if len(pending)>=shard_row_limit or pending_bytes+separator+row_bytes>shard_target or pending_script_bytes+separator+escaped_bytes>shard_target:
+                source=row.get('source_name') or row.get('table_name','')
+                if (pending and table_id in ('column_profiles','registry_field_summaries','semantic_dictionary') and source!=pending_source) or len(pending)>=shard_row_limit or pending_bytes+separator+row_bytes>shard_target or pending_script_bytes+separator+escaped_bytes>shard_target:
                     if pending:
                         parts.append(pending); pending=[]
                     pending_bytes = 2
@@ -541,6 +543,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                         parts=[];pending=[];rows=[]
                         table.update(status='unavailable',reason='Row exceeds public shard byte limit',complete=False)
                         break
+                pending_source=source
                 pending.append(serialized)
                 pending_bytes += separator+row_bytes
                 pending_script_bytes += separator+escaped_bytes

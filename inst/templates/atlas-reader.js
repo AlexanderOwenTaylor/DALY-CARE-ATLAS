@@ -141,7 +141,7 @@
     selectTable(tableId);cancel();const epoch=scanEpoch;
     const check=()=>{if(signal?.aborted || epoch!==scanEpoch || activeTable!==tableId)throw new Error('Search incomplete: cancelled');};
     const abort=()=>{if(epoch===scanEpoch)cancel();};signal?.addEventListener('abort',abort,{once:true});
-    let scanned=0,matches=0;const registrySeen=new Set();if(tableId==='registry_field_summaries'&&t.shards.reduce((n,s)=>n+s.rows,0)>217)throw new Error('Registry field inventory exceeds policy');const rows=[],start=Number.isInteger(criteria.offset)&&criteria.offset>=0?criteria.offset:Math.max(0,Number.isFinite(Number(page))?Math.floor(Number(page)):0)*PAGE_ROWS;let pageBytes=0;const pageLimit=['registry_field_summaries','semantic_dictionary'].includes(tableId)?131072:MAX_BYTES;
+    let scanned=0,matches=0;const registrySeen=new Set();if(tableId==='registry_field_summaries'&&t.shards.reduce((n,s)=>n+s.rows,0)>217)throw new Error('Registry field inventory exceeds policy');const rows=[],start=Number.isInteger(criteria.offset)&&criteria.offset>=0?criteria.offset:Math.max(0,Number.isFinite(Number(page))?Math.floor(Number(page)):0)*PAGE_ROWS;let pageBytes=0;const pageLimit=['column_profiles','registry_field_summaries','semantic_dictionary'].includes(tableId)?131072:MAX_BYTES;
     const needle=String(query||'').toLocaleLowerCase();
     try {
       check();
@@ -150,7 +150,7 @@
       if(!needle&&((['column_profiles','semantic_dictionary'].includes(tableId)&&(criteria.source||criteria.field))||locatedRegistry)&&t.shards.every(s=>Array.isArray(s.fields))){
         const match=pair=>(!criteria.source||pair[0]===criteria.source)&&(!criteria.field||pair[1]===criteria.field)&&(!Array.isArray(criteria.fields)||criteria.fields.includes(pair[1]));
         const total=t.shards.reduce((n,s)=>n+s.fields.filter(match).length,0);let offset=0;
-        for(const shard of t.shards){const count=shard.fields.filter(match).length;check();if(count>0&&offset<start+PAGE_ROWS&&offset+count>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&pageBytes+charge>pageLimit)break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();
+        for(const shard of t.shards){const count=shard.fields.filter(match).length;check();if(count>0&&offset<start+PAGE_ROWS&&offset+count>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&(['column_profiles','registry_field_summaries','semantic_dictionary'].includes(tableId)||pageBytes+charge>pageLimit))break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();
           if(data.some((row,i)=>rowSource(row)!==shard.fields[i][0]||fieldKey(row)!==shard.fields[i][1]))throw new Error('Exact field locator disagrees with screened rows');
           const selected=data.filter(row=>match([rowSource(row),fieldKey(row)]));for(let i=Math.max(0,start-offset);i<selected.length&&rows.length<PAGE_ROWS;i++)rows.push(selected[i]);scanned+=data.length;
         }offset+=count;}
@@ -158,7 +158,7 @@
       }
       if(!needle&&!criteria.source&&!criteria.field&&tableId!=='registry_field_summaries') {
         const total=t.shards.reduce((n,s)=>n+s.rows,0);let offset=0;
-        for(const shard of t.shards){check();if(offset<start+PAGE_ROWS && offset+shard.rows>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&pageBytes+charge>pageLimit)break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();for(let i=Math.max(0,start-offset);i<data.length && rows.length<PAGE_ROWS;i++)rows.push(data[i]);scanned+=data.length;}offset+=shard.rows;}
+        for(const shard of t.shards){check();if(offset<start+PAGE_ROWS && offset+shard.rows>start){const charge=shard.asset_bytes||shard.bytes;if(pageBytes&&(['column_profiles','registry_field_summaries','semantic_dictionary'].includes(tableId)||pageBytes+charge>pageLimit))break;pageBytes+=charge;const data=await loadShard(tableId,shard.id);check();for(let i=Math.max(0,start-offset);i<data.length && rows.length<PAGE_ROWS;i++)rows.push(data[i]);scanned+=data.length;}offset+=shard.rows;}
         return {rows,total_matches:total,scanned_rows:scanned,complete:true,reference_context,next_offset:start+rows.length};
       }
       const boundedScope=!needle&&!!(criteria.source||criteria.field)&&!criteria.explicitFull;let exhausted=true;
@@ -208,7 +208,7 @@
     value_privacy_status:privacyLabels,count_privacy_status:privacyLabels,date_privacy_status:privacyLabels,availability_privacy_status:privacyLabels
   });
   Object.assign(reviewedLabels.numeric_privacy_status,privacyLabels);
-  reviewedLabels.summary_status={published:'Published complete distribution',field_absent:'Field absent from checked schema',source_unavailable:'Source unavailable',needs_person_key:'Reviewed person key required',missing_person_key:'Person key missing',query_failed:'Query did not complete',resource_limit:'Resource limit reached',withheld_privacy:'Withheld by complete-distribution privacy checks',needs_unit_evidence:'Verified stored-unit evidence required',needs_numeric_policy:'Approved fixed bands required',needs_mapping:'Source-specific mapping required',invalid_contract:'Withheld: contract validation failed',empty_source:'Completed empty source',all_missing:'All assessed values missing',all_unrecognised:'All assessed values unrecognised',all_conflicting:'All assessed people have conflicting values',no_usable_values:'No usable values after complete assessment',no_values:'Legacy reason unavailable'};
+  reviewedLabels.summary_status={published:'Published complete distribution',field_absent:'Field absent from checked schema',source_unavailable:'Source unavailable',needs_person_key:'Summary unavailable until the person-linkage mapping is reviewed',missing_person_key:'Person key missing',query_failed:'Query did not complete',resource_limit:'Resource limit reached',withheld_privacy:'Withheld by complete-distribution privacy checks',needs_unit_evidence:'Verified stored-unit evidence required',needs_numeric_policy:'Approved fixed bands required',needs_mapping:'Source-specific mapping required',invalid_contract:'Withheld: contract validation failed',empty_source:'Completed empty source',all_missing:'All assessed values missing',all_unrecognised:'Values were collected, but their coding is not recognised',all_conflicting:'All assessed people have conflicting values',no_usable_values:'No recognised, unambiguous values: missing, unrecognised or conflicting records' ,no_values:'Legacy reason unavailable'};
   Object.assign(reviewedLabels.summary_method,{fixed_bands_midpoint_mean_nearest_rank_intervals:'Approximate midpoint mean and containing-band quartiles',complete_reviewed_recorded_codes:'Complete person-counted recorded codes'});
   reviewedLabels.summary_method['supplied_mean_and_quantiles; quantiles_may_use_bounded_stream_sample']='Supplied mean and quantiles; quartiles may use a sample of source records';
   function formatValue(value,key,row={}) {

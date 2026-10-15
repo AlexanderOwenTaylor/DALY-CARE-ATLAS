@@ -441,7 +441,8 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
     if(identical(table$status,'snapshot_preview')) table$status <- 'limited'
     parts <- list();pending <- list();pending_bytes <- 2
     pending_script_bytes <- nchar(enc2utf8(registration(id,'s0001',list())$script),type='bytes')
-    shard_target<-if(id=='semantic_dictionary')131072 else 262144
+    shard_target<-if(id%in%c('column_profiles','registry_field_summaries','semantic_dictionary'))131072 else 262144
+    pending_source<-NULL
     shard_row_limit<-if(id=='registry_field_summaries')50L else if(id=='column_profiles')100L else 250L
     for(row in rows) {
       for(column in table$columns) {
@@ -456,7 +457,8 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
       row_bytes <- nchar(enc2utf8(serialized),type='bytes')
       escaped_bytes <- nchar(enc2utf8(atlas_bundle_json(serialized)),type='bytes')-2
       separator <- as.integer(length(pending)>0L)
-      if(length(pending)>=shard_row_limit || pending_bytes+separator+row_bytes>shard_target ||
+      row_source<-row$source_name %||% row$table_name %||% ''
+      if((length(pending)>0L&&id%in%c('column_profiles','registry_field_summaries','semantic_dictionary')&&!identical(row_source,pending_source)) || length(pending)>=shard_row_limit || pending_bytes+separator+row_bytes>shard_target ||
          pending_script_bytes+separator+escaped_bytes>shard_target) {
         if(length(pending)) parts[[length(parts)+1L]] <- pending
         pending <- list();pending_bytes <- 2;separator <- 0L
@@ -466,6 +468,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
           parts <- list();rows <- list();table$status <- 'unavailable';table$reason <- 'Row exceeds public shard byte limit';table$complete <- FALSE;break
         }
       }
+      pending_source<-row_source
       pending[[length(pending)+1L]] <- serialized
       pending_bytes <- pending_bytes+separator+row_bytes
       pending_script_bytes <- pending_script_bytes+separator+escaped_bytes

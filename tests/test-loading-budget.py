@@ -6,6 +6,20 @@ sys.path.insert(0,str(ROOT/'scripts'))
 from publication import loading_budget
 
 class FilteredBudget(unittest.TestCase):
+ def test_production_shaped_source_page_loads_only_one_matching_shard(self):
+  with tempfile.TemporaryDirectory() as tmp:
+   stage=Path(tmp)
+   for name in ('DALYCARE_clinical.html','atlas-shell.css','DALYCARE_directory.js','DALYCARE_search.js','atlas-reader.js','atlas-shell.js','atlas-topic.js','atlas-topic.css','DALYCARE_atlas.html','atlas-pages.css','DALYCARE_entry.js','atlas-entry.js','DALYCARE_membership.js','favicon.svg','atlas-route-sources.js'):
+    (stage/name).write_bytes(b'x'*36000)
+   shards=[]
+   for i in range(2):
+    name='shard'+str(i)+'.js';(stage/name).write_bytes(b'x'*100000)
+    shards.append(dict(id=str(i),src=name,rows=20,bytes=99000,asset_bytes=100000,fields=[['Source','field'+str(i*20+j)] for j in range(20)]))
+   (stage/'descriptor.js').write_text('window.DALYCARE_OUTPUTS.registerDescriptor('+json.dumps(dict(table=dict(id='column_profiles',provenance='run_output',shards=shards)))+');\n')
+   result=loading_budget(stage,dict(build_id='production-shaped',tables=[dict(id='column_profiles',descriptor='descriptor.js')]))
+   self.assertLessEqual(max(r['bytes'] for r in result['routes']),524288)
+   source=next(r for r in result['routes'] if r['route']=='source field first page')
+   self.assertEqual(sum(d['path'].startswith('shard') for d in source['dependencies']),1)
  def test_filtered_prefix_charges_more_than_first_fifty_rows_in_both_publishers(self):
   with tempfile.TemporaryDirectory() as tmp:
    stage=Path(tmp)
@@ -34,6 +48,8 @@ class FilteredBudget(unittest.TestCase):
    self.assertEqual(values['unconfigured registry field profile fallback']-values['column_profiles exact field detail (largest shard)'],(stage/'table-descriptors/registry_field_summaries.js').stat().st_size)
    self.assertEqual(values['table=semantic_dictionary']-values['table=scoped'],(stage/semantic_descriptor).stat().st_size-(stage/descriptor).stat().st_size+100,'automatic vital route must charge source-membership script as well as semantic evidence')
    self.assertEqual(values['source-filtered bounded scan=semantic_dictionary'],values['table=semantic_dictionary'],'semantic source scan shares the 128 KiB transfer target')
+   source_routes=[r for r in result['routes'] if r['route']=='source field first page']
+   self.assertTrue(all('table' in r and 'source' in r and 'dependencies' in r for r in source_routes),'production failures must identify source/table and dependency bytes')
    rscript=os.environ.get('RSCRIPT') or shutil.which('Rscript')
    if not rscript and os.name=='nt':
     candidates=list(Path('C:/Program Files/R').glob('*/bin/Rscript.exe'))

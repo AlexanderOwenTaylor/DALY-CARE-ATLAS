@@ -159,6 +159,7 @@ atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapte
     if(!length(registry_summary_policy(project_root))) stop('Required reviewed registry policy unavailable',call.=FALSE)
   })
   atlas_preflight_check('invalid_policy','registry v2 local policy and unit evidence',registry_v2_preflight(project_root))
+  atlas_preflight_check('invalid_configuration','clinical readiness configuration',atlas_clinical_configuration_check())
   atlas_preflight_check('invalid_policy','approved metadata definitions',{
     if(!exists('atlas_metadata_preflight',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
     atlas_metadata_preflight(project_root)
@@ -198,6 +199,13 @@ run_atlas <- function(project_root, source_map_path, output_root = 'atlas_runs',
     map_path <- if(file.exists(source_map_path))source_map_path else file.path(project_root,source_map_path)
     atlas_build_preflight(project_root,map_path,state$run_dir,db_adapter)
     state$log_dirs <- c(state$log_dirs,file.path(state$run_dir,'logs'))
+    if(identical(toupper(Sys.getenv('DALYCARE_ATLAS_PREFLIGHT_ONLY','FALSE')),'TRUE')) {
+      if(is.null(db_adapter)&&atlas_db_profile_enabled())db_adapter<-dalycare_db_adapter(bootstrap_path=bootstrap_path)
+      readiness<-atlas_clinical_preflight(read_source_map(map_path,project_root=project_root),db_adapter,project_root,state$run_dir,probe=TRUE)
+      state$status<-'partial';state$stage<-'preflight_finished'
+      atlas_lifecycle_event(state,'info','Preflight finished; collection and publication were not started')
+      return(invisible(c(list(preflight_only=TRUE,run_dir=state$run_dir,phase_outcomes=state$outcomes,overall_status='preflight_only',build_status=atlas_lifecycle_save(state)),readiness)))
+    }
     atlas_lifecycle_stage(state,'collection')
     result <- atlas_run_impl(project_root,source_map_path,output_root,mode,bootstrap_path,db_adapter,state)
     state$outcomes[['website']] <- 'complete'
@@ -286,6 +294,7 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
     db_adapter <- dalycare_db_adapter(bootstrap_path = bootstrap_path)
   }
   source_resolution <- resolve_dalycare_sources(source_map, db_adapter = db_adapter)
+  atlas_clinical_preflight(source_map,db_adapter,project_root,run_dir,probe=FALSE,resolution=source_resolution)
   memory_plan <- memory_plan_for_sources(source_map, source_resolution)
   access_report <- dalycare_access_report(
     project_root = project_root,

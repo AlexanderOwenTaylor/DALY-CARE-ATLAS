@@ -16,10 +16,10 @@ def loading_budget(stage,directory):
         deps=common+[entry['descriptor']];shards=table['shards']
         if table['id']=='registry_field_summaries':deps+=['registry-v2.js']
         if table['id']=='semantic_dictionary':deps+=['DALYCARE_membership.js']
-        count=0;page_bytes=0;page_limit=131072 if table['id'] in ('registry_field_summaries','semantic_dictionary') else 262144
+        count=0;page_bytes=0;page_limit=131072 if table['id'] in ('column_profiles','registry_field_summaries','semantic_dictionary') else 262144
         for s in shards:
             charge=(stage/s['src']).stat().st_size
-            if count>=50 or (page_bytes and page_bytes+charge>page_limit):break
+            if count>=50 or (page_bytes and (table['id'] in ('column_profiles','registry_field_summaries','semantic_dictionary') or page_bytes+charge>page_limit)):break
             deps.append(s['src']);count+=s['rows'];page_bytes+=charge
         routes.append(dict(route='table='+table['id'],bytes=size(deps)))
         # A scoped non-locator scan may inspect nonmatching shards up to its
@@ -28,23 +28,26 @@ def loading_budget(stage,directory):
             filtered=common+[entry['descriptor']]+(['DALYCARE_membership.js'] if table['id']=='semantic_dictionary' else []);charged=0
             for shard in shards:
                 amount=(stage/shard['src']).stat().st_size
-                if charged and charged+amount>page_limit:break
+                if charged and (table['id']=='semantic_dictionary' or charged+amount>page_limit):break
                 filtered.append(shard['src']);charged+=amount
             routes.append(dict(route='source-filtered bounded scan='+table['id'],bytes=size(filtered)))
 
         if table['id'] in ('column_profiles','registry_field_summaries','semantic_dictionary') and shards:
             scoped=common+[entry['descriptor']]+(['registry-v2.js'] if table['id']=='registry_field_summaries' else ['DALYCARE_membership.js'] if table['id']=='semantic_dictionary' else [])
             routes.append(dict(route=table['id']+' exact field detail (largest shard)',bytes=size(scoped)+max((stage/s['src']).stat().st_size for s in shards)))
-            sources={pair[0] for s in shards for pair in s.get('fields',[])}
+            sources=list(dict.fromkeys(pair[0] for s in shards for pair in s.get('fields',[])))
             for source in sources:
                 deps=scoped[:];count=0;page_bytes=0
                 for s in shards:
                     n=sum(pair[0]==source for pair in s.get('fields',[]))
                     if n and count<50:
                         charge=(stage/s['src']).stat().st_size
-                        if page_bytes and page_bytes+charge>page_limit:break
+                        if page_bytes:break
                         deps.append(s['src']);count+=n;page_bytes+=charge
-                routes.append(dict(route='source field first page',bytes=size(deps)))
+                names=sorted(set(deps+['favicon.svg']))
+                route_files=list(stage.glob('atlas-route-*.js'))
+                if route_files:names.append(max(route_files,key=lambda p:p.stat().st_size).name)
+                routes.append(dict(route='source field first page',table=table['id'],source=source,bytes=size(deps),dependencies=[dict(path=n,bytes=(stage/n).stat().st_size) for n in sorted(set(names))]))
     if all(k in descriptors for k in ('column_profiles','registry_field_summaries')):
         profile,registry=descriptors['column_profiles'],descriptors['registry_field_summaries']
         deps=common+[profile[0]['descriptor'],registry[0]['descriptor']]
@@ -56,7 +59,10 @@ def loading_budget(stage,directory):
         pairs=[size(deps+[s['src'],definitions[key]['src']]) for s in search[1]['shards'] for key in s.get('definitions',[])]
         routes.append(dict(route='selected NPU item (largest actual dependency pair)',bytes=max(pairs,default=size(deps))))
     exceeded=next((r for r in routes if r['bytes']>524288),None)
-    if exceeded:raise ValueError('Cold route dependency byte budget exceeded: '+exceeded['route']+' '+str(exceeded['bytes']))
+    if exceeded:
+        (stage.parent/'logs').mkdir(exist_ok=True)
+        (stage.parent/'logs'/'loading-budget-failure.json').write_text(json.dumps(exceeded,separators=(',',':'))+'\n')
+        raise ValueError('Cold route dependency byte budget exceeded: '+exceeded['route']+' '+str(exceeded['bytes'])+' '+exceeded.get('table','')+' '+exceeded.get('source',''))
     result=dict(schema_version=1,build_id=directory['build_id'],limit=524288,accounting='Emitted bytes without gzip or cache credit; explicit later search/detail transfers excluded',routes=routes)
     (stage/'loading-budget.json').write_text(json.dumps(result,separators=(',',':'))+'\n',encoding='utf-8')
     return result

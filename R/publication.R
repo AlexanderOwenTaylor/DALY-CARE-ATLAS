@@ -9,11 +9,11 @@ atlas_loading_budget <- function(stage,directory) {
     deps<-c(common,entry$descriptor);shards<-table$shards
     if(table$id=='registry_field_summaries')deps<-c(deps,'registry-v2.js')
     if(table$id=='semantic_dictionary')deps<-c(deps,'DALYCARE_membership.js')
-    count<-0L;page_bytes<-0;page_limit<-if(table$id%in%c('registry_field_summaries','semantic_dictionary'))131072 else 262144;for(s in shards){charge<-file.info(file.path(stage,s$src))$size;if(count>=50||(page_bytes>0&&page_bytes+charge>page_limit))break;deps<-c(deps,s$src);count<-count+s$rows;page_bytes<-page_bytes+charge}
+    count<-0L;page_bytes<-0;page_limit<-if(table$id%in%c('column_profiles','registry_field_summaries','semantic_dictionary'))131072 else 262144;for(s in shards){charge<-file.info(file.path(stage,s$src))$size;if(count>=50||(page_bytes>0&&(table$id%in%c('column_profiles','registry_field_summaries','semantic_dictionary')||page_bytes+charge>page_limit)))break;deps<-c(deps,s$src);count<-count+s$rows;page_bytes<-page_bytes+charge}
     routes[[length(routes)+1L]]<-list(route=paste0('table=',table$id),bytes=size(deps))
     if(!identical(table$provenance,'project_reference')&&!table$id%in%c('column_profiles','registry_field_summaries','npu_reference_search')){
       filtered<-c(common,entry$descriptor,if(table$id=='semantic_dictionary')'DALYCARE_membership.js');charged<-0
-      for(shard in shards){amount<-file.info(file.path(stage,shard$src))$size;if(charged>0&&charged+amount>page_limit)break;filtered<-c(filtered,shard$src);charged<-charged+amount}
+      for(shard in shards){amount<-file.info(file.path(stage,shard$src))$size;if(charged>0&&(table$id=='semantic_dictionary'||charged+amount>page_limit))break;filtered<-c(filtered,shard$src);charged<-charged+amount}
       routes[[length(routes)+1L]]<-list(route=paste0('source-filtered bounded scan=',table$id),bytes=size(filtered))
     }
 
@@ -21,13 +21,13 @@ atlas_loading_budget <- function(stage,directory) {
       scoped<-c(common,entry$descriptor,if(table$id=='registry_field_summaries')'registry-v2.js' else if(table$id=='semantic_dictionary')'DALYCARE_membership.js')
       routes[[length(routes)+1L]]<-list(route=paste(table$id,'exact field detail (largest shard)'),bytes=size(scoped)+max(file.info(file.path(stage,vapply(shards,function(s)s$src,character(1))))$size))
       sources<-unique(unlist(lapply(shards,function(s)vapply(s$fields,function(pair)pair[[1]],character(1)))))
-      for(source in sources){deps<-scoped;count<-0L;page_bytes<-0;for(s in shards){n<-sum(vapply(s$fields,function(pair)pair[[1]]==source,logical(1)));if(n&&count<50){charge<-file.info(file.path(stage,s$src))$size;if(page_bytes>0&&page_bytes+charge>page_limit)break;deps<-c(deps,s$src);count<-count+n;page_bytes<-page_bytes+charge}};routes[[length(routes)+1L]]<-list(route='source field first page',bytes=size(deps))}
+      for(source in sources){deps<-scoped;count<-0L;page_bytes<-0;for(s in shards){n<-sum(vapply(s$fields,function(pair)pair[[1]]==source,logical(1)));if(n&&count<50){charge<-file.info(file.path(stage,s$src))$size;if(page_bytes>0&&(table$id%in%c('column_profiles','registry_field_summaries','semantic_dictionary')||page_bytes+charge>page_limit))break;deps<-c(deps,s$src);count<-count+n;page_bytes<-page_bytes+charge}};routes[[length(routes)+1L]]<-list(route='source field first page',table=table$id,source=source,bytes=size(deps),dependencies=lapply(sort(unique(c(deps,'favicon.svg',basename(list.files(stage,pattern='^atlas-route-.*[.]js$',full.names=TRUE)[which.max(file.info(list.files(stage,pattern='^atlas-route-.*[.]js$',full.names=TRUE))$size)]))),method='radix'),function(n)list(path=n,bytes=file.info(file.path(stage,n))$size)))}
     }
   }
   if(all(c('column_profiles','registry_field_summaries')%in%names(descriptors))){profile<-descriptors$column_profiles;registry<-descriptors$registry_field_summaries;deps<-c(common,profile$entry$descriptor,registry$entry$descriptor);routes[[length(routes)+1L]]<-list(route='unconfigured registry field profile fallback',bytes=size(deps)+max(c(0,file.info(file.path(stage,vapply(profile$table$shards,function(s)s$src,character(1))))$size)))}
   if(all(c('npu_reference_search','npu_display_dictionary')%in%names(descriptors))){search<-descriptors$npu_reference_search;reference<-descriptors$npu_display_dictionary;deps<-c(common,search$entry$descriptor,reference$entry$descriptor);pairs<-size(deps);definitions<-setNames(vapply(reference$table$shards,function(s)s$src,character(1)),vapply(reference$table$shards,function(s)s$id,character(1)));for(s in search$table$shards)for(key in unlist(s$definitions))pairs<-c(pairs,size(c(deps,s$src,definitions[[key]])));routes[[length(routes)+1L]]<-list(route='selected NPU item (largest actual dependency pair)',bytes=max(pairs))}
   exceeded<-Filter(function(r)!is.finite(r$bytes)||r$bytes>524288,routes)
-  if(length(exceeded)){item<-exceeded[[1]];stop(structure(list(message=paste('Cold route dependency byte budget exceeded:',item$route,item$bytes),call=NULL,budget_route=item$route,budget_bytes=item$bytes,budget_limit=524288),class=c('atlas_budget_error','error','condition')))}
+  if(length(exceeded)){item<-exceeded[[1]];dir.create(file.path(dirname(stage),'logs'),showWarnings=FALSE);writeLines(atlas_bundle_json(item),file.path(dirname(stage),'logs','loading-budget-failure.json'));stop(structure(list(message=paste('Cold route dependency byte budget exceeded:',item$route,item$bytes),call=NULL,budget_route=item$route,budget_bytes=item$bytes,budget_limit=524288),class=c('atlas_budget_error','error','condition')))}
   result<-list(schema_version=1L,build_id=directory$build_id,limit=524288L,accounting='Emitted bytes without gzip or cache credit; explicit later search/detail transfers excluded',routes=routes)
   con<-file(file.path(stage,'loading-budget.json'),'wb');writeBin(charToRaw(enc2utf8(paste0(atlas_bundle_json(result),'\n'))),con);close(con);invisible(result)
 }

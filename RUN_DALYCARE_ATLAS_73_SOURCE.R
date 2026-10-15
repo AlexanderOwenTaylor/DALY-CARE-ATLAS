@@ -142,6 +142,10 @@ if (inherits(.dalycare_result, "error")) {
   assign("dalycare_atlas_result", .dalycare_result, envir = .GlobalEnv)
   assign("dalycare_atlas_failed", FALSE, envir = .GlobalEnv)
   assign("dalycare_atlas_last_error", NULL, envir = .GlobalEnv)
+  if(isTRUE(.dalycare_result$preflight_only)) {
+    cat("\nPreflight finished. Full collection and website generation were not run.\n")
+    cat("Internal readiness report: ",.dalycare_result$readiness_file,"\n",sep="")
+  } else {
   cat("\nDALY-CARE atlas run complete.\n")
   cat("Run directory: ", .dalycare_result$run_dir, "\n", sep = "")
   cat("HTML: ", .dalycare_result$html, "\n", sep = "")
@@ -149,6 +153,7 @@ if (inherits(.dalycare_result, "error")) {
   cat("Completion report: ", .dalycare_result$completion_summary, "\n", sep="")
   cat("Registry report: ", .dalycare_result$registry_completion, "\n", sep="")
   cat("Result object saved as: dalycare_atlas_result\n")
+  }
 }
 
 invisible(.dalycare_result)

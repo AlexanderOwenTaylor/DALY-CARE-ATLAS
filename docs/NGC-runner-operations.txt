@@ -2,7 +2,15 @@ DALY-CARE Atlas 73 — operating instructions
 
 1. Extract the entire source runner ZIP into one writable folder inside NGC. Keep R/, scripts/, config/, inst/ and their contents together. Use the existing authorised DALY-CARE connection/bootstrap. Required R packages are listed in DESCRIPTION, including zip; arrange them locally before running. Terminology is packaged locally and the run does not download a release.
 
-2. In RStudio run:
+2. First run the short readiness check in RStudio:
+   Sys.setenv(DALYCARE_ATLAS_PREFLIGHT_ONLY="TRUE")
+   source("/path/to/DALY-CARE-ATLAS/RUN_DALYCARE_ATLAS_73_SOURCE.R", encoding="UTF-8")
+   This checks schema and configuration, without full source profiling or website generation. Logs/clinical_readiness.csv lists the missing prerequisites. logs/person-keys.review-required.csv is a worksheet: candidates are FALSE until their linkage is reviewed. Configured mappings are checked against schema, not assumed to establish actual person support.
+   logs/encoding_diagnostics.csv contains finite code-token classes and distinct-person aggregate counts, with a 120-second overall probe budget and at most 15 seconds per probe (or a stricter configured timeout). Missing and conflicting people are separate. Unknown text is counted as other_nonempty; no patient identifiers or free-text examples are written. Budget-skipped probes are explicit. Keep all these files inside NGC.
+   Review source codebooks and stored-unit metadata there. A token such as TRUE or 1 does not by itself prove treatment occurred. No units or clinical codes are inferred by the check.
+
+   For full collection, clear the flag and source the same runner:
+   Sys.unsetenv("DALYCARE_ATLAS_PREFLIGHT_ONLY")
    source("/path/to/DALY-CARE-ATLAS/RUN_DALYCARE_ATLAS_73_SOURCE.R", encoding="UTF-8")
    The default source map is config/source-map.dalycare73.tsv and default output folder is atlas_runs/. To change those, set DALYCARE_ATLAS_SOURCE_MAP or DALYCARE_ATLAS_OUTPUT_ROOT before sourcing. The 73 entries include helper/manual resources; the completion report states which were actually available and assessed.
 
@@ -21,5 +29,5 @@ DALY-CARE Atlas 73 — operating instructions
 8. Local and CI validation cannot establish live source behaviour. The next NGC run must confirm actual treatment encodings, stored-unit evidence, date formats, person-key availability and production queries. Missing source data and legitimately withheld results remain limitations. The release report separately records hosted, offline-loader and actual double-click browser validation.
 
 Local CSV configuration (UTF-8)
-Person keys: table_name,person_key,reviewed. Use one exact existing key column and reviewed=TRUE. The example config/registry-summary-person-keys.example.csv intentionally has blank keys and FALSE; do not use it unchanged as an attestation. Without a local mapping, only the three reviewed RKKP registries default to patientid. A supplied mapping is authoritative, including missing/disabled entries, and must cover every intended source needing person support.
+Person keys: table_name,person_key,reviewed. Use one exact existing key column and reviewed=TRUE. The example config/registry-summary-person-keys.example.csv intentionally has blank keys and FALSE; do not use it unchanged as an attestation. Without a local mapping, the three reviewed RKKP registries, patient and SDS_pato default to patientid. The latter two reuse the documented high-confidence count linkages in config/mcl_triangle_person_date_mapping.tsv. SP_VitaleVaerdier still requires an explicit reviewed mapping: a column named patientid is a candidate, not sufficient linkage evidence. A supplied mapping is authoritative, including missing/disabled entries, and must cover every intended source needing person support.
 Date formats: table_name,column_name,format_rule,reviewed; optional sentinel_dates. Allowed reviewed rules: iso, dmy_dash, dmy_slash, dmy_dot, ymd_compact. Sentinel dates are reviewed YYYY-MM-DD values separated by semicolons. No file means strict ISO parsing. Never guess formats or units from labels or old counts.

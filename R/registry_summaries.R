@@ -120,7 +120,9 @@ registry_summary_row <- function(spec, status, k) {
 registry_summary_person_key <- function(table_name, column_names) {
   path <- Sys.getenv("DALYCARE_REGISTRY_PERSON_KEYS_FILE", "")
   if (!nzchar(path)) {
-    if (!table_name %in% c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL")) return(list(status="needs_person_key", key=NULL))
+    # patient and SDS_pato also have exact, high-confidence count linkage in
+    # config/mcl_triangle_person_date_mapping.tsv. Do not generalise by name.
+    if (!table_name %in% c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL", "patient", "SDS_pato")) return(list(status="needs_person_key", key=NULL))
     if (!"patientid" %in% column_names) return(list(status="missing_person_key", key=NULL))
     return(list(status="ok", key="patientid"))
   }

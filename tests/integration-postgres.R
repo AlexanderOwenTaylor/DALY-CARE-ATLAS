@@ -6,6 +6,7 @@ if(!identical(Sys.getenv('DALYCARE_TEST_POSTGRES'),'1')) {
 source('tests/helper.R')
 source('R/registry_summaries.R')
 source('R/registry_summary_privacy.R')
+source('R/clinical_readiness.R')
 stopifnot(requireNamespace('RPostgres',quietly=TRUE))
 Sys.unsetenv(c('DALYCARE_REGISTRY_PERSON_KEYS_FILE','DALYCARE_REGISTRY_UNIT_EVIDENCE_FILE'))
 Sys.setenv(DALYCARE_MIN_CELL_COUNT='5')
@@ -281,6 +282,19 @@ tryCatch({
   inventory<-dbi_vital_inventory(connection,quoted,names(vital),'SP_VitaleVaerdier')
   stopifnot(identical(sort(inventory$vital_descriptors$descriptor),c('Puls','Temp')),all(inventory$vital_descriptor_assessment$inventory_status=='partial_withheld'))
   Sys.unsetenv('DALYCARE_REGISTRY_PERSON_KEYS_FILE');unlink(keyfile)
+  # Finite diagnostic vocabulary: execute the actual SQL, with no raw tokens/IDs.
+  probe<-data.frame(patientid=c('SECRET1','SECRET2','SECRET3','SECRET4','SECRET4'),Beh_Immunterapi=c(' true ','FALSE','PRIVATE free text','Y','N'))
+  DBI::dbWriteTable(connection,ref,probe,overwrite=TRUE,row.names=FALSE)
+  result<-atlas_clinical_probe_query(connection,atlas_encoding_probe_sql(connection,quoted,'patientid','Beh_Immunterapi'))
+  stopifnot(result$status=='ok')
+  expected<-atlas_encoding_probe_data(probe,'patientid','Beh_Immunterapi')
+  actual<-result$groups
+  actual<-actual[order(actual$encoding),];expected<-expected[order(expected$encoding),]
+  stopifnot(identical(actual$encoding,expected$encoding),identical(as.numeric(actual$n_people),expected$n_people),!any(grepl('SECRET|PRIVATE',unlist(actual))))
+  probe$patientid[1]<-NA;DBI::dbWriteTable(connection,ref,probe,overwrite=TRUE,row.names=FALSE)
+  missing<-atlas_clinical_probe_query(connection,atlas_encoding_probe_sql(connection,quoted,'patientid','Beh_Immunterapi'))
+  stopifnot(any(missing$groups$encoding=='key_missing'),!any(grepl('SECRET|PRIVATE',unlist(missing$groups))))
+  cat('PASS PostgreSQL finite encoding diagnostic parity and missing-key handling.\n')
   cat('PASS PostgreSQL D strict dates/mapped formats/Situation casts, overlapping person complements, alias regions, missing keys, actual producer, reservoir stream and controlled vital inventory.\n')
 
 },finally={DBI::dbRollback(connection);DBI::dbDisconnect(connection)})

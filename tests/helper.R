@@ -27,6 +27,7 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/public_privacy.R",
     "R/publication.R",
     "R/site_bundle.R",
+    "R/clinical_readiness.R",
     "R/run_atlas.R"
   )
   for (file in files) {

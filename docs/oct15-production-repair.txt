@@ -1,0 +1,57 @@
+DALY-CARE production repair: 15 October 2026
+
+Approved outcome
+Recover the retained October 15 aggregate outputs without another database run;
+make clinical prerequisites visible before full collection; keep the single
+source-73 runner, offline/hosted support and screened site.zip publication.
+
+Loading
+Exact-field tables are split at source boundaries with a 128 KiB target.
+Opening a field table reads one matching shard. Next continues from the exact
+returned offset; the locator still counts and searches every field identity.
+The unchanged hard limits are 512 KiB for the complete automatic opening route
+and 256 KiB for any shard. R and Python use the same rules as the browser.
+Failed source-page budgets record the exact table/source and dependency sizes
+in internal logs/loading-budget-failure.json. Atomic publication is retained.
+
+Clinical readiness
+DALYCARE_ATLAS_PREFLIGHT_ONLY=TRUE runs schema/configuration checks and bounded
+finite encoding probes, without full profiling or producing a website. It
+returns preflight_only=TRUE and all collection/publication phases not_started.
+Normal runs also save the readiness report before profiling. Its unresolved
+checks never imply absence of clinical observations.
+
+Internal outputs
+logs/clinical_readiness.csv:
+  table_name,source_column,requirement,status,action
+logs/person-keys.review-required.csv:
+  table_name,person_key,reviewed,evidence
+logs/encoding_diagnostics.csv:
+  encoding,n_people,table_name,source_column,status
+These files are excluded from the public manifest and sharing package.
+The person-key worksheet preserves reviewed configuration and leaves guessed
+schema candidates unreviewed. No arbitrary text, identifier or exact numeric
+measurement is included in encoding probes. Their finite vocabulary is a
+diagnostic aid, not a clinical value mapping.
+
+Evidence limits
+The October 15 archive has 134 unrecognised registry fields but no token
+frequency evidence. Their clinical mappings cannot honestly be reconstructed
+from outcome counts. Source-specific codebooks/finite NGC probes are required.
+The 40 missing numeric unit bindings still require authoritative stored-unit
+metadata and approved bands. Existing contracts and checksums are unchanged;
+no historical CSV receives a new interpretation from this patch.
+The additional default patient and SDS_pato person keys reuse the checked-in
+high-confidence mappings. SP still requires explicit linkage review.
+
+Terminology investigation
+The pinned official IFCC snapshot defines 3,319 of 3,378 observed NPU codes.
+All 59 unresolved codes are also absent from that official snapshot; none can
+be recovered by copying an omitted definition from it. Keep them unresolved
+until a trustworthy definition is available. No guessed names or units added.
+
+Acceptance
+Targeted regressions, complete R/Python/JavaScript suites on Windows/Linux,
+actual PostgreSQL synthetic queries, production archive rebuild/reconciliation,
+offline/hosted journeys and one independent review precede main-branch release.
+Live clinical completeness remains subject to a subsequent NGC confirmation.
