@@ -1,5 +1,5 @@
 # Internal readiness and finite encoding diagnostics. No patient values leave SQL.
-atlas_encoding_probe_vocabulary <- function() c('missing','conflicting','key_missing','other_nonempty',
+atlas_encoding_probe_vocabulary <- function() c('empty_source','missing','conflicting','key_missing','other_nonempty',
   paste0('token:',c('0','1','2','3','4','5','6','7','8','9','99','TRUE','FALSE','Yes','No','Ja','Nej','Y','N','true','false','yes','no','ja','nej','y','n')),
   paste0('trimmed:',c('0','1','TRUE','FALSE','Yes','No','Ja','Nej','Y','N','true','false','yes','no','ja','nej','y','n')))
 
@@ -56,7 +56,8 @@ atlas_clinical_readiness <- function(table,schema,root='.') {
     rows[[length(rows)+1L]]<<-data.frame(table_name=table,source_column=column,requirement=requirement,status=status,action=action,stringsAsFactors=FALSE)
   }
   key<-registry_summary_person_key(table,columns)
-  add(if(is.null(key$key))'' else key$key,'person_key',if(key$status=='ok')'configured' else if(key$status=='missing_person_key')'column_absent' else 'needs_review',
+  configured_key<-registry_summary_person_key_config(table)
+  add(if(is.null(configured_key$key))'' else configured_key$key,'person_key',if(key$status=='ok')'configured' else if(key$status=='missing_person_key')'column_absent' else 'needs_review',
     if(key$status=='ok')'Reviewed mapping found; aggregate key checks still required.' else 'Supply a reviewed source-specific person-key mapping; never use record counts as person counts.')
   add('','person_support','not_checked','Validate missing keys and distinct-person support inside NGC.')
   specs<-Filter(function(s)s$table_name==table,registry_v2_fields(root))
@@ -96,9 +97,10 @@ atlas_clinical_preflight <- function(source_map,adapter,root,run_dir,probe=FALSE
     }
     readiness[[i]]<-report
     cols<-if(is.null(schema))character() else schema$column_name
-    reviewed_key<-registry_summary_person_key(table,cols)
-    candidate<-if(reviewed_key$status=='ok')reviewed_key$key else if('patientid'%in%cols)'patientid' else if('PATIENTID'%in%cols)'PATIENTID' else ''
-    drafts[[i]]<-data.frame(table_name=table,person_key=candidate,reviewed=reviewed_key$status=='ok',evidence=if(reviewed_key$status=='ok')'Existing reviewed mapping; schema matched' else 'Unreviewed candidate only; establish source linkage before setting reviewed=TRUE')
+    configured_key<-registry_summary_person_key_config(table)
+    candidate<-if(!is.null(configured_key$key))configured_key$key else if('patientid'%in%cols)'patientid' else if('PATIENTID'%in%cols)'PATIENTID' else ''
+    evidence<-if(isTRUE(configured_key$reviewed))paste('Existing reviewed mapping;',if(is.null(schema))'schema unavailable' else if(candidate%in%cols)'schema matched' else 'configured column absent from schema') else 'Unreviewed candidate only; establish source linkage before setting reviewed=TRUE'
+    drafts[[i]]<-data.frame(table_name=table,person_key=candidate,reviewed=isTRUE(configured_key$reviewed),evidence=evidence)
     if(!probe||is.null(schema))next
     key<-registry_summary_person_key(table,schema$column_name)
     if(key$status!='ok')next
@@ -113,6 +115,7 @@ atlas_clinical_preflight <- function(source_map,adapter,root,run_dir,probe=FALSE
         status<-result$status;out<-result$groups
       }
       if(status=='ok'&&is.data.frame(out)&&setequal(c('encoding','n_people'),names(out))&&nrow(out)<=length(atlas_encoding_probe_vocabulary())&&all(out$encoding%in%atlas_encoding_probe_vocabulary())&&all((out$encoding=='key_missing'&is.na(out$n_people))|(!is.na(out$n_people)&is.finite(out$n_people)&out$n_people>=0&out$n_people==floor(out$n_people)))) {
+        if(!nrow(out))out<-data.frame(encoding='empty_source',n_people=0)
         out$table_name<-table;out$source_column<-s$source_column;out$status<-'ok'
       } else out<-data.frame(encoding='',n_people=NA_real_,table_name=table,source_column=s$source_column,status=if(status=='ok')'invalid_contract' else status)
       diagnostics[[length(diagnostics)+1L]]<-out

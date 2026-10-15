@@ -117,22 +117,28 @@ registry_summary_row <- function(spec, status, k) {
 # 20260831_211803-p3532373 column metadata (patientid, int4, sensitive).
 # A supplied private mapping is authoritative, including invalid/disabled rows.
 # No source-column heuristics or row-count fallback.
-registry_summary_person_key <- function(table_name, column_names) {
+registry_summary_person_key_config <- function(table_name) {
   path <- Sys.getenv("DALYCARE_REGISTRY_PERSON_KEYS_FILE", "")
+  unavailable <- list(key=NULL,reviewed=FALSE)
   if (!nzchar(path)) {
     # patient and SDS_pato also have exact, high-confidence count linkage in
     # config/mcl_triangle_person_date_mapping.tsv. Do not generalise by name.
-    if (!table_name %in% c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL", "patient", "SDS_pato")) return(list(status="needs_person_key", key=NULL))
-    if (!"patientid" %in% column_names) return(list(status="missing_person_key", key=NULL))
-    return(list(status="ok", key="patientid"))
+    if (!table_name %in% c("RKKP_DaMyDa", "RKKP_LYFO", "RKKP_CLL", "patient", "SDS_pato")) return(unavailable)
+    return(list(key="patientid",reviewed=TRUE))
   }
-  if (!file.exists(path)) return(list(status="needs_person_key", key=NULL))
+  if (!file.exists(path)) return(unavailable)
   mapping <- tryCatch(read.csv(path, colClasses="character", check.names=FALSE, stringsAsFactors=FALSE), error=function(e) NULL)
-  if (is.null(mapping) || !all(c("table_name", "person_key", "reviewed") %in% names(mapping))) return(list(status="needs_person_key", key=NULL))
+  if (is.null(mapping) || !all(c("table_name", "person_key", "reviewed") %in% names(mapping))) return(unavailable)
   mapping <- mapping[!is.na(mapping$table_name) & mapping$table_name == table_name, , drop=FALSE]
-  if (nrow(mapping) != 1 || is.na(mapping$reviewed[1]) || tolower(mapping$reviewed[1]) != "true" ||
-      is.na(mapping$person_key[1]) || !nzchar(trimws(mapping$person_key[1]))) return(list(status="needs_person_key", key=NULL))
-  key <- mapping$person_key[1]
+  if (nrow(mapping) != 1 || is.na(mapping$reviewed[1]) || !tolower(mapping$reviewed[1]) %in% c('true','false') ||
+      is.na(mapping$person_key[1]) || !nzchar(trimws(mapping$person_key[1]))) return(unavailable)
+  list(key=mapping$person_key[1],reviewed=tolower(mapping$reviewed[1])=='true')
+}
+
+registry_summary_person_key <- function(table_name, column_names) {
+  config <- registry_summary_person_key_config(table_name)
+  if(!isTRUE(config$reviewed))return(list(status="needs_person_key",key=NULL))
+  key <- config$key
   if (!key %in% column_names) return(list(status="missing_person_key", key=NULL))
   list(status="ok", key=key)
 }

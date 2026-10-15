@@ -5,7 +5,7 @@ DALY-CARE Atlas 73 — operating instructions
 2. First run the short readiness check in RStudio:
    Sys.setenv(DALYCARE_ATLAS_PREFLIGHT_ONLY="TRUE")
    source("/path/to/DALY-CARE-ATLAS/RUN_DALYCARE_ATLAS_73_SOURCE.R", encoding="UTF-8")
-   This checks schema and configuration, without full source profiling or website generation. Logs/clinical_readiness.csv lists the missing prerequisites. logs/person-keys.review-required.csv is a worksheet: candidates are FALSE until their linkage is reviewed. Configured mappings are checked against schema, not assumed to establish actual person support.
+   This checks schema and configuration, without full source profiling or website generation. logs/clinical_readiness.csv lists the missing prerequisites. logs/person-keys.review-required.csv is a worksheet: candidates are FALSE until their linkage is reviewed. Existing reviewed mappings remain recorded when their column is absent or schema cannot be checked; the evidence column reports the mismatch. Configured mappings are checked against schema, not assumed to establish actual person support.
    logs/encoding_diagnostics.csv contains finite code-token classes and distinct-person aggregate counts, with a 120-second overall probe budget and at most 15 seconds per probe (or a stricter configured timeout). Missing and conflicting people are separate. Unknown text is counted as other_nonempty; no patient identifiers or free-text examples are written. Budget-skipped probes are explicit. Keep all these files inside NGC.
    Review source codebooks and stored-unit metadata there. A token such as TRUE or 1 does not by itself prove treatment occurred. No units or clinical codes are inferred by the check.
 

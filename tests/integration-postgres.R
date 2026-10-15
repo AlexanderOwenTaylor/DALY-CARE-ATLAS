@@ -294,6 +294,9 @@ tryCatch({
   probe$patientid[1]<-NA;DBI::dbWriteTable(connection,ref,probe,overwrite=TRUE,row.names=FALSE)
   missing<-atlas_clinical_probe_query(connection,atlas_encoding_probe_sql(connection,quoted,'patientid','Beh_Immunterapi'))
   stopifnot(any(missing$groups$encoding=='key_missing'),!any(grepl('SECRET|PRIVATE',unlist(missing$groups))))
+  DBI::dbWriteTable(connection,ref,probe[FALSE,],overwrite=TRUE,row.names=FALSE)
+  empty<-atlas_clinical_probe_query(connection,atlas_encoding_probe_sql(connection,quoted,'patientid','Beh_Immunterapi'))
+  stopifnot(empty$status=='ok',nrow(empty$groups)==0,setequal(names(empty$groups),c('encoding','n_people')))
   cat('PASS PostgreSQL finite encoding diagnostic parity and missing-key handling.\n')
   cat('PASS PostgreSQL D strict dates/mapped formats/Situation casts, overlapping person complements, alias regions, missing keys, actual producer, reservoir stream and controlled vital inventory.\n')
 
