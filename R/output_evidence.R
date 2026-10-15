@@ -321,6 +321,13 @@ atlas_payload_from_run_outputs <- function(run_dir,project_root='.',membership_s
       tables[[i]]$provenance <- 'current_metadata_rebuild'
     }
   }
+  # Only bounded phase status metadata enters the public manifest. Completion
+  # reports retain all other diagnostics privately.
+  completion_path<-atlas_confined_path(run_dir,'outputs/atlas_completion_summary.csv')
+  if(file.exists(completion_path)&&file.info(completion_path)$size<=1048576){
+    completion<-utils::read.csv(completion_path,stringsAsFactors=FALSE,check.names=FALSE)
+    if(all(c('metric','value')%in%names(completion)))payload$publication_phase_summary<-atlas_evidence_rows(completion[completion$metric%in%c('collection_status','interpretation_status'),c('metric','value'),drop=FALSE])
+  }
   list(payload=payload,tables=tables,context=context,membership_spec=membership_spec)
 }
 
@@ -328,6 +335,10 @@ atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5,metadata_co
   if(!exists('atlas_metadata_only',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
   if(is.null(metadata_context))metadata_context<-atlas_metadata_context(x,project_root)
   min_cell_count <- atlas_effective_threshold(x,min_cell_count=min_cell_count)
+  if(!exists('atlas_availability_unsafe',mode='function'))source(file.path(project_root,'R/public_privacy.R'),local=TRUE)
+  source_totals<-list();for(row in x$sources)if(is.list(row)&&!is.null(row$table_name))source_totals[[row$table_name]]<-row$n_rows
+  suppressed<-Filter(function(r)atlas_availability_unsafe(r,min_cell_count,source_totals[[r$table_name]]),x$column_profile_rows)
+  suppressed<-vapply(suppressed,function(r)paste(r$table_name,r$column_name,sep='\r'),character(1))
   visit <- function(row,path=character()) {
     if(!is.list(row)) return(invisible(NULL))
     summary_row<-function(r)is.list(r)&&!is.null(names(r))&&any(c('category_counts_json','numeric_groups_json') %in% names(r))
@@ -344,6 +355,12 @@ atlas_evidence_audit <- function(x,project_root='.',min_cell_count=5,metadata_co
       return(invisible(NULL))
     }
     if(any(tail(path,1) %in% c('npu_display_dictionary','clinical_display_dictionary'))) return(invisible(NULL))
+    identity_text<-function(value)if(is.character(value)&&length(value)==1L&&!is.na(value))value else ''
+    source<-identity_text(row[['table_name']] %||% row[['registry']]);field<-identity_text(row[['column_name']] %||% row[['source_column']])
+    if(atlas_availability_unsafe(row,min_cell_count,source_totals[[source]])||paste(source,field,sep='\r')%in%suppressed)
+      for(key in intersect(c('n_available','n_missing','pct_available','pct_missing'),names(row)))if(!is.null(row[[key]])&&!is.na(row[[key]])&&row[[key]]!='')stop('Public availability complement audit failed',call.=FALSE)
+    structural<-any(c('panel_groups','panels')%in%path)&&setequal(names(row),c('group','panel_name','title','n_rows'))
+    if(!structural)for(key in intersect(c('n','n_rows','n_observed','n_patients','matched_rows','matched_patients','n_cohort','damyda_n','choropleth_value'),names(row))){v<-suppressWarnings(as.numeric(row[[key]]));if(length(v)==1&&is.finite(v)&&v>0&&v<min_cell_count)stop('Public small count audit failed',call.=FALSE)}
     forbidden <- intersect(c('min','max','min_date','max_date','raw_min_date','raw_max_date','display_min_date','display_max_date'),names(row))
     forbidden <- c(forbidden,intersect(c('mean','median','p25','p75','sd','q25','q75','iqr'),names(row)))
     if(row$value_privacy_status %||% '' %in% c('protected_field','withheld_unvalidated_distribution')) forbidden <- c(forbidden,intersect(c('value','label','raw_value','raw_code','raw_descriptor','display_value','statistic_value'),names(row)))
@@ -408,8 +425,10 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
     descriptors[[length(descriptors)+1L]] <- descriptor
   }
   if(!exists('atlas_public_privacy',mode='function')) source(file.path(project_root,'R/public_privacy.R'),encoding='UTF-8')
-  safe <- atlas_public_privacy(logical,project_root,minimum)
-  atlas_evidence_audit(safe,project_root,minimum)
+  if(!exists('atlas_metadata_context',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
+  metadata_context<-atlas_metadata_context(logical,project_root)
+  safe <- atlas_public_privacy(logical,project_root,minimum,metadata_context)
+  atlas_evidence_audit(safe,project_root,minimum,metadata_context)
   privacy <- c('value_privacy_status','count_privacy_status','date_privacy_status','availability_privacy_status','numeric_privacy_status','summary_scope','summary_method','is_sensitive')
   for(i in seq_along(descriptors)) {
     spec <- registry$artifacts[[i]]

@@ -6,7 +6,7 @@ snapshot <- list(privacy_metadata=list(minimum_cell_count=10),panels=list(regist
 tables <- atlas_output_evidence(NULL,root,snapshot)
 stopifnot(exists('atlas_write_site_bundle',mode='function'))
 paths <- atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload')
-for(name in c('atlas-vitals.js','atlas-vitals.css')) {
+for(name in c('atlas-reader.js','atlas-shell.css')) {
   stopifnot(unname(tools::md5sum(file.path(tmp,'site',name)))==unname(tools::md5sum(file.path(root,'inst/templates',name))))
   for(page in c('DALYCARE_outputs.html','DALYCARE_clinical.html')) stopifnot(any(grepl(name,readLines(file.path(tmp,'site',page),encoding='UTF-8'),fixed=TRUE)))
 }
@@ -56,7 +56,7 @@ for(version in c(1L,2L)) {
 }
 ordinary_keys <- list(run_id='ordinary',untouched=list(constructor='kept',prototype='also kept'))
 ordinary_paths <- atlas_write_site_bundle(file.path(tmp,'ordinary','site'),ordinary_keys,list(),root,'legacy_payload')
-stopifnot(identical(read_core(ordinary_paths$payload_json)$payload$untouched,ordinary_keys$untouched))
+stopifnot(is.null(read_core(ordinary_paths$payload_json)$payload$untouched),read_core(ordinary_paths$payload_json)$payload$export_contract=='dalycare-lazy-v1')
 Sys.setenv(DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES='1')
 failed <- try(atlas_write_site_bundle(file.path(tmp,'site'),payload,tables,root,'legacy_payload'),silent=TRUE)
 Sys.unsetenv('DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES')
@@ -79,7 +79,7 @@ stopifnot(inherits(try(atlas_output_evidence(NULL,root,list()),silent=TRUE),'try
 Sys.unsetenv('DALYCARE_MIN_CELL_COUNT')
 # Both transport files are identical and decode in the approved browser runtime.
 js <- file.path(tmp,'verify.cjs')
-writeLines(c("const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');","const [json,script,decoder]=process.argv.slice(2); const context={window:{}}; vm.createContext(context);","vm.runInContext(fs.readFileSync(script,'utf8'),context);vm.runInContext(fs.readFileSync(decoder,'utf8'),context);","assert.deepEqual(JSON.parse(JSON.stringify(context.window.DALYCARE_ATLAS_PAYLOAD)),JSON.parse(fs.readFileSync(json,'utf8')));","const p=context.window.DALYCARE_TRANSPORT.decode(context.window.DALYCARE_ATLAS_PAYLOAD);assert.equal(p.action_items,p.review_infrastructure_sections.action_items);"),js)
+writeLines(c("const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');","const [json,script,decoder]=process.argv.slice(2); const context={window:{}}; vm.createContext(context);","vm.runInContext(fs.readFileSync(script,'utf8'),context);vm.runInContext(fs.readFileSync(decoder,'utf8'),context);","assert.deepEqual(JSON.parse(JSON.stringify(context.window.DALYCARE_ATLAS_PAYLOAD)),JSON.parse(fs.readFileSync(json,'utf8')));","const p=context.window.DALYCARE_TRANSPORT.decode(context.window.DALYCARE_ATLAS_PAYLOAD);assert.equal(p.export_contract,'dalycare-lazy-v1');assert.equal(p.run_id,'synthetic');assert.equal(p.action_items,undefined);"),js)
 stopifnot(system2(Sys.which('node'),shQuote(c(js,paths$payload_json,paths$payload,file.path(root,'inst/templates/atlas-transport.js'))))==0)
 # Wide UTF-8 cells are bounded by data bytes and the escaped registration file.
 wide <- Filter(function(t)t$id=='registry_clinical_summary',tables)[[1]]

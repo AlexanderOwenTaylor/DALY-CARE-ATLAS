@@ -1,3 +1,11 @@
+atlas_availability_unsafe <- function(row,k,total=NULL) {
+  number<-function(v)if(is.null(v)||length(v)!=1L||is.logical(v)||is.na(suppressWarnings(as.numeric(v))))NA_real_ else suppressWarnings(as.numeric(v))
+  if(identical(row$availability_privacy_status,'withheld_small_complementary_cells'))return(TRUE)
+  n<-number(row$n_rows);if(!is.finite(n))n<-number(total)
+  cells<-vapply(c('n_available','n_missing'),function(key)number(row[[key]]),numeric(1))
+  if(is.finite(n)){cells<-c(cells,n-cells);for(key in c('pct_available','pct_missing')){pct<-number(row[[key]]);if(is.finite(pct))cells<-c(cells,n*pct/100,n*(100-pct)/100)}}
+  any(is.finite(cells)&cells>0&cells<k)
+}
 # Final serialization guard. Public counts are source rows, not unique people.
 atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5, metadata_context = NULL) {
   if(!exists('atlas_metadata_only',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
@@ -29,6 +37,7 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   if (is.data.frame(rows)) rows <- lapply(seq_len(nrow(rows)), function(i) as.list(rows[i,,drop=FALSE]))
   profiles <- list()
   for (r in rows) profiles[[paste(scalar(r,"table_name"),scalar(r,"column_name"),sep="\r")]] <- r
+  source_totals<-list();for(row in payload$sources)if(is.list(row)&&!is.null(row$table_name))source_totals[[row$table_name]]<-row$n_rows
   blank <- function(r, keys) { for (key in intersect(keys,names(r))) r[key] <- list(NULL); r }
   year_paths <- list(c('panels','atlas_temporal_coverage_years'),c('review_temporal_coverage','years'))
   range_rows <- c(payload$panels$atlas_temporal_coverage_years,payload$review_temporal_coverage$years)
@@ -122,14 +131,14 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
     table <- scalar(r,"table_name",scalar(r,"registry"))
     profile <- "profile_kind" %in% names(r) || all(c("column_name","n_available") %in% names(r))
     available_cells <- vapply(c("n_available","n_missing"),function(key) num(obj[[key]]),numeric(1))
-    if (any(!is.na(available_cells) & available_cells > 0 & available_cells < k)) {
+    if (atlas_availability_unsafe(obj,k,source_totals[[table]])) {
       r <- blank(r,c("n_available","n_missing","pct_available","pct_missing"))
       r$availability_privacy_status <- "withheld_small_complementary_cells"
     }
     provenance <- profiles[[paste(table,field,sep="\r")]]
     if (!is.null(provenance)) {
       cells <- vapply(c("n_available","n_missing"),function(key) num(provenance[[key]]),numeric(1))
-      if (scalar(provenance,"availability_privacy_status") == "withheld_small_complementary_cells" || any(!is.na(cells) & cells > 0 & cells < k)) {
+      if (atlas_availability_unsafe(provenance,k,source_totals[[table]])) {
         r <- blank(r,c("n_available","n_missing","pct_available","pct_missing"))
         r$availability_privacy_status <- "withheld_small_complementary_cells"
       }

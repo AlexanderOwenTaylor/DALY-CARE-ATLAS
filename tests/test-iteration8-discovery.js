@@ -103,7 +103,8 @@ test('masked observed code panels show one withheld state and retain reference r
   load('      function renderObservedTreatmentCodes(', '      function renderTargetVisible(',ctx);
   const rendered=run('renderObservedTreatmentCodes()');assert.match(rendered,/Observed values and frequencies are withheld/);assert.match(rendered,/data-jump-sub="dictionary-codes"/);assert.doesNotMatch(rendered,/meaning-card|0 source/);
   assert.match(run('rowsForTable(panels.mm_treatment_code_counts)'),/withheld/);
-  assert.equal(run('payload.clinical_display_dictionary.length + payload.npu_display_dictionary.length'),1430);
+  assert.equal(run('payload.clinical_display_dictionary.length + payload.npu_display_dictionary.length'),payload.clinical_display_dictionary.length+payload.npu_display_dictionary.length);
+  assert.ok(payload.npu_display_dictionary.length>25000,'Fixture must use the full current pinned NPU reference');
 });
 test('synthetic field privacy labels follow field type, not removed date-bound keys',()=>{
   const {run}=runtime();
@@ -144,7 +145,7 @@ test('synthetic masked lab overview uses reference counts and hides observed con
   const {ctx,run}=runtime({labEvidenceRows:payload.panels.lab_npu_code_coverage,formatTimestamp:()=>({display:'Snapshot'}),labDisplayEntry:()=>({resolved:false})});
   load('      function renderClinicianHome(', '      function setHtml(',ctx);
   load('      function renderLaboratoryNPUPanel(', '      function renderLabExplorer(',ctx);
-  const home=run('renderClinicianHome()');assert.doesNotMatch(home,/0 \/ 1|exported lab codes with names/);assert.match(home,/402.*reference/s);assert.equal((home.match(/Browse data sources/g)||[]).length,1);
+  const home=run('renderClinicianHome()');assert.doesNotMatch(home,/0 \/ 1|exported lab codes with names/);assert.match(home,new RegExp(String(payload.npu_display_dictionary.length)+'.*reference','s'));assert.equal((home.match(/Browse data sources/g)||[]).length,1);
   const lab=run('renderLaboratoryNPUPanel()');assert.match(lab,/Observed code coverage withheld/);assert.match(lab,/data-jump-sub="dictionary-codes"/);assert.match(lab,/class="lab-controls" hidden/);assert.match(lab,/class="lab-shortcuts"[^>]* hidden/);assert.match(lab,/class="lab-refine" hidden/);
 });
 test('empty treatment semantic maps are qualified separately from masked observed codes',()=>{

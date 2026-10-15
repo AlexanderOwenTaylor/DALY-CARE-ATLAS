@@ -1,4 +1,4 @@
-import copy, importlib.util, json, os, subprocess, sys, tempfile, unittest
+import copy, importlib.util, json, os, shutil, subprocess, sys, tempfile, unittest
 import unittest.mock
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
@@ -82,9 +82,10 @@ class RegistryPrivacyTests(unittest.TestCase):
         self.assertTrue(audit_public_payload(out,project_root=ROOT))
         forged=dict(row,value='FORBIDDEN',n=30)
         other=sanitize_public_payload({'column_top_value_rows':[forged]})
-        self.assertIsNone(other['column_top_value_rows'][0]['value']); self.assertIsNone(other['column_top_value_rows'][0]['mean'])
+        self.assertIsNone(other['column_top_value_rows'][0].get('value')); self.assertIsNone(other['column_top_value_rows'][0].get('mean'))
+        self.assertNotIn('FORBIDDEN',json.dumps(other));self.assertEqual(other['column_top_value_rows'][0]['summary_status'],'invalid_contract')
     def test_r_python_parity_adversarial(self):
-        rscript=Path('C:/Program Files/R/R-4.3.1/bin/Rscript.exe')
+        rscript=Path(os.environ.get('RSCRIPT') or shutil.which('Rscript') or 'C:/Program Files/R/R-4.3.1/bin/Rscript.exe')
         if not rscript.exists(): self.skipTest('R runtime unavailable')
         rows=[self.row(),self.row('numeric')]
         cases=[rows,[dict(rows[0],n_valid=29)],[dict(rows[1],mean=-1)],[rows[0],dict(rows[0],summary_status='query_failed')],[dict(rows[0],extra='FORBIDDEN')],[dict(rows[0],category_counts_json='[')]]

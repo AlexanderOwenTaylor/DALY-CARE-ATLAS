@@ -23,6 +23,9 @@ source_test_runtime <- function(root = normalizePath(file.path(getwd()), winslas
     "R/mcl_triangle_feasibility.R",
     "R/html.R",
     "R/output_evidence.R",
+    "R/metadata_privacy.R",
+    "R/public_privacy.R",
+    "R/publication.R",
     "R/site_bundle.R",
     "R/run_atlas.R"
   )
@@ -50,7 +53,7 @@ source_ki67_test_runtime <- function(root = normalizePath(file.path(getwd()), wi
 }
 
 expect_true <- function(x, message = "Expected TRUE") {
-  if (!isTRUE(x)) stop(message, call. = FALSE)
+  if (!isTRUE(x)) stop(if(identical(message,"Expected TRUE"))paste(message,paste(deparse(substitute(x)),collapse=' '))else message, call. = FALSE)
 }
 
 expect_false <- function(x, message = "Expected FALSE") {
@@ -77,4 +80,19 @@ source_advanced_entry <- function(path, envir) {
   on.exit({if (is.null(old)) rm(list=key,envir=.GlobalEnv) else assign(key,old,envir=.GlobalEnv)},add=TRUE)
   assign(key,config,envir=.GlobalEnv)
   sys.source(path,envir=envir)
+}
+
+# Copy the complete declared runtime for moved-root/CLI tests, never user runs.
+copy_test_runtime_fixture <- function(destination,root=getwd()) {
+  dir.create(destination,recursive=TRUE,showWarnings=FALSE)
+  for(item in c('R','scripts','inst','config','DESCRIPTION','NAMESPACE','LICENSE'))
+    if(!file.copy(file.path(root,item),destination,recursive=TRUE,overwrite=TRUE))stop('Runtime fixture copy failed',call.=FALSE)
+  invisible(destination)
+}
+read_public_table <- function(site,id) {
+  catalogue<-jsonlite::fromJSON(sub(';\\s*$','',sub('^[^=]+=','',paste(readLines(file.path(site,'DALYCARE_output_catalogue.js'),encoding='UTF-8'),collapse='\n'))),simplifyVector=FALSE)
+  table<-Filter(function(t)t$id==id,catalogue$tables)[[1]]
+  rows<-list()
+  for(shard in table$shards){script<-paste(readLines(file.path(site,shard$src),encoding='UTF-8'),collapse='\n');wire<-jsonlite::fromJSON(sub('\\);$','',sub('^.*?register\\(','',script)),simplifyVector=FALSE);rows<-c(rows,jsonlite::fromJSON(wire$rows_json,simplifyVector=FALSE))}
+  rows
 }

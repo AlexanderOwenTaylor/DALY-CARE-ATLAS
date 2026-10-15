@@ -15,6 +15,7 @@ sys.path.insert(0, str(ROOT / 'scripts'))
 from build_ui_iteration import build
 from public_privacy import audit_public_payload
 from site_bundle import decode_transport
+from runtime_fixture import public_rows
 
 EXPORT_ENV = {
     'original': 'DALYCARE_TEST_ORIGINAL_EXPORT',
@@ -86,14 +87,8 @@ class SyntheticBuilderTest(unittest.TestCase):
         # Use the real CLI in an isolated public-only project so a regression to
         # sibling output defaults cannot overwrite a developer's local export.
         project = Path(self.temp.name) / 'cli-project'
-        for directory in ('scripts', 'config', 'inst/templates', 'inst/config'):
-            (project / directory).mkdir(parents=True, exist_ok=True)
-        for relative in ('scripts/build_ui_iteration.py', 'scripts/clinical_source_membership.py', 'scripts/public_privacy.py', 'scripts/registry_summary_privacy.py', 'scripts/site_bundle.py', 'scripts/output_evidence.py', 'inst/config/public-output-registry.json', 'inst/config/clinical-source-membership.json', 'inst/config/registry-summary-policy.json',
-                         'config/npu-display-dictionary.csv', 'config/clinical-display-dictionary.csv',
-                         'config/public-measurement-policy.csv', 'inst/templates/DALYCARE_atlas.html'):
-            shutil.copyfile(ROOT / relative, project / relative)
-        for resource in (ROOT/'inst/templates').iterdir():
-            if resource.is_file(): shutil.copyfile(resource, project/'inst/templates'/resource.name)
+        from runtime_fixture import copy_runtime_fixture
+        copy_runtime_fixture(ROOT,project)
         return subprocess.run([sys.executable, str(project / 'scripts/build_ui_iteration.py'), *arguments],
                               cwd=self.temp.name, text=True, capture_output=True)
 
@@ -123,7 +118,7 @@ class SyntheticBuilderTest(unittest.TestCase):
         self.assertEqual(json.loads(raw)['transport_version'], 2)
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
         self.assertEqual(data, decode_transport(json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8'))))
-        self.assertEqual(data['fixture_notice'], self.payload['fixture_notice'])
+        self.assertTrue(data['synthetic_validation'])
         self.assertEqual(audit_public_payload(data), [])
         self.assertEqual((self.output / 'DALYCARE_atlas.html').read_bytes(),
                          (ROOT / 'inst/templates/DALYCARE_entry.html').read_bytes())
@@ -146,8 +141,9 @@ class SyntheticBuilderTest(unittest.TestCase):
         self.assertEqual(data, decode_transport(json.loads((self.output / 'DALYCARE_atlas_payload.json').read_text(encoding='utf-8'))))
         self.assertEqual((self.output / 'DALYCARE_atlas.html').read_bytes(),
                          (ROOT / 'inst/templates/DALYCARE_entry.html').read_bytes())
-        self.assertIn('DALYCARE_atlas_payload.js', (self.output / 'DALYCARE_clinical.html').read_text(encoding='utf-8'))
-        self.assertEqual(data['fixture_notice'], self.payload['fixture_notice'])
+        self.assertIn('DALYCARE_search.js', (self.output / 'DALYCARE_clinical.html').read_text(encoding='utf-8'))
+        self.assertNotIn('DALYCARE_atlas_payload.js', (self.output / 'DALYCARE_clinical.html').read_text(encoding='utf-8'))
+        self.assertTrue(data['synthetic_validation'])
 
     def test_builder_preserves_committed_public_dictionary_identity(self):
         self.write_input()
@@ -158,7 +154,7 @@ class SyntheticBuilderTest(unittest.TestCase):
         for key, filename in [('npu_display_dictionary','npu-display-dictionary.csv'),
                               ('clinical_display_dictionary','clinical-display-dictionary.csv')]:
             with (ROOT / 'config' / filename).open(encoding='utf-8-sig', newline='') as stream:
-                self.assertEqual(data[key], list(csv.DictReader(stream)))
+                self.assertEqual([{k:'' if v is None else v for k,v in r.items()} for r in public_rows(self.output,key)],list(csv.DictReader(stream)))
         self.assertNotIn('SYNTHETIC_OBSOLETE_DICTIONARY', json.dumps(data))
 
     def test_builder_enforces_privacy_and_preserves_eligible_zero(self):
@@ -169,17 +165,19 @@ class SyntheticBuilderTest(unittest.TestCase):
         data = load_js(self.output / 'DALYCARE_atlas_payload.js')
         self.assertEqual(audit_public_payload(data), [])
         self.assertGreaterEqual(data['privacy_metadata']['minimum_cell_count'], 5)
-        eligible, small, date = data['column_profile_rows']
-        self.assertEqual(eligible['numeric_privacy_status'], 'eligible_stored_summary')
-        self.assertEqual([eligible[k] for k in ('mean','median','p25','p75')], [0,0,0,10])
+        eligible, small, date = public_rows(self.output,'column_profiles')
+        self.assertEqual(eligible['numeric_privacy_status'], 'needs_verified_grouped_evidence')
+        self.assertEqual([eligible[k] for k in ('mean','median','p25','p75')], [None]*4)
+        self.assertEqual([eligible[k] for k in ('n_available','n_missing')], [80,20])
         self.assertIsNone(eligible['min']); self.assertIsNone(eligible['max'])
         self.assertEqual(small['availability_privacy_status'], 'withheld_small_complementary_cells')
         for key in ('n_available','n_missing','pct_available','pct_missing','mean','median','p25','p75'):
             self.assertIsNone(small[key])
         self.assertIsNone(date['min_date']); self.assertIsNone(date['max_date'])
-        self.assertIsNone(data['panels']['mm_treatment_code_counts'][0]['code'])
+        self.assertIsNone(public_rows(self.output,'mm_treatment_code_counts')[0]['code'])
         for forbidden in ('SYNTHETIC_FORBIDDEN_NAME','SYNTHETIC_FORBIDDEN_UUID','1927-02-03','987654.125'):
-            self.assertNotIn(forbidden, json.dumps(data))
+            for path in self.output.rglob('*'):
+                if path.is_file(): self.assertNotIn(forbidden,path.read_text(encoding='utf-8'))
 
     def test_builder_rejects_malformed_inputs_before_publishing(self):
         for raw in ('wrong wrapper', 'window.DALYCARE_ATLAS_PAYLOAD = {broken};',

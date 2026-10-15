@@ -43,13 +43,13 @@ def metadata_context(payload=None,root=None,columns=None,sources=None):
         if isinstance(row,dict) and valid(row.get('table_name')):
             key=row['table_name'];locations[key]=None if key in locations else {'table':row.get('table') if valid(row.get('table')) else None,'schema':row.get('schema') if valid(row.get('schema')) else None}
     with (root/'config/clinical-display-dictionary.csv').open(encoding='utf-8-sig',newline='') as f:labels={(r['system'],r['code']):r for r in csv.DictReader(f) if r['kind']=='field'}
-    return {'pairs':pairs,'vocabulary':vocabulary,'definitions':definitions,'reference':resource,'profiles':{(r['table_name'],r['column_name']):r for r in columns if isinstance(r,dict) and (r.get('table_name'),r.get('column_name')) in pairs},'labels':labels,'locations':locations}
+    return {'pairs':pairs,'vocabulary':vocabulary,'definitions':definitions,'reference':resource,'profiles':{(r['table_name'],r['column_name']):r for r in columns if isinstance(r,dict) and (r.get('table_name'),r.get('column_name')) in pairs},'labels':labels,'locations':locations,'schemas':schemas_for.__wrapped__(str(root/'inst/config/public-output-registry.json'),0)}
 
 def metadata_identity_approved(row,path,root,context=None):
     if not isinstance(row,dict) or not metadata_path(path):return False
     try:
-        p=Path(root or Path(__file__).resolve().parents[1])/'inst/config/public-output-registry.json'
-        schemas=schemas_for(str(p),p.stat().st_mtime_ns)
+        if context is None:return False
+        schemas=context['schemas']
         if not any(set(row)==set(sc) for sc in schemas):return False
         schema=next(sc for sc in schemas if set(sc)==set(row))
         import math

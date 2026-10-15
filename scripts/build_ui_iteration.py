@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold
 from output_evidence import collect_output_evidence, load_registry, confined_path, read_registered_csv, read_build_context, _bound_source_file
-from site_bundle import write_site_bundle, decode_transport, resolve_transport_version, _byte_limit
+from site_bundle import package_site, write_site_bundle, decode_transport, resolve_transport_version, _byte_limit
 from clinical_source_membership import load_membership_resource, clinical_source_inventory
 from semantic_catalogue import rebuild_semantics, validate_terminology
 
@@ -26,6 +26,8 @@ def build(input_dir, output_dir, project_root, run_dir=None, transport_version=N
     if not raw.strip().startswith(prefix):
         raise ValueError('Unrecognized atlas payload wrapper')
     payload = decode_transport(json.loads(raw.strip()[len(prefix):].strip().removesuffix(';')), max_bytes=maximum)
+    if 'export_contract' in payload:
+        raise ValueError('This lazy export requires its original aggregate run: use scripts/rebuild_atlas_from_outputs.R; it is not a complete payload import')
     context = matching_run_context(run_dir, payload, registry) if run_dir is not None else None
     minimum = effective_threshold(payload, context)
     rebuild_semantics(payload,project_root)
@@ -53,6 +55,11 @@ def build(input_dir, output_dir, project_root, run_dir=None, transport_version=N
     errors = audit_public_payload(payload, project_root=project_root, min_cell_count=minimum)
     if errors:
         raise ValueError(f'Public privacy audit failed at {len(errors)} paths')
+    if run_dir is not None:
+        completion=confined_path(run_dir,'outputs/atlas_completion_summary.csv')
+        if completion.is_file() and completion.stat().st_size<=1048576:
+            with completion.open(encoding='utf-8-sig',newline='') as handle:
+                payload['publication_phase_summary']=[dict(metric=r['metric'],value=r['value']) for r in csv.DictReader(handle) if r.get('metric') in ('collection_status','interpretation_status') and 'value' in r]
     tables = collect_output_evidence(run_dir, project_root, payload)
     inputs = [dict(path=str(source.resolve()),bytes=source.stat().st_size,provenance='legacy_payload'), membership_input]
     for spec in registry['artifacts']:
@@ -64,6 +71,7 @@ def build(input_dir, output_dir, project_root, run_dir=None, transport_version=N
         path=confined_path(run_dir,'outputs/atlas_build_context.json')
         inputs.append(dict(path=str(path),bytes=path.stat().st_size,provenance='build_context'))
     paths = write_site_bundle(output_dir, payload, tables, project_root, 'legacy_payload',manifest_inputs=inputs,transport_version=transport_version)
+    paths['archive']=package_site(output_dir)
     print(f'Built {output_dir}: {paths["payload_json"].stat().st_size:,} transport bytes')
     return paths
 

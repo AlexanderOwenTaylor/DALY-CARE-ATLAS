@@ -35,7 +35,7 @@
   if(!entry || entry.schema_version!==1 || !entry.build_id) {status.textContent='Run details could not be loaded. Keep all atlas files together and reopen Home.';status.setAttribute('role','alert');if(document.documentElement)document.documentElement.dataset.atlasReady='entry-error';}
   else {
     const provenance=entry.provenance==='csv_outputs'?'From CSV outputs':entry.provenance==='legacy_payload'?'From an earlier atlas export':'Aggregate atlas export';
-    status.textContent=provenance+' · Run '+(entry.run_id||'not supplied');
+    status.textContent=(entry.synthetic_validation?'SYNTHETIC VALIDATION DATA — not DALY-CARE results · ':'')+provenance+' · Run '+(entry.run_id||'not supplied');
     if(document.documentElement)document.documentElement.dataset.atlasReady='entry';
   }
   if(new URLSearchParams(window.location.search).get('route')==='unknown') status.textContent+=' · That saved link is not recognized. Choose a question below.';

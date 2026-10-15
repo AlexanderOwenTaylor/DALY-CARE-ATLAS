@@ -187,5 +187,34 @@ class ArchiveAcceptanceTests(unittest.TestCase):
         self.assertEqual(csv.field_size_limit(), old_limit)
 
 
+class NumericWirePrecisionTests(unittest.TestCase):
+    def test_shard_decimal_lexemes_survive_reading_and_csv_comparison(self):
+        tokens=['99.670218163368801','0.100000000000000005','1.7976931348623157e308','2.2250738585072014e-308']
+        with tempfile.TemporaryDirectory() as tmp:
+            site=Path(tmp);(site/'output-shards').mkdir();(site/'downloads').mkdir()
+            raw='['+','.join('{"pct":'+n+'}' for n in tokens)+']'
+            table=dict(id='sample',columns=[dict(key='pct',type='number')],represented_row_count=len(tokens),shards=[dict(id='s1',src='output-shards/sample-s1.js',rows=len(tokens),bytes=len(raw))])
+            (site/'DALYCARE_output_catalogue.js').write_text('window.DALYCARE_OUTPUT_CATALOGUE = '+json.dumps(dict(build_id='b',tables=[table]))+';')
+            (site/'output-shards/sample-s1.js').write_text('window.DALYCARE_OUTPUTS.register('+json.dumps(dict(build_id='b',table_id='sample',shard_id='s1',rows_json=raw))+');')
+            csv_path=site/'downloads/sample.csv';csv_path.write_text('pct\n'+'\n'.join(tokens)+'\n')
+            tables,catalogue=module.read_site_tables(site)
+            module.compare_csv_downloads(site,tables,catalogue)
+            csv_path.write_text('pct\n'+'\n'.join(['99.670218163368800']+tokens[1:])+'\n')
+            with self.assertRaisesRegex(ValueError,'disagrees'):module.compare_csv_downloads(site,tables,catalogue)
+
+class MixedRegistrySchemaTests(unittest.TestCase):
+    def test_mixed_registry_nullable_union_keeps_required_keys_strict(self):
+        import sys
+        sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
+        from registry_summary_privacy import SCHEMA as LEGACY
+        from registry_v2 import SCHEMA as MODERN
+        keys=list(dict.fromkeys(LEGACY+MODERN));columns=[dict(key=k,type='string') for k in keys]
+        rows=[dict.fromkeys(schema) for schema in (LEGACY,MODERN)]
+        for row,version in zip(rows,('registry-summary-v1','registry-summary-v2')):row['contract_version']=version
+        expected=[{k:row.get(k) for k in keys} for row in rows]
+        self.assertEqual(module.canonical_rows(rows,columns,True),module.canonical_rows(expected,columns,True))
+        for changed in (dict(rows[0],unexpected='bad'),{k:v for k,v in rows[1].items() if k!='mapping_status'},dict(rows[1],mean='123')):
+            with self.assertRaisesRegex(ValueError,'schema'):module.canonical_rows([changed],columns,True)
+
 if __name__ == '__main__':
     unittest.main()

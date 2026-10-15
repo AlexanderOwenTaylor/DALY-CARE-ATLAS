@@ -38,8 +38,8 @@ def rebuild_semantics(payload,root):
         labels={}
         for r in csv.DictReader(f):
             if r['kind']=='field':labels.setdefault((r['system'],r['code']),[]).append(r)
-    columns=payload.get('column_profile_rows') or []
-    sources=payload.get('catalog_rows') or []
+    columns=[r for r in (payload.get('column_profile_rows') or []) if isinstance(r,dict)]
+    sources=[r for r in (payload.get('catalog_rows') or []) if isinstance(r,dict)]
     discovered={(r.get('table_name'),r.get('column_name')):r for r in columns if r.get('table_name') and r.get('column_name')}
     for source in sources:
         for field in (source.get('schema_signature') or '').split('|'):
@@ -110,10 +110,10 @@ def rebuild_semantics(payload,root):
     for identity,group in grouped.items():
         row=group[0]
         concept={**blank('clinical_concepts'),**{k:row.get(k) for k in ('clinical_concept_id','clinical_variable','clinical_group','clinical_subgroup','search_terms')}}
-        concept.update(concept_status='metadata_only',purpose=row.get('semantic_meaning','Description unavailable'),raw_field_count=len(group),
+        concept.update(concept_status='metadata_only',purpose=row.get('semantic_meaning','Description unavailable'),raw_field_count=str(len(group)),
             primary_sources='; '.join(sorted({r['source_name'] for r in group})),count_scope='source_identity_metadata',denominator_scope='source_identity_metadata',profile_scope='source_identity_metadata')
         concept.update(old_concepts.get(identity,{}))
-        concept['raw_field_count']=len(group)
+        concept['raw_field_count']=str(len(group))
         concept['primary_sources']='; '.join(sorted({r['source_name'] for r in group}))
         concepts.append(concept)
     payload['clinical_concept_rows']=concepts

@@ -1,0 +1,5 @@
+NPU terminology
+NPU terminology is owned by IFCC and IUPAC. See www.labterm.dk.
+Terms: https://cms.npu-terminology.org/wp-content/uploads/2024/06/NPU-License-Terms-of-Use.pdf
+Official codes remain associated with their exact formal definitions. Additional readable labels are local aliases; they do not imply publisher endorsement or verify units stored in a source.
+The public manifest records the pinned terminology retrieval date and checksums. A retrieval date is not an official publication date.

@@ -28,9 +28,9 @@ write_csv(bad_manifest, published$manifest)
 rejected_manifest <- tryCatch(atlas_validate_output_manifest(work, atlas_output_registry(root)$input_max_bytes, project_root = root), error = identity)
 expect_true(inherits(rejected_manifest, 'error'), 'The resource input exception must not permit another external path.')
 writeBin(manifest_bytes, published$manifest)
-moved_root <- tempfile('moved-membership-project-'); dir.create(file.path(moved_root, 'inst/config'), recursive = TRUE)
+moved_root <- tempfile('moved-membership-project-'); copy_test_runtime_fixture(moved_root,root)
 for (name in c('clinical-source-membership.json', 'public-output-registry.json')) {
-  expect_true(file.copy(file.path(root, 'inst/config', name), file.path(moved_root, 'inst/config', name)))
+  expect_true(file.copy(file.path(root, 'inst/config', name), file.path(moved_root, 'inst/config', name),overwrite=TRUE))
 }
 expect_equal(unname(tools::md5sum(clinical_source_membership_path(moved_root))),
              unname(tools::md5sum(clinical_source_membership_path(root))))

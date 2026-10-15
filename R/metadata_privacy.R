@@ -44,19 +44,19 @@ atlas_metadata_context <- function(payload=list(),root='.',columns=NULL,sources=
   for(row in columns)if(valid(row$table_name)&&valid(row$column_name))assign(atlas_metadata_key(row$table_name,row$column_name),row,envir=profiles)
   display_path<-file.path(root,'config/clinical-display-dictionary.csv')
   if(!file.exists(display_path))display_path<-system.file('config','clinical-display-dictionary.csv',package='dalycareatlas')
-  labels<-utils::read.csv(display_path,stringsAsFactors=FALSE,check.names=FALSE,fileEncoding='UTF-8');labels<-labels[labels$kind=='field',,drop=FALSE]
-  list(pairs=pairs,definitions=definitions,vocabulary=vocabulary,reference=resource,profiles=profiles,labels=labels,locations=locations)
+  labels<-if(nzchar(display_path)&&file.exists(display_path))utils::read.csv(display_path,stringsAsFactors=FALSE,check.names=FALSE,fileEncoding='UTF-8') else data.frame(kind=character(),system=character(),code=character(),label=character(),definition=character())
+  labels<-labels[labels$kind=='field',,drop=FALSE]
+  registry_path<-file.path(root,'inst/config/public-output-registry.json');if(!file.exists(registry_path))registry_path<-system.file('config','public-output-registry.json',package='dalycareatlas')
+  registry<-jsonlite::fromJSON(registry_path,simplifyVector=FALSE)
+  specs<-Filter(function(s)s$id %in% c('semantic_dictionary','panel_raw_fields'),registry$artifacts)
+  schemas<-unlist(lapply(specs,function(s)c(s$schemas,list(s$schemas[[1]][unlist(s$projection)]))),recursive=FALSE)
+  list(pairs=pairs,definitions=definitions,vocabulary=vocabulary,reference=resource,profiles=profiles,labels=labels,locations=locations,schemas=schemas)
 }
 atlas_metadata_schema_cache <- new.env(parent=emptyenv())
 atlas_metadata_identity_approved <- function(row,path,root='.',context=NULL) {
   if(!is.list(row)||!length(path)||!atlas_metadata_path(path))return(FALSE)
-  file<-file.path(root,'inst/config/public-output-registry.json');cache_key<-paste(normalizePath(file,winslash='/',mustWork=FALSE),file.info(file)$mtime,sep='|')
-  schemas<-atlas_metadata_schema_cache[[cache_key]]
-  if(is.null(schemas)) {
-    registry<-tryCatch(jsonlite::fromJSON(file,simplifyVector=FALSE),error=function(e)NULL)
-    specs<-Filter(function(s)s$id %in% c('semantic_dictionary','panel_raw_fields'),registry$artifacts)
-    schemas<-unlist(lapply(specs,function(s)c(s$schemas,list(s$schemas[[1]][unlist(s$projection)]))),recursive=FALSE);atlas_metadata_schema_cache[[cache_key]]<-schemas
-  }
+  schemas<-context$schemas
+  if(is.null(schemas))return(FALSE)
   if(!any(vapply(schemas,function(s)length(names(row))==length(s)&&setequal(names(row),names(s)),logical(1))))return(FALSE)
   schema<-Filter(function(s)length(names(row))==length(s)&&setequal(names(row),names(s)),schemas)[[1]]
   if(!all(vapply(names(row),function(k) {v<-row[[k]];is.null(v)||(length(v)==1L&&is.atomic(v)&&(is.na(v)||switch(schema[[k]],string=is.character(v),number=is.numeric(v)&&is.finite(v),boolean=is.logical(v),FALSE)))},logical(1))))return(FALSE)

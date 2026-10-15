@@ -7,6 +7,8 @@ import re
 import shutil
 import uuid
 import warnings
+import csv
+from publication import public_manifest, package_site, loading_budget
 from pathlib import Path
 from output_evidence import load_registry, _get, _set
 from public_privacy import sanitize_public_payload, audit_public_payload, effective_threshold, VERSION
@@ -433,6 +435,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
     root = Path(project_root)
     registry = load_registry(root)
     maximum = _byte_limit(registry['input_max_bytes'])
+    _charge_graph(payload, _Budget(maximum), reject_proto=True)
     minimum = effective_threshold(payload)
     # Restore full evidence at its reviewed paths before guarding, including profile context.
     logical = copy.deepcopy(payload)
@@ -444,20 +447,18 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
     from metadata_privacy import metadata_context
     context=metadata_context(logical,root)
     safe_tables = sanitize_public_payload(logical, minimum, root, context)
-    guarded = sanitize_public_payload(payload, minimum, root, context)
-    if audit_public_payload(safe_tables, project_root=root, min_cell_count=minimum, metadata_context=context) or audit_public_payload(guarded, project_root=root, min_cell_count=minimum, metadata_context=context):
+    if audit_public_payload(safe_tables, project_root=root, min_cell_count=minimum, metadata_context=context):
         raise ValueError('Public privacy audit failed')
-    field_labels = _field_labels(safe_tables.get('clinical_display_dictionary'))
-    vital_profiles = _vital_profiles(safe_tables.get('column_profile_rows'))
+    synthetic=os.environ.get('DALYCARE_SYNTHETIC_VALIDATION')=='TRUE' or str(payload.get('run_id','')).startswith('SYNTHETIC') or str(payload.get('fixture_notice','')).startswith('SYNTHETIC')
+    build_id = uuid.uuid4().hex
+    guarded = dict(synthetic_validation=synthetic,export_contract='dalycare-lazy-v1',build_id=build_id,run_id=payload.get('run_id',''),privacy_metadata=safe_tables.get('privacy_metadata',{}),directory='DALYCARE_directory.js',search='DALYCARE_search.js')
     encoded = encode_transport(guarded, transport_version, maximum)
-    # The object-literal wrapper treats own __proto__ specially at any depth.
     _charge_graph(encoded, _Budget(maximum), reject_proto=True)
     transport = compact(encoded)
     payload_script = 'window.DALYCARE_ATLAS_PAYLOAD = '+transport+';\n'
     payload_json = transport+'\n'
-    if max(len(payload_script.encode('utf-8')), len(payload_json.encode('utf-8'))) > maximum:
+    if max(len(payload_script.encode('utf-8')),len(payload_json.encode('utf-8'))) > maximum:
         raise ValueError('Actual payload asset byte budget exceeded')
-    build_id = uuid.uuid4().hex
     output.parent.mkdir(parents=True,exist_ok=True)
     stage = output.parent / ('.'+output.name+'-stage-'+build_id)
     backup = output.parent / ('.'+output.name+'-previous-'+build_id)
@@ -468,25 +469,32 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
         raise ValueError('Unsafe manifest destination')
     stage.mkdir()
     try:
-        resources = {'DALYCARE_atlas.html':'DALYCARE_entry.html','DALYCARE_clinical.html':'DALYCARE_atlas.html', **{name:name for name in ('DALYCARE_outputs.html','atlas-entry.js','atlas-outputs.js','atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')}}
+        resources = {'DALYCARE_atlas.html':'DALYCARE_entry.html','DALYCARE_clinical.html':'DALYCARE_lazy.html', **{name:name for name in ('atlas-entry.js','atlas-outputs.js','atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')}}
+        resources['DALYCARE_outputs.html']='DALYCARE_lazy.html'
+        resources.update({name:name for name in ('atlas-reader.js','atlas-shell.js','atlas-shell.css','atlas-topic.js','atlas-topic.css','atlas-route-registries.js','atlas-route-vitals.js','atlas-route-laboratory.js','atlas-route-treatment.js','atlas-route-situation.js','atlas-route-feasibility.js','atlas-route-infrastructure.js','atlas-route-variables.js','atlas-route-ehr.js','atlas-route-timeplace.js','atlas-route-sources.js','favicon.svg')})
         for name, source in resources.items():
             shutil.copyfile(root/'inst/templates'/source,stage/name)
         def write(name, text):
+            if name.startswith('table-descriptors/') and len(text.encode('utf-8'))>262144:raise ValueError('Descriptor byte budget exceeded')
             (stage/name).write_bytes(text.encode('utf-8'))
         from registry_v2 import public_resource
-        write('registry-v2.js','window.DALYCARE_REGISTRY_V2_RESOURCE = '+compact(public_resource(root))+';\n'+(root/'inst/templates/registry-v2.js').read_text(encoding='utf-8'))
+        write('registry-v2.js','window.DALYCARE_REGISTRY_BUILD_ID = '+compact(build_id)+';\nwindow.DALYCARE_REGISTRY_V2_RESOURCE = '+compact(public_resource(root))+';\n'+(root/'inst/templates/registry-v2.js').read_text(encoding='utf-8'))
         write('DALYCARE_atlas_payload.js',payload_script)
         write('DALYCARE_atlas_payload.json',payload_json)
-        entry = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance)
+        entry = dict(synthetic_validation=synthetic,schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance)
         if provenance not in ('csv_outputs','legacy_payload'):
             raise ValueError('Invalid entry provenance')
         write('DALYCARE_entry.js','window.DALYCARE_ENTRY = '+compact(entry)+';\n')
         (stage/'output-shards').mkdir()
+        (stage/'table-descriptors').mkdir()
+        (stage/'downloads').mkdir()
+        canonical = {}
         catalogue_tables, total = [], 0
         seen = set()
         for table in tables:
             table = copy.deepcopy(table)
             table_id = table['id']
+            table.setdefault('title',table_id)
             if not re.fullmatch('[A-Za-z0-9_-]+',table_id) or table_id in seen:
                 raise ValueError('Invalid table identity')
             seen.add(table_id)
@@ -494,6 +502,9 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             rows = _get(safe_tables,spec['payload_path']) if spec and spec['projection'] and spec['payload_path'] else []
             rows = rows or []
             keys = [c['key'] for c in table['columns']]
+            if table_id!='registry_field_summaries':
+                for key in sorted(PRIVACY_COLUMNS.intersection(k for r in rows for k in r)-set(keys)):
+                    table['columns'].append(dict(key=key,label=key,type='boolean' if key=='is_sensitive' else 'string'));keys.append(key)
             allowed = set(spec['projection']) | PRIVACY_COLUMNS if spec else set()
             if not set(keys) <= allowed or (not spec and (table['columns'] or table['source_file'])):
                 raise ValueError('Unreviewed public schema')
@@ -504,6 +515,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
             pending_bytes = 2  # JSON array brackets, including for an empty shard.
             _, empty_script = _registration(build_id,table_id,'s0001','[]')
             pending_script_bytes = len(empty_script.encode('utf-8'))
+            shard_row_limit=50 if table_id=='registry_field_summaries' else 100 if table_id=='column_profiles' else 250
             for row in rows:
                 for col in table['columns']:
                     v = row.get(col['key']); kind = col['type']
@@ -515,7 +527,7 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                 row_bytes = len(serialized.encode('utf-8'))
                 escaped_bytes = len(compact(serialized).encode('utf-8')) - 2
                 separator = int(bool(pending))
-                if len(pending)>=250 or pending_bytes+separator+row_bytes>SHARD_BYTES or pending_script_bytes+separator+escaped_bytes>SHARD_BYTES:
+                if len(pending)>=shard_row_limit or pending_bytes+separator+row_bytes>SHARD_BYTES or pending_script_bytes+separator+escaped_bytes>SHARD_BYTES:
                     if pending:
                         parts.append(pending); pending=[]
                     pending_bytes = 2
@@ -533,6 +545,10 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                 pending_script_bytes += separator+escaped_bytes
             if pending:
                 parts.append(pending)
+            canonical[table_id] = rows
+            with (stage/'downloads'/f'{table_id}.csv').open('w',encoding='utf-8',newline='') as stream:
+                writer=csv.writer(stream,lineterminator='\n'); writer.writerow(keys)
+                writer.writerows([('true' if r.get(k) else 'false') if type(r.get(k)) is bool else r.get(k) for k in keys] for r in rows)
             table['represented_row_count'] = len(rows)
             for i, part in enumerate(parts,1):
                 shard_id = 's'+str(i).zfill(4)
@@ -541,20 +557,38 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
                     raise ValueError('Table shard exceeds byte limit')
                 relative = 'output-shards/'+table_id+'-'+shard_id+'.js'
                 write(relative,script); size=len(data.encode());total+=size
-                table['shards'].append(dict(id=shard_id,src=relative,rows=len(part),bytes=size))
+                shard=dict(id=shard_id,src=relative,rows=len(part),bytes=size,asset_bytes=len(script.encode('utf-8')))
+                if table_id in ('column_profiles','registry_field_summaries'):shard['fields']=[[r.get('table_name'),r.get('column_name' if table_id=='column_profiles' else 'source_column')] for r in map(json.loads,part)]
+                table['shards'].append(shard)
             catalogue_tables.append(table)
+            write('table-descriptors/'+table_id+'.js','window.DALYCARE_OUTPUTS.registerDescriptor('+compact(dict(schema_version=1,build_id=build_id,table=table))+');\n')
         if total>registry['public_table_max_bytes']:
             raise ValueError('Public table-data budget exceeded')
         limits = dict(input_max_bytes=registry['input_max_bytes'],public_table_max_bytes=registry['public_table_max_bytes'],shard_max_rows=250,shard_max_bytes=SHARD_BYTES,cache_max_bytes=1048576,page_rows=50,minimum_cell_count=minimum,public_table_bytes=total)
         catalogue = dict(schema_version=1,build_id=build_id,run_id=payload.get('run_id',''),provenance=provenance,privacy_policy_version=VERSION,minimum_cell_count=minimum,limits=limits,tables=catalogue_tables)
-        if field_labels:
-            catalogue['field_labels'] = field_labels
-        if vital_profiles:
-            catalogue['vital_profiles'] = vital_profiles
         write('DALYCARE_output_catalogue.js','window.DALYCARE_OUTPUT_CATALOGUE = '+compact(catalogue)+';\n')
-        for names in [('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css')]:
+        directory=dict(synthetic_validation=synthetic,schema_version=2,build_id=build_id,run_id=payload.get('run_id',''),minimum_cell_count=minimum,tables=[{k:t[k] for k in ('id','title','status','represented_row_count') if k in t}|dict(descriptor='table-descriptors/'+t['id']+'.js') for t in catalogue_tables])
+        directory['sources']=[{k:r.get(k) for k in ('table_name','load_status','domain','subdomain')} for r in (canonical.get('sources') or safe_tables.get('catalog_rows') or []) if isinstance(r,dict) and isinstance(r.get('table_name'),str)]
+        write('DALYCARE_membership.js','window.DALYCARE_MEMBERSHIP = '+compact(dict(build_id=build_id,inventory=safe_tables.get('clinical_source_inventory')))+';\n')
+        write_reference_index(stage,build_id,canonical,catalogue_tables,directory)
+        write('DALYCARE_directory.js','window.DALYCARE_DIRECTORY = '+compact(directory)+';\n')
+        labels=_field_labels(canonical.get('clinical_display_dictionary',[]))
+        sources=[]; fields=[]; seen_fields=set()
+        for row in canonical.get('column_profiles',[]):
+            source,field=row.get('table_name'),row.get('column_name')
+            if not isinstance(source,str) or not isinstance(field,str) or (source,field) in seen_fields:continue
+            seen_fields.add((source,field))
+            if source not in sources:sources.append(source)
+            fields.append([sources.index(source),field,labels.get(source,{}).get(field,'')])
+        write('DALYCARE_search.js','window.DALYCARE_SEARCH = '+compact(dict(schema_version=1,build_id=build_id,sources=sources,fields=fields))+';\n')
+        for names in [('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),('DALYCARE_clinical.html','DALYCARE_directory.js','DALYCARE_search.js','atlas-reader.js','atlas-shell.js','atlas-topic.js','atlas-shell.css','atlas-topic.css')]:
             if sum((stage/n).stat().st_size for n in names)>ENTRY_BYTES:
                 raise ValueError('Initial asset byte budget exceeded')
+        for name in ('THIRD_PARTY_NOTICES.txt','OPERATING.txt'):
+            shutil.copyfile(root/'inst/templates'/name,stage/name)
+        terminology=json.loads((root/'config/terminology/manifest.json').read_text(encoding='utf-8-sig'))
+        loading_budget(stage,directory)
+        public_manifest(stage,build_id,payload.get('run_id',''),VERSION,terminology,payload.get('publication_phase_summary',canonical.get('run_summary',[])))
         files = sorted(p.relative_to(stage) for p in stage.rglob('*') if p.is_file())
         if any((stage/f).stat().st_size==0 for f in files):
             raise ValueError('Empty site asset')
@@ -585,3 +619,38 @@ def write_site_bundle(output_dir, payload, tables, project_root, provenance, man
     finally:
         if stage.exists(): shutil.rmtree(stage)
         if manifest_stage.exists(): manifest_stage.unlink()
+
+
+def write_reference_index(stage,build_id,canonical,tables,directory):
+    source=next((t for t in tables if t['id']=='npu_display_dictionary'),None)
+    if source is None:return
+    data=canonical.get('npu_display_dictionary',[]);offset=0;rows=[]
+    for shard in source['shards']:
+        for row in data[offset:offset+shard['rows']]:
+            words=dict.fromkeys(re.findall(r"[\w]+",' '.join(str(v) for v in row.values() if v is not None).lower()))
+            rows.append(dict(code=row.get('code',''),label=row.get('label',''),terms=' '.join(words),shard=shard['id']))
+        offset+=shard['rows']
+    rows.sort(key=lambda r:r['code'])
+    t=dict(id='npu_reference_search',title='NPU reference search',status='available' if rows else 'empty_output',represented_row_count=len(rows),complete=True,columns=[dict(key=k,label=k,type='string') for k in ('code','label','terms','shard')],shards=[])
+    parts=[];pending=[];pending_bytes=0
+    for row in rows:
+        encoded=compact(row);charge=len(compact(encoded).encode('utf-8'))+1
+        if pending and (len(pending)>=100 or pending_bytes+charge>SHARD_BYTES-512):
+            parts.append(pending);pending=[];pending_bytes=0
+        if charge>SHARD_BYTES-512:raise ValueError('Reference search row exceeds byte budget')
+        pending.append(encoded);pending_bytes+=charge
+    if pending:parts.append(pending)
+    offset=0
+    for i,part in enumerate(parts,1):
+        sid='s'+str(i).zfill(4);raw,script=_registration(build_id,t['id'],sid,'['+','.join(part)+']');relative='output-shards/'+t['id']+'-'+sid+'.js'
+        if len(script.encode('utf-8'))>SHARD_BYTES:raise ValueError('Reference search shard budget')
+        (stage/relative).write_text(script,encoding='utf-8',newline='')
+        t['shards'].append(dict(id=sid,src=relative,rows=len(part),bytes=len(raw.encode('utf-8')),first=rows[offset]['code'],last=rows[offset+len(part)-1]['code'],definitions=list(dict.fromkeys(r['shard'] for r in rows[offset:offset+len(part)]))))
+        offset+=len(part)
+    relative='table-descriptors/'+t['id']+'.js'
+    descriptor='window.DALYCARE_OUTPUTS.registerDescriptor('+compact(dict(schema_version=1,build_id=build_id,table=t))+');\n'
+    if len(descriptor.encode('utf-8'))>262144:raise ValueError('Reference descriptor byte budget exceeded')
+    (stage/relative).write_text(descriptor,encoding='utf-8',newline='')
+    directory['tables'].append({k:t[k] for k in ('id','title','status','represented_row_count','complete')}|dict(descriptor=relative))
+    with (stage/'downloads'/f"{t['id']}.csv").open('w',encoding='utf-8',newline='') as stream:
+        w=csv.DictWriter(stream,fieldnames=['code','label','terms','shard'],lineterminator='\n');w.writeheader();w.writerows(rows)

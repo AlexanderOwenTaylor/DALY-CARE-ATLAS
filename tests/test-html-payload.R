@@ -434,7 +434,8 @@ expect_true(length(payload$review_infrastructure_sections$db_query_log) > 0, "re
 expect_true(length(payload$review_infrastructure_sections$streaming_summary) > 0, "review infrastructure sections should include DB streaming progress summaries.")
 expect_true(length(payload$review_infrastructure_sections$temporal_date_quality) > 0, "review infrastructure sections should include temporal date-quality rows.")
 expect_true(length(payload$review_temporal_coverage$sources) > 0, "review temporal coverage should include source coverage rows.")
-expect_true(length(payload$review_temporal_coverage$years) > 0, "review temporal coverage should include year rows.")
+expect_equal(length(payload$review_temporal_coverage$years),0L,'Unsupported legacy years do not become observed coverage')
+expect_true(all(vapply(payload$panels$atlas_temporal_coverage_years,function(r)is.null(r$year),logical(1))),'Legacy year labels require the accepted person-support evidence')
 expect_true(length(payload$review_temporal_coverage$date_quality) > 0, "review temporal coverage should include date-quality rows.")
 expect_true(length(payload$review_spatial_coverage$region_coverage) > 0, "review spatial coverage should include region coverage rows.")
 expect_true(length(payload$review_dk_choropleth$map_regions) > 0, "review Denmark choropleth should include map regions.")
@@ -492,4 +493,6 @@ view_json <- atlas_to_json(list(
   column_profile_rows = payload$column_profile_rows,
   column_top_value_rows = payload$column_top_value_rows
 ))
-expect_false(grepl("patientid", view_json, ignore.case = TRUE), "View-model payload sections should not expose id-like field names.")
+expect_true(any(vapply(payload$column_profile_rows,function(row)identical(tolower(row$column_name),'patientid'),logical(1))), 'Exact schema field identity remains discoverable')
+protected_probe<-atlas_public_privacy(list(column_profile_rows=atlas_evidence_rows(column_profiles),column_top_value_rows=list(list(table_name='example_labs',column_name='patientid',value='SYNTHETIC_OBSERVED_PATIENT_ID',n=10))),root)
+expect_false(grepl('SYNTHETIC_OBSERVED_PATIENT_ID',jsonlite::toJSON(protected_probe,auto_unbox=TRUE),fixed=TRUE),'Observed identifier values must never be public')

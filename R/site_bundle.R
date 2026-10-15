@@ -1,5 +1,33 @@
 # Matched bounded transport and staged publication for R-only installations.
-atlas_bundle_json <- function(x) as.character(jsonlite::toJSON(x,auto_unbox=TRUE,null='null',na='null',digits=NA))
+atlas_bundle_json <- function(x) {
+  encoded<-as.character(jsonlite::toJSON(x,auto_unbox=TRUE,null='null',na='null',digits=NA))
+  # Some jsonlite/R combinations round finite DBL_MAX past the JSON/browser
+  # boundary. Repair by encoding the original scalar graph at 17 digits, never
+  # by clamping the rounded wire token or relaxing the browser finite check.
+  if(grepl('e[+]?308',encoded)) {
+    pattern<-'"(?:[^"\\\\]|\\\\.)*"(*SKIP)(*F)|-?[0-9]+(?:[.][0-9]+)?e[+]?308'
+    tokens<-regmatches(encoded,gregexpr(pattern,encoded,perl=TRUE))[[1]]
+    if(any(!is.finite(suppressWarnings(as.numeric(tokens))))) {
+      precise<-function(v){
+        if(is.null(v))return('null')
+        if(is.list(v)&&identical(class(v),'list')&&all(names(attributes(v))%in%'names')){
+          members<-vapply(v,precise,character(1));keys<-names(v)
+          if(is.null(keys))return(paste0('[',paste(members,collapse=','),']'))
+          if(anyNA(keys)||any(!nzchar(keys))||anyDuplicated(keys))stop('Extreme numeric JSON requires unique record keys',call.=FALSE)
+          return(paste0('{',paste(paste0(vapply(keys,function(k)as.character(jsonlite::toJSON(k,auto_unbox=TRUE)),character(1)),':',members),collapse=','),'}'))
+        }
+        if(is.numeric(v)&&is.null(attributes(v))){
+          values<-vapply(v,function(n)if(is.na(n))'null' else if(is.finite(n))sprintf('%.17g',n)else stop('Invalid finite transport number',call.=FALSE),character(1))
+          return(if(length(values)==1L)values else paste0('[',paste(values,collapse=','),']'))
+        }
+        if(is.atomic(v)&&typeof(v)%in%c('character','logical')&&is.null(attributes(v)))return(as.character(jsonlite::toJSON(v,auto_unbox=TRUE,null='null',na='null')))
+        stop('Extreme numeric JSON shape unsupported; use scalar records',call.=FALSE)
+      }
+      encoded<-precise(x)
+    }
+  }
+  encoded
+}
 atlas_bundle_aliases <- function() c(action_items='action_items',action_summary='action_summary',streaming_summary='review_streaming_summary',temporal_date_quality='review_temporal_date_quality',db_budget_actions='db_budget_actions',db_query_log='db_query_log',catalog='catalog_rows',resource_reconciliation='resource_reconciliation_rows',canonical_resource_reconciliation='canonical_resource_reconciliation_rows',current_run_source_map_audit='current_run_source_map_audit_rows',source_map_crosswalk='source_map_crosswalk_rows',source_resolution_delta='source_resolution_delta_rows',legacy_resource_audit='legacy_cartography_audit_rows',columns='column_profile_rows',column_summary='column_profile_summary',panels='panel_groups',qa='qa_items',run_summary='run_summary')
 atlas_transport_version <- function(transport_version=NULL) {
   if(is.null(transport_version)) {
@@ -340,6 +368,7 @@ atlas_site_destination <- function(site_dir) {
 }
 
 atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',provenance='legacy_payload',manifest_paths=list(),membership_spec=NULL,transport_version=NULL) {
+  if(!exists('atlas_public_manifest',mode='function'))source(file.path(project_root,'R/publication.R'),local=TRUE)
   output <- atlas_site_destination(site_dir)
   transport_version <- atlas_transport_version(transport_version)
   if(is.null(membership_spec)) membership_spec <- load_clinical_source_membership(project_root)
@@ -348,6 +377,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   manifest_paths <- manifest_paths[!vapply(manifest_paths,function(path)identical(normalizePath(path,winslash='/',mustWork=FALSE),membership_path),logical(1))]
   manifest_paths$clinical_source_membership <- membership_path
   registry <- atlas_output_registry(project_root); minimum <- atlas_effective_threshold(payload)
+  atlas_transport_usage(payload,atlas_transport_limit(registry$input_max_bytes),reject_proto=TRUE)
   if(!exists('atlas_public_privacy',mode='function')) source(file.path(project_root,'R/public_privacy.R'),encoding='UTF-8')
   if(!provenance %in% c('csv_outputs','legacy_payload')) stop('Invalid entry provenance',call.=FALSE)
   logical <- payload; ids <- vapply(registry$artifacts,function(s)s$id,character(1))
@@ -359,19 +389,16 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   if(!exists('atlas_metadata_context',mode='function'))source(file.path(project_root,'R/metadata_privacy.R'),local=TRUE)
   metadata_context<-atlas_metadata_context(logical,project_root)
   safe <- atlas_public_privacy(logical,project_root,minimum,metadata_context)
-  payload <- atlas_public_privacy(payload,project_root,minimum,metadata_context)
-  atlas_evidence_audit(safe,project_root,minimum,metadata_context);atlas_evidence_audit(payload,project_root,minimum,metadata_context)
-  field_labels <- atlas_bundle_field_labels(safe[['clinical_display_dictionary']])
-  vital_profiles <- atlas_bundle_vital_profiles(safe[['column_profile_rows']])
-  transport <- atlas_payload_transport(atlas_sanitize_payload_text(payload),transport_version,
-    max_bytes=atlas_transport_limit(registry$input_max_bytes))
+  atlas_evidence_audit(safe,project_root,minimum,metadata_context)
+  build_id <- paste(sample(c(0:9,letters[1:6]),32,replace=TRUE),collapse='')
+  synthetic<-identical(Sys.getenv('DALYCARE_SYNTHETIC_VALIDATION'),'TRUE')||startsWith(payload$run_id %||% '','SYNTHETIC')
+  bootstrap <- list(synthetic_validation=synthetic,export_contract='dalycare-lazy-v1',build_id=build_id,run_id=payload$run_id %||% '',privacy_metadata=safe$privacy_metadata,directory='DALYCARE_directory.js',search='DALYCARE_search.js')
+  transport <- atlas_payload_transport(bootstrap,transport_version,max_bytes=atlas_transport_limit(registry$input_max_bytes))
   transport_assets <- atlas_transport_assets(transport,registry$input_max_bytes)
   parent <- dirname(output)
   stage <- tempfile(paste0('.',basename(output),'-stage-'),tmpdir=parent)
   if(!dir.create(stage,showWarnings=FALSE)) stop('Cannot create site staging directory',call.=FALSE)
   stage <- normalizePath(stage,winslash='/',mustWork=TRUE)
-  # Build IDs are controlled hexadecimal, independent of display run IDs.
-  build_id <- paste(sample(c(0:9,letters[1:6]),32,replace=TRUE),collapse='')
   backup <- paste0(output,'-previous-',build_id)
   manifest <- atlas_confined_path(parent,'outputs/output_manifest.csv')
   dir.create(dirname(manifest),recursive=TRUE,showWarnings=FALSE)
@@ -380,16 +407,19 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   manifest_backup <- paste0(manifest,'-previous-',build_id)
   on.exit({if(dir.exists(stage)) unlink(stage,recursive=TRUE);if(file.exists(manifest_stage)) unlink(manifest_stage)},add=TRUE)
   write <- function(name,text) {
+    if(startsWith(name,'table-descriptors/')&&nchar(enc2utf8(text),type='bytes')>262144)stop('Descriptor byte budget exceeded',call.=FALSE)
     path <- atlas_confined_path(stage,name)
     con <- file(path,'wb');on.exit(close(con));writeBin(charToRaw(enc2utf8(text)),con)
   }
-  resources <- c(DALYCARE_atlas.html='DALYCARE_entry.html',DALYCARE_clinical.html='DALYCARE_atlas.html',DALYCARE_outputs.html='DALYCARE_outputs.html',`atlas-entry.js`='atlas-entry.js',`atlas-outputs.js`='atlas-outputs.js',`atlas-transport.js`='atlas-transport.js',`atlas-pages.css`='atlas-pages.css',`atlas-vitals.js`='atlas-vitals.js',`atlas-vitals.css`='atlas-vitals.css')
+  resources <- c(DALYCARE_atlas.html='DALYCARE_entry.html',DALYCARE_clinical.html='DALYCARE_lazy.html',DALYCARE_outputs.html='DALYCARE_lazy.html',`atlas-entry.js`='atlas-entry.js',`atlas-outputs.js`='atlas-outputs.js',`atlas-transport.js`='atlas-transport.js',`atlas-pages.css`='atlas-pages.css',`atlas-vitals.js`='atlas-vitals.js',`atlas-vitals.css`='atlas-vitals.css')
+  lazy_resources<-c('atlas-reader.js','atlas-shell.js','atlas-shell.css','atlas-topic.js','atlas-topic.css','atlas-route-registries.js','atlas-route-vitals.js','atlas-route-laboratory.js','atlas-route-treatment.js','atlas-route-situation.js','atlas-route-feasibility.js','atlas-route-infrastructure.js','atlas-route-variables.js','atlas-route-ehr.js','atlas-route-timeplace.js','atlas-route-sources.js','favicon.svg','THIRD_PARTY_NOTICES.txt','OPERATING.txt')
+  resources<-c(resources,setNames(lazy_resources,lazy_resources))
   for(name in names(resources)) if(!file.copy(atlas_bundle_resource(resources[[name]],project_root),file.path(stage,name))) stop('Resource copy failed',call.=FALSE)
-  write('registry-v2.js',paste0('window.DALYCARE_REGISTRY_V2_RESOURCE = ',atlas_bundle_json(registry_v2_public_resource(project_root)),';\n',paste(readLines(atlas_bundle_resource('registry-v2.js',project_root),warn=FALSE,encoding='UTF-8'),collapse='\n')))
+  write('registry-v2.js',paste0('window.DALYCARE_REGISTRY_BUILD_ID = ',atlas_bundle_json(build_id),';\nwindow.DALYCARE_REGISTRY_V2_RESOURCE = ',atlas_bundle_json(registry_v2_public_resource(project_root)),';\n',paste(readLines(atlas_bundle_resource('registry-v2.js',project_root),warn=FALSE,encoding='UTF-8'),collapse='\n')))
   write('DALYCARE_atlas_payload.js',transport_assets$script)
   write('DALYCARE_atlas_payload.json',transport_assets$json)
-  write('DALYCARE_entry.js',paste0('window.DALYCARE_ENTRY = ',atlas_bundle_json(list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance)),';\n'))
-  dir.create(file.path(stage,'output-shards'))
+  write('DALYCARE_entry.js',paste0('window.DALYCARE_ENTRY = ',atlas_bundle_json(list(synthetic_validation=synthetic,schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance)),';\n'))
+  dir.create(file.path(stage,'output-shards'));dir.create(file.path(stage,'table-descriptors'));dir.create(file.path(stage,'downloads'));canonical<-list()
   registration <- function(table_id,shard_id,rows) {
     data <- paste0('[',paste(unlist(rows,use.names=FALSE),collapse=','),']')
     script <- paste0('window.DALYCARE_OUTPUTS.register(',atlas_bundle_json(list(schema_version=1L,build_id=build_id,table_id=table_id,shard_id=shard_id,rows_json=data)),');\n')
@@ -399,17 +429,19 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
   catalog_tables <- list();total <- 0;seen <- character()
   privacy <- c('value_privacy_status','count_privacy_status','date_privacy_status','availability_privacy_status','numeric_privacy_status','summary_scope','summary_method','is_sensitive')
   for(table in tables) {
-    id <- table$id
+    id <- table$id;table$title<-table$title %||% id
     if(!grepl('^[A-Za-z0-9_-]+$',id) || id %in% seen) stop('Invalid table identity',call.=FALSE)
     seen <- c(seen,id); index <- match(id,ids); spec <- if(!is.na(index)) registry$artifacts[[index]] else NULL
     rows <- if(length(spec$projection) && length(spec$payload_path)) atlas_evidence_get(safe,unlist(spec$payload_path)) else list()
     keys <- vapply(table$columns,function(c)c$key,character(1))
+    if(!identical(id,'registry_field_summaries'))for(key in sort(setdiff(intersect(privacy,unique(unlist(lapply(rows,names)))),keys))){table$columns[[length(table$columns)+1L]]<-list(key=key,label=key,type=if(key=='is_sensitive')'boolean' else 'string');keys<-c(keys,key)}
     if(any(!keys %in% c(unlist(spec$projection),if(!is.null(spec)) privacy)) || (is.null(spec) && (length(keys) || nzchar(table$source_file)))) stop('Unreviewed public schema',call.=FALSE)
     if(!identical(id,'registry_field_summaries')) rows <- lapply(rows,function(r)setNames(lapply(keys,function(k)r[[k]]),keys))
     table$rows <- NULL;table$shards <- list()
     if(identical(table$status,'snapshot_preview')) table$status <- 'limited'
     parts <- list();pending <- list();pending_bytes <- 2
     pending_script_bytes <- nchar(enc2utf8(registration(id,'s0001',list())$script),type='bytes')
+    shard_row_limit<-if(id=='registry_field_summaries')50L else if(id=='column_profiles')100L else 250L
     for(row in rows) {
       for(column in table$columns) {
         v <- row[[column$key]]
@@ -423,7 +455,7 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
       row_bytes <- nchar(enc2utf8(serialized),type='bytes')
       escaped_bytes <- nchar(enc2utf8(atlas_bundle_json(serialized)),type='bytes')-2
       separator <- as.integer(length(pending)>0L)
-      if(length(pending)>=250L || pending_bytes+separator+row_bytes>262144 ||
+      if(length(pending)>=shard_row_limit || pending_bytes+separator+row_bytes>262144 ||
          pending_script_bytes+separator+escaped_bytes>262144) {
         if(length(pending)) parts[[length(parts)+1L]] <- pending
         pending <- list();pending_bytes <- 2;separator <- 0L
@@ -438,23 +470,40 @@ atlas_write_site_bundle <- function(site_dir,payload,tables,project_root='.',pro
       pending_script_bytes <- pending_script_bytes+separator+escaped_bytes
     }
     if(length(pending)) parts[[length(parts)+1L]] <- pending
+    canonical[[id]]<-rows
+    atlas_public_csv(file.path(stage,'downloads',paste0(id,'.csv')),keys,rows)
     table$represented_row_count <- length(rows)
     for(i in seq_along(parts)) {
       shard_id <- sprintf('s%04d',i);item <- registration(id,shard_id,parts[[i]])
       if(!fits(item)) stop('Table shard exceeds byte limit',call.=FALSE)
       relative <- paste0('output-shards/',id,'-',shard_id,'.js');write(relative,item$script)
       total <- total+item$bytes
-      table$shards[[i]] <- list(id=shard_id,src=relative,rows=length(parts[[i]]),bytes=item$bytes)
+      table$shards[[i]] <- list(id=shard_id,src=relative,rows=length(parts[[i]]),bytes=item$bytes,asset_bytes=nchar(enc2utf8(item$script),type='bytes'))
+      if(id%in%c('column_profiles','registry_field_summaries'))table$shards[[i]]$fields<-lapply(jsonlite::fromJSON(item$data,simplifyVector=FALSE),function(r)list(r$table_name,r[[if(id=='column_profiles')'column_name' else 'source_column']]))
     }
     catalog_tables[[length(catalog_tables)+1L]] <- table
+    write(paste0('table-descriptors/',id,'.js'),paste0('window.DALYCARE_OUTPUTS.registerDescriptor(',atlas_bundle_json(list(schema_version=1L,build_id=build_id,table=table)),');\n'))
   }
   if(total>registry$public_table_max_bytes) stop('Public table-data budget exceeded',call.=FALSE)
   limits <- list(input_max_bytes=registry$input_max_bytes,public_table_max_bytes=registry$public_table_max_bytes,shard_max_rows=250L,shard_max_bytes=262144L,cache_max_bytes=1048576L,page_rows=50L,minimum_cell_count=minimum,public_table_bytes=total)
   catalogue <- list(schema_version=1L,build_id=build_id,run_id=payload$run_id %||% '',provenance=provenance,privacy_policy_version=payload$privacy_metadata$policy_version,minimum_cell_count=minimum,limits=limits,tables=catalog_tables)
-  if(length(field_labels)) catalogue$field_labels <- field_labels
-  if(length(vital_profiles)) catalogue$vital_profiles <- vital_profiles
   write('DALYCARE_output_catalogue.js',paste0('window.DALYCARE_OUTPUT_CATALOGUE = ',atlas_bundle_json(catalogue),';\n'))
-  for(names in list(c('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),c('DALYCARE_outputs.html','DALYCARE_output_catalogue.js','atlas-outputs.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css'))) if(sum(file.info(file.path(stage,names))$size)>524288) stop('Initial asset byte budget exceeded',call.=FALSE)
+  directory<-list(synthetic_validation=synthetic,schema_version=2L,build_id=build_id,run_id=payload$run_id %||% '',minimum_cell_count=minimum,tables=lapply(catalog_tables,function(t)c(t[intersect(c('id','title','status','represented_row_count'),names(t))],list(descriptor=paste0('table-descriptors/',t$id,'.js')))))
+  source_identity<-canonical$sources;if(!length(source_identity))source_identity<-safe$catalog_rows
+  directory$sources<-lapply(Filter(function(r)is.list(r)&&is.character(r$table_name)&&length(r$table_name)==1L,source_identity),function(r)setNames(lapply(c('table_name','load_status','domain','subdomain'),function(k)r[[k]]),c('table_name','load_status','domain','subdomain')))
+  write('DALYCARE_membership.js',paste0('window.DALYCARE_MEMBERSHIP = ',atlas_bundle_json(list(build_id=build_id,inventory=safe$clinical_source_inventory)),';\n'))
+  reference<-atlas_reference_search(write,build_id,canonical,catalog_tables)
+  if(!is.null(reference)){directory$tables[[length(directory$tables)+1L]]<-reference$directory;atlas_public_csv(file.path(stage,'downloads/npu_reference_search.csv'),vapply(reference$table$columns,function(c)c$key,character(1)),reference$rows)}
+  write('DALYCARE_directory.js',paste0('window.DALYCARE_DIRECTORY = ',atlas_bundle_json(directory),';\n'))
+  labels<-atlas_bundle_field_labels(canonical$clinical_display_dictionary);sources<-character();fields<-list();identities<-new.env(hash=TRUE,parent=emptyenv())
+  for(row in canonical$column_profiles){source<-row$table_name;field<-row$column_name;if(!is.character(source)||!is.character(field))next
+    key<-atlas_bundle_json(list(source,field));if(exists(key,envir=identities,inherits=FALSE))next;assign(key,TRUE,envir=identities)
+    if(!source%in%sources)sources<-c(sources,source)
+    fields[[length(fields)+1L]]<-list(match(source,sources)-1L,field,labels[[source]][[field]] %||% '')}
+  write('DALYCARE_search.js',paste0('window.DALYCARE_SEARCH = ',atlas_bundle_json(list(schema_version=1L,build_id=build_id,sources=as.list(sources),fields=fields)),';\n'))
+  for(names in list(c('DALYCARE_atlas.html','DALYCARE_entry.js','atlas-entry.js','atlas-pages.css'),c('DALYCARE_clinical.html','DALYCARE_directory.js','DALYCARE_search.js','atlas-reader.js','atlas-shell.js','atlas-topic.js','atlas-shell.css','atlas-topic.css')))if(sum(file.info(file.path(stage,names))$size)>524288)stop('Initial asset byte budget exceeded',call.=FALSE)
+  atlas_loading_budget(stage,directory)
+  atlas_public_manifest(stage,build_id,payload$run_id %||% '',safe$privacy_metadata$policy_version,project_root,payload$publication_phase_summary %||% canonical$run_summary)
   files <- list.files(stage,recursive=TRUE,full.names=FALSE)
   if(any(file.info(file.path(stage,files))$size==0)) stop('Empty site asset',call.=FALSE)
   stage_assets <- as.list(setNames(file.path(stage,files),paste0('site_',seq_along(files))))

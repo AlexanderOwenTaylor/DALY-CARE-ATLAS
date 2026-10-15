@@ -52,7 +52,7 @@ if (!identical(basename(if (is.na(.dalycare_entry_path)) "" else .dalycare_entry
       suppressWarnings(dir.create(path,recursive=TRUE,showWarnings=FALSE))
       rows <- data.frame(metric=c('run_status','failing_stage','current_stage','sanitised_error','recovery_instructions',
         'collection_status','interpretation_status','website_status','packaging_status'),
-        value=c('failed',stage,stage,message,recovery,rep('not_started',3),'not_implemented'))
+        value=c('failed',stage,stage,message,recovery,rep('not_started',4)))
       utils::write.table(rows,diagnostics,sep='\t',quote=TRUE,row.names=FALSE,fileEncoding='UTF-8')
       utils::write.table(data.frame(timestamp=format(Sys.time(),'%Y-%m-%dT%H:%M:%S%z'),level='error',table_name='',stage=stage,message=message),
         file.path(path,'atlas_execution_log.tsv'),sep='\t',quote=TRUE,row.names=FALSE,fileEncoding='UTF-8')

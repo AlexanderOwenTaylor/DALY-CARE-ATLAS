@@ -1,0 +1,9 @@
+DALY-CARE aggregate atlas
+Unzip the entire share archive into one folder. Open DALYCARE_atlas.html. Keep all relative folders together. Classic scripts support local file opening and ordinary static hosting without a server API.
+The public manifest describes this build, its partial/complete state and SHA256 for each allowed asset (excluding the manifest itself). A ZIP checksum, if supplied, belongs outside the ZIP.
+Field identities remain searchable when results are withheld. Reference definitions do not establish observed tests or verified stored units. Search reports completion separately from load failures.
+For a new source run use the project's single73 source entrypoint after local dependency/configuration preflight. Keep private aggregate outputs and logs inside the run directory; they are excluded from this share archive.
+For offline rebuilding use Rscript scripts/rebuild_atlas_from_outputs.R <run_dir> with the original project resources. A lazy website bootstrap is not a complete aggregate input.
+This build can remain partial because collection or interpretation evidence is incomplete. A successfully created website or ZIP does not change that evidence state. Live NGC validation is a separate acceptance step.
+
+CSV nullable empty strings and null share the same missing-cell representation. Preserve quoted empty records when importing; for R read.csv use blank.lines.skip=FALSE.

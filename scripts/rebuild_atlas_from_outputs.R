@@ -19,4 +19,7 @@ if(nrow(existing) && all(c('artifact_id','relative_path') %in% names(existing)))
   inputs <- c(previous,inputs)
 }
 paths <- write_static_atlas(run_dir,rebuilt$payload,project_root=project_root,output_evidence=rebuilt$tables,manifest_paths=inputs,membership_spec=rebuilt$membership_spec)
+source(file.path(project_root,'R/publication.R'),encoding='UTF-8')
+archive<-atlas_publication_boundary(atlas_package_site(file.path(run_dir,'site')),phase='packaging')
+cat('Validated public ZIP:',archive,'\n')
 cat('Rebuilt from strict CSV inputs:',paths$html,'\n')

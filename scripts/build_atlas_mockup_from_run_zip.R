@@ -123,7 +123,11 @@ zip_dir <- function(from, zipfile) {
 temp_root <- tempfile("atlas_mockup_unzip_")
 dir.create(temp_root, recursive = TRUE, showWarnings = FALSE)
 on.exit(unlink(temp_root, recursive = TRUE, force = TRUE), add = TRUE)
+entries<-utils::unzip(input_zip,list=TRUE)$Name
+if(anyDuplicated(entries)||any(grepl('^/|:|(^|/)[.][.](/|$)|\\\\',entries)))stop('Unsafe input ZIP entries',call.=FALSE)
 utils::unzip(input_zip, exdir = temp_root)
+extracted<-list.files(temp_root,recursive=TRUE,full.names=TRUE,all.files=TRUE)
+if(any(nzchar(Sys.readlink(extracted)),na.rm=TRUE))stop('Linked input ZIP entries are not accepted',call.=FALSE)
 
 source_files <- list.files(temp_root, pattern = "^atlas_sources[.]csv$", recursive = TRUE, full.names = TRUE)
 if (!length(source_files)) stop("Could not find outputs/atlas_sources.csv inside the input ZIP.", call. = FALSE)
@@ -660,5 +664,6 @@ if (file.exists(memory_log)) all_paths$memory_log <- memory_log
 manifest <- output_manifest(all_paths, run_dir = mock_dir)
 write_csv(manifest, file.path(mock_output_dir, "output_manifest.csv"))
 
-zip_dir(mock_dir, output_zip)
+source(file.path(project_root,'R/publication.R'),encoding='UTF-8')
+atlas_publication_boundary(atlas_package_site(file.path(mock_dir,'site'),output_zip),phase='packaging')
 cat("Mock-up ZIP written:\n", output_zip, "\n", sep = "")

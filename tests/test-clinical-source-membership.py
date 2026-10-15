@@ -23,7 +23,12 @@ TEMP_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def load_payload(path):
-    return decode_transport(json.loads(path.read_text(encoding='utf-8')))
+    bootstrap=decode_transport(json.loads(path.read_text(encoding='utf-8')))
+    if bootstrap.get('export_contract')=='dalycare-lazy-v1':
+        artifact=json.loads((path.parent/'DALYCARE_membership.js').read_text(encoding='utf-8').split('=',1)[1].strip().removesuffix(';'))
+        assert artifact['build_id']==bootstrap['build_id']
+        return dict(bootstrap,clinical_source_inventory=artifact['inventory'])
+    return bootstrap
 
 
 def published_tables(path):
@@ -115,6 +120,16 @@ class MembershipSelectorTest(unittest.TestCase):
 class ImportedMembershipBuildTest(unittest.TestCase):
     maxDiff = 1200
 
+    def assert_canonical_extension(self,actual,expected):
+        from site_bundle import PRIVACY_COLUMNS
+        self.assertEqual({k:v for k,v in actual.items() if k not in ('columns','rows')},{k:v for k,v in expected.items() if k not in ('columns','rows')})
+        self.assertEqual(actual['columns'][:len(expected['columns'])],expected['columns'])
+        self.assertTrue({c['key'] for c in actual['columns'][len(expected['columns']):]}<=PRIVACY_COLUMNS)
+        self.assertEqual(len(actual['rows']),len(expected['rows']))
+        for row,prior in zip(actual['rows'],expected['rows']):
+            self.assertEqual({k:row[k] for k in prior},prior)
+            self.assertTrue(set(row)-set(prior)<=PRIVACY_COLUMNS)
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='membership-', dir=TEMP_ROOT)
         self.addCleanup(self.temp.cleanup)
@@ -150,12 +165,19 @@ class ImportedMembershipBuildTest(unittest.TestCase):
         self.assertEqual(payload['clinical_source_inventory']['evidence_origin'], 'imported_snapshot')
         self.assertEqual([row['source_key'] for row in payload['clinical_source_inventory']['rows']],
                          ['BIOBANK_SAMPLES', 'LAB_BIOBANK_SAMPLES'])
-        for key in ('catalog_rows', 'column_profile_rows', 'review_clinical_sections', 'review_module_readiness', 'panels', 'panel_kpi_rows'):
-            self.assertEqual(payload[key], self.payload[key], key)
+        self.assertEqual(json.loads((self.input/'DALYCARE_atlas_payload.js').read_text().split('=',1)[1].strip().removesuffix(';')),self.payload)
+        self.assertNotIn('column_profile_rows',payload)
         for table in before_tables:
             if table['status'] == 'snapshot_preview':
                 table['status'] = 'limited'
-        self.assertEqual(published_tables(self.output), before_tables)
+        actual={t['id']:t for t in published_tables(self.output)}
+        for table in before_tables:
+            if table['id'] not in {'semantic_dictionary','semantic_panel_links','panel_raw_fields','clinical_concepts'}:
+                self.assert_canonical_extension(actual[table['id']],table)
+        self.assertTrue(any(r['raw_column']=='sample_type' for r in actual['semantic_dictionary']['rows']))
+        self.assertEqual(actual['clinical_concepts']['status'],'limited')
+        self.assertEqual(len(actual['clinical_concepts']['rows']),len({r['clinical_concept_id'] for r in actual['semantic_dictionary']['rows']}))
+        self.assertTrue(all(r.get('raw_field_count') is None for r in actual['clinical_concepts']['rows']))
         manifest = json.loads(self.output.with_suffix('.manifest.json').read_text(encoding='utf-8'))
         resource = self.project / 'inst/config/clinical-source-membership.json'
         recorded = [i for i in manifest['inputs'] if i.get('artifact_id') == 'clinical_source_membership']
@@ -217,7 +239,8 @@ class ImportedMembershipBuildTest(unittest.TestCase):
         self.assertEqual(inventory['inventory_state'], 'limited')
         self.assertEqual(inventory['diagnostics'][0], dict(code='catalog_limited', source_key=None, membership_id=None))
         self.assertEqual(len(inventory['rows']), 2)
-        self.assertEqual(payload['catalog_rows'], self.payload['catalog_rows'])
+        directory=json.loads((self.output/'DALYCARE_directory.js').read_text().split('=',1)[1].strip().removesuffix(';'))
+        self.assertEqual(len(directory['sources']),1000)
 
     def test_guarded_catalog_missing_malformed_and_empty_remain_distinct(self):
         for catalog, state, code in ((None, 'unavailable', 'catalog_unavailable'),
@@ -252,9 +275,12 @@ class ImportedMembershipBuildTest(unittest.TestCase):
         payload = load_payload(self.output / 'DALYCARE_atlas_payload.json')
         self.assertTrue('clinical_source_inventory' in payload, 'Imported membership overlay is missing')
         self.assertEqual([r['source_key'] for r in payload['clinical_source_inventory']['rows']], ['BIOBANK_SAMPLES', 'LAB_BIOBANK_SAMPLES'])
-        self.assertEqual(payload['catalog_rows'], self.payload['catalog_rows'])
+        self.assertEqual(json.loads((self.input/'DALYCARE_atlas_payload.js').read_text().split('=',1)[1].strip().removesuffix(';')),self.payload)
         self.assertEqual(csv_path.read_bytes(), csv_before)
-        self.assertEqual(published_tables(self.output), expected_tables)
+        actual={t['id']:t for t in published_tables(self.output)}
+        for table in expected_tables:
+            if table['status']=='snapshot_preview':table['status']='limited'
+            if table['id'] not in {'semantic_dictionary','semantic_panel_links','panel_raw_fields','clinical_concepts'}:self.assert_canonical_extension(actual[table['id']],table)
 
 
 if __name__ == '__main__':

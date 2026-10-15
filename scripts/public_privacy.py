@@ -22,6 +22,17 @@ def number(value):
         return n if math.isfinite(n) else None
     except (ValueError,TypeError): return None
 
+def availability_unsafe(row,k,total=None):
+    if row.get('availability_privacy_status')=='withheld_small_complementary_cells':return True
+    total=number(row.get('n_rows')) if number(row.get('n_rows')) is not None else number(total)
+    cells=[number(row.get(key)) for key in ('n_available','n_missing')]
+    if total is not None:
+        cells.extend(total-v for v in list(cells) if v is not None)
+        for key in ('pct_available','pct_missing'):
+            pct=number(row.get(key))
+            if pct is not None:cells.extend((total*pct/100,total*(100-pct)/100))
+    return any(v is not None and 0<v<k for v in cells)
+
 def threshold(value):
     n=number(value)
     return max(5, math.ceil(n)) if n is not None else 5
@@ -39,6 +50,7 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None, metada
     approved=measurement_policy(project_root)
     # Canonical profile provenance is required for panel copies missing min/distinct.
     profiles={(str(r.get('table_name','')),str(r.get('column_name',''))):r for r in payload.get('column_profile_rows',[]) if isinstance(r,dict)}
+    source_totals={r.get('table_name'):r.get('n_rows') for r in payload.get('sources',[]) if isinstance(r,dict)}
     year_paths = {('panels','atlas_temporal_coverage_years'), ('review_temporal_coverage','years')}
     has_ranges = any(isinstance(r,dict) and r.get('coverage_basis') == 'source_date_range'
                      for rows in (payload.get('panels',{}).get('atlas_temporal_coverage_years',[]), payload.get('review_temporal_coverage',{}).get('years',[])) for r in rows)
@@ -107,11 +119,11 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None, metada
         field=str(r.get('column_name',r.get('source_column',r.get('date_column',r.get('raw_column','')))) or '')
         table=str(r.get('table_name',r.get('registry','')) or '')
         profile=('profile_kind' in r or 'column_name' in r and 'n_available' in r)
-        if any(number(obj.get(key)) is not None and 0<number(obj.get(key))<k for key in ('n_available','n_missing')):
+        if availability_unsafe(obj,k,source_totals.get(table)):
             for key in {'n_available','n_missing','pct_available','pct_missing'} & r.keys(): r[key]=None
             r['availability_privacy_status']='withheld_small_complementary_cells'
         provenance=profiles.get((table,field),{})
-        if provenance.get('availability_privacy_status')=='withheld_small_complementary_cells' or any(number(provenance.get(key)) is not None and 0<number(provenance.get(key))<k for key in ('n_available','n_missing')):
+        if availability_unsafe(provenance,k,source_totals.get(table)):
             for key in {'n_available','n_missing','pct_available','pct_missing'} & r.keys(): r[key]=None
             r['availability_privacy_status']='withheld_small_complementary_cells'
         protected=bool(field and PROTECTED.search(field)) or str(r.get('is_sensitive','')).lower()=='true' or str(r.get('profile_kind',''))=='sensitive'
@@ -176,7 +188,8 @@ def audit_public_payload(payload,project_root=None,min_cell_count=5,metadata_con
     if metadata_context is None:metadata_context=build_metadata_context(payload,project_root)
     errors=[]
     k=effective_threshold(payload,min_cell_count=min_cell_count)
-    suppressed={(str(r.get('table_name','')),str(r.get('column_name',''))) for r in payload.get('column_profile_rows',[]) if r.get('availability_privacy_status')=='withheld_small_complementary_cells'}
+    source_totals={r.get('table_name'):r.get('n_rows') for r in payload.get('sources',[]) if isinstance(r,dict)}
+    suppressed={(str(r.get('table_name','')),str(r.get('column_name',''))) for r in payload.get('column_profile_rows',[]) if availability_unsafe(r,k,source_totals.get(r.get('table_name')))}
     def visit(obj,path):
         summary_row=isinstance(obj,dict) and bool({'category_counts_json','numeric_groups_json'} & obj.keys())
         summary_table=isinstance(obj,list) and any(isinstance(r,dict) and bool({'category_counts_json','numeric_groups_json'} & r.keys()) for r in obj)
@@ -192,9 +205,14 @@ def audit_public_payload(payload,project_root=None,min_cell_count=5,metadata_con
                 return
             field=str(obj.get('column_name',obj.get('source_column',obj.get('date_column',''))) or '')
             table=str(obj.get('table_name',obj.get('registry','')) or '')
-            if (table,field) in suppressed:
+            if availability_unsafe(obj,k,source_totals.get(table)) or (table,field) in suppressed:
                 for key in {'n_available','n_missing','pct_available','pct_missing'} & obj.keys():
                     if obj[key] not in (None,''): errors.append('.'.join(path+(key,)))
+            structural_count=(len(path)>0 and any(x in {'panel_groups','panels'} for x in path) and set(obj)=={'group','panel_name','title','n_rows'})
+            if not structural_count:
+                for key in {'n','n_rows','n_observed','n_patients','matched_rows','matched_patients','n_cohort','damyda_n','choropleth_value'} & obj.keys():
+                    n=number(obj[key])
+                    if n is not None and 0<n<k:errors.append('.'.join(path+(key,)))
             structural_section=(obj.get('distribution_type')=='clinical_section' and obj.get('value_class')=='section' and all(obj.get(key) in (None,'') for key in ('n','pct','statistic','statistic_value','raw_column','raw_descriptor','raw_code','raw_value')))
             for key in {'raw_value','raw_code','raw_descriptor','statistic_value','display_value'} & obj.keys():
                 if obj[key] not in (None,'') and not (key=='display_value' and structural_section): errors.append('.'.join(path+(key,)))

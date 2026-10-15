@@ -22,10 +22,16 @@ class EvidenceTests(unittest.TestCase):
    return next(t for t in self.collect() if t['id']==spec['id'])
   a=write_years(1983); b=write_years(2026)
   self.assertEqual(a,b); self.assertIsNone(a['source_row_count']); self.assertEqual(a['represented_row_count'],2)
-  self.assertIn('transformed',a['reason'].lower()); self.assertIsNone(a['rows'][0]['year']); self.assertEqual(a['rows'][1]['date_column'],'E'); self.assertEqual(a['rows'][1]['year'],2020); self.assertIsNone(a['rows'][1]['n_rows'])
+  self.assertIn('transformed',a['reason'].lower()); self.assertIsNone(a['rows'][0]['year']); self.assertEqual(a['rows'][1]['date_column'],'E'); self.assertIsNone(a['rows'][1]['year']); self.assertIsNone(a['rows'][1]['n_rows'])
   spec=specs['atlas_spatial_region_counts'];keys=list(spec['schemas'][0]);row=dict(table_name='S',region_column='RegionCode',region_code='01',n_rows=1)
   self.write('panels/atlas_spatial_region_counts.csv',keys,[[row.get(k) for k in keys]])
   table=next(t for t in self.collect() if t['id']==spec['id']);self.assertEqual(table['rows'][0]['region_column'],'RegionCode');self.assertIsNone(table['rows'][0]['n_rows'])
+ def test_supported_year_label_survives_with_counts_withheld(self):
+  from output_evidence import collect_output_evidence
+  row=dict(table_name='S',date_column='D',coverage_basis='person_supported_label_only',year=2020,n_rows=10,pct_rows=50,support_k=5,person_support_safe=True,outside_person_support_safe=True,outside_record_support_safe=True,partition_complete=False)
+  tables=collect_output_evidence(None,ROOT,{'panels':{'atlas_temporal_coverage_years':[row]}})
+  table=next(t for t in tables if t['id']=='atlas_temporal_coverage_years')
+  self.assertEqual(table['rows'][0]['year'],2020);self.assertIsNone(table['rows'][0]['n_rows']);self.assertIsNone(table['rows'][0]['pct_rows']);self.assertEqual(table['rows'][0]['count_privacy_status'],'withheld_partition_counts')
  def test_reviewed_discovery_terms_are_not_arbitrary_field_values(self):
   from output_evidence import collect_output_evidence
   p={'column_profile_rows':[{'table_name':'SP_PatientInfo','column_name':'weight_in_kg'},{'table_name':'Other','column_name':'FORBIDDEN_ARBITRARY_TERM'}]}
@@ -142,7 +148,7 @@ class EvidenceTests(unittest.TestCase):
   for context in (base,dict(base,binding_files={}),dict(base,binding_files=[])):
    context_path.write_text(json.dumps(context),encoding='utf-8')
    self.assertEqual(matching_run_context(self.run,{'run_id':'synthetic-context'},registry),context)
-   self.assertEqual(len(self.collect()),148)
+   self.assertEqual({t['id'] for t in self.collect()},{s['id'] for s in registry['artifacts']})
   # A real selected binding validates and remains required at its selected path.
   spec=next(s for s in registry['artifacts'] if s['id']==selected)
   headers=list(spec['schemas'][0]);row={k:'' for k in headers};row.update(metric='synthetic_count',label='Selected source',value='23',status='available')
@@ -151,9 +157,9 @@ class EvidenceTests(unittest.TestCase):
   context=dict(base,bindings=[selected],binding_files={selected:'outputs/selected_mcl/mcl_triangle_count_summary.csv'})
   context_path.write_text(json.dumps(context),encoding='utf-8')
   self.assertEqual(matching_run_context(self.run,{'run_id':'synthetic-context'},registry),context)
-  self.assertEqual(len(self.collect()),148)
+  self.assertEqual({t['id'] for t in self.collect()},{s['id'] for s in registry['artifacts']})
   context_path.unlink();self.write('atlas_run_summary.csv',['metric','value'],[['run_id','synthetic-context']])
   self.assertIsNone(matching_run_context(self.run,{'run_id':'synthetic-context'},registry))
-  self.assertEqual(len(self.collect()),148)
+  self.assertEqual({t['id'] for t in self.collect()},{s['id'] for s in registry['artifacts']})
 
 if __name__=='__main__':unittest.main()

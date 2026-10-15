@@ -9,7 +9,7 @@ atlas_recovery_instructions <- function(stage) {
 atlas_lifecycle_start <- function(project_root, output_root, stage='preflight') {
   state <- new.env(parent=emptyenv())
   state$stage <- stage;state$status <- 'running';state$error <- '';state$error_code <- '';state$error_resource <- ''
-  state$outcomes <- c(collection='not_started',interpretation='not_started',website='not_started',packaging='not_implemented')
+  state$outcomes <- c(collection='not_started',interpretation='not_started',website='not_started',packaging='not_started')
   state$run_id <- paste0(format(Sys.time(),'%Y%m%d_%H%M%S'),'-p',Sys.getpid(),'-',paste(sample(c(0:9,letters[1:6]),8,TRUE),collapse=''))
   state$run_dir <- file.path(output_root,state$run_id)
   state$log_dirs <- character()
@@ -88,11 +88,12 @@ atlas_lifecycle_stage <- function(state,stage,previous_status='complete') {
 
 atlas_lifecycle_fail <- function(state,error=NULL) {
   state$status <- 'failed'
-  state$error_code <- if(inherits(error,'atlas_preflight_error')) error$code else 'unexpected_stage_error'
-  state$error_resource <- if(inherits(error,'atlas_preflight_error')) error$resource else ''
+  state$error_code <- if(inherits(error,c('atlas_preflight_error','atlas_publication_error'))) error$code else 'unexpected_stage_error'
+  state$error_resource <- if(inherits(error,c('atlas_preflight_error','atlas_publication_error'))) error$resource else ''
   state$error <- paste0('Atlas ',state$stage,' failed: ',state$error_code,
     if(nzchar(state$error_resource))paste0(' (',state$error_resource,')') else '',
-    '. Raw error details withheld; inspect retained internal diagnostics.')
+    '. Raw argument details withheld. Recovery status includes the safe cause and stage.',
+    if(!is.null(error$breadcrumbs))paste0(' Functions/classes: ',error$breadcrumbs)else '')
   if(state$stage %in% names(state$outcomes)) state$outcomes[[state$stage]] <- 'failed'
   diagnostics <- atlas_lifecycle_event(state,'error',state$error)
   structure(list(message=paste0(state$error,' Diagnostics written to: ',diagnostics),call=NULL,
@@ -106,6 +107,8 @@ atlas_preflight_check <- function(code,resource,expr) {
 
 atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapter=NULL) {
   # Match DESCRIPTION Imports for source runs too; never install at runtime.
+  if(!exists('atlas_package_preflight',mode='function'))source(file.path(project_root,'R/publication.R'),local=TRUE)
+  atlas_preflight_check('missing_dependency','portable ZIP',atlas_package_preflight())
   packages <- c('dplyr','jsonlite','purrr','readr','stringr','tibble','tidyr')
   description <- file.path(project_root,'DESCRIPTION')
   if(file.exists(description)) packages <- atlas_preflight_check('invalid_configuration','DESCRIPTION',{
@@ -125,7 +128,8 @@ atlas_build_preflight <- function(project_root,source_map_path,run_dir,db_adapte
     })
   }
   for(name in c('DALYCARE_entry.html','DALYCARE_atlas.html','DALYCARE_outputs.html','atlas-entry.js','atlas-outputs.js',
-    'atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css','registry-v2.js')) {
+    'atlas-transport.js','atlas-pages.css','atlas-vitals.js','atlas-vitals.css','registry-v2.js',
+    'DALYCARE_lazy.html','atlas-reader.js','atlas-shell.js','atlas-shell.css','atlas-topic.js','atlas-topic.css','atlas-route-registries.js','atlas-route-vitals.js','atlas-route-laboratory.js','atlas-route-treatment.js','atlas-route-situation.js','atlas-route-feasibility.js','atlas-route-infrastructure.js','atlas-route-variables.js','atlas-route-ehr.js','atlas-route-timeplace.js','atlas-route-sources.js','favicon.svg','OPERATING.txt','THIRD_PARTY_NOTICES.txt')) {
     atlas_preflight_check('missing_or_invalid_template',name,{
       resource <- atlas_bundle_resource(name,project_root)
       expected_bytes <- file.info(resource)$size
@@ -200,7 +204,8 @@ run_atlas <- function(project_root, source_map_path, output_root = 'atlas_runs',
     values <- setNames(result$completion$summary$value,result$completion$summary$metric)
     state$outcomes[['collection']] <- values[['collection_status']]
     state$outcomes[['interpretation']] <- values[['interpretation_status']]
-    state$status <- 'partial' # Packaging is a separate, not yet implemented phase.
+    state$outcomes[['packaging']] <- 'complete'
+    state$status <- if(all(state$outcomes=='complete'))'complete' else 'partial'
     state$stage <- 'finished'
     atlas_lifecycle_event(state,'info','Build finished; review separate phase outcomes')
     result$build_status <- atlas_lifecycle_save(state)
@@ -953,6 +958,10 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
   interpretation_status <- completion$summary$value[completion$summary$metric=='interpretation_status']
   atlas_lifecycle_stage(lifecycle,'website',interpretation_status)
   site_paths <- write_static_atlas(run_dir,payload,project_root=project_root,output_evidence=reconstructed$tables,manifest_paths=manifest_paths,membership_spec=membership_spec)
+  atlas_lifecycle_stage(lifecycle,'packaging')
+  if(!exists('atlas_package_site',mode='function'))source(file.path(project_root,'R/publication.R'),local=TRUE)
+  archive_path<-atlas_publication_boundary(atlas_package_site(file.path(run_dir,'site')),phase='packaging')
+  lifecycle$outcomes[['packaging']]<-'complete'
   manifest_path <- site_paths$manifest
   log_event("info", "", "Static atlas written")
   log_event("info", "", "Output manifest written")
@@ -969,6 +978,7 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
     run_id = run_id,
     run_dir = run_dir,
     manifest = manifest_path,
+    archive = archive_path,
     html = site_paths$html,
     payload = site_paths$payload,
     completion = completion,
@@ -1041,7 +1051,7 @@ atlas_completion_report <- function(source_map, sources, registry_rows, project_
     if(stage=='website') website <- 'failed'
   }
   summary <- rbind(summary,data.frame(metric=c('collection_status','interpretation_status','website_status','packaging_status','overall_status'),
-    value=c(collection,interpretation,website,'not_implemented',if(build_status=='failed')'failed' else if(build_status=='complete')'partial' else 'running'),stringsAsFactors=FALSE))
+    value=c(collection,interpretation,website,if(!is.null(lifecycle))lifecycle$outcomes[['packaging']] else 'not_started',if(build_status=='failed')'failed' else if(build_status=='complete'&&collection=='complete'&&interpretation=='complete'&&!is.null(lifecycle)&&lifecycle$outcomes[['packaging']]=='complete')'complete' else if(build_status=='complete')'partial' else 'running'),stringsAsFactors=FALSE))
   list(summary=summary,registries=registries)
 }
 

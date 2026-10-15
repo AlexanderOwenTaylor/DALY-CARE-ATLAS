@@ -3,9 +3,12 @@ root=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(root/'scr
 from registry_summary_privacy import sanitize_registry_summaries,audit_registry_summaries
 from registry_v2 import policy,public_resource
 work=root/'.artifact-temp/registry-v2'
-runtime=shutil.which('Rscript') or 'C:/Program Files/R/R-4.3.1/bin/Rscript.exe'
+runtime=os.environ.get('RSCRIPT') or shutil.which('Rscript') or 'C:/Program Files/R/R-4.3.1/bin/Rscript.exe'
 env=os.environ.copy()
-if os.name=='nt':env.update(R_LIBS_USER='C:/Users/User/AppData/Local/R/win-library/4.3',LC_ALL='English_United States.utf8')
+if os.name=='nt':
+ env.setdefault('LC_ALL','English_United States.utf8')
+ libs=pathlib.Path('C:/Users/User/AppData/Local/R/win-library/4.3')
+ if libs.exists():env.setdefault('R_LIBS_USER',str(libs))
 subprocess.run([runtime,'tests/test-registry-v2.R'],cwd=root,env=env,check=True)
 os.environ['DALYCARE_REGISTRY_UNIT_EVIDENCE_FILE']=str(work/'unit.json');os.environ['DALYCARE_REGISTRY_NUMERIC_POLICY_FILE']=str(work/'policy.json');os.environ['DALYCARE_MIN_CELL_COUNT']='5'
 golden=json.loads((work/'golden.json').read_text())

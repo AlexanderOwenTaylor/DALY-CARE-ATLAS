@@ -80,7 +80,7 @@ saved <- accepted$context;saved$bindings <- as.list(unique(c(unlist(saved$bindin
 jsonlite::write_json(saved,file.path(one$run_dir,'outputs/atlas_build_context.json'),auto_unbox=TRUE,null='null')
 
 child(rebuild_args);after <- accept_site(one$run_dir)
-expect_true(any(vapply(after$core$payload$sources,function(r)identical(r$domain,'Synthetic CSV acceptance sentinel'),logical(1))))
+expect_true(any(vapply(read_public_table(file.path(one$run_dir,'site'),'sources'),function(r)identical(r$domain,'Synthetic CSV acceptance sentinel'),logical(1))))
 t <- Filter(function(t)t$id=='sources',after$catalogue$tables)[[1]]
 shard_text <- paste(readLines(file.path(one$run_dir,'site',t$shards[[1]]$src),encoding='UTF-8'),collapse='\n')
 expect_true(grepl('Synthetic CSV acceptance sentinel',shard_text,fixed=TRUE),'CSV change must reach the public table shard')
@@ -98,10 +98,12 @@ optional <- Filter(function(s)s$id=='npu_display_dictionary',registry$artifacts)
 optional_path <- file.path(reference_root,optional$source_file)
 file.rename(optional_path,paste0(optional_path,'.test-backup'))
 reference_args <- c(file.path(reference_root,'scripts/rebuild_atlas_from_outputs.R'),one$run_dir,reference_root)
-child(reference_args);a <- accept_site(one$run_dir,reference_root);expect_equal(Filter(function(t)t$id==optional$id,a$catalogue$tables)[[1]]$status,'not_produced')
+child(reference_args,FALSE);expect_equal(prior,tools::md5sum(assets))
 schema <- optional$schemas[[which.max(lengths(optional$schemas))]]
 write_csv(as.data.frame(lapply(schema,function(x)character()),stringsAsFactors=FALSE),optional_path)
-child(reference_args);a <- accept_site(one$run_dir,reference_root);expect_equal(Filter(function(t)t$id==optional$id,a$catalogue$tables)[[1]]$status,'empty_output')
+child(reference_args,FALSE);expect_equal(prior,tools::md5sum(assets))
+expect_true(file.copy(paste0(optional_path,'.test-backup'),optional_path,overwrite=TRUE))
+child(reference_args);a <- accept_site(one$run_dir,reference_root);expect_equal(Filter(function(t)t$id==optional$id,a$catalogue$tables)[[1]]$status,'available')
 summary_only_range <- review_temporal_summary(data.frame(table_name='S',domain='D',display_min_year=NA_real_,display_max_year=NA_real_),data.frame(domain='D',year=NA_real_))
 expect_true(is.na(summary_only_range$n_year_rows[[1]]))
 # Synthetic coverage regression: inferred range lengths disappear from descriptor scope.
@@ -118,16 +120,20 @@ invisible(years(1982))
 file.copy(file.path(coverage_run,spec$source_file),file.path(one$run_dir,spec$source_file),overwrite=TRUE)
 child(rebuild_args)
 range_core <- accept_site(one$run_dir)$core$payload
-expect_equal(length(range_core$panels$atlas_temporal_coverage_years),2L)
+expect_equal(length(read_public_table(file.path(one$run_dir,'site'),'atlas_temporal_coverage_years')),2L)
 # Only inferred rows also rebuild without aggregate() dropping every null year.
 only_ranges <- read.csv(file.path(coverage_run,spec$source_file),stringsAsFactors=FALSE)
 only_ranges <- only_ranges[only_ranges$coverage_basis=='source_date_range',]
 write_csv(only_ranges,file.path(one$run_dir,spec$source_file))
 child(rebuild_args);only_core <- accept_site(one$run_dir)$core$payload
-expect_equal(length(only_core$panels$atlas_temporal_coverage_years),1L)
+expect_equal(length(read_public_table(file.path(one$run_dir,'site'),'atlas_temporal_coverage_years')),1L)
 
 x <- years(1982);y <- years(2025);expect_equal(x,y);expect_true(is.null(x$source_row_count));expect_equal(x$represented_row_count,2L)
-expect_true(is.null(x$rows[[1]]$year));expect_equal(x$rows[[2]]$date_column,'EventDate');expect_equal(x$rows[[2]]$year,2020);expect_true(is.null(x$rows[[2]]$n_rows))
+expect_true(is.null(x$rows[[1]]$year));expect_equal(x$rows[[2]]$date_column,'EventDate');expect_true(is.null(x$rows[[2]]$year));expect_true(is.null(x$rows[[2]]$n_rows))
+# A supported label can remain while its numeric partition is withheld.
+supported<-list(table_name='S',date_column='EventDate',coverage_basis='person_supported_label_only',year=2020,n_rows=10,pct_rows=50,support_k=5,person_support_safe=TRUE,outside_person_support_safe=TRUE,outside_record_support_safe=TRUE,partition_complete=FALSE)
+supported_table<-Filter(function(t)t$id=='atlas_temporal_coverage_years',atlas_output_evidence(NULL,root,list(panels=list(atlas_temporal_coverage_years=list(supported)))))[[1]]
+expect_equal(supported_table$rows[[1]]$year,2020);expect_true(is.null(supported_table$rows[[1]]$n_rows));expect_equal(supported_table$rows[[1]]$count_privacy_status,'withheld_partition_counts')
 sp <- Filter(function(s)s$id=='atlas_spatial_region_counts',registry$artifacts)[[1]]
 region <- data.frame(table_name='S',domain='D',subdomain='D',atlas_role='events',region_column='RegionCode',region_code='01',region_name='Synthetic',n_rows=1,pct_rows=1,count_basis='source_rows')
 write_csv(region,file.path(coverage_run,sp$source_file));tab <- Filter(function(t)t$id==sp$id,atlas_output_evidence(coverage_run,root))[[1]]

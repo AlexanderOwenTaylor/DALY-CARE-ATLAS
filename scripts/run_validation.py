@@ -36,6 +36,7 @@ def main() -> int:
     for key in ('TMPDIR', 'TEMP', 'TMP'):
         env[key] = str(scratch)
     env['LANG'] = env['LC_ALL'] = 'English_United States.utf8' if os.name == 'nt' else 'C.UTF-8'
+    env['DALYCARE_METADATA_TEST_OUTPUT'] = str(scratch / 'metadata-parity.json')
     env['RSCRIPT'] = args.rscript
     env['PATH'] = str(Path(args.rscript).parent) + os.pathsep + env.get('PATH', '')
     if os.name == 'nt':

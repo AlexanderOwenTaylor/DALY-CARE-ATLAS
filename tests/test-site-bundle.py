@@ -17,7 +17,10 @@ class BundleTests(unittest.TestCase):
     probe="const fs=require('fs'),vm=require('vm');let c={window:{}};vm.runInNewContext(fs.readFileSync(process.argv[1],'utf8'),c);process.stdout.write(JSON.stringify(c.window.DALYCARE_ATLAS_PAYLOAD));"
     evaluated=subprocess.run(['node','-e',probe,str(result['payload'])],capture_output=True,text=True,check=True)
     self.assertEqual(json.loads(evaluated.stdout),wire)
-    self.assertEqual(b.decode_transport(wire)['untouched'],payload['untouched'])
+    decoded=b.decode_transport(wire)
+    self.assertEqual(decoded['export_contract'],'dalycare-lazy-v1')
+    self.assertEqual(decoded['run_id'],payload['run_id'])
+    self.assertNotIn('untouched',decoded)
    before={p:p.read_bytes() for p in result['assets']+[result['manifest']]}
    for version in (1,2):
     for unsafe in ({'__proto__':'own'}, {'nested':[{'__proto__':'own'}]}):
@@ -33,7 +36,8 @@ class BundleTests(unittest.TestCase):
    out=Path(tmp)/'site'
    for version in (1,2):
     result=b.write_site_bundle(out,payload,[],ROOT,'legacy_payload',transport_version=version)
-    required=max(result['payload'].stat().st_size,result['payload_json'].stat().st_size)
+    wire=json.loads(result['payload_json'].read_text(encoding='utf-8'))
+    required=max(result['payload'].stat().st_size,result['payload_json'].stat().st_size,b.normalized_size(wire),b.normalized_size(payload))
     registry=load_registry(ROOT)
     registry['input_max_bytes']=required
     with patch.object(b,'load_registry',return_value=registry):
@@ -65,8 +69,9 @@ class BundleTests(unittest.TestCase):
       wire=json.loads(result['payload_json'].read_text(encoding='utf-8'))
       self.assertEqual(wire['transport_version'],want)
       decoded=b.decode_transport(wire)
-      self.assertEqual(decoded['rows'],payload['rows'])
-      self.assertEqual(decoded['clinical_source_inventory']['evidence_origin'],'imported_snapshot')
+      self.assertEqual(decoded['run_id'],payload['run_id'])
+      self.assertEqual(decoded['export_contract'],'dalycare-lazy-v1')
+      self.assertNotIn('rows',decoded)
 
  def test_chunks_transport_manifest_and_rollback(self):
   import site_bundle as b
@@ -76,7 +81,7 @@ class BundleTests(unittest.TestCase):
    payload={'run_id':'synthetic','action_items':[{'status':'safe'}], 'review_infrastructure_sections':{'action_items':[{'status':'safe'}]},'privacy_metadata':{'minimum_cell_count':10}}
    tables=collect_output_evidence(None,ROOT,{'privacy_metadata':{'minimum_cell_count':10},'panels':{'registry_clinical_summary':[{'table_name':'S'+str(i),'registry':'LYFO','n_rows':7 if i==250 else 20,'n_cols':7,'n_patients':20} for i in range(251)]}})
    paths=b.write_site_bundle(out,payload,tables,ROOT,'legacy_payload')
-   for name in ('atlas-vitals.js','atlas-vitals.css'):
+   for name in ('atlas-reader.js','atlas-shell.js'):
     self.assertEqual((out/name).read_bytes(),(ROOT/'inst/templates'/name).read_bytes())
     for page in ('DALYCARE_outputs.html','DALYCARE_clinical.html'):
      self.assertIn(name,(out/page).read_text(encoding='utf-8'))
@@ -91,9 +96,10 @@ class BundleTests(unittest.TestCase):
      data=json.loads((out/s['src']).read_text(encoding='utf-8').split('register(',1)[1].removesuffix(');\n'))
      self.assertEqual(len(data['rows_json'].encode()),s['bytes']); self.assertLessEqual((out/s['src']).stat().st_size,262144)
    transport=json.loads(paths['payload_json'].read_text(encoding='utf-8')); decoded=b.decode_transport(transport)
-   from public_privacy import sanitize_public_payload
-   self.assertEqual(decoded,sanitize_public_payload(payload,10,ROOT))
-   self.assertEqual(decoded['action_items'],payload['action_items']); self.assertIs(decoded['action_items'],decoded['review_infrastructure_sections']['action_items'])
+   self.assertEqual(decoded['export_contract'],'dalycare-lazy-v1')
+   self.assertEqual(decoded['privacy_metadata']['minimum_cell_count'],10)
+   self.assertNotIn('action_items',decoded)
+   self.assertNotIn('review_infrastructure_sections',decoded)
    self.assertEqual(set(paths['assets']),set(p for p in out.rglob('*') if p.is_file()))
    prior={p.relative_to(out):p.read_bytes() for p in paths['assets']}
    with patch.dict(os.environ,{'DALYCARE_ATLAS_PUBLIC_TABLE_MAX_BYTES':'1'}):
@@ -184,8 +190,11 @@ class BundleTests(unittest.TestCase):
    (src/'DALYCARE_atlas_payload.js').write_text('window.DALYCARE_ATLAS_PAYLOAD = '+json.dumps(encode_transport(payload))+';',encoding='utf-8')
    paths=build(src,Path(tmp)/'output',ROOT)
    restored=decode_transport(json.loads(paths['payload_json'].read_text(encoding='utf-8')))
-   self.assertEqual(restored['action_items'],payload['action_items'])
-   self.assertIs(restored['action_items'],restored['review_infrastructure_sections']['action_items'])
+   self.assertEqual(restored['run_id'],'new')
+   self.assertEqual(restored['export_contract'],'dalycare-lazy-v1')
+   self.assertNotIn('action_items',restored)
+   with self.assertRaisesRegex(ValueError,'lazy export requires its original aggregate run'):
+    build(Path(tmp)/'output',Path(tmp)/'second',ROOT)
 
 
  def test_invalid_saved_context_preserves_previous_site_and_manifest(self):

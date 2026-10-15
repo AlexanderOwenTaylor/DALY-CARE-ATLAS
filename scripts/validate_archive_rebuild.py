@@ -147,7 +147,9 @@ def read_site_tables(site):
             if (registration['build_id'] != catalogue['build_id'] or
                     registration['table_id'] != table['id'] or registration['shard_id'] != shard['id']):
                 raise ValueError('Stale or misidentified public shard')
-            part = json.loads(registration['rows_json'])
+            # Keep exact wire decimals; binary-float decoding can silently shorten
+            # a valid token before the independent CSV equality comparison.
+            part = json.loads(registration['rows_json'], parse_float=Decimal)
             if len(part) != shard['rows']:
                 raise ValueError('Public shard row count disagrees')
             rows.extend(part)
@@ -164,7 +166,7 @@ def verify_original(reference, original):
             raise ValueError('Original archive evidence changed during rebuilding')
 
 
-def canonical_rows(rows, columns):
+def canonical_rows(rows, columns, registry_contract=False):
     """Compare CSV and JSON values without losing typed codes or row duplicates."""
     def cell(value, column):
         if value is None or value == '':
@@ -196,6 +198,14 @@ def canonical_rows(rows, columns):
         raise ValueError('Invalid public table schema')
     result = Counter()
     for row in rows:
+        if registry_contract and isinstance(row,dict) and row.get('contract_version') in ('registry-summary-v1','registry-summary-v2'):
+            from registry_summary_privacy import SCHEMA as LEGACY
+            from registry_v2 import SCHEMA as MODERN
+            required=set(MODERN if row['contract_version']=='registry-summary-v2' else LEGACY)
+            foreign=(set(LEGACY)|set(MODERN))-required
+            if not required<=row.keys() or not row.keys()<=required|foreign or not set(keys)<=required|foreign or any(row.get(k) not in (None,'') for k in foreign):
+                raise ValueError('Invalid public registry table-copy schema')
+            row={key:row.get(key) for key in keys}
         if not isinstance(row, dict) or set(keys) != row.keys():
             raise ValueError('Invalid public table-copy schema')
         result[tuple(cell(row[key], column) for key, column in zip(keys, columns))] += 1
@@ -212,7 +222,7 @@ def compare_csv_downloads(site, tables, catalogue):
             raise ValueError('Public CSV schema disagrees with its table')
         if any(set(row) != set(keys) or any(value is None for value in row.values()) for row in rows):
             raise ValueError('Public CSV schema has malformed row widths')
-        if canonical_rows(rows, table['columns']) != canonical_rows(tables[table_id], table['columns']):
+        if canonical_rows(rows, table['columns'],table_id=='registry_field_summaries') != canonical_rows(tables[table_id], table['columns'],table_id=='registry_field_summaries'):
             raise ValueError('Public CSV disagrees with its screened table')
 
 
@@ -248,7 +258,7 @@ def compare_payload_tables(payload, tables, catalogue, registry):
             table = descriptors[spec['id']]
             if not isinstance(value, list):
                 raise ValueError('Invalid registered public payload table')
-            if canonical_rows(value, table['columns']) != canonical_rows(tables[spec['id']], table['columns']):
+            if canonical_rows(value, table['columns'],spec['id']=='registry_field_summaries') != canonical_rows(tables[spec['id']], table['columns'],spec['id']=='registry_field_summaries'):
                 raise ValueError('Public payload disagrees with its screened table')
 
 
@@ -262,6 +272,8 @@ def main():
     args = parser.parse_args()
     reference = json.loads(args.reference.read_text(encoding='utf-8-sig'))
     verify_original(reference, args.original)
+    from publication import validate_site
+    validate_site(args.site)
     tables, catalogue = read_site_tables(args.site)
     result = compare_tables(reference, tables, args.allow_stricter_withholding)
     compare_csv_downloads(args.site, tables, catalogue)

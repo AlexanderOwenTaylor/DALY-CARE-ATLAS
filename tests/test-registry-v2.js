@@ -3,8 +3,9 @@ const v2=require('../inst/templates/registry-v2.js');
 const work=path.resolve(__dirname,'../.artifact-temp/registry-v2');
 if(!fs.existsSync(path.join(work,'resource.json'))){
  const cp=require('node:child_process'),env={...process.env};
- if(process.platform==='win32'){env.R_LIBS_USER='C:/Users/User/AppData/Local/R/win-library/4.3';env.LC_ALL='English_United States.utf8';}
- cp.execFileSync(process.platform==='win32'?'C:/Program Files/R/R-4.3.1/bin/Rscript.exe':'Rscript',['tests/test-registry-v2.R'],{cwd:path.resolve(__dirname,'..'),env,stdio:'inherit'});
+ if(process.platform==='win32'){const local='C:/Users/User/AppData/Local/R/win-library/4.3';if(!env.R_LIBS_USER&&fs.existsSync(local))env.R_LIBS_USER=local;env.LC_ALL=env.LC_ALL||'English_United States.utf8';}
+ const fallback='C:/Program Files/R/R-4.3.1/bin/Rscript.exe',rscript=env.RSCRIPT||(process.platform==='win32'&&fs.existsSync(fallback)?fallback:'Rscript');
+ cp.execFileSync(rscript,['tests/test-registry-v2.R'],{cwd:path.resolve(__dirname,'..'),env,stdio:'inherit'});
 }
 const resource=JSON.parse(fs.readFileSync(path.join(work,'resource.json'),'utf8'));
 const rows=JSON.parse(fs.readFileSync(path.join(work,'golden.json'),'utf8'));
@@ -20,7 +21,7 @@ function reader(input){
  const scripts=[],table={id:'registry_field_summaries',title:'Registry',status:'available',columns:Object.keys(rows[0]).map(key=>({key,type:typeof rows[0][key]==='number'?'number':'string'})),shards:input.map((row,i)=>{const json=JSON.stringify([row]);return {id:'s'+i,src:`output-shards/registry_field_summaries-s${i}.js`,rows:1,bytes:Buffer.byteLength(json),json};})};
  const window={DALYCARE_REGISTRY_V2_RESOURCE:resource,DALYCARERegistryV2:v2,DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'synthetic',minimum_cell_count:5,tables:[table]},location:{hash:''},addEventListener(){}};
  const document={createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);}},getElementById:()=>null};
- vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../inst/templates/atlas-outputs.js'),'utf8'),{window,document,URLSearchParams,TextEncoder,setTimeout,clearTimeout,console});
+ vm.runInNewContext(fs.readFileSync(path.resolve(__dirname,'../inst/templates/atlas-reader.js'),'utf8'),{window,document,URLSearchParams,TextEncoder,setTimeout,clearTimeout,console});
  return {api:window.DALYCARE_OUTPUTS,answer(index){document.currentScript=scripts.at(-1);const shard=table.shards[index];window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'synthetic',table_id:table.id,shard_id:shard.id,rows_json:shard.json});document.currentScript=null;}};
 }
 test('exact-column output reader independently rejects altered v2 groups',async()=>{

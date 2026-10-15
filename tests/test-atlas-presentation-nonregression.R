@@ -236,44 +236,19 @@ json_array_row_count <- function(json, key) {
   }
   rows
 }
-before <- c(
-  semantic_dictionary_rows = count_rows(payload$semantic_dictionary_rows),
-  semantic_value_map_rows = count_rows(payload$semantic_value_map_rows),
-  semantic_code_map_rows = count_rows(payload$semantic_code_map_rows),
-  sources = count_rows(payload$sources),
-  catalog_rows = count_rows(payload$catalog_rows),
-  "cohort_counts.data_point_counts" = count_rows(payload$mcl_triangle_feasibility$cohort_counts$data_point_counts),
-  "cohort_counts.treatment_strategy_strata_counts" = count_rows(payload$mcl_triangle_feasibility$cohort_counts$treatment_strategy_strata_counts),
-  "cohort_counts.answerability_summary" = count_rows(payload$mcl_triangle_feasibility$cohort_counts$answerability_summary)
-)
-
+# The lazy bootstrap owns no duplicated clinical detail. Compare every registered
+# canonical table before/after publication, and preserve the original input graph.
+original <- serialize(payload,NULL)
+evidence <- atlas_output_evidence(NULL,root,payload)
 run_dir <- tempfile("atlas_presentation_nonregression_")
-invisible(write_static_atlas(run_dir, payload, project_root = root))
-payload_js <- paste(readLines(file.path(run_dir, "site", "DALYCARE_atlas_payload.js"), warn = FALSE, encoding = "UTF-8"), collapse = "\n")
-payload_json <- sub("^window\\.DALYCARE_ATLAS_PAYLOAD\\s*=\\s*", "", payload_js)
-payload_json <- sub(";\\s*$", "", payload_json)
-# Compare decoded clinical rows, including rows packed by transport v2. Searching
-# raw JSON arrays mistakes the deliberately null packed slots for lost evidence.
-wire <- jsonlite::fromJSON(payload_json,simplifyVector=FALSE)
-decoded <- wire$payload
-for(table in wire$row_tables) {
-  rows <- lapply(table$rows,function(row) {
-    keys <- unlist(table$schemas[[row[[1L]]+1L]],use.names=FALSE)
-    setNames(row[-1L],keys)
-  })
-  decoded <- atlas_evidence_set(decoded,unlist(table$path,use.names=FALSE),rows)
-}
-for(alias in wire$aliases) decoded <- atlas_evidence_set(decoded,unlist(alias$target,use.names=FALSE),atlas_evidence_get(decoded,unlist(alias$source,use.names=FALSE)))
-after <- vapply(names(before),function(key) {
-  path <- if(startsWith(key,'cohort_counts.')) c('mcl_triangle_feasibility',strsplit(key,'.',fixed=TRUE)[[1]]) else key
-  as.integer(count_rows(atlas_evidence_get(decoded,path)))
-},integer(1))
-
-for (name in names(before)) {
-  expect_equal(
-    as.integer(after[[name]]),
-    as.integer(before[[name]]),
-    paste("Presentation rendering should preserve payload row count:", name, "before", before[[name]], "after", after[[name]])
-  )
+invisible(write_static_atlas(run_dir,payload,project_root=root,output_evidence=evidence))
+expect_true(identical(original,serialize(payload,NULL)))
+wire <- jsonlite::fromJSON(file.path(run_dir,'site','DALYCARE_atlas_payload.json'),simplifyVector=FALSE)
+expect_equal(wire$payload$export_contract,'dalycare-lazy-v1')
+expect_true(is.null(wire$payload$semantic_dictionary_rows))
+for(table in evidence) {
+  rows <- read_public_table(file.path(run_dir,'site'),table$id)
+  expect_equal(length(rows),length(table$rows),paste('Canonical table row count',table$id))
+  expect_true(file.exists(file.path(run_dir,'site','downloads',paste0(table$id,'.csv'))))
 }
 closeAllConnections()

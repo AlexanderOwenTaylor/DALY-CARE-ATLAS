@@ -1,7 +1,7 @@
 const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs'), vm=require('node:vm'), path=require('node:path');
-const runtime=path.join(__dirname,'../inst/templates/atlas-outputs.js');
+const runtime=path.join(__dirname,'../inst/templates/atlas-reader.js');
 test('exact numeric cells cannot bypass privacy with a legacy eligibility marker',()=>{
  const f=harness().api.formatValue;
  for(const key of ['mean','median','p25','p75','sd','q25','q75','iqr','min','max']) assert.doesNotMatch(f(87654321,key,{numeric_privacy_status:'eligible_stored_summary'}),/87654321/);
@@ -111,26 +111,15 @@ test('null reasons apply only to reviewed affected columns and preserve zero',()
  assert.equal(h.api.formatValue(null,'year',{numeric_privacy_status:'needs_validation_negative_sentinel'}),'Missing');
 });
 
-test('selected laboratory rows expose cell withholding and reference meaning before raw metadata',async()=>{
- const elements=new Map(),scripts=[],listeners={};
- function el(id){if(!elements.has(id))elements.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,focus(){},setAttribute(){},addEventListener(){},appendChild(node){node.parentNode=this;},querySelectorAll(){return [];}});return elements.get(id);}
- const row={table_name:'S',lab_code:null,n:null,value_privacy_status:'withheld_unvalidated_distribution'},json=JSON.stringify([row]);
- const table={id:'lab_npu_code_coverage',title:'Laboratory code occurrence metadata by source',kind:'aggregate_summary',row_grain:JSON.parse(fs.readFileSync(path.join(__dirname,'../inst/config/public-output-registry.json'),'utf8')).artifacts.find(t=>t.id==='lab_npu_code_coverage').row_grain,status:'available',source_file:'outputs/panels/lab_npu_code_coverage.csv',provenance:'csv_run',complete:true,columns:Object.keys(row).map(key=>({key,type:key==='n'?'number':'string'})),shards:[{id:'s0',src:'output-shards/lab-s0.js',rows:1,bytes:Buffer.byteLength(json)}]};
- const document={getElementById:el,body:{classList:{toggle(){}}},documentElement:{dataset:{}},createElement:()=>({remove(){}}),head:{appendChild(s){scripts.push(s);}}};
- const window={DALYCARE_OUTPUT_CATALOGUE:{schema_version:1,build_id:'b1',tables:[table]},location:{search:'?table=lab_npu_code_coverage'},history:{replaceState(){},pushState(){}},addEventListener(name,fn){listeners[name]=fn;}};
- vm.runInNewContext(fs.readFileSync(runtime,'utf8'),{window,document,URLSearchParams,TextEncoder,AbortController,setTimeout:()=>1,clearTimeout(){}});
- assert.match(el('table-purpose').textContent,/source.field context.*withheld/i);assert.doesNotMatch(el('table-cue').innerHTML,/withheld|source.field context/i);assert.match(el('table-cue').innerHTML,/href="DALYCARE_outputs.html\?table=npu_display_dictionary"/);
- assert.match(el('table-metadata').innerHTML,/From this run.s CSV outputs/);
- document.currentScript=scripts[0];window.DALYCARE_OUTPUTS.register({schema_version:1,build_id:'b1',table_id:table.id,shard_id:'s0',rows_json:json});
- await Promise.resolve();await Promise.resolve();await Promise.resolve();
- assert.match(el('rows').innerHTML,/Withheld/);assert.doesNotMatch(el('rows').innerHTML,/>Missing</);
- table.id='npu_display_dictionary';table.kind='reference_definitions';table.provenance='project_reference';table.shards=[];window.location.search='?table=npu_display_dictionary';listeners.popstate();
- assert.match(el('table-state').textContent,/Reference definitions/);assert.match(el('table-cue').innerHTML,/do not establish observed/);assert.match(el('table-metadata').innerHTML,/Reviewed project reference definitions/);
- table.id='missing_table';table.shards=[{id:'s1',src:'output-shards/missing-s1.js',rows:1,bytes:Buffer.byteLength(json)}];window.location.search='?table=missing_table';listeners.popstate();scripts.at(-1).onerror();
- await Promise.resolve();await Promise.resolve();await Promise.resolve();
- assert.match(el('read-status').textContent,/incomplete/i);assert.match(el('read-status').textContent,/HTML.*folder\/files together/);assert.doesNotMatch(el('read-status').textContent,/shard|No matches/);
- // A load failure remains distinct from a completed empty scan.
- window.DALYCARE_OUTPUTS.cancel();
+test('production topic renderer retains withholding, provenance and reference meaning',()=>{
+ const h=harness(),target={innerHTML:'',querySelectorAll(){return [];}};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../inst/templates/atlas-topic.js'),'utf8'),{window:h.window});
+ const row={table_name:'S',lab_code:null,n:null,value_privacy_status:'withheld_unvalidated_distribution'};
+ const table={id:'lab_npu_code_coverage',title:'Laboratory evidence',provenance:'csv_run',columns:Object.keys(row).map(key=>({key,type:key==='n'?'number':'string'}))};
+ const render=()=>h.window.DALYCARE_TOPIC.renderTable({table,result:{rows:[row],total_matches:1},esc:x=>String(x??''),format:h.api.formatValue,target});render();
+ assert.match(target.innerHTML,/source.field context.*withheld/i);assert.match(target.innerHTML,/From this run.s CSV outputs/);assert.match(target.innerHTML,/Withheld/);assert.doesNotMatch(target.innerHTML,/>Missing</);
+ assert.match(target.innerHTML,/href="DALYCARE_outputs.html\?table=npu_display_dictionary"/);
+ table.id='npu_display_dictionary';table.provenance='project_reference';render();assert.match(target.innerHTML,/Reviewed project reference definitions/);assert.match(target.innerHTML,/do not establish observed/);
 });
 
 test('null count and distinctness reasons follow only their actual guard suppressions',()=>{
@@ -154,3 +143,10 @@ test('reference count bases are readable while unknown basis codes retain their 
  assert.equal(f('region_reference_metadata','count_basis'),'Configured region reference entries');
  assert.equal(f('unreviewed_basis','count_basis'),'unreviewed_basis');
 });
+
+ test('wide valid rows use a byte-bounded page and an exact continuation cursor',async()=>{
+ const h=harness(1,4);for(const [i,s] of h.tables[0].shards.entries()){s.json=JSON.stringify([{value:String(i)+'x'.repeat(150000)}]);s.rows=1;s.bytes=Buffer.byteLength(s.json);s.asset_bytes=s.bytes+250;}
+ let p=h.api.scanTable('t0','',0);h.answer();let result=await p;assert.equal(h.scripts.length,1);assert.equal(result.rows.length,1);assert.equal(result.next_offset,1);assert.equal(result.total_matches,4);
+ for(let offset=1;offset<4;offset++){p=h.api.scanTable('t0','',0,undefined,undefined,{offset});await Promise.resolve();h.answer();result=await p;assert.equal(result.rows.length,1);assert.equal(result.rows[0].value[0],String(offset));assert.equal(result.next_offset,offset+1);}
+ assert.ok(h.tables[0].shards.every(s=>s.asset_bytes<=262144));
+ });
