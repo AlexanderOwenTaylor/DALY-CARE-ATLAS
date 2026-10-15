@@ -354,6 +354,7 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
     damyda_feature_coverage = data.frame(stringsAsFactors = FALSE),
     registry_clinical_summary = empty_registry_summary(),
     registry_field_summaries = empty_registry_field_summaries(),
+    registry_interpretation_diagnostics = empty_registry_interpretation_diagnostics(),
     damyda_clinical_profile = empty_registry_categorical(),
     damyda_numeric_fields = empty_registry_numeric(),
     lyfo_clinical_profile = empty_registry_categorical(),
@@ -907,6 +908,7 @@ atlas_run_impl <- function(project_root, source_map_path, output_root = "atlas_r
     panels[[panel_name]]
   })
   names(payload_panels) <- names(panels)
+  payload_panels$registry_interpretation_diagnostics <- NULL
 
   payload_args <- list(
     run_id = run_id, generated_at = generated_at, sources = payload_sources, columns = payload_columns, checks = payload_checks, panels = payload_panels,

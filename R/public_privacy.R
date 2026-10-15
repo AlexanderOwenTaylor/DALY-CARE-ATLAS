@@ -43,6 +43,7 @@ atlas_public_privacy <- function(payload, project_root = ".", min_cell_count = 5
   range_rows <- c(payload$panels$atlas_temporal_coverage_years,payload$review_temporal_coverage$years)
   has_ranges <- any(vapply(range_rows,function(r) is.list(r) && scalar(r,'coverage_basis') == 'source_date_range',logical(1)))
   walk <- function(obj, path = character()) {
+    if(is.list(obj)&&!is.null(names(obj)))obj['registry_interpretation_diagnostics']<-NULL
     if(length(path) && tail(path,1)%in%c("coverage_evidence","vital_descriptors","vital_descriptor_assessment"))return(list())
     summary_row<-function(r)is.list(r)&&!is.null(names(r))&&any(c('category_counts_json','numeric_groups_json') %in% names(r))
     summary_table<-is.list(obj)&&is.null(names(obj))&&any(vapply(obj,summary_row,logical(1)))

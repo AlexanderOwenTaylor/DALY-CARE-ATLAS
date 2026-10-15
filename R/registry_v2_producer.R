@@ -67,14 +67,46 @@ registry_v2_group_data <- function(data,key,s) {
   if(s$kind=='numeric'&&length(values)&&length(unique(values))==1)groups<-rbind(groups,data.frame(status='constant',value='',n=1))
   groups
 }
+# Private, bounded evidence: one row per reviewed field, fixed resolution classes.
+# Never retain group values (including reviewed codes/bands), raw tokens or keys.
+empty_registry_interpretation_diagnostics <- function() {
+  cols<-c(atlas_registry_privacy_metadata,'policy_checksum','mapping_status','collection_status','encoding_basis','count_basis',registry_v2_counts)
+  as.data.frame(setNames(lapply(cols,function(n)if(n %in% registry_v2_counts)numeric() else character()),cols),stringsAsFactors=FALSE)
+}
+registry_v2_diagnostic <- function(s,row,groups=NULL) {
+  d<-s[c(atlas_registry_privacy_metadata,'policy_checksum','mapping_status')]
+  d$collection_status<-row$collection_status
+  d$encoding_basis<-if(s$kind=='categorical')'reviewed_recorded_codes' else 'strict_numeric_encoding'
+  d$count_basis<-'distinct_people_one_unambiguous_value_per_field'
+  d[registry_v2_counts]<-as.list(rep(NA_real_,length(registry_v2_counts)))
+  if(identical(row$collection_status,'complete')&&is.data.frame(groups)&&nrow(groups)<=5000L&&
+     setequal(names(groups),c('status','value','n'))&&!is.logical(groups$n)) {
+    n<-suppressWarnings(as.numeric(groups$n))
+    if(all(groups$status %in% c('valid','missing','invalid','conflicting','constant'))&&
+       all(is.finite(n)&n>=0&n==floor(n)&n<=9007199254740991)) {
+      parts<-vapply(c('valid','missing','invalid','conflicting'),function(st)sum(n[groups$status==st]),numeric(1))
+      if(sum(parts)<=9007199254740991)d[registry_v2_counts]<-as.list(c(sum(parts),unname(parts)))
+    }
+  }
+  as.data.frame(d,stringsAsFactors=FALSE)
+}
+registry_v2_with_diagnostics <- function(rows,diagnostics,project_root,k) {
+  out<-registry_summary_final_guard(registry_v2_frame(rows),project_root,k)
+  attr(out,'registry_interpretation_diagnostics')<-if(length(diagnostics))do.call(rbind,diagnostics) else empty_registry_interpretation_diagnostics()
+  out
+}
 registry_field_summaries <- function(data,table_name,project_root='.',min_cell_count=5) {
   specs<-Filter(function(s)s$table_name==table_name,registry_v2_fields(project_root));k<-registry_summary_k(min_cell_count)
   key<-registry_summary_person_key(table_name,names(data))
+  diagnostics<-list()
   rows<-lapply(specs,function(s) {
-    if(!s$source_column %in% names(data))return(registry_v2_row(s,'field_absent',k))
-    if(key$status!='ok')return(registry_v2_row(s,key$status,k))
-    registry_v2_from_groups(s,registry_v2_group_data(data,key$key,s),k)
-  });registry_summary_final_guard(registry_v2_frame(rows),project_root,k)
+    groups<-NULL
+    row<-if(!s$source_column %in% names(data))registry_v2_row(s,'field_absent',k)
+      else if(key$status!='ok')registry_v2_row(s,key$status,k)
+      else {groups<-registry_v2_group_data(data,key$key,s);registry_v2_from_groups(s,groups,k)}
+    diagnostics[[length(diagnostics)+1L]]<<-registry_v2_diagnostic(s,row,groups)
+    row
+  });registry_v2_with_diagnostics(rows,diagnostics,project_root,k)
 }
 registry_summary_from_groups <- function(spec,groups,k) {
   if(is.null(spec$policy_checksum)) {
@@ -135,16 +167,30 @@ registry_summary_sql <- function(conn,table_ref,key,spec,dialect,cap) {
 dbi_registry_field_summaries <- function(conn,table_ref,table_name,column_names,project_root='.',min_cell_count=5,budget_context=NULL) {
   specs<-Filter(function(s)s$table_name==table_name,registry_v2_fields(project_root));k<-registry_summary_k(min_cell_count)
   key<-registry_summary_person_key(table_name,column_names);dialect<-registry_summary_db_dialect(conn)
+  diagnostics<-list()
   rows<-lapply(specs,function(s) {
+    groups<-NULL
+    collect<-function() {
     if(!s$source_column %in% column_names)return(registry_v2_row(s,'field_absent',k))
     if(key$status!='ok')return(registry_v2_row(s,key$status,k))
     if(dialect=='unsupported')return(registry_v2_row(s,'query_failed',k))
     if(!is.null(budget_context)&&is.function(budget_context$should_skip)&&budget_context$should_skip('registry_complete_person_groups',atlas_max_text_distinct_rows(),s$source_column))return(registry_v2_row(s,'resource_limit',k))
+    start<-proc.time()[['elapsed']]
     query<-registry_summary_query(conn,registry_summary_sql(conn,table_ref,key$key,s,dialect,5000L),dialect)
-    if(query$status!='ok')return(registry_v2_row(s,query$status,k))
-    if(nrow(query$groups)>5000)return(registry_v2_row(s,'resource_limit',k))
-    registry_v2_from_groups(s,query$groups,k)
-  });registry_summary_final_guard(registry_v2_frame(rows),project_root,k)
+    row<-if(query$status!='ok')registry_v2_row(s,query$status,k)
+      else if(nrow(query$groups)>5000)registry_v2_row(s,'resource_limit',k)
+      else {groups<<-query$groups;registry_v2_from_groups(s,groups,k)}
+    status<-if(row$collection_status=='complete')'ok' else row$collection_status
+    if(!is.null(budget_context)&&is.function(budget_context$add_log))
+      budget_context$add_log(s$source_column,'registry_complete_person_groups',status,
+        if(status=='ok')'executed' else 'withheld','Complete-field registry aggregate; private values excluded.',
+        elapsed_ms=1000*(proc.time()[['elapsed']]-start),strategy='sql_person_aggregate')
+    row
+    }
+    row<-collect()
+    diagnostics[[length(diagnostics)+1L]]<<-registry_v2_diagnostic(s,row,groups)
+    row
+  });registry_v2_with_diagnostics(rows,diagnostics,project_root,k)
 }
 registry_v2_complete <- function(rows,root='.',k=5) {
   existing<-if(nrow(rows))paste(rows$table_name,rows$source_column,sep='\r') else character()

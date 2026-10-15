@@ -59,6 +59,7 @@ tryCatch({
     groups<-DBI::dbGetQuery(connection,registry_summary_sql(connection,quoted,'patientid',numeric,'postgres',5000L))
     sql_row<-registry_summary_from_groups(numeric,groups,k)
     memory<-registry_field_summaries(frame,'RKKP_DaMyDa','.',k);memory<-memory[memory$source_column=='Reg_Haemoglobin',,drop=FALSE]
+    attr(memory,'registry_interpretation_diagnostics')<-NULL
     rownames(memory)<-NULL;rownames(sql_row)<-NULL
     stopifnot(identical(memory,sql_row));sql_row
   }
@@ -97,6 +98,36 @@ tryCatch({
   cat('PASS PostgreSQL C1 production SQL acceptance: three registries, repeated people, conflicts, unknown encoding, threshold, malformed/overflow numeric values and missing keys.\n')
   # D uses the real generated parser, exact membership aggregate and producer path.
   source_test_runtime()
+  # Retain private 19+1 resolution evidence with the actual PostgreSQL producer.
+  ref<-DBI::Id(schema=schema,table='private_registry');quoted<-as.character(DBI::dbQuoteIdentifier(connection,ref))
+  private_frame<-data.frame(patientid=sprintf('SYNTHETIC_PRIVATE_%02d',1:20),Beh_Immunterapi=c(rep('0',19),'UNMAPPED_SYNTHETIC'))
+  DBI::dbWriteTable(connection,ref,private_frame,overwrite=TRUE,row.names=FALSE)
+  budget<-new_db_budget_context('RKKP_CLL',20)
+  private_sql<-dbi_registry_field_summaries(connection,quoted,'RKKP_CLL',names(private_frame),'.',budget_context=budget)
+  private_memory<-registry_field_summaries(private_frame,'RKKP_CLL','.')
+  stopifnot(identical(private_sql,private_memory))
+  diagnostic<-attr(private_sql,'registry_interpretation_diagnostics');diagnostic<-diagnostic[diagnostic$source_column=='Beh_Immunterapi',]
+  public<-private_sql[private_sql$source_column=='Beh_Immunterapi',]
+  stopifnot(diagnostic$n_valid==19,diagnostic$n_unrecognised==1,diagnostic$denominator_n==20,
+    public$publication_status=='withheld_privacy',all(is.na(public[registry_v2_counts])),
+    identical(budget$query_log()$status,'ok'),all(is.finite(budget$query_log()$elapsed_ms)),
+    !any(grepl('SYNTHETIC_PRIVATE_|UNMAPPED_SYNTHETIC',as.character(unlist(diagnostic)))))
+  # Failure logging needs a savepoint because PostgreSQL aborts a failed transaction.
+  DBI::dbExecute(connection,'SAVEPOINT diagnostic_failure')
+  absent_ref<-as.character(DBI::dbQuoteIdentifier(connection,DBI::Id(schema=schema,table='private_registry_absent')))
+  failed<-dbi_registry_field_summaries(connection,absent_ref,'RKKP_CLL',names(private_frame),'.',budget_context=budget)
+  DBI::dbExecute(connection,'ROLLBACK TO SAVEPOINT diagnostic_failure')
+  stopifnot(tail(budget$query_log()$status,1)=='query_failed',
+    all(attr(failed,'registry_interpretation_diagnostics')$collection_status %in% c('field_absent','query_failed')))
+  private_profile<-dbi_profile_table(list(test=connection),'test',schema,'private_registry','RKKP_CLL','dataset','synthetic','summary')
+  retained<-private_profile$panels$registry_interpretation_diagnostics
+  retained<-retained[retained$source_column=='Beh_Immunterapi',]
+  stopifnot(retained$n_valid==19,retained$n_unrecognised==1,
+    is.null(attr(private_profile$panels$registry_field_summaries,'registry_interpretation_diagnostics')),
+    'registry_complete_person_groups' %in% private_profile$db_query_log$query_category)
+  retained_path<-tempfile('postgres-private-diagnostic-',fileext='.csv');write.csv(retained,retained_path,row.names=FALSE)
+  retained_csv<-read.csv(retained_path);stopifnot(retained_csv$n_valid==19,retained_csv$n_unrecognised==1);unlink(retained_path)
+  cat('PASS PostgreSQL private 19+1 diagnostics and safe success/failure logging.\n')
   Sys.unsetenv(c('DALYCARE_REGISTRY_PERSON_KEYS_FILE','DALYCARE_DATE_FORMATS_FILE'))
   ref<-DBI::Id(schema=schema,table='date_coverage');quoted<-as.character(DBI::dbQuoteIdentifier(connection,ref))
   dates<-c('2024-02-29','2023-02-29','2024-02-30','2024-13-01','2024-01-01junk','01-02-03','01/02/2024',

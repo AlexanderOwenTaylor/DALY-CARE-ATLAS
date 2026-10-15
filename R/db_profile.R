@@ -1258,6 +1258,8 @@ dbi_profile_table <- function(connections, db_name, schema, table, table_name, s
       project_root = getOption("dalycare.registry.project_root", "."),
       min_cell_count = min_cell_count, budget_context = budget_context
     )
+    panels$registry_interpretation_diagnostics <- attr(panels$registry_field_summaries,'registry_interpretation_diagnostics')
+    attr(panels$registry_field_summaries,'registry_interpretation_diagnostics') <- NULL
   }
   list(
     source = source_row,

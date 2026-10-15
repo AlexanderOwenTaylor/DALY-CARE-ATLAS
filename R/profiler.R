@@ -361,6 +361,8 @@ profile_panels <- function(data, table_name, profile_mode = "full", min_cell_cou
     atlas_temporal_coverage_years = empty_temporal_coverage_years(),
     atlas_spatial_region_counts = empty_spatial_region_counts()
   )
+  summary_panels$registry_interpretation_diagnostics <- attr(summary_panels$registry_field_summaries,'registry_interpretation_diagnostics')
+  attr(summary_panels$registry_field_summaries,'registry_interpretation_diagnostics') <- NULL
   summary_panels$coverage_evidence <- coverage_evidence_panels_from_data(data,table_name,min_cell_count)$coverage_evidence
   summary_panels <- coverage_release_panels(summary_panels,data.frame(table_name=table_name),min_cell_count)
   summary_panels <- c(summary_panels,vital_inventory_from_data(data,table_name,min_cell_count))

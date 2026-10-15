@@ -251,7 +251,7 @@ def collect_output_evidence(run_dir, project_root, payload_snapshot=None):
         for sub in ('outputs', 'outputs/panels'):
             for path in sorted(confined_path(run, sub).glob('*.csv')):
                 confined_path(run, path.relative_to(run).as_posix())
-                if path.relative_to(run).as_posix() not in known and path.name != 'output_manifest.csv':
+                if path.relative_to(run).as_posix() not in known and path.relative_to(run).as_posix() not in {'outputs/output_manifest.csv', 'outputs/panels/registry_interpretation_diagnostics.csv'}:
                     unknown.append(path)
         for i, _ in enumerate(unknown, 1):
             descriptors.append(dict(id=f'unreviewed_{i}', title='Unreviewed output', source_file='', group='Other outputs', kind='metadata', status='metadata_only', reason='Artifact not registered for publication', row_grain='Meaning not supplied', count_basis='not supplied', source_row_count=None, represented_row_count=0, complete=False, provenance='csv_run', source_terms=[], columns=[], rows=[]))

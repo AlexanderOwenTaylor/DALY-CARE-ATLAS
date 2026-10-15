@@ -127,7 +127,7 @@ atlas_payload <- function(run_id, generated_at, sources, columns, checks, panels
   panels$atlas_spatial_region_coverage <- panel_atlas_spatial_region_coverage(sources,panels$atlas_spatial_region_counts)
   panels$atlas_dk_choropleth_regions <- panel_atlas_dk_choropleth_regions(sources,panels,panels$atlas_spatial_region_counts,panels$atlas_spatial_region_coverage)
   # Internal evidence and scoped descriptor membership belong in registered CSVs.
-  panels[c("coverage_evidence","vital_descriptors","vital_descriptor_assessment")] <- NULL
+  panels[c("coverage_evidence","vital_descriptors","vital_descriptor_assessment","registry_interpretation_diagnostics")] <- NULL
   if (is.null(column_profiles)) column_profiles <- basic_column_profiles(columns)
   if (is.null(column_top_values)) column_top_values <- empty_column_top_values()
   if (is.null(action_items)) action_items <- empty_run_action_items()

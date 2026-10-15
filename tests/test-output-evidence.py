@@ -11,6 +11,10 @@ class EvidenceTests(unittest.TestCase):
  def write(self,name,headers,rows):
   with (self.run/'outputs'/name).open('w',encoding='utf-8',newline='') as f:
    w=csv.writer(f);w.writerow(headers);w.writerows(rows)
+ def test_private_registry_diagnostics_create_no_public_table_or_link(self):
+  baseline=self.collect()
+  self.write('panels/registry_interpretation_diagnostics.csv',['table_name','source_column','n_valid','n_unrecognised'],[['RKKP_CLL','Beh_Immunterapi',19,1]])
+  self.assertEqual(self.collect(),baseline)
  def test_coverage_context_and_collapsed_scope_are_published_without_range_length(self):
   from output_evidence import load_registry
   specs={s['id']:s for s in load_registry(ROOT)['artifacts']}

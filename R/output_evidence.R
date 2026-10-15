@@ -454,7 +454,7 @@ atlas_output_evidence <- function(run_dir,project_root='.',payload_snapshot=NULL
     known <- vapply(registry$artifacts,function(s)s$source_file,character(1)); unknown <- character()
     for(sub in c('outputs','outputs/panels')) for(file in sort(list.files(atlas_confined_path(run_dir,sub),pattern='\\.csv$',full.names=FALSE))) {
       relative <- paste0(sub,'/',file);atlas_confined_path(run_dir,relative)
-      if(!relative %in% known && file!='output_manifest.csv') unknown <- c(unknown,relative)
+      if(!relative %in% known && !relative %in% c('outputs/output_manifest.csv','outputs/panels/registry_interpretation_diagnostics.csv')) unknown <- c(unknown,relative)
     }
     for(i in seq_along(unknown)) descriptors[[length(descriptors)+1L]] <- list(id=paste0('unreviewed_',i),title='Unreviewed output',source_file='',group='Other outputs',kind='metadata',status='metadata_only',reason='Artifact not registered for publication',row_grain='Meaning not supplied',count_basis='not supplied',source_row_count=NULL,represented_row_count=0L,complete=FALSE,provenance='csv_run',source_terms=list(),columns=list(),rows=list())
   }

@@ -96,7 +96,7 @@ def sanitize_public_payload(payload, min_cell_count=5, project_root=None, metada
         if metadata_path(path):return metadata_fallback(obj,metadata_context)
         if has_ranges and path == ('review_temporal_coverage','summary') and 'n_year_rows' in obj:
             obj=dict(obj,n_year_rows=None)
-        r={key:(copy.deepcopy(v) if key in REFERENCE else walk(v,path+(key,))) for key,v in obj.items()}
+        r={key:(copy.deepcopy(v) if key in REFERENCE else walk(v,path+(key,))) for key,v in obj.items() if key != 'registry_interpretation_diagnostics'}
         for key in ('sampling_method','sample_size','eligible_n','sampling_complete'): r.pop(key,None)
         if ('year' in r and 'coverage_basis' in r) or ('region_code' in r and 'count_basis' in r) or 'quality_state' in r:
             support_k=number(r.get('support_k'))
